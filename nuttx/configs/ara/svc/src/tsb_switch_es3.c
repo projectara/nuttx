@@ -847,7 +847,7 @@ static int es3_post_init_seq(struct tsb_switch *sw)
      * Configure the Routing Table as 5 bit addressable
      * (RT10b = 0, RTBitSel = 1).
      */
-    if (switch_internal_setattr(sw, RTBITSEL, 0x1)) {
+    if (switch_internal_setattr(sw, SW_ATTR_RTBITSEL, 0x1)) {
         dbg_error("RTBITSEL register write failed\n");
         return -EIO;
     }

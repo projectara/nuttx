@@ -517,7 +517,7 @@ static int link_status(int argc, char *argv[]) {
         printf("Ignoring unexpected arguments.\n");
     }
 
-    rc = switch_internal_getattr(sw, SWSTA, &link_status);
+    rc = switch_internal_getattr(sw, SW_ATTR_SWSTA, &link_status);
     if (rc) {
         printf("Error: could not read link status: %d.\n", rc);
     } else {

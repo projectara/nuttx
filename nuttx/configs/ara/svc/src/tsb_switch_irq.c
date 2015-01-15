@@ -157,7 +157,7 @@ int switch_irq_enable(struct tsb_switch *sw, bool enable) {
                                 true, switch_hard_irq_handler, sw);
 
         // Enable the switch internal interrupt sources
-        if (switch_internal_setattr(sw, SWINE, SWINE_ENABLE_ALL)) {
+        if (switch_internal_setattr(sw, SW_ATTR_SWINE, SWINE_ENABLE_ALL)) {
             dbg_error("Switch SWINE register write failed\n");
             return -EIO;
         }
@@ -170,26 +170,26 @@ int switch_irq_enable(struct tsb_switch *sw, bool enable) {
         }
 
         // Enable the SPI interrupts
-        if (switch_internal_setattr(sw, SPIINTE, SPIINTE_ENABLE_ALL)) {
+        if (switch_internal_setattr(sw, SW_ATTR_SPIINTE, SPIINTE_ENABLE_ALL)) {
             dbg_error("Switch SPIINTE register write failed\n");
             return -EIO;
         }
-        if (switch_internal_setattr(sw, SPICEE,
+        if (switch_internal_setattr(sw, SW_ATTR_SPICEE,
                                     sw->rdata->spicee_enable_all)) {
             dbg_error("Switch SPICEE register write failed\n");
             return -EIO;
         }
-        if (switch_internal_setattr(sw, SPI3EE,
+        if (switch_internal_setattr(sw, SW_ATTR_SPI3EE,
                                     sw->rdata->spi3ee_enable_all)) {
             dbg_error("Switch SPI3EE register write failed\n");
             return -EIO;
         }
-        if (switch_internal_setattr(sw, SPI4EE,
+        if (switch_internal_setattr(sw, SW_ATTR_SPI4EE,
                                     sw->rdata->spi45ee_enable_all)) {
             dbg_error("Switch SPI4EE register write failed\n");
             return -EIO;
         }
-        if (switch_internal_setattr(sw, SPI5EE,
+        if (switch_internal_setattr(sw, SW_ATTR_SPI5EE,
                                     sw->rdata->spi45ee_enable_all)) {
             dbg_error("Switch SPI5EE register write failed\n");
             return -EIO;
@@ -256,7 +256,7 @@ static int switch_threaded_irq_handler(struct tsb_switch *sw) {
 
     do {
         // Read Switch Interrupt Status register
-        if (switch_internal_getattr(sw, SWINT, &swint)) {
+        if (switch_internal_getattr(sw, SW_ATTR_SWINT, &swint)) {
             dbg_error("IRQ: SWINT register read failed\n");
             return -EIO;
         }
@@ -264,34 +264,34 @@ static int switch_threaded_irq_handler(struct tsb_switch *sw) {
 
         // Handle the Switch internal interrupts
         if (swint & TSB_INTERRUPT_SWINTERNAL) {
-            if (switch_internal_getattr(sw, SWINS, &swins)) {
+            if (switch_internal_getattr(sw, SW_ATTR_SWINS, &swins)) {
                 dbg_error("IRQ: SWINS register read failed\n");
             }
             dbg_insane("IRQ: Switch internal irq, SWINS=0x%04x\n", swins);
 
             if (swins & TSB_INTERRUPT_SPICES) {
-                if (switch_internal_getattr(sw, SPICES, &attr_value)) {
+                if (switch_internal_getattr(sw, SW_ATTR_SPICES, &attr_value)) {
                     dbg_error("IRQ: SPICES register read failed\n");
                 }
                 dbg_insane("IRQ: Switch internal irq, SPICES=0x%04x\n",
                            attr_value);
             }
             if (swins & TSB_INTERRUPT_SPI3ES) {
-                if (switch_internal_getattr(sw, SPI3ES, &attr_value)) {
+                if (switch_internal_getattr(sw, SW_ATTR_SPI3ES, &attr_value)) {
                     dbg_error("IRQ: SPI3ES register read failed\n");
                 }
                 dbg_insane("IRQ: Switch internal irq, SPI3ES=0x%04x\n",
                            attr_value);
             }
             if (swins & TSB_INTERRUPT_SPI4ES) {
-                if (switch_internal_getattr(sw, SPI4ES, &attr_value)) {
+                if (switch_internal_getattr(sw, SW_ATTR_SPI4ES, &attr_value)) {
                     dbg_error("IRQ: SPI4ES register read failed\n");
                 }
                 dbg_insane("IRQ: Switch internal irq, SPI4ES=0x%04x\n",
                            attr_value);
             }
             if (swins & TSB_INTERRUPT_SPI5ES) {
-                if (switch_internal_getattr(sw, SPI5ES, &attr_value)) {
+                if (switch_internal_getattr(sw, SW_ATTR_SPI5ES, &attr_value)) {
                     dbg_error("IRQ: SPI5ES register read failed\n");
                 }
                 dbg_insane("IRQ: Switch internal irq, SPI5ES=0x%04x\n",

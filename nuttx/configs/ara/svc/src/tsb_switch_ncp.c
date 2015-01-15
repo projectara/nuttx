@@ -521,8 +521,8 @@ int switch_internal_setattr(struct tsb_switch *sw,
     dbg_verbose("%s(): attrId=0x%04x\n", __func__, attrid);
 
     switch (attrid) {
-    /* Special case for SWRES attribute: ignore reply */
-    case SWRES:
+    /* Special case for SW_ATTR_SWRES attribute: ignore reply */
+    case SW_ATTR_SWRES:
         ignore_reply = true;
         break;
     default:

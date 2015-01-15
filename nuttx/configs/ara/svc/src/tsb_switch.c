@@ -2456,7 +2456,7 @@ int switch_fct_enable(struct tsb_switch *sw) {
     uint32_t spictlb = 0xC;
     int rc;
 
-    rc = switch_internal_setattr(sw, SPICTLB, spictlb);
+    rc = switch_internal_setattr(sw, SW_ATTR_SPICTLB, spictlb);
 
     if (rc) {
         dbg_error("Failed to set spictlb\n");
@@ -2622,7 +2622,7 @@ struct tsb_switch *switch_init(struct tsb_switch_data *pdata) {
     /*
      * Sanity check
      */
-    if (switch_internal_getattr(sw, SWVER, &attr_value)) {
+    if (switch_internal_getattr(sw, SW_ATTR_SWVER, &attr_value)) {
         dbg_error("Switch probe failed\n");
         goto error;
     }
