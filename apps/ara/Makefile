@@ -40,17 +40,17 @@
 
 # Sub-directories
 
-SUBDIRS  = debug epm svc unipro tca lg
+SUBDIRS  = unipro tca lg
 SUBDIRS  += apbridge-unipro
 
 # Sub-directories that might need context setup.  Directories may need
 # context setup for a variety of reasons, but the most common is because
 # the example may be built as an NSH built-in function.
 
-CNTXTDIRS = debug epm svc unipro tca lg
+CNTXTDIRS = tca lg
 
 ifeq ($(CONFIG_NSH_BUILTIN_APPS),y)
-CNTXTDIRS += debug epm svc unipro tca lg
+CNTXTDIRS += unipro tca lg
 endif
 
 all: nothing
