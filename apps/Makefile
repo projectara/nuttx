@@ -48,7 +48,7 @@ TOPDIR ?= $(APPDIR)/import
 #   only for cleaning. builtin must always be the first in the list.
 
 CONFIGURED_APPS =
-SUBDIRS  = examples graphics interpreters builtin import nshlib
+SUBDIRS  = ara examples graphics interpreters builtin import nshlib
 SUBDIRS += platform system greybus-utils
 
 # The list of configured directories is derived from NuttX configuration

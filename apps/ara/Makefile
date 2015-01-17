@@ -41,7 +41,7 @@
 # Sub-directories
 
 SUBDIRS  = unipro tca lg
-SUBDIRS  += apbridge-unipro
+SUBDIRS  += apbridge-unipro apbridge gpbridge
 
 # Sub-directories that might need context setup.  Directories may need
 # context setup for a variety of reasons, but the most common is because
@@ -59,7 +59,7 @@ all: nothing
 
 define SDIR_template
 $(1)_$(2):
-    $(Q) $(MAKE) -C $(1) $(2) TOPDIR="$(TOPDIR)" APPDIR="$(APPDIR)"
+	$(Q) $(MAKE) -C $(1) $(2) TOPDIR="$(TOPDIR)" APPDIR="$(APPDIR)"
 endef
 
 $(foreach SDIR, $(CNTXTDIRS), $(eval $(call SDIR_template,$(SDIR),context)))
