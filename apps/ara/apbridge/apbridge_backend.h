@@ -26,25 +26,18 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _GREYNUS_UTILS_UTILS_H_
-#define _GREYNUS_UTILS_UTILS_H_
+#ifndef APBRIDGE_BACKEND_H
+#define APBRIDGE_BACKEND_H
 
-#include <nuttx/greybus/greybus.h>
+struct apbridge_backend {
+    int (*usb_to_unipro)(unsigned int cportid, void *buf, size_t len);
+    int (*usb_to_svc)(void *buf, size_t len);
 
-#include <apps/greybus-utils/svc.h>
-#include <apps/greybus-utils/debug.h>
-#include <apps/greybus-utils/manifest.h>
-
-static inline int gb_packet_size(const char *rbuf)
-{
-   const struct gb_operation_hdr *hdr = (const struct gb_operation_hdr *)rbuf;
-   return hdr->size;
-}
-
-struct cport_msg {
-	__u8	cport;
-	__u8	data[0];
+    void (*init)(void);
 };
 
-#endif
+int recv_from_unipro(unsigned int cportid, void *buf, size_t len);
+void apbridge_backend_register(struct apbridge_backend *apbridge_backend);
+
+#endif /* APBRIDGE_BACKEND_H */
 

@@ -38,18 +38,27 @@
 #define AL_RX_BRG_CSI_DT2_VAL                           0x00000000
 #define AL_RX_BRG_CSI_DT3_VAL                           0x00000000
 
+#define PS_HOLD_GPIO    8
+#define POWERKEY_GPIO   0
+
 static pthread_t g_display_thread;
 
 void press_powerkey(void)
 {
     tsb_gpio_initialize();
-    tsb_gpio_direction_out(0, 1);
+    tsb_gpio_direction_out(NULL, POWERKEY_GPIO, 1);
 }
 
 void depress_powerkey(void)
 {
-    tsb_gpio_direction_out(0, 0);
+    tsb_gpio_direction_out(NULL, POWERKEY_GPIO, 0);
     tsb_gpio_uninitialize();
+}
+
+static void ps_hold(void)
+{
+    tsb_gpio_initialize();
+    tsb_gpio_direction_out(NULL, PS_HOLD_GPIO, 1);
 }
 
 void lg4892_dsi_init(struct cdsi_dev *dev)
@@ -156,5 +165,6 @@ static void *display_fn(void *p_data)
 
 int display_init(void)
 {
+    ps_hold();
     return pthread_create(&g_display_thread, NULL, display_fn, NULL);
 }

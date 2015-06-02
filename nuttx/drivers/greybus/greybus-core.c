@@ -132,6 +132,7 @@ static bool gb_operation_has_timedout(struct gb_operation *operation)
 static void gb_process_response(struct gb_operation_hdr *hdr,
                                 struct gb_operation *operation)
 {
+    irqstate_t flags;
     struct list_head *iter, *iter_next;
     struct gb_operation *op;
     struct gb_operation_hdr *op_hdr;
@@ -146,7 +147,10 @@ static void gb_process_response(struct gb_operation_hdr *hdr,
 
         // Destroy all the operation that have timedout
         if (gb_operation_has_timedout(op)) {
+            flags = irqsave();
             list_del(iter);
+            irqrestore(flags);
+
             if (op->callback) {
                 timedout_hdr.id = op_hdr->id;
                 timedout_hdr.type = TYPE_RESPONSE_FLAG | op_hdr->type;
@@ -155,18 +159,21 @@ static void gb_process_response(struct gb_operation_hdr *hdr,
                 op->callback(operation);
                 op->response_buffer = NULL;
             }
-            gb_operation_destroy(op);
+            gb_operation_unref(op);
             continue;
         }
 
         if (hdr->id != op_hdr->id)
             continue;
 
+        flags = irqsave();
         list_del(iter);
+        irqrestore(flags);
+
         operation->request = op;
         if (op->callback)
             op->callback(operation);
-        gb_operation_destroy(op);
+        gb_operation_unref(op);
         break;
     }
 }
@@ -206,7 +213,6 @@ int greybus_rx_handler(unsigned int cport, void *data, size_t size)
     struct gb_operation *op;
     struct gb_operation_hdr *hdr = data;
     struct gb_operation_handler *op_handler;
-    int retval;
 
     if (cport >= CPORT_MAX || !data)
         return -EINVAL;
@@ -214,7 +220,7 @@ int greybus_rx_handler(unsigned int cport, void *data, size_t size)
     if (!g_cport[cport].driver || !g_cport[cport].driver->op_handlers)
         return 0;
 
-    if (sizeof(*hdr) > size || hdr->size > size)
+    if (sizeof(*hdr) > size || hdr->size > size || sizeof(*hdr) > hdr->size)
         return -EINVAL; /* Dropping garbage request */
 
     op_handler = find_operation_handler(hdr->type, cport);
@@ -223,15 +229,10 @@ int greybus_rx_handler(unsigned int cport, void *data, size_t size)
         return 0;
     }
 
-    op = gb_operation_create(cport, 0, 0);
+    op = gb_operation_create(cport, 0, hdr->size - sizeof(*hdr));
     if (!op)
         return -ENOMEM;
 
-    op->request_buffer = malloc(hdr->size);
-    if (!op->request_buffer) {
-        retval = -ENOMEM;
-        goto err_operation_destroy;
-    }
     memcpy(op->request_buffer, data, hdr->size);
 
     flags = irqsave(); // useless if IRQ's priorities are correct
@@ -240,11 +241,6 @@ int greybus_rx_handler(unsigned int cport, void *data, size_t size)
     irqrestore(flags);
 
     return 0;
-
-err_operation_destroy:
-    gb_operation_destroy(op);
-
-    return retval;
 }
 
 int gb_register_driver(unsigned int cport, struct gb_driver *driver)
@@ -320,6 +316,7 @@ int gb_operation_send_request(struct gb_operation *operation,
 {
     struct gb_operation_hdr *hdr = operation->request_buffer;
     int retval = 0;
+    irqstate_t flags;
 
     DEBUGASSERT(operation);
     DEBUGASSERT(transport_backend);
@@ -327,19 +324,26 @@ int gb_operation_send_request(struct gb_operation *operation,
 
     hdr->id = 0;
 
+    flags = irqsave();
+
     if (need_response) {
         hdr->id = atomic_inc(&request_id);
         if (hdr->id == 0) /* ID 0 is for request with no response */
             atomic_inc(&request_id);
         clock_gettime(CLOCK_REALTIME, &operation->time);
         operation->callback = callback;
+        gb_operation_ref(operation);
         list_add(&g_cport[operation->cport].tx_fifo, &operation->list);
     }
 
     retval = transport_backend->send(operation->cport,
                                      operation->request_buffer, hdr->size);
-    if (need_response && retval)
+    if (need_response && retval) {
         list_del(&operation->list);
+        gb_operation_unref(operation);
+    }
+
+    irqrestore(flags);
 
     return retval;
 }

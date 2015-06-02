@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2015 Google Inc.
+/**
+ * Copyright (c) 2014-2015 Google Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,38 +24,26 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * @brief TCA64XX GPIO Expander Driver
  */
 
-/*
- * @file    configs/ara/svc/src/tca6424.h
- * @brief   TCA6424 GPIO Expander Driver
- * @author  Patrick Titiano
- */
-
-#ifndef _TSB_TCA6424_H_
-#define _TSB_TCA6424_H_
+#ifndef _TSB_TCA64XX_H_
+#define _TSB_TCA64XX_H_
 
 #include <stdint.h>
-#include <nuttx/i2c.h>
 
-typedef struct
-{
-    struct i2c_dev_s *i2c_dev;  /* Nuttx I2C bus handler */
-    uint8_t addr;               /* I2C device address */
-} tca6424_device;
+typedef enum {
+    TCA6408_PART,
+    TCA6416_PART,
+    TCA6424_PART,
+} tca64xx_part;
 
+// Unused IO line for irq, reset.
+#define TCA64XX_IO_UNUSED   (1 << 31)
 
-tca6424_device *tca6424_init(struct i2c_dev_s *i2c_dev, uint8_t addr);
-
-int tca6424_set_direction_in(tca6424_device *dev, uint8_t which);
-int tca6424_set_direction_out(tca6424_device *dev, uint8_t which);
-int tca6424_get_direction(tca6424_device *dev, uint8_t which);
-int tca6424_set_polarity_inverted(tca6424_device *dev,
-                                  uint8_t which, uint8_t inverted);
-int tca6424_get_polarity_inverted(tca6424_device *dev, uint8_t which);
-int tca6424_set(tca6424_device *dev, uint8_t which, uint8_t val);
-int tca6424_get(tca6424_device *dev, uint8_t which);
-
-void tca6424_deinit(tca6424_device *dev);
+int tca64xx_init(void **driver_data, tca64xx_part part, struct i2c_dev_s *dev,
+                 uint8_t addr, uint32_t reset, uint32_t irq, int gpio_base);
+void tca64xx_deinit(void *driver_data);
 
 #endif

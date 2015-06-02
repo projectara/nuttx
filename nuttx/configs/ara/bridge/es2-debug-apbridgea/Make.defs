@@ -1,8 +1,7 @@
 ############################################################################
-# apps/examples/Makefile
+# configs/ara/bridge/es1-debug-apbridgea/Make.defs
 #
-#   Copyright (C) 2011-2014 Gregory Nutt. All rights reserved.
-#   Author: Gregory Nutt <gnutt@nuttx.org>
+#   Based on Gregory Nutt <gnutt@nuttx.org> Make.defs
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -59,59 +58,7 @@
 #
 ############################################################################
 
--include $(TOPDIR)/.config # Current configuration
-
-# Sub-directories
-
-SUBDIRS  = debug epm etm svc unipro lg
-SUBDIRS  += apbridge gpbridge
-SUBDIRS  += svc_power
-SUBDIRS  += pwm
-SUBDIRS  += gpio
-SUBDIRS  += bdbpm
-SUBDIRS  += springpm
-SUBDIRS  += pinshare
-
-# Sub-directories that might need context setup.  Directories may need
-# context setup for a variety of reasons, but the most common is because
-# the example may be built as an NSH built-in function.
-
-CNTXTDIRS = debug epm etm pwm svc unipro lg
-CNTXTDIRS += gpio
-CNTXTDIRS += pinshare
-
-ifeq ($(CONFIG_NSH_BUILTIN_APPS),y)
-CNTXTDIRS += debug epm etm pwm svc unipro lg
-CNTXTDIRS += gpio
-CNTXTDIRS += bdbpm
-CNTXTDIRS += springpm
-CNTXTDIRS += pinshare
-endif
-
-all: nothing
-
-.PHONY: nothing context depend clean distclean
-
-define SDIR_template
-$(1)_$(2):
-	$(Q) $(MAKE) -C $(1) $(2) TOPDIR="$(TOPDIR)" APPDIR="$(APPDIR)"
-endef
-
-$(foreach SDIR, $(CNTXTDIRS), $(eval $(call SDIR_template,$(SDIR),context)))
-$(foreach SDIR, $(SUBDIRS), $(eval $(call SDIR_template,$(SDIR),depend)))
-$(foreach SDIR, $(SUBDIRS), $(eval $(call SDIR_template,$(SDIR),clean)))
-$(foreach SDIR, $(SUBDIRS), $(eval $(call SDIR_template,$(SDIR),distclean)))
-
-nothing:
-
-install:
-
-context: $(foreach SDIR, $(CNTXTDIRS), $(SDIR)_context)
-
-depend: $(foreach SDIR, $(SUBDIRS), $(SDIR)_depend)
-
-clean: $(foreach SDIR, $(SUBDIRS), $(SDIR)_clean)
-
-distclean: $(foreach SDIR, $(SUBDIRS), $(SDIR)_distclean)
-
--include Make.dep
+include ${TOPDIR}/.config
+include ${TOPDIR}/tools/Config.mk
+include ${TOPDIR}/arch/arm/src/armv7-m/Toolchain.defs
+include $(TOPDIR)/configs/$(CONFIG_ARCH_BOARD)/tsb-makefile.common

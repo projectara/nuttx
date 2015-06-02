@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2014-2015 Google Inc.
+ * Copyright (c) 2015 Google Inc.
  * All rights reserved.
+ * Author: Eli Sennesh <esennesh@leaflabs.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -26,25 +27,25 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _GREYNUS_UTILS_UTILS_H_
-#define _GREYNUS_UTILS_UTILS_H_
+#ifndef __VIBRATOR_GB_H__
+#define __VIBRATOR_GB_H__
 
-#include <nuttx/greybus/greybus.h>
+#include <nuttx/greybus/types.h>
 
-#include <apps/greybus-utils/svc.h>
-#include <apps/greybus-utils/debug.h>
-#include <apps/greybus-utils/manifest.h>
+/* Greybus vibrator request types */
+#define GB_VIBRATOR_TYPE_INVALID             0x00
+#define GB_VIBRATOR_TYPE_PROTOCOL_VERSION    0x01
+#define GB_VIBRATOR_TYPE_VIBRATOR_ON         0x02
+#define GB_VIBRATOR_TYPE_VIBRATOR_OFF        0x03
 
-static inline int gb_packet_size(const char *rbuf)
-{
-   const struct gb_operation_hdr *hdr = (const struct gb_operation_hdr *)rbuf;
-   return hdr->size;
-}
-
-struct cport_msg {
-	__u8	cport;
-	__u8	data[0];
+/* version request has no payload */
+struct gb_vibrator_proto_version_response {
+    __u8 major;
+    __u8 minor;
 };
 
-#endif
+struct gb_vibrator_on_request {
+    __le16 timeout_ms;
+};
 
+#endif /* __VIBRATOR_GB_H__ */

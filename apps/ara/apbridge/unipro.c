@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2014-2015 Google Inc.
  * All rights reserved.
  *
@@ -24,26 +24,61 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * @brief TCA6408 GPIO Expander Driver
  */
 
-#ifndef _TSB_TCA6408_H_
-#define _TSB_TCA6408_H_
+#include <nuttx/config.h>
 
-#include <stdint.h>
+#include <errno.h>
+#include <arch/tsb/gpio.h>
+#include <arch/tsb/unipro.h>
+#include <nuttx/usb/apb_es1.h>
+#include <apps/greybus-utils/utils.h>
 
-int tca6408_reset(bool en);
-void tca6408_set_direction_in(uint8_t which);
-int tca6408_set_default_outputs(uint8_t dflt);
-void tca6408_set_direction_out(uint8_t which, uint8_t value);
-int tca6408_get_direction(uint8_t which);
-int tca6408_set_polarity_inverted(uint8_t which, uint8_t inverted);
-int tca6408_get_polarity_inverted(uint8_t which);
-void tca6408_set(uint8_t which, uint8_t val);
-uint8_t tca6408_get(uint8_t which);
+#include "apbridge_backend.h"
 
-void tca6408_init(struct i2c_dev_s *dev, uint8_t addr,
-                  uint8_t reset, uint8_t irq);
+/*
+ * TODO
+ * Already defined in tsb_unipro.c
+ * Move them to tsb_unipro.h
+ */
 
-#endif
+#define CPORTID_CDSI0    (16)
+#define CPORTID_CDSI1    (17)
+
+static int unipro_usb_to_unipro(unsigned int cportid, void *buf, size_t len)
+{
+    return unipro_send(cportid, buf, len);
+}
+
+static int unipro_usb_to_svc(void *buf, size_t len)
+{
+    return svc_handle(buf, len);
+}
+
+static struct unipro_driver unipro_driver = {
+    .name = "APBridge",
+    .rx_handler = recv_from_unipro,
+};
+
+static void unipro_backend_init(void)
+{
+    int i;
+
+    /* unipro_init() will initialize any non-display, non-camera CPorts */
+    unipro_init();
+
+    /* Now register a driver for those CPorts */
+    for (i = 0; i < CPORT_MAX; i++) {
+        /* These cports are already allocated for display and camera */
+        if (i == CPORTID_CDSI0 || i == CPORTID_CDSI1)
+            continue;
+        unipro_driver_register(&unipro_driver, i);
+    }
+}
+
+void apbridge_backend_register(struct apbridge_backend *apbridge_backend)
+{
+    apbridge_backend->usb_to_unipro = unipro_usb_to_unipro;
+    apbridge_backend->usb_to_svc = unipro_usb_to_svc;
+    apbridge_backend->init = unipro_backend_init;
+}

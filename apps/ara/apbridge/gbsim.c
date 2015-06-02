@@ -26,25 +26,68 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _GREYNUS_UTILS_UTILS_H_
-#define _GREYNUS_UTILS_UTILS_H_
+#include <nuttx/config.h>
 
-#include <nuttx/greybus/greybus.h>
+#include <stdio.h>
+#include <string.h>
+#include <nuttx/usb/apb_es1.h>
+#include <apps/greybus-utils/utils.h>
 
-#include <apps/greybus-utils/svc.h>
-#include <apps/greybus-utils/debug.h>
-#include <apps/greybus-utils/manifest.h>
+#include "apbridge_backend.h"
 
-static inline int gb_packet_size(const char *rbuf)
+#define IID_LENGTH 7
+
+static int gbsim_usb_to_unipro(unsigned int cportid, void *buf, size_t len)
 {
-   const struct gb_operation_hdr *hdr = (const struct gb_operation_hdr *)rbuf;
-   return hdr->size;
+    greybus_rx_handler(cportid, buf, len);
+    return len;
 }
 
-struct cport_msg {
-	__u8	cport;
-	__u8	data[0];
+static int gbsim_usb_to_svc(void *buf, size_t len)
+{
+    return svc_handle(buf, len);
+}
+
+static void init(void)
+{
+}
+
+static int listen(unsigned int cport)
+{
+    return 0;
+}
+
+static int gbsim_recv_from_unipro(unsigned int cportid,
+                                  const void *buf, size_t len)
+{
+    return recv_from_unipro(cportid, (void *)buf, len);
+}
+
+struct gb_transport_backend gb_unipro_backend = {
+    .init = init,
+    .listen = listen,
+    .send = gbsim_recv_from_unipro,
 };
 
-#endif
+static void manifest_enable(unsigned char *manifest_file, int manifest_number)
+{
+    char iid[IID_LENGTH];
 
+    snprintf(iid, IID_LENGTH, "IID-%d", manifest_number + 1);
+    enable_manifest(iid, NULL);
+}
+
+
+void gbsim_backend_init(void)
+{
+    gb_init(&gb_unipro_backend);
+    foreach_manifest(manifest_enable);
+    enable_cports();
+}
+
+void apbridge_backend_register(struct apbridge_backend *apbridge_backend)
+{
+    apbridge_backend->usb_to_unipro = gbsim_usb_to_unipro;
+    apbridge_backend->usb_to_svc = gbsim_usb_to_svc;
+    apbridge_backend->init = gbsim_backend_init;
+}

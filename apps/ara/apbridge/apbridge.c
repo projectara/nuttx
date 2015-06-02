@@ -36,119 +36,123 @@
 #include <nuttx/usb/apb_es1.h>
 #include <apps/greybus-utils/utils.h>
 #include <apps/nsh.h>
+#include <arch/tsb/gpio.h>
+
+#ifdef CONFIG_BOARD_HAVE_DISPLAY
+#include <arch/board/dsi.h>
+#endif
+
+#include "apbridge_backend.h"
 
 #define IID_LENGTH 7
 
 static struct apbridge_dev_s *g_usbdev = NULL;
 static pthread_t g_svc_thread;
+static struct apbridge_backend apbridge_backend;
 
-static int usb_to_unipro(struct apbridge_dev_s *dev, void *payload, size_t size)
+static int usb_to_unipro(struct apbridge_dev_s *dev, void *buf, size_t len)
 {
-  struct cport_msg *cmsg = (struct cport_msg *)payload;
+    struct gb_operation_hdr *hdr = buf;
+    unsigned int cportid;
 
-  gb_dump(cmsg->data, size - 1);
+    gb_dump(buf, len);
 
-  greybus_rx_handler(cmsg->cport, cmsg->data, size - 1);
-  return size;
+    if (len < sizeof(*hdr))
+        return -EPROTO;
+
+    /*
+     * Retreive and clear the cport id stored in the header pad bytes.
+     */
+    cportid = hdr->pad[1] << 8 | hdr->pad[0];
+    hdr->pad[0] = 0;
+    hdr->pad[1] = 0;
+
+    return apbridge_backend.usb_to_unipro(cportid, buf, len);
 }
 
-static int usb_to_svc(struct apbridge_dev_s *dev, void *payload, size_t size)
+static int usb_to_svc(struct apbridge_dev_s *dev, void *buf, size_t len)
 {
-  gb_dump(payload, size);
+    gb_dump(buf, len);
 
-  return svc_handle(payload, size);
+    return apbridge_backend.usb_to_svc(buf, len);
 }
 
-static int recv_from_svc(void *buf, size_t length)
+static int recv_from_svc(void *buf, size_t len)
 {
-  gb_dump(buf, length);
+    gb_dump(buf, len);
 
-  return svc_to_usb(g_usbdev, buf, length);
+    return svc_to_usb(g_usbdev, buf, len);
 }
 
-static int recv_from_unipro(unsigned int cportid, const void *buf, size_t len)
+int recv_from_unipro(unsigned int cportid, void *buf, size_t len)
 {
-  int ret = -ENODEV;
-  struct cport_msg *cmsg;
+    struct gb_operation_hdr *hdr = (void *)buf;
 
-  cmsg = malloc(len + 1);
-  if (!cmsg)
-      return -ENOMEM;
+    /*
+     * FIXME: Remove when UniPro driver provides the actual buffer length.
+     */
+    len = gb_packet_size(buf);
 
-  cmsg->cport = cportid;
-  memcpy(cmsg->data, buf, len);
+    gb_dump(buf, len);
 
-  gb_dump(cmsg->data, len);
+    /* Store the cport id in the header pad bytes (if we have a header). */
+    if (len >= sizeof(*hdr)) {
+        hdr->pad[0] = cportid & 0xff;
+        hdr->pad[1] = (cportid >> 8) & 0xff;
+    }
 
-  if (g_usbdev)
-    ret = unipro_to_usb(g_usbdev, cmsg, len + 1);
-  free(cmsg);
-  return ret;
+    return unipro_to_usb(g_usbdev, buf, len);
 }
 
 static void manifest_event(unsigned char *manifest_file, int manifest_number)
 {
-  char iid[IID_LENGTH];
+    char iid[IID_LENGTH];
 
-  snprintf(iid, IID_LENGTH, "IID-%d", manifest_number + 1);
-  send_svc_event(0, iid, manifest_file);
+    snprintf(iid, IID_LENGTH, "IID-%d", manifest_number + 1);
+    send_svc_event(0, iid, manifest_file);
 }
 
-static void *svc_sim_fn(void * p_data)
+static void *svc_sim_fn(void *p_data)
 {
-  struct apbridge_dev_s *priv;
+    struct apbridge_dev_s *priv = p_data;
 
-  priv = (struct apbridge_dev_s *)p_data;
+    usb_wait(priv);
+    apbridge_backend.init();
+    send_svc_handshake();
+    send_ap_id(0);
 
-  usb_wait(priv);
-  send_svc_handshake();
-  send_ap_id(0);
-  foreach_manifest(manifest_event);
-  enable_cports();
+    foreach_manifest(manifest_event);
 
-  return NULL;
+    return NULL;
 }
 
 static int svc_sim_init(struct apbridge_dev_s *priv)
 {
-  int ret;
+    int ret;
 
-  g_usbdev = priv;
-  ret = pthread_create (&g_svc_thread, NULL, svc_sim_fn,
-                        (pthread_addr_t)priv);
-  return ret;
+    g_usbdev = priv;
+    ret = pthread_create(&g_svc_thread, NULL, svc_sim_fn,
+                         (pthread_addr_t)priv);
+    return ret;
 }
 
 static struct apbridge_usb_driver usb_driver = {
-  .usb_to_unipro = usb_to_unipro,
-  .usb_to_svc = usb_to_svc,
-  .init = svc_sim_init,
-};
-
-static void init(void)
-{
-}
-
-static int listen(unsigned int cport)
-{
-  return 0;
-}
-
-struct gb_transport_backend gb_unipro_backend = {
-    .init = init,
-    .listen = listen,
-    .send = recv_from_unipro,
+    .usb_to_unipro = usb_to_unipro,
+    .usb_to_svc = usb_to_svc,
+    .init = svc_sim_init,
 };
 
 int bridge_main(int argc, char *argv[])
 {
+    tsb_gpio_register(NULL);
+#ifdef CONFIG_BOARD_HAVE_DISPLAY
+    display_init();
+#endif
+
     svc_register(recv_from_svc);
-
-    gb_init(&gb_unipro_backend);
-
+    apbridge_backend_register(&apbridge_backend);
     usbdev_apbinitialize(&usb_driver);
 
-    /* Nothing else to do since usb gadget and greybus handle everything */
 #ifdef CONFIG_EXAMPLES_NSH
     printf("Calling NSH\n");
     return nsh_main(argc, argv);

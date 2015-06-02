@@ -4,8 +4,11 @@
 #
 
 config APBRIDGE
-	bool "APBridge FW without UniPro layer"
+	bool "APBridge FW"
 	select GREYBUS_UTILS
-	select DISABLE_UNIPRO
 	default n
 
+config APBRIDGE_GBSIM
+	bool "Enable GBSIM mode"
+	depends on APBRIDGE
+	default n

@@ -34,7 +34,6 @@
 #include "svc_msg.h"
 #include "greybus_manifest.h"
 
-int verbose;
 static int state = GBEMU_IDLE;
 static sem_t svc_lock;
 
@@ -62,15 +61,16 @@ void send_hot_plug(char *hpe, int iid)
     struct svc_msg *msg = (struct svc_msg *)hpe;
     struct greybus_manifest_header *mh =
         (struct greybus_manifest_header *)(hpe + HP_BASE_SIZE);
+    size_t manifest_size = le16toh(mh->size);
 
     msg->header.function_id = SVC_FUNCTION_HOTPLUG;
     msg->header.message_type = SVC_MSG_DATA;
-    msg->header.payload_length = mh->size + 2;
+    msg->header.payload_length = htole16(manifest_size + 2);
     msg->hotplug.hotplug_event = SVC_HOTPLUG_EVENT;
     msg->hotplug.interface_id = iid;
 
     /* Write out hotplug message with manifest payload */
-    svc_int_write(hpe, HP_BASE_SIZE + mh->size);
+    svc_int_write(hpe, HP_BASE_SIZE + manifest_size);
 
     gb_debug("SVC->AP hotplug event (plug) sent\n");
 }
@@ -81,7 +81,7 @@ void send_hot_unplug(int iid)
 
     msg.header.function_id = SVC_FUNCTION_HOTPLUG;
     msg.header.message_type = SVC_MSG_DATA;
-    msg.header.payload_length = 2;
+    msg.header.payload_length = htole16(2);
     msg.hotplug.hotplug_event = SVC_HOTUNPLUG_EVENT;
     msg.hotplug.interface_id = iid;
 
@@ -166,12 +166,13 @@ static int get_interface_id(char *fname)
 void send_svc_event(int type, char *name, void *priv)
 {
     char *hpe;
+    int iid;
 
     hpe = get_manifest_blob(priv);
     if (type == 0) {
         if (hpe) {
             parse_manifest_blob(hpe);
-            int iid = get_interface_id(name);
+            iid = get_interface_id(name);
             if (iid > 0) {
                 gb_info("%s interface detected\n", name);
                 send_hot_plug(hpe, iid);
@@ -185,7 +186,7 @@ void send_svc_event(int type, char *name, void *priv)
         } else
             gb_error("missing manifest blob, no hotplug event sent\n");
     } else if (type == 1) {
-        int iid = get_interface_id(name);
+        iid = get_interface_id(name);
         if (iid > 0) {
             manifest_release(hpe);
             send_hot_unplug(iid);

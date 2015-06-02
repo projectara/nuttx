@@ -219,9 +219,11 @@ enum ctrlreq_state {
 
 /* Request helpers *********************************************************/
 
-static int usbclass_allocreq_buf(struct usbdev_req_s *req,
+static int usbclass_allocreq_buf(struct usbdev_ep_s *ep,
+                                 struct usbdev_req_s *req,
                                  uint16_t len);
-static void usbclass_freereq_buf(struct usbdev_req_s *req);
+static void usbclass_freereq_buf(struct usbdev_ep_s *ep,
+                                 struct usbdev_req_s *req);
 static struct usbdev_req_s *usbclass_allocreq(struct usbdev_ep_s *ep,
                                               uint16_t len);
 static void usbclass_freereq(struct usbdev_ep_s *ep,
@@ -419,7 +421,7 @@ static void put_request(struct list_head *list, struct usbdev_req_s *req)
 }
 
 static int _to_usb(struct apbridge_dev_s *priv, uint8_t epno,
-                   void *payload, size_t len)
+                   const void *payload, size_t len)
 {
     int ret;
 
@@ -457,7 +459,8 @@ static int _to_usb(struct apbridge_dev_s *priv, uint8_t epno,
  * @return 0 in success or -EINVAL if len is too big
  */
 
-int unipro_to_usb(struct apbridge_dev_s *priv, void *payload, size_t len)
+int unipro_to_usb(struct apbridge_dev_s *priv, const void *payload,
+                  size_t len)
 {
     if (len > APBRIDGE_REQ_SIZE)
         return -EINVAL;
@@ -473,7 +476,7 @@ int unipro_to_usb(struct apbridge_dev_s *priv, void *payload, size_t len)
  * @return 0 in success or -EINVAL if len is too big
  */
 
-int svc_to_usb(struct apbridge_dev_s *priv, void *payload, size_t len)
+int svc_to_usb(struct apbridge_dev_s *priv, const void *payload, size_t len)
 {
     if (len > APBRIDGE_EPINTIN_MXPACKET)
         return -EINVAL;
@@ -493,7 +496,9 @@ int svc_to_usb(struct apbridge_dev_s *priv, void *payload, size_t len)
  *
  ****************************************************************************/
 
-static int usbclass_allocreq_buf(struct usbdev_req_s *req, uint16_t len)
+static int usbclass_allocreq_buf(struct usbdev_ep_s *ep,
+                                 struct usbdev_req_s *req,
+                                 uint16_t len)
 {
     req->len = len;
     req->buf = EP_ALLOCBUFFER(ep, len);
@@ -521,7 +526,7 @@ static struct usbdev_req_s *usbclass_allocreq(struct usbdev_ep_s *ep,
             req->len = 0;
             req->buf = NULL;
         } else {
-            if (usbclass_allocreq_buf(req, len)) {
+            if (usbclass_allocreq_buf(ep, req, len)) {
                 EP_FREEREQ(ep, req);
                 req = NULL;
             }
@@ -538,7 +543,8 @@ static struct usbdev_req_s *usbclass_allocreq(struct usbdev_ep_s *ep,
  *
  ****************************************************************************/
 
-static void usbclass_freereq_buf(struct usbdev_req_s *req)
+static void usbclass_freereq_buf(struct usbdev_ep_s *ep,
+                                 struct usbdev_req_s *req)
 {
     if (req->buf != NULL) {
         EP_FREEBUFFER(ep, req->buf);
@@ -559,7 +565,7 @@ static void usbclass_freereq_buf(struct usbdev_req_s *req)
 static void usbclass_freereq(struct usbdev_ep_s *ep, struct usbdev_req_s *req)
 {
     if (ep != NULL && req != NULL) {
-        usbclass_freereq_buf(req);
+        usbclass_freereq_buf(ep, req);
         EP_FREEREQ(ep, req);
     }
 }

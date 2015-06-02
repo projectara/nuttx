@@ -15,7 +15,11 @@ echo "Project Ara firmware image builder"
 
 USAGE="
 
-USAGE: ${0} <board-name> <config-name>
+USAGE:
+    (1) rebuild specific image config
+        ${0} <board-name> <config-name>
+    (2) rebuild all image configs under configs/ara|bdb|endo
+        ${0} all
 
 Where:
   <board-name> is the name of the board in the configs directory
@@ -23,17 +27,22 @@ Where:
 
 "
 
+buildall=0
+
+# check for "all" parameter
+if [ "$1" = "all" ] ; then
+  echo "Building all configurations"
+  buildall=1
 # validate parameters for board & image are present
-if [ "$#" -ne 2 ] ; then
+elif  [ "$#" -ne 2 ] ; then
   echo "Required parameters not specified."
   echo "$USAGE"
   exit $ARA_BUILD_CONFIG_ERR_BAD_PARAMS
+#capture parameters for board  & image
+else
+  board=$1
+  image=$2
 fi
-
-board=$1
-image=$2
-
-ARA_MAKE_BUILD_NAME_UNIQUE=0
 
 # determine NuttX top level folder absolute path
 TOPDIR="`dirname \"$0\"`"  # relative
@@ -45,92 +54,64 @@ if [ -z "$TOPDIR" ] ; then
   exit $ARA_BUILD_CONFIG_ERR_NO_NUTTX_TOPDIR
 fi
 
-# set path to image config
-configpath=${TOPDIR}/configs/${board}/${image}
-if [ ! -d "${configpath}" ]; then
-  echo "Build config '${configpath}' does not exist"
-  exit $ARA_BUILD_CONFIG_ERR_CONFIG_NOT_FOUND
-fi
+build_image_from_defconfig() {
+  # configpath, defconfigFile, buildname, buildbase
+  # must be defined on entry
 
-# set build output path
-buildbase="`( cd \"$TOPDIR/..\" && pwd )`/build"
+  echo "Build config file   : $defconfigFile"
+  echo "Build name          : '$buildname'"
 
-# create build name from config
-# substitute "-" for "/"
-board=$(echo "$board" | sed -e "s#/#-#")
-image=$(echo "$image" | sed -e "s#/#-#")
+  # define paths used during build process
+  ARA_BUILD_CONFIG_PATH="$buildbase/$buildname/config"
+  ARA_BUILD_IMAGE_PATH="$buildbase/$buildname/image"
+  ARA_BUILD_TOPDIR="$buildbase/$buildname"
 
-buildname=${board}-${image}
-# uniquify build name with time stamp
-if [ $ARA_MAKE_BUILD_NAME_UNIQUE == 1 ]; then
-  buildname=${buildname}-`date +"%Y%m%d-%H%M%S"`
-fi
+  echo "Build output folder : $ARA_BUILD_TOPDIR"
+  echo "Image output folder : $ARA_BUILD_IMAGE_PATH"
 
-# full path to defconfig file
-defconfigFile="${configpath}/defconfig"
+  # delete build tree if it already exists
+  if [ -d $ARA_BUILD_TOPDIR ] ; then
+    rm -rf $ARA_BUILD_TOPDIR
+  fi
 
-echo "Build config file   : $defconfigFile"
-echo "Build name          : '$buildname'"
+  # create folder structure in build output tree
+  mkdir -p "$ARA_BUILD_CONFIG_PATH"
+  mkdir -p "$ARA_BUILD_IMAGE_PATH"
+  mkdir -p "$ARA_BUILD_TOPDIR"
 
-# define paths used during build process
-ARA_BUILD_CONFIG_PATH="$buildbase/$buildname/config"
-ARA_BUILD_IMAGE_PATH="$buildbase/$buildname/image"
-ARA_BUILD_TOPDIR="$buildbase/$buildname"
+  # Copy nuttx tree to build tree
+  cp -r $TOPDIR/../nuttx $ARA_BUILD_TOPDIR/nuttx
+  cp -r $TOPDIR/../apps $ARA_BUILD_TOPDIR/apps
+  cp -r $TOPDIR/../misc $ARA_BUILD_TOPDIR/misc
+  cp -r $TOPDIR/../NxWidgets $ARA_BUILD_TOPDIR/NxWidgets
 
-echo "Build output folder : $ARA_BUILD_TOPDIR"
-echo "Image output folder : $ARA_BUILD_IMAGE_PATH"
+  # copy Make.defs to build output tree
+  if ! install -m 644 -p ${configpath}/Make.defs ${ARA_BUILD_TOPDIR}/nuttx/Make.defs  >/dev/null 2>&1; then
+      echo "Warning: Failed to copy Make.defs"
+  fi
 
-# delete build tree if it already exists
-if [ -d $ARA_BUILD_TOPDIR ] ; then
-   rm -rf $ARA_BUILD_TOPDIR
-fi
+  # copy setenv.sh to build output tree
+  if  install -p ${configpath}/setenv.sh ${ARA_BUILD_TOPDIR}/nuttx/setenv.sh >/dev/null 2>&1; then
+  chmod 755 "${ARA_BUILD_TOPDIR}/nuttx/setenv.sh"
+  fi
 
-# create folder structure in build output tree
-mkdir -p "$ARA_BUILD_CONFIG_PATH"
-mkdir -p "$ARA_BUILD_IMAGE_PATH"
-mkdir -p "$ARA_BUILD_TOPDIR"
+  # copy defconfig to build output tree
+  if ! install -m 644 -p ${defconfigFile} ${ARA_BUILD_TOPDIR}/nuttx/.config ; then
+      echo "ERROR: Failed to copy defconfig"
+      exit $ARA_BUILD_CONFIG_ERR_CONFIG_COPY_FAILED
+  fi
 
-# Copy nuttx tree to build tree
-cp -r ./nuttx $ARA_BUILD_TOPDIR/nuttx
-cp -r ./apps $ARA_BUILD_TOPDIR/apps
-cp -r ./misc $ARA_BUILD_TOPDIR/misc
-cp -r ./NxWidgets $ARA_BUILD_TOPDIR/NxWidgets
+  # save config files
+  cp ${ARA_BUILD_TOPDIR}/nuttx/.config   ${ARA_BUILD_CONFIG_PATH}/.config > /dev/null 2>&1
+  cp ${ARA_BUILD_TOPDIR}/nuttx/Make.defs ${ARA_BUILD_CONFIG_PATH}/Make.defs > /dev/null 2>&1
+  cp ${ARA_BUILD_TOPDIR}/nuttx/setenv.sh  ${ARA_BUILD_CONFIG_PATH}/setenv.sh > /dev/null 2>&1
 
-# copy Make.defs to build output tree
-if ! install -m 644 -p ${configpath}/Make.defs ${ARA_BUILD_TOPDIR}/nuttx/Make.defs ; then
-    echo "Warning: Failed to copy Make.defs"
-#    exit $ARA_BUILD_CONFIG_ERR_CONFIG_COPY_FAILED
-fi
-
-# copy setenv.sh to build output tree
-if  install -p ${configpath}/setenv.sh ${ARA_BUILD_TOPDIR}/nuttx/setenv.sh ; then
- chmod 755 "${ARA_BUILD_TOPDIR}/nuttx/setenv.sh"
-fi
-
-# copy defconfig to build output tree
-if ! install -m 644 -p ${defconfigFile} ${ARA_BUILD_TOPDIR}/nuttx/.config ; then
-    echo "ERROR: Failed to copy defconfig"
-    exit $ARA_BUILD_CONFIG_ERR_CONFIG_COPY_FAILED
-fi
-
-# save config files
-cp ${ARA_BUILD_TOPDIR}/nuttx/.config   ${ARA_BUILD_CONFIG_PATH}/.config > /dev/null 2>&1
-cp ${ARA_BUILD_TOPDIR}/nuttx/Make.defs ${ARA_BUILD_CONFIG_PATH}/Make.defs > /dev/null 2>&1
-cp ${ARA_BUILD_TOPDIR}/nuttx/setenv.sh  ${ARA_BUILD_CONFIG_PATH}/setenv.sh > /dev/null 2>&1 
-
-#echo "Build configured"
-MAKE_RESULT=1
-
-build_image() {
   echo -n "Building '$buildname'" ...
   pushd $ARA_BUILD_TOPDIR/nuttx > /dev/null
   make --always-make -r -f Makefile.unix | tee $ARA_BUILD_TOPDIR/build.log 2>&1
 
-  if [ $? -eq 0 ] ; then
-    MAKE_RESULT=1
-  else
-    MAKE_RESULT=0
-  fi
+  MAKE_RESULT=${PIPESTATUS[0]}
+
   popd > /dev/null
 }
 
@@ -153,16 +134,73 @@ copy_image_files() {
     cp $ARA_BUILD_TOPDIR/nuttx/$fn $ARA_BUILD_TOPDIR/image/$fn  >/dev/null 2>&1
     rm -f $ARA_BUILD_TOPDIR/nuttx/$fn >/dev/null 2>&1
   done
+  # if bridge image (i.e. *not* an svc image)
+  # expand image to 2M using truncate utility
+  # for more info, run "truncate --help"
+  if [ -z $(echo $buildname | grep "svc")  ] ; then
+    truncate -s 2M $ARA_BUILD_TOPDIR/image/nuttx.bin
+  fi
 }
 
-build_image
+# set build output path
+buildbase="`( cd \"$TOPDIR/..\" && pwd )`/build"
 
-if [ $MAKE_RESULT -eq 0 ] ; then
-  echo "Build failed"
+if [ $buildall -eq 1 ] ; then
+  # build list of defconfigs
+  defconfig_list=$(find $TOPDIR/configs/bdb -iname defconfig)
+  defconfig_list+=" "
+  defconfig_list+=$(find $TOPDIR/configs/ara  -iname defconfig)
+  defconfig_list+=" "
+  defconfig_list+=$(find $TOPDIR/configs/endo  -iname defconfig)
+  # process list of defconfigs
+  for cfg in $defconfig_list; do
+    # save full path to defconfig
+    defconfigFile=${cfg}
+    # get abs path to defconfig
+    configpath=$(readlink -f $(dirname "$cfg"))
+    #create build name
+    buildname=$(readlink -f $(dirname "$cfg"))
+    #strip abs path
+    buildname=$(echo "$buildname" | sed -e "s:^$TOPDIR/configs/::")
+    # repl slash with dash
+    buildname=$(echo "$buildname" | sed -e "s#/#-#g")
+    # build the image
+    build_image_from_defconfig
+    # check build result
+    if [ $MAKE_RESULT -ne 0 ] ; then
+      echo "Build '$buildname' failed"
+      exit 1
+    fi
+    echo "Build '$buildname' succeeded"
+    copy_image_files
+    clean_build
+  done
+  echo "Build all configurations succeeded"
+  exit 0
+fi
+
+# build from board+image params
+
+# set path to image config
+configpath=${TOPDIR}/configs/${board}/${image}
+if [ ! -d "${configpath}" ]; then
+  echo "Build config '${configpath}' does not exist"
+  exit $ARA_BUILD_CONFIG_ERR_CONFIG_NOT_FOUND
+fi
+# create build name from config
+# substitute "-" for "/"
+board=$(echo "$board" | sed -e "s#/#-#")
+image=$(echo "$image" | sed -e "s#/#-#")
+buildname=${board}-${image}
+# full path to defconfig file
+defconfigFile="${configpath}/defconfig"
+build_image_from_defconfig
+if [ $MAKE_RESULT -ne 0 ] ; then
+  echo "Build '$buildname' failed"
   exit 1
 fi
 
-echo "Build succeeded"
+echo "Build '$buildname' succeeded"
 copy_image_files
 clean_build
 echo "Build complete"
