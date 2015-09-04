@@ -395,11 +395,6 @@ void usb_wait(struct apbridge_dev_s *priv)
     sem_wait(&priv->config_sem);
 }
 
-static unsigned int get_cportid(const struct gb_operation_hdr *hdr)
-{
-    return hdr->pad[0];
-}
-
 static int apbridge_queue(struct apbridge_dev_s *priv, struct usbdev_ep_s *ep,
                           const void *payload, size_t len, void *data)
 {
@@ -440,21 +435,48 @@ static struct apbridge_msg_s *apbridge_dequeue(struct apbridge_dev_s *priv)
     return list_entry(list, struct apbridge_msg_s, list);
 }
 
+void set_cport_id(struct usbdev_ep_s *ep, struct usbdev_req_s *req,
+                  unsigned int cportid)
+{
+    struct gb_operation_hdr *hdr;
+    uint8_t epno = USB_EPNO(ep->eplog);
+
+    if (epno == CONFIG_APBRIDGE_EPBULKIN) {
+        hdr = (struct gb_operation_hdr *)req->buf;
+        hdr->pad[0] = cportid & 0xff;
+    }
+}
+
+unsigned int get_cport_id(struct apbridge_dev_s *priv,
+                          struct usbdev_ep_s *ep, struct usbdev_req_s *req)
+{
+    struct gb_operation_hdr *hdr;
+    unsigned int cportid;
+    uint8_t epno = USB_EPNO(ep->eplog);
+
+    if (epno == CONFIG_APBRIDGE_EPBULKOUT) {
+        hdr = (struct gb_operation_hdr *)req->buf;
+        cportid = hdr->pad[0];
+    } else {
+        cportid = priv->epout_to_cport_n[BULKEP_TO_N(ep)];
+    }
+    return cportid;
+}
+
 static int _to_usb_submit(struct usbdev_ep_s *ep, struct usbdev_req_s *req,
-                          const void *payload, size_t len)
+                          unsigned int cportid, const void *payload,
+                          size_t len)
 {
     struct gb_operation_hdr *gbhdr;
     struct apbridge_dev_s *priv;
     int ret;
-    unsigned int cportid;
 
     priv = ep->priv;
     req->len = len;
     req->flags = USBDEV_REQFLAGS_NULLPKT;
 
-    cportid = get_cportid(payload);
-
     req->buf = (void*) payload;
+    set_cport_id(ep, req, cportid);
 
     gbhdr = (struct gb_operation_hdr *)req->buf;
     gb_timestamp_tag_exit_time(&priv->ts[cportid], cportid);
@@ -490,13 +512,9 @@ int unipro_to_usb(struct apbridge_dev_s *priv, unsigned int cportid,
     uint8_t epno;
     struct usbdev_ep_s *ep;
     struct usbdev_req_s *req;
-    struct gb_operation_hdr *hdr = (void *)payload;
 
     if (len > APBRIDGE_REQ_SIZE)
         return -EINVAL;
-
-    /* Store the cport id in the header pad bytes. */
-    hdr->pad[0] = cportid & 0xff;
 
     epno = priv->cport_to_epin_n[cportid];
     ep = priv->ep[epno & USB_EPNO_MASK];
@@ -506,7 +524,7 @@ int unipro_to_usb(struct apbridge_dev_s *priv, unsigned int cportid,
         return apbridge_queue(priv, ep, payload, len, (void*) cportid);
     }
 
-    return _to_usb_submit(ep, req, payload, len);
+    return _to_usb_submit(ep, req, cportid, payload, len);
 }
 
 int usb_release_buffer(struct apbridge_dev_s *priv, const void *buf)
@@ -733,8 +751,6 @@ static void usbclass_rdcomplete(struct usbdev_ep_s *ep,
 {
     struct apbridge_dev_s *priv;
     struct apbridge_usb_driver *drv;
-    struct gb_operation_hdr *hdr;
-    int ep_n;
     unsigned int cportid;
 
     /* Sanity check */
@@ -756,21 +772,7 @@ static void usbclass_rdcomplete(struct usbdev_ep_s *ep,
     switch (req->result) {
     case OK:                    /* Normal completion */
         usbtrace(TRACE_CLASSRDCOMPLETE, 0);
-        ep_n = BULKEP_TO_N(ep);
-        hdr = (struct gb_operation_hdr *)req->buf;
-        /* Legacy ep: copy from payload cportid */
-
-        if (ep_n != 0) {
-            cportid = priv->epout_to_cport_n[ep_n];
-            hdr->pad[0] = cportid & 0xff;
-        }
-
-        /*
-         * Retreive and clear the cport id stored in the header pad bytes.
-         */
-        cportid = hdr->pad[0];
-        hdr->pad[0] = 0;
-
+        cportid = get_cport_id(priv, ep, req);
         usbdclass_log_rx_time(priv, cportid);
         drv->usb_to_unipro(priv, cportid, req->buf , req->xfrd);
         break;
@@ -806,7 +808,8 @@ static void usbclass_wrcomplete(struct usbdev_ep_s *ep,
     info = apbridge_dequeue(priv);
     if (info) {
         request_set_priv(req, info->priv);
-        _to_usb_submit(info->ep, req, info->buf, info->len);
+        _to_usb_submit(info->ep, req,
+                       (unsigned int)info->priv, info->buf, info->len);
         free(info);
     } else {
         put_request(req);
