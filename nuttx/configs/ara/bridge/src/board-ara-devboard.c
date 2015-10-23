@@ -70,6 +70,10 @@
 #include <nuttx/device_audio_board.h>
 #endif
 
+#ifdef CONFIG_ARCH_CHIP_DEVICE_CODEC_RT5647
+#include <nuttx/device_codec.h>
+#endif
+
 #ifdef CONFIG_APBRIDGEA
 /* must pull up or drive high on SDB APBridgeA to bring Helium out of reset */
 #define HELIUM_EXT_NRST_BTN_GPIO 0
@@ -209,6 +213,14 @@ static struct device devices[] = {
         .init_data      = &audio_board_init_data_info,
     },
 #endif
+#ifdef CONFIG_ARCH_CHIP_DEVICE_CODEC_RT5647
+    {
+        .type           = DEVICE_TYPE_CODEC_HW,
+        .name           = "rt5647",
+        .desc           = "ALC5647 Audio Codec driver",
+        .id             = 0,
+    },
+#endif
 };
 
 static struct device_table bdb_device_table = {
@@ -245,6 +257,10 @@ static void bdb_driver_register(void)
 #ifdef CONFIG_BOARD_HAVE_AUDIO
     extern struct device_driver audio_board_driver;
     device_register_driver(&audio_board_driver);
+#endif
+#ifdef CONFIG_ARCH_CHIP_DEVICE_CODEC_RT5647
+    extern struct device_driver rt5647_audcodec;
+    device_register_driver(&rt5647_audcodec);
 #endif
 }
 #endif
