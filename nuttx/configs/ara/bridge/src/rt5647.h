@@ -45,4 +45,13 @@
 
 #define EN_I2S1                         BIT(15)
 
+#define RT5647_FORMATS (GB_AUDIO_PCM_FMT_S8 | GB_AUDIO_PCM_FMT_S16_LE | \
+                       GB_AUDIO_PCM_FMT_S24_LE)
+
+#define RT5647_STEREO_RATES (GB_AUDIO_PCM_RATE_8000 | GB_AUDIO_PCM_RATE_11025 |\
+                            GB_AUDIO_PCM_RATE_16000 | GB_AUDIO_PCM_RATE_22050 |\
+                            GB_AUDIO_PCM_RATE_32000 | GB_AUDIO_PCM_RATE_44100 |\
+                            GB_AUDIO_PCM_RATE_48000 | GB_AUDIO_PCM_RATE_64000 |\
+                            GB_AUDIO_PCM_RATE_88200 | GB_AUDIO_PCM_RATE_96000 |\
+                            GB_AUDIO_PCM_RATE_176400 | GB_AUDIO_PCM_RATE_192000)
 #endif /* _RT5647_H_ */
