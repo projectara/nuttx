@@ -58,10 +58,30 @@ struct rt5647_info {
     struct gb_audio_widget *widgets;
     int num_widgets;
     struct gb_audio_route *routes;
+    int num_routes;
 };
 
 struct rt5647_reg rt5647_init_regs[] = {
     // {xxxx, xxxx},
+};
+
+struct gb_audio_dai rt5647_dai = {
+    .name = "rt5647-aif1",
+    .cport = 0,
+    .capture = {
+        .stream_name = "AIF1 Capture",
+        .formats = RT5647_FORMATS,
+        .rates = RT5647_STEREO_RATES,
+        .chan_min = 1,
+        .chan_max = 2,
+    },
+    .playback = {
+        .stream_name = "AIF1 Playback",
+        .formats = RT5647_FORMATS,
+        .rates = RT5647_STEREO_RATES,
+        .chan_min = 1,
+        .chan_max = 2,
+    },
 };
 
 struct gb_audio_control rt5647_controls[] = {
@@ -80,6 +100,10 @@ struct gb_audio_widget rt5647_widgets[] = {
         "I2S1", 0, GB_AUDIO_WIDGET_TYPE_SUPPLY, GB_AUDIO_WIDGET_STATE_DISABLED,
         EN_I2S1,
     },
+};
+
+struct gb_audio_route rt5647_routes[] = {
+    // { src, dest, control },
 };
 
 /* TODO: copy from Linux source code temporarily,
@@ -235,12 +259,60 @@ static int audcodec_read_value(struct bitctl *ctl, uint32_t *value)
 
 static int rt5647_get_topology_size(struct device *dev, uint16_t *size)
 {
+    struct rt5647_info *info = NULL;
+    int tpg_size = 0;
+
+    if (!dev || !device_get_private(dev) || !size) {
+        return -EINVAL;
+    }
+    info = device_get_private(dev);
+
+    tpg_size = sizeof(struct gb_audio_topology);
+    tpg_size += sizeof(struct gb_audio_dai);
+    tpg_size += info->num_controls * sizeof(struct gb_audio_control);
+    tpg_size += info->num_widgets * sizeof(struct gb_audio_widget);
+    tpg_size += info->num_routes * sizeof(struct gb_audio_route);
+
+    *size = tpg_size;
     return 0;
 }
 
 static int rt5647_get_topology(struct device *dev,
                                struct gb_audio_topology *topology)
 {
+    struct rt5647_info *info = NULL;
+    int len = 0;
+    uint8_t *data = NULL;
+
+    if (!dev || !device_get_private(dev)) {
+        return -EINVAL;
+    }
+    info = device_get_private(dev);
+
+    topology->num_dais = 1;
+    topology->num_controls = info->num_controls;
+    topology->num_widgets = info->num_widgets;
+    topology->num_routes = info->num_routes;
+
+    data = topology->data;
+    /* fill dai object */
+    len = sizeof(struct gb_audio_dai);
+    memcpy(data, info->dai, len);
+    data += len;
+
+    /* fill audio control object */
+    len = topology->num_controls * sizeof(struct gb_audio_control);
+    memcpy(data, info->controls, len);
+    data += len;
+
+    /* fill audio widget object */
+    len = topology->num_widgets * sizeof(struct gb_audio_widget);
+    memcpy(data, info->widgets, len);
+    data += len;
+
+    /* fill audio route object */
+    len = topology->num_routes * sizeof(struct gb_audio_route);
+    memcpy(data, info->routes, len);
     return 0;
 }
 
@@ -422,6 +494,14 @@ static int rt5647_audcodec_probe(struct device *dev)
 
     info->dev = dev;
     strcpy((char*)info->name, RT5647_CODEC_NAME);
+
+    info->dai = &rt5647_dai;
+    info->controls = rt5647_controls;
+    info->num_controls = ARRAY_SIZE(rt5647_controls);
+    info->widgets = rt5647_widgets;
+    info->num_widgets = ARRAY_SIZE(rt5647_widgets);
+    info->routes = rt5647_routes;
+    info->num_routes = ARRAY_SIZE(rt5647_routes);
 
     device_set_private(dev, info);
     return 0;
