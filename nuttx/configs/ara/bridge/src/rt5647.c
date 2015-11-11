@@ -71,7 +71,35 @@ struct rt5647_info {
 };
 
 struct rt5647_reg rt5647_init_regs[] = {
-    // {xxxx, xxxx},
+    { RT5647_GENERAL_CTRL_1, 0x2061 }, /* enable MCLK Gate Control */
+    { RT5647_ADC_DAC_CLK_CTRL, 0x0000 },
+    { RT5647_PR_INDEX, 0x003d },
+    { RT5647_PR_DATA, 0x3600 },
+
+    /* playback */
+    { RT5647_DAC_STO_DIGI_MIXER, 0x4646 },/* DACL2 & DACR2 */
+    { RT5647_OUT_L_MIXER_MUTE, 0x001F },
+    { RT5647_OUT_R_MIXER_MUTE, 0x001F },
+    { RT5647_LOUT_MIXER, 0xF000 },
+    { RT5647_LOUT_VOL, 0xC8C8 },
+    { RT5647_HP_L_MIXER_MUTE, 0x001F },
+    { RT5647_HP_R_MIXER_MUTE, 0x001F },
+    { RT5647_HPO_MIXER_CTRL, 0x6000 },
+    { RT5647_HPOUT_VOL, 0xC8C8 },
+
+    { RT5647_SPK_L_MIXER_CTRL, 0x003C }, /* DACL1 */
+    { RT5647_SPK_R_MIXER_CTRL, 0x003C }, /* DACR1 */
+    { RT5647_SPO_MIXER_CTRL, 0xD806 }, /* SPKVOLL & SPKVOLR */
+
+    { RT5647_SPKOUT_VOL, 0x8888 }, /* SPOL&SPOR output mute */
+    /* record */
+    { RT5647_IN2_CTRL, 0x0000 },/* IN1 boost 20db and signal ended mode */
+    { RT5647_REC_MIXER_L_CTRL, 0x007F },/* Mic1 -> RECMIXL */
+    { RT5647_REC_MIXER_R_CTRL, 0x007F },/* Mic1 -> RECMIXR */
+
+    { RT5647_STO1_ADC_DIGI_MIXER, 0x7060 },
+
+    { RT5647_STO1_ADC_DIGI_VOL, 0xAFAF },/* Mute STO1 ADC for depop, Digital Input Gain */
 };
 
 struct gb_audio_dai rt5647_dai = {
@@ -368,7 +396,7 @@ audio_route rt5647_routes[] = {
     { RT5647_WIDGET_STODAC_MIXL, RT5647_WIDGET_DAC_L1, 0 },
     // Stereo DAC MIXR
     { RT5647_WIDGET_STODAC_MIXR, RT5647_WIDGET_DAC_R1, 0 },
-    
+
     // DAC L1
     { RT5647_WIDGET_DAC_L1, RT5647_WIDGET_SPK_MIXL, RT5647_CTL_SPKL_DACL1 },
     { RT5647_WIDGET_DAC_L1, RT5647_WIDGET_SPOL_MIX, RT5647_CTL_SPOL_DACL1 },
@@ -376,7 +404,7 @@ audio_route rt5647_routes[] = {
     { RT5647_WIDGET_DAC_R1, RT5647_WIDGET_SPK_MIXR, RT5647_CTL_SPKR_DACR1 },
     { RT5647_WIDGET_DAC_R1, RT5647_WIDGET_SPOL_MIX, RT5647_CTL_SPOL_DACR1 },
     { RT5647_WIDGET_DAC_R1, RT5647_WIDGET_SPOR_MIX, RT5647_CTL_SPOR_DACR1 },
-    
+
     // SPK MIXL
     { RT5647_WIDGET_SPK_MIXL, RT5647_WIDGET_SPKVOLL, 0 },
     // SPK MIXR
@@ -1118,6 +1146,10 @@ static int rt5647_audcodec_open(struct device *dev)
     }
     info = device_get_private(dev);
 
+    /* codec power on sequence */
+    audcodec_write(RT5647_RESET, 0);    /* software reset */
+
+    /* initialize audio codec */
     for (i = 0; i < info->num_regs; i++) {
         audcodec_write(info->init_regs[i].reg , info->init_regs[i].val);
     }
@@ -1172,6 +1204,7 @@ static int rt5647_audcodec_probe(struct device *dev)
     info->rx_delay = 0;
     info->tx_delay = 0;
 
+    /* initialize i2c bus */
     info->i2c = up_i2cinitialize(0);
     if (!info->i2c) {
         free(info);
