@@ -517,3 +517,13 @@ menuconfig GREYBUS
 if GREYBUS
 source drivers/greybus/Kconfig
 endif # GREYBUS
+
+menuconfig DRIVERS_ARA
+	bool "Ara Driver Support"
+	---help---
+		Enable Project Ara-specific drivers that are not Greybus
+		drivers, board-specific drivers, or Toshiba-specific drivers.
+
+if DRIVERS_ARA
+source drivers/ara/Kconfig
+endif
