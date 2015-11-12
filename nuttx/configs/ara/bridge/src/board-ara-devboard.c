@@ -65,6 +65,11 @@
 #define SD_CARD_DETECT_PIN 22 /* GPIO 22 */
 #endif
 
+#ifdef CONFIG_BOARD_HAVE_AUDIO
+#include <arch/board/audio_board.h>
+#include <nuttx/device_audio_board.h>
+#endif
+
 #ifdef CONFIG_APBRIDGEA
 /* must pull up or drive high on SDB APBridgeA to bring Helium out of reset */
 #define HELIUM_EXT_NRST_BTN_GPIO 0
@@ -121,6 +126,29 @@ static struct device_resource sdio_board_resources[] = {
 };
 #endif
 
+#ifdef CONFIG_BOARD_HAVE_AUDIO
+static struct audio_board_dai audio_board_dai_tbl[] = {
+    {
+        .data_cport = 6,
+        .i2s_dev_id = 0,
+    },
+};
+
+static struct audio_board_bundle audio_board_bundle_tbl[] = {
+    {
+        .mgmt_cport     = 5,
+        .codec_dev_id   = 0,
+        .dai_count      = ARRAY_SIZE(audio_board_dai_tbl),
+        .dai            = audio_board_dai_tbl,
+    },
+};
+
+struct audio_board_init_data audio_board_init_data_info = {
+    .bundle_count   = ARRAY_SIZE(audio_board_bundle_tbl),
+    .bundle         = audio_board_bundle_tbl,
+};
+#endif
+
 static struct device devices[] = {
 #ifdef CONFIG_ARA_BRIDGE_HAVE_USB4624
     {
@@ -172,6 +200,15 @@ static struct device devices[] = {
         .resource_count = ARRAY_SIZE(sdio_board_resources),
     },
 #endif
+#ifdef CONFIG_BOARD_HAVE_AUDIO
+    {
+        .type           = DEVICE_TYPE_AUDIO_BOARD_HW,
+        .name           = "audio_board",
+        .desc           = "Board-specific Audio Information",
+        .id             = 0,
+        .init_data      = &audio_board_init_data_info,
+    },
+#endif
 };
 
 static struct device_table bdb_device_table = {
@@ -204,6 +241,10 @@ static void bdb_driver_register(void)
 #ifdef CONFIG_ARCH_CHIP_DEVICE_SDIO
     extern struct device_driver sdio_board_driver;
     device_register_driver(&sdio_board_driver);
+#endif
+#ifdef CONFIG_BOARD_HAVE_AUDIO
+    extern struct device_driver audio_board_driver;
+    device_register_driver(&audio_board_driver);
 #endif
 }
 #endif
