@@ -89,6 +89,9 @@ ifeq ($(CONFIG_ARA_BRIDGE_BOARD_OOT),y)
 CSRCS += $(OOT_BOARD)
 endif
 
+ifeq ($(CONFIG_BOARD_HAVE_AUDIO),y)
+CSRCS += audio_board.c
+endif
 
 COBJS		= $(CSRCS:.c=$(OBJEXT))
 
