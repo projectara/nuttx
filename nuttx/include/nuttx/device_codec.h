@@ -123,23 +123,16 @@ struct device_codec_type_ops {
                        struct gb_audio_ctl_elem_value *value);
     int (*set_control)(struct device *dev, uint8_t control_id,
                        struct gb_audio_ctl_elem_value *value);
-
     int (*enable_widget)(struct device *dev, uint8_t widget_id);
     int (*disable_widget)(struct device *dev, uint8_t widget_id);
-
     int (*get_tx_delay)(struct device *dev, uint32_t *delay);
-
     int (*start_tx)(struct device *dev);
     int (*stop_tx)(struct device *dev);
-
     int (*register_tx_callback)(struct device *dev,
                                 device_codec_event_callback *callback);
-
     int (*get_rx_delay)(struct device *dev, uint32_t *delay);
-
     int (*start_rx)(struct device *dev);
     int (*stop_rx)(struct device *dev);
-
     int (*register_rx_callback)(struct device *dev,
                                 device_codec_event_callback *callback);
 };
