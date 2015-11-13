@@ -107,45 +107,23 @@ struct device_i2s_dai {
 };
 
 struct device_i2s_type_ops {
-    int (*get_processing_delay)(struct device *dev,
-                                uint32_t *processing_delay);
     int (*get_caps)(struct device *dev, uint8_t clk_role,
                     struct device_i2s_pcm *pcm, struct device_i2s_dai *dai);
     int (*set_config)(struct device *dev, uint8_t clk_role,
                       struct device_i2s_pcm *pcm, struct device_i2s_dai *dai);
+    int (*get_delay_receiver)(struct device *dev, uint32_t *delay);
     int (*prepare_receiver)(struct device *dev, struct ring_buf *rx_rb,
                             device_i2s_callback callback, void *arg);
     int (*start_receiver)(struct device *dev);
     int (*stop_receiver)(struct device *dev);
     int (*shutdown_receiver)(struct device *dev);
+    int (*get_delay_transmitter)(struct device *dev, uint32_t *delay);
     int (*prepare_transmitter)(struct device *dev, struct ring_buf *tx_rb,
                                device_i2s_callback callback, void *arg);
     int (*start_transmitter)(struct device *dev);
     int (*stop_transmitter)(struct device *dev);
     int (*shutdown_transmitter)(struct device *dev);
 };
-
-/**
- * @brief Get processing delay
- * @param dev I2S device to get delay of
- * @param processing_delay Address to write delay value
- * @return 0: Delay value returned successfully
- *         -errno: Cause of failure
- */
-static inline int device_i2s_get_processing_delay(struct device *dev,
-                                                  uint32_t *processing_delay)
-{
-    DEVICE_DRIVER_ASSERT_OPS(dev);
-
-    if (!device_is_open(dev))
-        return -ENODEV;
-
-    if (DEVICE_DRIVER_GET_OPS(dev, i2s)->get_processing_delay)
-        return DEVICE_DRIVER_GET_OPS(dev, i2s)->get_processing_delay(dev,
-                                                              processing_delay);
-
-    return -ENOSYS;
-}
 
 /**
  * @brief Get device's capabilities with specified PCM values
@@ -223,6 +201,27 @@ static inline int device_i2s_prepare_receiver(struct device *dev,
 }
 
 /**
+ * @brief Get receiver start-up delay
+ * @param dev I2S device to get delay of
+ * @param delay Address to write delay value
+ * @return 0: Delay value returned successfully
+ *         -errno: Cause of failure
+ */
+static inline int device_i2s_get_delay_receiver(struct device *dev,
+                                                uint32_t *delay)
+{
+    DEVICE_DRIVER_ASSERT_OPS(dev);
+
+    if (!device_is_open(dev))
+        return -ENODEV;
+
+    if (DEVICE_DRIVER_GET_OPS(dev, i2s)->get_delay_receiver)
+        return DEVICE_DRIVER_GET_OPS(dev, i2s)->get_delay_receiver(dev, delay);
+
+    return -ENOSYS;
+}
+
+/**
  * Start I2S receiver.  Should be called whenever an empty ring buffer
  * entry is made available to the I2S driver (unless you *know* that the
  * ring buffer is not full).
@@ -279,6 +278,28 @@ static inline int device_i2s_shutdown_receiver(struct device *dev)
 
     if (DEVICE_DRIVER_GET_OPS(dev, i2s)->shutdown_receiver)
         return DEVICE_DRIVER_GET_OPS(dev, i2s)->shutdown_receiver(dev);
+
+    return -ENOSYS;
+}
+
+/**
+ * @brief Get transmitter start-up delay
+ * @param dev I2S device to get delay of
+ * @param delay Address to write delay value
+ * @return 0: Delay value returned successfully
+ *         -errno: Cause of failure
+ */
+static inline int device_i2s_get_delay_transmitter(struct device *dev,
+                                                   uint32_t *delay)
+{
+    DEVICE_DRIVER_ASSERT_OPS(dev);
+
+    if (!device_is_open(dev))
+        return -ENODEV;
+
+    if (DEVICE_DRIVER_GET_OPS(dev, i2s)->get_delay_transmitter)
+        return DEVICE_DRIVER_GET_OPS(dev, i2s)->get_delay_transmitter(dev,
+                                                                      delay);
 
     return -ENOSYS;
 }
