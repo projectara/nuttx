@@ -49,15 +49,16 @@
 #define DEVICE_CODEC_EDGE_RISING                          BIT(0)
 #define DEVICE_CODEC_EDGE_FALLING                         BIT(1)
 
-struct device_codec_dai_config {
+struct device_codec_pcm {
     uint32_t    format;   /* same as GB_AUDIO */
     uint32_t    rate;     /* same as GB_AUDIO */
     uint8_t     channels; /* same as GB_AUDIO */
     uint8_t     sig_bits; /* same as GB_AUDIO - may be able to remove */
+};
+
+struct device_codec_dai {
+    uint32_t    mclk_freq;
     uint32_t    protocol; /* low-level protocol defining WCLK, offset, etc. */
-    uint8_t     mclk_role;
-    uint8_t     bclk_role;
-    uint8_t     wclk_role;
     uint8_t     wclk_polarity;
     uint8_t     wclk_change_edge;
     uint8_t     data_rx_edge;
@@ -112,12 +113,12 @@ typedef int (*device_codec_event_callback)(struct device *dev, uint32_t event);
 struct device_codec_type_ops {
     int (*get_topology_size)(struct device *dev, uint16_t *size);
     int (*get_topology)(struct device *dev, struct gb_audio_topology *topology);
-
-    int (*get_dai_config)(struct device *dev,
-                          struct device_codec_dai_config *dai_config);
-    int (*set_dai_config)(struct device *dev,
-                          struct device_codec_dai_config *dai_config);
-
+    int (*get_caps)(struct device *dev, uint8_t clk_role,
+                    struct device_codec_pcm *pcm,
+                    struct device_codec_dai *dai);
+    int (*set_config)(struct device *dev, uint8_t clk_role,
+                      struct device_codec_pcm *pcm,
+                      struct device_codec_dai *dai);
     int (*get_control)(struct device *dev, uint8_t control_id,
                        struct gb_audio_ctl_elem_value *value);
     int (*set_control)(struct device *dev, uint8_t control_id,
@@ -171,34 +172,34 @@ static inline int device_codec_get_topology(struct device *dev,
     return -ENOSYS;
 }
 
-static inline int device_codec_get_dai_config(struct device *dev,
-                                              struct device_codec_dai_config
-                                                                    *dai_config)
+static inline int device_codec_get_caps(struct device *dev, uint8_t clk_role,
+                                        struct device_codec_pcm *pcm,
+                                        struct device_codec_dai *dai)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
     if (!device_is_open(dev)) {
         return -ENODEV;
     }
-    if (DEVICE_DRIVER_GET_OPS(dev, codec)->get_dai_config) {
-        return DEVICE_DRIVER_GET_OPS(dev, codec)->get_dai_config(dev,
-                                                                 dai_config);
+    if (DEVICE_DRIVER_GET_OPS(dev, codec)->get_caps) {
+        return DEVICE_DRIVER_GET_OPS(dev, codec)->get_caps(dev, clk_role, pcm,
+                                                           dai);
     }
     return -ENOSYS;
 }
 
-static inline int device_codec_set_dai_config(struct device *dev,
-                                              struct device_codec_dai_config
-                                                                    *dai_config)
+static inline int device_codec_set_config(struct device *dev, uint8_t clk_role,
+                                          struct device_codec_pcm *pcm,
+                                          struct device_codec_dai *dai)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
     if (!device_is_open(dev)) {
         return -ENODEV;
     }
-    if (DEVICE_DRIVER_GET_OPS(dev, codec)->set_dai_config) {
-        return DEVICE_DRIVER_GET_OPS(dev, codec)->set_dai_config(dev, 
-                                                                 dai_config);
+    if (DEVICE_DRIVER_GET_OPS(dev, codec)->set_config) {
+        return DEVICE_DRIVER_GET_OPS(dev, codec)->set_config(dev, clk_role, pcm,
+                                                             dai);
     }
     return -ENOSYS;
 }
