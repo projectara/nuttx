@@ -129,16 +129,16 @@ struct device_codec_type_ops {
 
     int (*get_tx_delay)(struct device *dev, uint32_t *delay);
 
-    int (*activate_tx)(struct device *dev);
-    int (*deactivate_tx)(struct device *dev);
+    int (*start_tx)(struct device *dev);
+    int (*stop_tx)(struct device *dev);
 
     int (*register_tx_callback)(struct device *dev,
                                 device_codec_event_callback *callback);
 
     int (*get_rx_delay)(struct device *dev, uint32_t *delay);
 
-    int (*activate_rx)(struct device *dev);
-    int (*deactivate_rx)(struct device *dev);
+    int (*start_rx)(struct device *dev);
+    int (*stop_rx)(struct device *dev);
 
     int (*register_rx_callback)(struct device *dev,
                                 device_codec_event_callback *callback);
@@ -277,28 +277,28 @@ static inline int device_codec_get_tx_delay(struct device *dev, uint32_t *delay)
     return -ENOSYS;
 }
 
-static inline int device_codec_activate_tx(struct device *dev)
+static inline int device_codec_start_tx(struct device *dev)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
     if (!device_is_open(dev)) {
         return -ENODEV;
     }
-    if (DEVICE_DRIVER_GET_OPS(dev, codec)->activate_tx) {
-        return DEVICE_DRIVER_GET_OPS(dev, codec)->activate_tx(dev);
+    if (DEVICE_DRIVER_GET_OPS(dev, codec)->start_tx) {
+        return DEVICE_DRIVER_GET_OPS(dev, codec)->start_tx(dev);
     }
     return -ENOSYS;
 }
 
-static inline int device_codec_deactivate_tx(struct device *dev)
+static inline int device_codec_stop_tx(struct device *dev)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
     if (!device_is_open(dev)) {
         return -ENODEV;
     }
-    if (DEVICE_DRIVER_GET_OPS(dev, codec)->deactivate_tx) {
-        return DEVICE_DRIVER_GET_OPS(dev, codec)->deactivate_tx(dev);
+    if (DEVICE_DRIVER_GET_OPS(dev, codec)->stop_tx) {
+        return DEVICE_DRIVER_GET_OPS(dev, codec)->stop_tx(dev);
     }
     return -ENOSYS;
 }
@@ -332,28 +332,28 @@ static inline int device_codec_get_rx_delay(struct device *dev, uint32_t *delay)
     return -ENOSYS;
 }
 
-static inline int device_codec_activate_rx(struct device *dev)
+static inline int device_codec_start_rx(struct device *dev)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
     if (!device_is_open(dev)) {
         return -ENODEV;
     }
-    if (DEVICE_DRIVER_GET_OPS(dev, codec)->activate_rx) {
-        return DEVICE_DRIVER_GET_OPS(dev, codec)->activate_rx(dev);
+    if (DEVICE_DRIVER_GET_OPS(dev, codec)->start_rx) {
+        return DEVICE_DRIVER_GET_OPS(dev, codec)->start_rx(dev);
     }
     return -ENOSYS;
 }
 
-static inline int device_codec_deactivate_rx(struct device *dev)
+static inline int device_codec_stop_rx(struct device *dev)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
     if (!device_is_open(dev)) {
         return -ENODEV;
     }
-    if (DEVICE_DRIVER_GET_OPS(dev, codec)->deactivate_rx) {
-        return DEVICE_DRIVER_GET_OPS(dev, codec)->deactivate_rx(dev);
+    if (DEVICE_DRIVER_GET_OPS(dev, codec)->stop_rx) {
+        return DEVICE_DRIVER_GET_OPS(dev, codec)->stop_rx(dev);
     }
     return -ENOSYS;
 }
