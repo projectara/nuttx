@@ -99,7 +99,6 @@ struct device_i2s_pcm {
  */
 struct device_i2s_dai {
     uint32_t    mclk_freq;          /* mclk frequency generated/required */
-    uint8_t     clk_role;           /* DEVICE_I2S_ROLE_* */
     uint8_t     protocol;           /* DEVICE_I2S_PROTOCOL_* */
     uint8_t     wclk_polarity;      /* DEVICE_I2S_POLARITY_* */
     uint8_t     wclk_change_edge;   /* DEVICE_I2S_EDGE_* */
@@ -110,12 +109,10 @@ struct device_i2s_dai {
 struct device_i2s_type_ops {
     int (*get_processing_delay)(struct device *dev,
                                 uint32_t *processing_delay);
-    int (*get_caps)(struct device *dev, uint8_t role,
+    int (*get_caps)(struct device *dev, uint8_t clk_role,
                     struct device_i2s_pcm *pcm, struct device_i2s_dai *dai);
-    int (*get_config)(struct device *dev, struct device_i2s_pcm *pcm,
-                      struct device_i2s_dai *dai);
-    int (*set_config)(struct device *dev, struct device_i2s_pcm *pcm,
-                      struct device_i2s_dai *dai);
+    int (*set_config)(struct device *dev, uint8_t clk_role,
+                      struct device_i2s_pcm *pcm, struct device_i2s_dai *dai);
     int (*prepare_receiver)(struct device *dev, struct ring_buf *rx_rb,
                             device_i2s_callback callback, void *arg);
     int (*start_receiver)(struct device *dev);
@@ -153,13 +150,13 @@ static inline int device_i2s_get_processing_delay(struct device *dev,
 /**
  * @brief Get device's capabilities with specified PCM values
  * @param dev I2S device being queried
- * @param role Specifies if query is for when device is clock master or slave
+ * @param clk_role Specifies if query is for clock master or slave
  * @param pcm PCM parameters being tested
  * @param dai DAI parameters that support specified PCM parameters
  * @return 0: Delay value returned successfully
  *         -errno: Cause of failure
  */
-static inline int devcie_i2s_get_caps(struct device *dev, uint8_t role,
+static inline int devcie_i2s_get_caps(struct device *dev, uint8_t clk_role,
                                       struct device_i2s_pcm *pcm,
                                       struct device_i2s_dai *dai)
 {
@@ -169,30 +166,8 @@ static inline int devcie_i2s_get_caps(struct device *dev, uint8_t role,
         return -ENODEV;
 
     if (DEVICE_DRIVER_GET_OPS(dev, i2s)->get_caps)
-        return DEVICE_DRIVER_GET_OPS(dev, i2s)->get_caps(dev, role, pcm, dai);
-
-    return -ENOSYS;
-}
-
-/**
- * @brief Get current PCM and DAI configuration
- * @param dev I2S device being queried
- * @param pcm Current PCM parameter values
- * @param dai Current DAI parameter values
- * @return 0: Delay value returned successfully
- *         -errno: Cause of failure
- */
-static inline int devcie_i2s_get_config(struct device *dev,
-                                        struct device_i2s_pcm *pcm,
-                                        struct device_i2s_dai *dai)
-{
-    DEVICE_DRIVER_ASSERT_OPS(dev);
-
-    if (!device_is_open(dev))
-        return -ENODEV;
-
-    if (DEVICE_DRIVER_GET_OPS(dev, i2s)->get_config)
-        return DEVICE_DRIVER_GET_OPS(dev, i2s)->get_config(dev, pcm, dai);
+        return DEVICE_DRIVER_GET_OPS(dev, i2s)->get_caps(dev, clk_role, pcm,
+                                                         dai);
 
     return -ENOSYS;
 }
@@ -200,12 +175,13 @@ static inline int devcie_i2s_get_config(struct device *dev,
 /**
  * @brief Set current PCM and DAI configuration
  * @param dev I2S device being set
+ * @param clk_role Specifies that device is clock master or slave
  * @param pcm Set PCM parameter values
  * @param dai Set DAI parameter values
  * @return 0: Delay value returned successfully
  *         -errno: Cause of failure
  */
-static inline int devcie_i2s_set_config(struct device *dev,
+static inline int devcie_i2s_set_config(struct device *dev, uint8_t clk_role,
                                         struct device_i2s_pcm *pcm,
                                         struct device_i2s_dai *dai)
 {
@@ -215,7 +191,8 @@ static inline int devcie_i2s_set_config(struct device *dev,
         return -ENODEV;
 
     if (DEVICE_DRIVER_GET_OPS(dev, i2s)->set_config)
-        return DEVICE_DRIVER_GET_OPS(dev, i2s)->set_config(dev, pcm, dai);
+        return DEVICE_DRIVER_GET_OPS(dev, i2s)->set_config(dev, clk_role, pcm,
+                                                           dai);
 
     return -ENOSYS;
 }
