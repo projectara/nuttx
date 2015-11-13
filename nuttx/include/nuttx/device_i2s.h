@@ -110,11 +110,11 @@ struct device_i2s_type_ops {
     int (*get_processing_delay)(struct device *dev,
                                 uint32_t *processing_delay);
     int (*query_pcm_m)(struct device *dev, struct device_i2s_pcm *pcm,
-                       struct device_i2s_dai **dai);
+                       struct device_i2s_dai *dai);
     int (*query_pcm_s)(struct device *dev, struct device_i2s_pcm *pcm,
-                       struct device_i2s_dai **dai);
-    int (*get_pcm)(struct device *dev, struct device_i2s_pcm **pcm,
-                   struct device_i2s_dai **dai);
+                       struct device_i2s_dai *dai);
+    int (*get_pcm)(struct device *dev, struct device_i2s_pcm *pcm,
+                   struct device_i2s_dai *dai);
     int (*set_pcm)(struct device *dev, struct device_i2s_pcm *pcm,
                    struct device_i2s_dai *dai);
     int (*prepare_receiver)(struct device *dev, struct ring_buf *rx_rb,
@@ -161,7 +161,7 @@ static inline int device_i2s_get_processing_delay(struct device *dev,
  */
 static inline int devcie_i2s_query_pcm_m(struct device *dev,
                                          struct device_i2s_pcm *pcm,
-                                         struct device_i2s_dai **dai)
+                                         struct device_i2s_dai *dai)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -184,7 +184,7 @@ static inline int devcie_i2s_query_pcm_m(struct device *dev,
  */
 static inline int devcie_i2s_query_pcm_s(struct device *dev,
                                          struct device_i2s_pcm *pcm,
-                                         struct device_i2s_dai **dai)
+                                         struct device_i2s_dai *dai)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -206,8 +206,8 @@ static inline int devcie_i2s_query_pcm_s(struct device *dev,
  *         -errno: Cause of failure
  */
 static inline int devcie_i2s_get_pcm(struct device *dev,
-                                     struct device_i2s_pcm **pcm,
-                                     struct device_i2s_dai **dai)
+                                     struct device_i2s_pcm *pcm,
+                                     struct device_i2s_dai *dai)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
