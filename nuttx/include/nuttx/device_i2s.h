@@ -92,10 +92,10 @@ struct device_i2s_pcm {
     uint8_t     channels;
 };
 
-/* low level DAI comunication capabilites of a driver
- * Most capabilites are bitfields,
- * To find matching capabilites between drivers AND the bitfields
- * returned from query_pcm
+/* low level DAI communication capabilities of a driver
+ * Most capabilities are bitfields,
+ * To find matching capabilities between drivers AND the bitfields
+ * returned from get_caps
  */
 struct device_i2s_dai {
     uint32_t    mclk_freq;          /* mclk frequency generated/required */
