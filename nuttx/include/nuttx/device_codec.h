@@ -123,6 +123,17 @@ typedef int (*device_codec_event_callback)(struct device *dev,
                                            enum device_codec_event event,
                                            void *arg);
 
+enum {
+    DEVICE_CODEC_JACK_EVENT_INVALID,
+    DEVICE_CODEC_JACK_EVENT_INSERTION,
+    DEVICE_CODEC_JACK_EVENT_REMOVAL,
+};
+
+typedef int (*device_codec_jack_event_callback)(struct device *dev,
+                                           uint8_t widget_id,
+                                           uint8_t widget_type,
+                                           enum device_codec_jack_event event);
+
 struct device_codec_type_ops {
     int (*get_topology_size)(struct device *dev, uint16_t *size);
     int (*get_topology)(struct device *dev, struct gb_audio_topology *topology);
@@ -149,6 +160,9 @@ struct device_codec_type_ops {
     int (*register_rx_callback)(struct device *dev,
                                 device_codec_event_callback *callback
                                 void *arg);
+    int (*register_jack_callback)(struct device *dev,
+                                  device_codec_jack_event_callback *callback,
+                                  void *arg);
 };
 
 static inline int device_codec_get_topology_size(struct device *dev,
@@ -383,6 +397,24 @@ static inline int device_codec_register_rx_callback(struct device *dev,
     }
     if (DEVICE_DRIVER_GET_OPS(dev, codec)->register_rx_callback) {
         return DEVICE_DRIVER_GET_OPS(dev, codec)->register_rx_callback(dev,
+                                                                      callback,
+                                                                      arg);
+    }
+    return -ENOSYS;
+}
+
+static inline int device_codec_register_jack_event_callback(struct device *dev,
+                                    device_codec_jack_event_callback *callback,
+                                    void *arg)
+{
+    DEVICE_DRIVER_ASSERT_OPS(dev);
+
+    if (!device_is_open(dev)) {
+        return -ENODEV;
+    }
+    if (DEVICE_DRIVER_GET_OPS(dev, codec)->register_jack_event_callback) {
+        return DEVICE_DRIVER_GET_OPS(dev, codec)->register_jack_event_callback(
+                                                                      dev,
                                                                       callback,
                                                                       arg);
     }
