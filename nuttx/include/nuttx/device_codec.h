@@ -113,18 +113,18 @@ typedef int (*device_codec_event_callback)(struct device *dev, uint32_t event);
 struct device_codec_type_ops {
     int (*get_topology_size)(struct device *dev, uint16_t *size);
     int (*get_topology)(struct device *dev, struct gb_audio_topology *topology);
-    int (*get_caps)(struct device *dev, uint8_t clk_role,
-                    struct device_codec_pcm *pcm,
-                    struct device_codec_dai *dai);
-    int (*set_config)(struct device *dev, uint8_t clk_role,
-                      struct device_codec_pcm *pcm,
-                      struct device_codec_dai *dai);
     int (*get_control)(struct device *dev, uint8_t control_id,
                        struct gb_audio_ctl_elem_value *value);
     int (*set_control)(struct device *dev, uint8_t control_id,
                        struct gb_audio_ctl_elem_value *value);
     int (*enable_widget)(struct device *dev, uint8_t widget_id);
     int (*disable_widget)(struct device *dev, uint8_t widget_id);
+    int (*get_caps)(struct device *dev, uint8_t clk_role,
+                    struct device_codec_pcm *pcm,
+                    struct device_codec_dai *dai);
+    int (*set_config)(struct device *dev, uint8_t clk_role,
+                      struct device_codec_pcm *pcm,
+                      struct device_codec_dai *dai);
     int (*get_tx_delay)(struct device *dev, uint32_t *delay);
     int (*start_tx)(struct device *dev);
     int (*stop_tx)(struct device *dev);
@@ -161,38 +161,6 @@ static inline int device_codec_get_topology(struct device *dev,
     }
     if (DEVICE_DRIVER_GET_OPS(dev, codec)->get_topology) {
         return DEVICE_DRIVER_GET_OPS(dev, codec)->get_topology(dev, topology);
-    }
-    return -ENOSYS;
-}
-
-static inline int device_codec_get_caps(struct device *dev, uint8_t clk_role,
-                                        struct device_codec_pcm *pcm,
-                                        struct device_codec_dai *dai)
-{
-    DEVICE_DRIVER_ASSERT_OPS(dev);
-
-    if (!device_is_open(dev)) {
-        return -ENODEV;
-    }
-    if (DEVICE_DRIVER_GET_OPS(dev, codec)->get_caps) {
-        return DEVICE_DRIVER_GET_OPS(dev, codec)->get_caps(dev, clk_role, pcm,
-                                                           dai);
-    }
-    return -ENOSYS;
-}
-
-static inline int device_codec_set_config(struct device *dev, uint8_t clk_role,
-                                          struct device_codec_pcm *pcm,
-                                          struct device_codec_dai *dai)
-{
-    DEVICE_DRIVER_ASSERT_OPS(dev);
-
-    if (!device_is_open(dev)) {
-        return -ENODEV;
-    }
-    if (DEVICE_DRIVER_GET_OPS(dev, codec)->set_config) {
-        return DEVICE_DRIVER_GET_OPS(dev, codec)->set_config(dev, clk_role, pcm,
-                                                             dai);
     }
     return -ENOSYS;
 }
@@ -253,6 +221,38 @@ static inline int device_codec_disable_widget(struct device *dev,
     if (DEVICE_DRIVER_GET_OPS(dev, codec)->disable_widget) {
         return DEVICE_DRIVER_GET_OPS(dev, codec)->disable_widget(dev,
                                                                  widget_id);
+    }
+    return -ENOSYS;
+}
+
+static inline int device_codec_get_caps(struct device *dev, uint8_t clk_role,
+                                        struct device_codec_pcm *pcm,
+                                        struct device_codec_dai *dai)
+{
+    DEVICE_DRIVER_ASSERT_OPS(dev);
+
+    if (!device_is_open(dev)) {
+        return -ENODEV;
+    }
+    if (DEVICE_DRIVER_GET_OPS(dev, codec)->get_caps) {
+        return DEVICE_DRIVER_GET_OPS(dev, codec)->get_caps(dev, clk_role, pcm,
+                                                           dai);
+    }
+    return -ENOSYS;
+}
+
+static inline int device_codec_set_config(struct device *dev, uint8_t clk_role,
+                                          struct device_codec_pcm *pcm,
+                                          struct device_codec_dai *dai)
+{
+    DEVICE_DRIVER_ASSERT_OPS(dev);
+
+    if (!device_is_open(dev)) {
+        return -ENODEV;
+    }
+    if (DEVICE_DRIVER_GET_OPS(dev, codec)->set_config) {
+        return DEVICE_DRIVER_GET_OPS(dev, codec)->set_config(dev, clk_role, pcm,
+                                                             dai);
     }
     return -ENOSYS;
 }
