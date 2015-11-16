@@ -108,9 +108,20 @@ struct audio_widget {
 
 typedef struct gb_audio_route audio_route;
 
+enum device_codec_event {
+    DEVICE_CODEC_EVENT_INVALID,
+    DEVICE_CODEC_EVENT_NONE,
+    DEVICE_CODEC_EVENT_UNSPECIFIED, /* Catch-all */
+    DEVICE_CODEC_EVENT_UNDERRUN,
+    DEVICE_CODEC_EVENT_OVERRUN,
+    DEVICE_CODEC_EVENT_CLOCKING,
+    DEVICE_CODEC_EVENT_DATA_LEN,
+};
+
 typedef int (*device_codec_event_callback)(struct device *dev,
                                            unsigned int dai_idx,
-                                           uint32_t event, void *arg);
+                                           enum device_codec_event event,
+                                           void *arg);
 
 struct device_codec_type_ops {
     int (*get_topology_size)(struct device *dev, uint16_t *size);
