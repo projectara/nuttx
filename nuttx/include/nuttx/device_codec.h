@@ -134,6 +134,17 @@ typedef int (*device_codec_jack_event_callback)(struct device *dev,
                                            uint8_t widget_type,
                                            enum device_codec_jack_event event);
 
+enum {
+    DEVICE_CODEC_BUTTON_EVENT_INVALID,
+    DEVICE_CODEC_BUTTON_EVENT_PRESS,
+    DEVICE_CODEC_BUTTON_EVENT_RELEASE,
+};
+
+typedef int (*device_codec_button_event_callback)(struct device *dev,
+                                         uint8_t widget_id,
+                                         uint8_t button_id,
+                                         enum device_codec_button_event event);
+
 struct device_codec_type_ops {
     int (*get_topology_size)(struct device *dev, uint16_t *size);
     int (*get_topology)(struct device *dev, struct gb_audio_topology *topology);
@@ -162,6 +173,9 @@ struct device_codec_type_ops {
                                 void *arg);
     int (*register_jack_callback)(struct device *dev,
                                   device_codec_jack_event_callback *callback,
+                                  void *arg);
+    int (*register_button_callback)(struct device *dev,
+                                  device_codec_button_event_callback *callback,
                                   void *arg);
 };
 
@@ -417,6 +431,23 @@ static inline int device_codec_register_jack_event_callback(struct device *dev,
                                                                       dev,
                                                                       callback,
                                                                       arg);
+    }
+    return -ENOSYS;
+}
+
+static inline int device_codec_register_button_event_callback(
+                                  struct device *dev,
+                                  device_codec_button_event_callback *callback,
+                                  void *arg)
+{
+    DEVICE_DRIVER_ASSERT_OPS(dev);
+
+    if (!device_is_open(dev)) {
+        return -ENODEV;
+    }
+    if (DEVICE_DRIVER_GET_OPS(dev, codec)->register_button_event_callback) {
+        return DEVICE_DRIVER_GET_OPS(dev, codec)->
+                   register_button_event_callback( dev, callback, arg);
     }
     return -ENOSYS;
 }
