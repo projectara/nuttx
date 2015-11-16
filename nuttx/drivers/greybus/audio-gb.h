@@ -191,7 +191,7 @@ struct gb_audio_pcm {
 
 struct gb_audio_dai {
     __u8            name[AUDIO_DAI_NAME_MAX];
-    __le16          cport;
+    __le16          data_cport;
     struct gb_audio_pcm capture;
     struct gb_audio_pcm playback;
 };
