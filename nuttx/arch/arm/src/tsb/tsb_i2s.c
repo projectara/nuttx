@@ -65,6 +65,14 @@
     DEVICE_I2S_PCM_RATE_32000  | \
     DEVICE_I2S_PCM_RATE_48000)
 
+#define TSB_I2S_PROTOCOL_MASK (DEVICE_I2S_PROTOCOL_PCM | \
+                               DEVICE_I2S_PROTOCOL_I2S | \
+                               DEVICE_I2S_PROTOCOL_LR_STEREO)
+#define TSB_I2S_WCLK_PALARITY_MASK (DEVICE_I2S_POLARITY_NORMAL | DEVICE_I2S_POLARITY_REVERSED)
+#define TSB_I2S_WCLK_EDGE_MASK (DEVICE_I2S_EDGE_RISING | DEVICE_I2S_EDGE_FALLING)
+#define TSB_I2S_RXCLK_EDGE_MASK (DEVICE_I2S_EDGE_RISING | DEVICE_I2S_EDGE_FALLING)
+#define TSB_I2S_TXCLK_EDGE_MASK (DEVICE_I2S_EDGE_RISING | DEVICE_I2S_EDGE_FALLING)
+
 
 /*
  * Limit register polling loops so they don't go forever.  1000 should be
@@ -343,6 +351,49 @@ static int tsb_i2s_calc_bclk(struct device_i2s_pcm *pcm)
     }
 
     return (sample_frequency * pcm->channels * sample_size);
+}
+
+static int tsb_i2s_test_mclk(struct device *pll_dev,
+                             struct device_i2s_pcm *pcm)
+{
+    int ret;
+    uint32_t bclk_freq;
+    uint32_t mclk_freq;
+
+    /* can we generate mclk to match pcm setting*/
+    ret = tsb_i2s_calc_bclk(pcm);
+    if (ret < 0) {
+        return ret;
+    }
+    if (ret == 0) {
+        return -EINVAL;
+    }
+    bclk_freq = (uint32_t)ret;
+
+    pll_dev = device_open(DEVICE_TYPE_PLL_HW, TSB_I2S_PLLA_ID);
+    if (!pll_dev)
+        return -EIO;
+    /*
+     * The I2S controller always divides MCLK by four and optionally
+     * by two again to get the BCLK.  So try to set the PLL/MCLK
+     * frequency to four or eight times the required BCLK frequency.
+     */
+    mclk_freq = bclk_freq * 4;
+    ret = device_pll_query_frequency(pll_dev, mclk_freq);
+    if (ret) {
+        if (ret == -EINVAL) {
+            mclk_freq = bclk_freq * 8;
+            ret = device_pll_query_frequency(pll_dev, mclk_freq);
+        }
+    }
+    device_close(pll_dev);
+    pll_dev = NULL;
+
+    if(ret)
+        return ret;
+
+    /* no errors, return the matching mclk frequency */
+    return mclk_freq;
 }
 
 static int tsb_i2s_device_is_open(struct tsb_i2s_info *info)
@@ -1192,14 +1243,6 @@ static int tsb_i2s_op_get_delay_transmitter(struct device *dev,
     return 0;
 }
 
-static int tsb_i2s_op_get_processing_delay(struct device *dev,
-                                           uint32_t *processing_delay)
-{
-    *processing_delay = 0; /* TODO: Make accurate guess for this */
-
-    return 0;
-}
-
 static int tsb_i2s_op_get_caps(struct device *dev,
                                uint8_t clk_role,
                                struct device_i2s_pcm *pcm,
@@ -1207,7 +1250,6 @@ static int tsb_i2s_op_get_caps(struct device *dev,
 {
     struct tsb_i2s_info *info = device_get_private(dev);
     int ret;
-    uint32_t bclk_freq;
     uint32_t mclk_freq;
 
 
@@ -1217,52 +1259,58 @@ static int tsb_i2s_op_get_caps(struct device *dev,
     }
 
     if (clk_role == DEVICE_I2S_ROLE_MASTER) {
-        /* If master test for supported mclk */
-        ret = tsb_i2s_calc_bclk(pcm);
+
+        ret = tsb_i2s_test_mclk(info->pll_dev, pcm);
         if (ret < 0) {
             return ret;
-        }
-        if (ret == 0) {
+        } else if (ret == 0) {
+            /* this should never happen */
             return -EINVAL;
         }
-        bclk_freq = (uint32_t)ret;
+        mclk_freq = ret;
+        ret = 0;
 
-        info->pll_dev = device_open(DEVICE_TYPE_PLL_HW, TSB_I2S_PLLA_ID);
-        if (!info->pll_dev)
-            return -EIO;
-        /*
-         * The I2S controller always divides MCLK by four and optionally
-         * by two again to get the BCLK.  So try to set the PLL/MCLK
-         * frequency to four or eight times the required BCLK frequency.
+        /* query for master,
+         * return full set of hardware capabilities
          */
-        mclk_freq = bclk_freq * 4;
-        ret = device_pll_query_frequency(info->pll_dev, mclk_freq);
-        if (ret) {
-            if (ret == -EINVAL) {
-                mclk_freq = bclk_freq * 8;
-                ret = device_pll_query_frequency(info->pll_dev, mclk_freq);
-            }
-        }
-        device_close(info->pll_dev);
-        info->pll_dev = NULL;
-
-        if (ret) {
-          return ret;
-        }
-
         dai->mclk_freq = mclk_freq;
-    } else {
-        //rem chris ensure that clock is withig bounds
-    }
 
-    dai->protocol = (DEVICE_I2S_PROTOCOL_PCM |
-                     DEVICE_I2S_PROTOCOL_I2S |
-                     DEVICE_I2S_PROTOCOL_LR_STEREO);
-    dai->wclk_polarity = DEVICE_I2S_POLARITY_NORMAL |
-                         DEVICE_I2S_POLARITY_REVERSED;
-    dai->wclk_change_edge = DEVICE_I2S_EDGE_RISING | DEVICE_I2S_EDGE_FALLING;
-    dai->data_rx_edge = DEVICE_I2S_EDGE_RISING | DEVICE_I2S_EDGE_FALLING;
-    dai->data_tx_edge = DEVICE_I2S_EDGE_RISING | DEVICE_I2S_EDGE_FALLING;
+        dai->protocol = TSB_I2S_PROTOCOL_MASK;
+        dai->wclk_polarity = TSB_I2S_WCLK_PALARITY_MASK;
+        dai->wclk_change_edge = TSB_I2S_WCLK_EDGE_MASK;
+        dai->data_rx_edge = TSB_I2S_RXCLK_EDGE_MASK;
+        dai->data_tx_edge = TSB_I2S_TXCLK_EDGE_MASK;
+    } else {
+
+        /* query for slave,
+         * ensure the slave capabilities match requested capabilities
+         */
+
+        /*check only one bit is set for all bitfields */
+        if ( !ONE_BIT_IS_SET(dai->wclk_polarity)  ||
+             !ONE_BIT_IS_SET(dai->wclk_change_edge)  ||
+             !ONE_BIT_IS_SET(dai->data_rx_edge)  ||
+             !ONE_BIT_IS_SET(dai->data_tx_edge)) {
+
+            return -ERANGE;
+        }
+
+        /* check that bit field settings match our capabilities */
+        if( !(dai->protocol & TSB_I2S_PROTOCOL_MASK) ||
+            !(dai->wclk_polarity & TSB_I2S_WCLK_PALARITY_MASK) ||
+            !(dai->wclk_change_edge & TSB_I2S_WCLK_EDGE_MASK) ||
+            !(dai->data_rx_edge & TSB_I2S_RXCLK_EDGE_MASK) ||
+            !(dai->data_tx_edge & TSB_I2S_TXCLK_EDGE_MASK)) {
+
+            return -ERANGE;
+        }
+
+        //rem chris to do about slave mclk
+        // Toshiba spec states "Maximum audio sample frequency supported is 48KHz."
+        // does this limit mclk to 12288000????
+        // for now just ignore mclk
+
+    }
 
     return OK;
 };
@@ -1274,15 +1322,54 @@ static int tsb_i2s_op_set_config(struct device *dev,
 {
     struct tsb_i2s_info *info = device_get_private(dev);
     int ret;
-    uint32_t bclk_freq;
-    uint32_t mclk_freq;
 
     ret = tsb_i2s_verify_pcm_support(clk_role, pcm);
     if (ret) {
         return ret;
     }
 
-    //rem chris to do
+    /*check only one bit is set for all bitfields */
+    if ( !ONE_BIT_IS_SET(dai->wclk_polarity)  ||
+         !ONE_BIT_IS_SET(dai->wclk_change_edge)  ||
+         !ONE_BIT_IS_SET(dai->data_rx_edge)  ||
+         !ONE_BIT_IS_SET(dai->data_tx_edge)) {
+
+        return -ERANGE;
+    }
+
+    /* check that bit field settings match our capabilities */
+    if( !(dai->protocol & TSB_I2S_PROTOCOL_MASK) ||
+        !(dai->wclk_polarity & TSB_I2S_WCLK_PALARITY_MASK) ||
+        !(dai->wclk_change_edge & TSB_I2S_WCLK_EDGE_MASK) ||
+        !(dai->data_rx_edge & TSB_I2S_RXCLK_EDGE_MASK) ||
+        !(dai->data_tx_edge & TSB_I2S_TXCLK_EDGE_MASK)) {
+
+        return -ERANGE;
+    }
+
+    if (clk_role == DEVICE_I2S_ROLE_MASTER) {
+        ret = tsb_i2s_test_mclk(info->pll_dev, pcm);
+        if (ret < 0) {
+            return ret;
+        } else if (ret == 0) {
+            /* this should never happen */
+            return -EINVAL;
+        }
+    } else {
+        //rem chris to do about slave mclk
+    }
+
+    memcpy(&info->pcm, pcm, sizeof(struct device_i2s_pcm));
+    memcpy(&info->pcm, dai, sizeof(struct device_i2s_dai));
+    if(clk_role == DEVICE_I2S_ROLE_MASTER) {
+        info->mclk_role = DEVICE_I2S_ROLE_MASTER;
+        info->bclk_role = DEVICE_I2S_ROLE_MASTER;
+        info->wclk_role = DEVICE_I2S_ROLE_MASTER;
+    } else {
+        info->mclk_role = DEVICE_I2S_ROLE_SLAVE;
+        info->bclk_role = DEVICE_I2S_ROLE_SLAVE;
+        info->wclk_role = DEVICE_I2S_ROLE_SLAVE;
+    }
 
     info->flags &= TSB_I2S_FLAG_CONFIGURED;
     return 1;
