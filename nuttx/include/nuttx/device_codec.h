@@ -49,6 +49,11 @@
 #define DEVICE_CODEC_EDGE_RISING                          BIT(0)
 #define DEVICE_CODEC_EDGE_FALLING                         BIT(1)
 
+#define MUXID(id, idx) ((id & 0xFF) | (idx << 8)) /* control_id macro for
+                                                   * struct gb_audio_route */
+
+#define NOCONTROL 0xFF /* no control object for struct gb_audio_route */
+
 struct device_codec_pcm {
     uint32_t    format;   /* same as GB_AUDIO */
     uint32_t    rate;     /* same as GB_AUDIO */

@@ -278,7 +278,7 @@ struct gb_audio_widget {
 struct gb_audio_route {
 	__u8	source_id;	/* widget id */
 	__u8	destination_id;	/* widget id */
-	__u8	control_id;	/* 0-63 */
+	__le16	control_id;	/* low byte: control id, high byte: index */
 } __packed;
 
 struct gb_audio_topology {
