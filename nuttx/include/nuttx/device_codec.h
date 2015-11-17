@@ -169,12 +169,12 @@ struct device_codec_type_ops {
     int (*start_rx)(struct device *dev, unsigned int dai_idx);
     int (*stop_rx)(struct device *dev, unsigned int dai_idx);
     int (*register_rx_callback)(struct device *dev,
-                                device_codec_event_callback *callback
+                                device_codec_event_callback *callback,
                                 void *arg);
-    int (*register_jack_callback)(struct device *dev,
+    int (*register_jack_event_callback)(struct device *dev,
                                   device_codec_jack_event_callback *callback,
                                   void *arg);
-    int (*register_button_callback)(struct device *dev,
+    int (*register_button_event_callback)(struct device *dev,
                                   device_codec_button_event_callback *callback,
                                   void *arg);
 };
