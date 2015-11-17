@@ -56,7 +56,8 @@ struct rt5647_info {
     struct rt5647_reg *init_regs;
     int num_regs;
 
-    struct gb_audio_dai *dai;
+    struct gb_audio_dai *dais;
+    int num_dais;
     struct audio_control *controls;
     int num_controls;
     struct audio_widget *widgets;
@@ -108,22 +109,24 @@ struct rt5647_reg rt5647_init_regs[] = {
     { RT5647_STO1_ADC_DIGI_VOL, 0xAFAF },/* Mute STO1 ADC for depop, Digital Input Gain */
 };
 
-struct gb_audio_dai rt5647_dai = {
-    .name = "rt5647-aif1",
-    .cport = 0,
-    .capture = {
-        .stream_name = "AIF1 Capture",
-        .formats = RT5647_FORMATS,
-        .rates = RT5647_STEREO_RATES,
-        .chan_min = 1,
-        .chan_max = 2,
-    },
-    .playback = {
-        .stream_name = "AIF1 Playback",
-        .formats = RT5647_FORMATS,
-        .rates = RT5647_STEREO_RATES,
-        .chan_min = 1,
-        .chan_max = 2,
+struct gb_audio_dai rt5647_dais[] = {
+    {
+        .name = "rt5647-aif1",
+        .cport = 0,
+        .capture = {
+            .stream_name = "AIF1 Capture",
+            .formats = RT5647_FORMATS,
+            .rates = RT5647_STEREO_RATES,
+            .chan_min = 1,
+            .chan_max = 2,
+        },
+        .playback = {
+            .stream_name = "AIF1 Playback",
+            .formats = RT5647_FORMATS,
+            .rates = RT5647_STEREO_RATES,
+            .chan_min = 1,
+            .chan_max = 2,
+        },
     },
 };
 
@@ -873,7 +876,7 @@ static int rt5647_get_topology_size(struct device *dev, uint16_t *size)
     info = device_get_private(dev);
 
     tpg_size = sizeof(struct gb_audio_topology);
-    tpg_size += sizeof(struct gb_audio_dai);
+    tpg_size += info->num_dais * sizeof(struct gb_audio_dai);
     tpg_size += info->num_controls * sizeof(struct gb_audio_control);
     tpg_size += info->num_widgets * sizeof(struct gb_audio_widget);
     tpg_size += info->num_routes * sizeof(struct gb_audio_route);
@@ -894,11 +897,11 @@ static int rt5647_get_topology(struct device *dev,
     }
     info = device_get_private(dev);
 
-    if (!info->dai || !info->controls || !info->widgets || !info->routes) {
+    if (!info->dais || !info->controls || !info->widgets || !info->routes) {
         return -EINVAL;
     }
 
-    topology->num_dais = 1;
+    topology->num_dais = info->num_dais;
     topology->num_controls = info->num_controls;
     topology->num_widgets = info->num_widgets;
     topology->num_routes = info->num_routes;
@@ -906,8 +909,10 @@ static int rt5647_get_topology(struct device *dev,
     data = topology->data;
     /* fill dai object */
     len = sizeof(struct gb_audio_dai);
-    memcpy(data, info->dai, len);
-    data += len;
+    for (i = 0; i < info->num_dais; i++) {
+        memcpy(data, &info->dais[i], len);
+        data += len;
+    }
 
     /* fill audio control object */
     len = sizeof(struct gb_audio_control);
@@ -1236,7 +1241,8 @@ static int rt5647_audcodec_probe(struct device *dev)
 
     info->init_regs = rt5647_init_regs;
     info->num_regs = ARRAY_SIZE(rt5647_init_regs);
-    info->dai = &rt5647_dai;
+    info->dais = rt5647_dais;
+    info->num_dais = ARRAY_SIZE(rt5647_dais);
     info->controls = rt5647_controls;
     info->num_controls = ARRAY_SIZE(rt5647_controls);
     info->widgets = rt5647_widgets;
