@@ -160,14 +160,14 @@ struct device_codec_type_ops {
                       uint8_t clk_role, struct device_codec_pcm *pcm,
                       struct device_codec_dai *dai);
     int (*get_tx_delay)(struct device *dev, uint32_t *delay);
-    int (*start_tx)(struct device *dev, unsigned int dai_idx);
-    int (*stop_tx)(struct device *dev, unsigned int dai_idx);
+    int (*start_tx)(struct device *dev, uint32_t dai_idx);
+    int (*stop_tx)(struct device *dev, uint32_t dai_idx);
     int (*register_tx_callback)(struct device *dev,
                                 device_codec_event_callback *callback,
                                 void *arg);
     int (*get_rx_delay)(struct device *dev, uint32_t *delay);
-    int (*start_rx)(struct device *dev, unsigned int dai_idx);
-    int (*stop_rx)(struct device *dev, unsigned int dai_idx);
+    int (*start_rx)(struct device *dev, uint32_t dai_idx);
+    int (*stop_rx)(struct device *dev, uint32_t dai_idx);
     int (*register_rx_callback)(struct device *dev,
                                 device_codec_event_callback *callback,
                                 void *arg);

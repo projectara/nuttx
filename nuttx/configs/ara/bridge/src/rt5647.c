@@ -66,8 +66,14 @@ struct rt5647_info {
 
     uint32_t rx_delay;
     device_codec_event_callback *rx_callback;
+    void* rx_callback_arg;
     uint32_t tx_delay;
     device_codec_event_callback *tx_callback;
+    void* tx_callback_arg;
+    device_codec_jack_event_callback *jack_event_callback;
+    void* jack_event_callback_arg;
+    device_codec_button_event_callback *button_event_callback;
+    void* button_event_callback_arg;
 };
 
 struct rt5647_reg rt5647_init_regs[] = {
@@ -926,14 +932,16 @@ static int rt5647_get_topology(struct device *dev,
     return 0;
 }
 
-static int rt5647_get_dai_config(struct device *dev,
-                                 struct device_codec_dai_config *dai_config)
+static int rt5647_get_caps(struct device *dev, unsigned int dai_idx,
+                           uint8_t clk_role, struct device_codec_pcm *pcm,
+                           struct device_codec_dai *dai)
 {
     return 0;
 }
 
-static int rt5647_set_dai_config(struct device *dev,
-                                 struct device_codec_dai_config *dai_config)
+static int rt5647_set_config(struct device *dev, unsigned int dai_idx,
+                             uint8_t clk_role, struct device_codec_pcm *pcm,
+                             struct device_codec_dai *dai)
 {
     return 0;
 }
@@ -1077,18 +1085,19 @@ static int rt5647_get_tx_delay(struct device *dev, uint32_t *delay)
     return 0;
 }
 
-static int rt5647_activate_tx(struct device *dev)
+static int rt5647_start_tx(struct device *dev, uint32_t dai_idx)
 {
     return 0;
 }
 
-static int rt5647_deactivate_tx(struct device *dev)
+static int rt5647_stop_tx(struct device *dev, uint32_t dai_idx)
 {
     return 0;
 }
 
 static int rt5647_register_tx_callback(struct device *dev,
-                                       device_codec_event_callback *callback)
+                                       device_codec_event_callback *callback,
+                                       void *arg)
 {
     struct rt5647_info *info = NULL;
 
@@ -1097,6 +1106,7 @@ static int rt5647_register_tx_callback(struct device *dev,
     }
     info = device_get_private(dev);
     info->tx_callback = callback;
+    info->tx_callback_arg = arg;
     return 0;
 }
 
@@ -1113,18 +1123,19 @@ static int rt5647_get_rx_delay(struct device *dev, uint32_t *delay)
     return 0;
 }
 
-static int rt5647_activate_rx(struct device *dev)
+static int rt5647_start_rx(struct device *dev, uint32_t dai_idx)
 {
     return 0;
 }
 
-static int rt5647_deactivate_rx(struct device *dev)
+static int rt5647_stop_rx(struct device *dev, uint32_t dai_idx)
 {
     return 0;
 }
 
 static int rt5647_register_rx_callback(struct device *dev,
-                                       device_codec_event_callback *callback)
+                                       device_codec_event_callback *callback,
+                                       void *arg)
 {
     struct rt5647_info *info = NULL;
 
@@ -1133,6 +1144,37 @@ static int rt5647_register_rx_callback(struct device *dev,
     }
     info = device_get_private(dev);
     info->rx_callback = callback;
+    info->rx_callback_arg = arg;
+    return 0;
+}
+
+static int rt5647_register_jack_event_callback(struct device *dev,
+                                    device_codec_jack_event_callback *callback,
+                                    void *arg)
+{
+    struct rt5647_info *info = NULL;
+
+    if (!dev || !device_get_private(dev) || !callback) {
+        return -EINVAL;
+    }
+    info = device_get_private(dev);
+    info->jack_event_callback = callback;
+    info->jack_event_callback_arg = arg;
+    return 0;
+}
+
+static int rt5647_register_button_event_callback(struct device *dev,
+                                  device_codec_button_event_callback *callback,
+                                  void *arg)
+{
+    struct rt5647_info *info = NULL;
+
+    if (!dev || !device_get_private(dev) || !callback) {
+        return -EINVAL;
+    }
+    info = device_get_private(dev);
+    info->button_event_callback = callback;
+    info->button_event_callback_arg = arg;
     return 0;
 }
 
@@ -1237,20 +1279,22 @@ static void rt5647_audcodec_remove(struct device *dev)
 static struct device_codec_type_ops rt5647_audcodec_type_ops = {
     .get_topology_size = rt5647_get_topology_size,
     .get_topology = rt5647_get_topology,
-    .get_dai_config = rt5647_get_dai_config,
-    .set_dai_config = rt5647_set_dai_config,
     .get_control = rt5647_get_control,
     .set_control = rt5647_set_control,
     .enable_widget = rt5647_enable_widget,
     .disable_widget = rt5647_disable_widget,
+    .get_caps = rt5647_get_caps,
+    .set_config = rt5647_set_config,
     .get_tx_delay = rt5647_get_tx_delay,
-    .activate_tx = rt5647_activate_tx,
-    .deactivate_tx = rt5647_deactivate_tx,
+    .start_tx = rt5647_start_tx,
+    .stop_tx = rt5647_stop_tx,
     .register_tx_callback = rt5647_register_tx_callback,
     .get_rx_delay = rt5647_get_rx_delay,
-    .activate_rx = rt5647_activate_rx,
-    .deactivate_rx = rt5647_deactivate_rx,
+    .start_rx = rt5647_start_rx,
+    .stop_rx = rt5647_stop_rx,
     .register_rx_callback = rt5647_register_rx_callback,
+    .register_jack_event_callback = rt5647_register_jack_event_callback,
+    .register_button_event_callback = rt5647_register_button_event_callback,
 };
 
 static struct device_driver_ops rt5647_audcodec_ops = {
