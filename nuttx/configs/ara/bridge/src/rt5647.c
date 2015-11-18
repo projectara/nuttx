@@ -48,6 +48,13 @@ struct rt5647_reg {
     uint16_t val;
 };
 
+struct pll_code {
+    int m;
+    int n;
+    int k;
+    int bp;
+};
+
 struct rt5647_info {
     struct device *dev;
     struct i2c_dev_s *i2c;
@@ -56,7 +63,7 @@ struct rt5647_info {
     struct rt5647_reg *init_regs;
     int num_regs;
 
-    struct gb_audio_dai *dais;
+    struct audio_dai *dais;
     int num_dais;
     struct audio_control *controls;
     int num_controls;
@@ -75,6 +82,8 @@ struct rt5647_info {
     void* jack_event_callback_arg;
     device_codec_button_event_callback *button_event_callback;
     void* button_event_callback_arg;
+
+    int clk_id; // sysclk source : mclk:0 , pll:1
 };
 
 struct rt5647_reg rt5647_init_regs[] = {
@@ -109,23 +118,38 @@ struct rt5647_reg rt5647_init_regs[] = {
     { RT5647_STO1_ADC_DIGI_VOL, 0xAFAF },/* Mute STO1 ADC for depop, Digital Input Gain */
 };
 
-struct gb_audio_dai rt5647_dais[] = {
+struct audio_dai rt5647_dais[] = {
     {
-        .name = "rt5647-aif1",
-        .cport = 0,
-        .capture = {
-            .stream_name = "AIF1 Capture",
-            .formats = RT5647_FORMATS,
-            .rates = RT5647_STEREO_RATES,
-            .chan_min = 1,
-            .chan_max = 2,
+        .dai = {
+            .name = "rt5647-aif1",
+            .cport = 0,
+            .capture = {
+                .stream_name = "AIF1 Capture",
+                .formats = RT5647_FORMATS,
+                .rates = RT5647_STEREO_RATES,
+                .chan_min = 1,
+                .chan_max = 2,
+            },
+            .playback = {
+                .stream_name = "AIF1 Playback",
+                .formats = RT5647_FORMATS,
+                .rates = RT5647_STEREO_RATES,
+                .chan_min = 1,
+                .chan_max = 2,
+            },
         },
-        .playback = {
-            .stream_name = "AIF1 Playback",
-            .formats = RT5647_FORMATS,
-            .rates = RT5647_STEREO_RATES,
-            .chan_min = 1,
-            .chan_max = 2,
+        .caps = {
+            .protocol = DEVICE_CODEC_PROTOCOL_PCM |
+                        DEVICE_CODEC_PROTOCOL_I2S |
+                        DEVICE_CODEC_PROTOCOL_LR_STEREO,
+            .wclk_polarity = DEVICE_CODEC_POLARITY_NORMAL |
+                             DEVICE_CODEC_POLARITY_REVERSED,
+            .wclk_change_edge = DEVICE_CODEC_EDGE_RISING |
+                                DEVICE_CODEC_EDGE_FALLING,
+            .data_rx_edge = DEVICE_CODEC_EDGE_RISING |
+                            DEVICE_CODEC_EDGE_FALLING,
+            .data_tx_edge = DEVICE_CODEC_EDGE_RISING |
+                            DEVICE_CODEC_EDGE_FALLING,
         },
     },
 };
@@ -910,7 +934,7 @@ static int rt5647_get_topology(struct device *dev,
     /* fill dai object */
     len = sizeof(struct gb_audio_dai);
     for (i = 0; i < info->num_dais; i++) {
-        memcpy(data, &info->dais[i], len);
+        memcpy(data, &info->dais[i].dai, len);
         data += len;
     }
 
@@ -937,17 +961,229 @@ static int rt5647_get_topology(struct device *dev,
     return 0;
 }
 
+static int rt5647_rate_to_freq(uint32_t rate)
+{
+    uint32_t freq = 0;
+
+    if (!ONE_BIT_IS_SET(rate)) {
+        return -EINVAL;
+    }
+
+    switch (rate) {
+    case GB_AUDIO_PCM_RATE_5512:
+        freq = 5512;
+        break;
+    case GB_AUDIO_PCM_RATE_8000:
+        freq = 8000;
+        break;
+    case GB_AUDIO_PCM_RATE_11025:
+        freq = 11025;
+        break;
+    case GB_AUDIO_PCM_RATE_16000:
+        freq = 16000;
+        break;
+    case GB_AUDIO_PCM_RATE_22050:
+        freq = 22050;
+        break;
+    case GB_AUDIO_PCM_RATE_32000:
+        freq = 32000;
+        break;
+    case GB_AUDIO_PCM_RATE_44100:
+        freq = 44100;
+        break;
+    case GB_AUDIO_PCM_RATE_48000:
+        freq = 48000;
+        break;
+    case GB_AUDIO_PCM_RATE_64000:
+        freq = 64000;
+        break;
+    case GB_AUDIO_PCM_RATE_88200:
+        freq = 88200;
+        break;
+    case GB_AUDIO_PCM_RATE_96000:
+        freq = 96000;
+        break;
+    case GB_AUDIO_PCM_RATE_176400:
+        freq = 176400;
+        break;
+    case GB_AUDIO_PCM_RATE_192000:
+        freq = 192000;
+        break;
+    default:
+        return -EINVAL;
+    }
+    return freq;
+}
+
+static int rt5647_fmtbit_to_bitnum(uint32_t fmtbit)
+{
+    uint32_t bits = 0;
+
+    if (!ONE_BIT_IS_SET(fmtbit)) {
+        return -EINVAL;
+    }
+
+    switch (fmtbit) {
+    case GB_AUDIO_PCM_FMT_S8:
+    case GB_AUDIO_PCM_FMT_U8:
+        bits = 8;
+        break;
+    case GB_AUDIO_PCM_FMT_S16_LE:
+    case GB_AUDIO_PCM_FMT_S16_BE:
+    case GB_AUDIO_PCM_FMT_U16_LE:
+    case GB_AUDIO_PCM_FMT_U16_BE:
+        bits = 16;
+        break;
+    case GB_AUDIO_PCM_FMT_S24_LE:
+    case GB_AUDIO_PCM_FMT_S24_BE:
+    case GB_AUDIO_PCM_FMT_U24_LE:
+    case GB_AUDIO_PCM_FMT_U24_BE:
+        bits = 24;
+        break;
+    case GB_AUDIO_PCM_FMT_S32_LE:
+    case GB_AUDIO_PCM_FMT_S32_BE:
+    case GB_AUDIO_PCM_FMT_U32_LE:
+    case GB_AUDIO_PCM_FMT_U32_BE:
+        bits = 32;
+        break;
+    default:
+        return -EINVAL;
+    }
+    return bits;
+}
+
 static int rt5647_get_caps(struct device *dev, unsigned int dai_idx,
                            uint8_t clk_role, struct device_codec_pcm *pcm,
                            struct device_codec_dai *dai)
 {
+    struct rt5647_info *info = NULL;
+    struct gb_audio_pcm *pbpcm = NULL;
+
+    if (!dev || !device_get_private(dev) || !pcm || !dai) {
+        return -EINVAL;
+    }
+    info = device_get_private(dev);
+
+    if (dai_idx >= info->num_dais) {
+        return -EINVAL;
+    }
+    pbpcm = &info->dais[dai_idx].dai.playback;
+
+    /* check pcm capability */
+    if (!ONE_BIT_IS_SET(pcm->rate) || !(pbpcm->rates & pcm->rate)) {
+        return -EINVAL;
+    }
+    if (!ONE_BIT_IS_SET(pcm->format) || !(pbpcm->formats & pcm->format)) {
+        return -EINVAL;
+    }
+    if (pcm->channels > pbpcm->chan_max || pcm->channels < pbpcm->chan_min) {
+        return -EINVAL;
+    }
+
+    if (!(clk_role & DEVICE_CODEC_ROLE_SLAVE)) {
+        /* In current audio module, we only supported slave mode. */
+        return -EINVAL;
+    }
+    memcpy(dai, &info->dais[dai_idx].caps, sizeof(struct device_codec_dai));
     return 0;
+}
+
+int rt5647_pll_calc(uint32_t infreq, uint32_t outfreq, struct pll_code *code) {
+    int m = 0, n = 0, k = 0, find = 0;
+    int t = 0, t1 = 0, out;
+
+    if (!code) {
+        return -EINVAL;
+    }
+    k = 2; /* assume K = 2 (typical)*/
+    t1 = outfreq / 1000; /* assume clock tolerance is 1KHz */
+
+    for (n = 0; n <= RT5647_PLL_N_CODE_MAX; n++) {
+        for (m = 0; m <= RT5647_PLL_M_CODE_MAX; m++) {
+            out = (infreq * (n + 2)) / ((m + 2) * (k + 2));
+            t = abs(outfreq - out);
+            if (t1 >= t) {
+                find = 1;
+                goto findout;
+            }
+        }
+    }
+
+findout:
+    if (find) {
+        code->m = m;
+        code->n = n;
+        code->k = k;
+        code->bp = 0; /* assume m_bypass = 0 temporarily */
+
+        return 0;
+    }
+    return -EINVAL;
 }
 
 static int rt5647_set_config(struct device *dev, unsigned int dai_idx,
                              uint8_t clk_role, struct device_codec_pcm *pcm,
                              struct device_codec_dai *dai)
 {
+    struct rt5647_info *info = NULL;
+    struct gb_audio_pcm *pbpcm = NULL;
+    struct pll_code code;
+    int sysclk = 0, ratefreq = 0, numbits = 0, channels = 0, ret;
+    uint32_t value = 0, mask = 0;
+
+    if (!dev || !device_get_private(dev) || !pcm || !dai) {
+        return -EINVAL;
+    }
+    info = device_get_private(dev);
+
+    if (dai_idx >= info->num_dais) {
+        return -EINVAL;
+    }
+    pbpcm = &info->dais[dai_idx].dai.playback;
+
+    /* check pcm capability */
+    if (!ONE_BIT_IS_SET(pcm->rate) || !(pbpcm->rates & pcm->rate)) {
+        return -EINVAL;
+    }
+    if (!ONE_BIT_IS_SET(pcm->format) || !(pbpcm->formats & pcm->format)) {
+        return -EINVAL;
+    }
+    if (pcm->channels > pbpcm->chan_max || pcm->channels < pbpcm->chan_min) {
+        return -EINVAL;
+    }
+
+    if (!(clk_role & DEVICE_CODEC_ROLE_SLAVE)) {
+        /* In current audio module, we only supported slave mode. */
+        return -EINVAL;
+    }
+    // check clock setting
+    ratefreq = rt5647_rate_to_freq(pcm->rate);
+    numbits = rt5647_fmtbit_to_bitnum(pcm->format);
+    channels = pcm->channels;
+
+    if (ratefreq <= 0 || numbits <= 0) {
+        return -EINVAL;
+    }
+
+    sysclk = 256 * ratefreq; /* 256*FS */
+    ret = rt5647_pll_calc(dai->mclk_freq, sysclk, &code);
+    if (ret) {
+        return -EINVAL;
+    }
+    // write clock setting
+    value = RT5647_SYSCLK_S_MCLK | RT5647_PLL_S_MCLK;
+    mask = RT5647_SYSCLK_S_MASK | RT5647_PLL_S_MASK;
+    audcodec_update(RT5647_GLOBAL_CLOCK, value, mask);
+
+    /* set n & k code */
+    value = (code.n << RT5647_PLL_N_CODE_SFT) |
+            (code.k << RT5647_PLL_K_CODE_SFT);
+    audcodec_write(RT5647_PLL1, value);
+    /* set m & m_bypass code */
+    value = (code.m << RT5647_PLL_M_CODE_SFT) |
+            (code.bp << RT5647_PLL_M_BYPASS_SFT);
+    audcodec_write(RT5647_PLL2, value);
+
     return 0;
 }
 

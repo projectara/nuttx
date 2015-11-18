@@ -288,6 +288,42 @@
 #define RT5647_PWR6_MONOVOL_EN                7
 #define RT5647_PWR6_MICINDET_EN               5
 
+/* Global Clock Control (MX-80) */
+#define RT5647_SYSCLK_S_SFT                   14
+#define RT5647_SYSCLK_S_MASK                  (0x3 << 14)
+#define RT5647_SYSCLK_S_MCLK                  (0 << 14)
+#define RT5647_SYSCLK_S_PLL                   (1 << 14)
+
+#define RT5647_PLL_S_SFT                      11
+#define RT5647_PLL_S_MASK                     (0x7 << 11)
+#define RT5647_PLL_S_MCLK                     (0 << 11)
+#define RT5647_PLL_S_BCLK1                    (1 << 11)
+#define RT5647_PLL_S_BCLK2                    (2 << 11)
+#define RT5647_PLL_S_BCLK3                    (3 << 11)
+#define RT5647_PLL_S_INTCLK                   (4 << 11)
+
+#define RT5647_PLL_PREDIV_SFT                 3
+#define RT5647_PLL_PREDIV_DIV1                (0 << 3)
+#define RT5647_PLL_PREDIV_DIV2                (1 << 3)
+
+#define RT5647_SYSCLK_DIV_DA_FILTER           0
+#define RT5647_SYSCLK_DIV_DA_FILTER_MASK      (0x7 << 0)
+
+/* PLL Control 1 (MX-81) */
+#define RT5647_PLL_N_CODE_SFT                 7
+#define RT5647_PLL_N_CODE_MASK                (0x1FF << 7)
+#define RT5647_PLL_N_CODE_MAX                 0x1FF
+#define RT5647_PLL_K_CODE_SFT                 0
+#define RT5647_PLL_K_CODE_MASK                (0x1F << 0)
+#define RT5647_PLL_K_CODE_MAX                 0x1F
+
+/* PLL Control 2 (MX-82) */
+#define RT5647_PLL_M_CODE_SFT                 12
+#define RT5647_PLL_M_CODE_MASK                (0xF << 12)
+#define RT5647_PLL_M_CODE_MAX                 0xF
+#define RT5647_PLL_M_BYPASS_SFT               11
+
+
 #define RT5647_FORMATS (GB_AUDIO_PCM_FMT_S8 | GB_AUDIO_PCM_FMT_S16_LE | \
                        GB_AUDIO_PCM_FMT_S24_LE)
 
