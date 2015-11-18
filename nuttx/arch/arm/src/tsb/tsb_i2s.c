@@ -233,7 +233,7 @@ static int tsb_i2s_verify_pcm_support(uint8_t clk_role, struct device_i2s_pcm *p
         ret = -EINVAL;
     } else if (!(pcm->rate & TSB_I2S_RATE_MASK)) {
         ret = -EINVAL;
-    } else if ((pcm->channels > 2) || (!pcm->channels == 0)) {
+    } else if ((pcm->channels > 2) || (pcm->channels == 0)) {
         ret = -EINVAL;
     }
 
@@ -1360,7 +1360,7 @@ static int tsb_i2s_op_set_config(struct device *dev,
     }
 
     memcpy(&info->pcm, pcm, sizeof(struct device_i2s_pcm));
-    memcpy(&info->pcm, dai, sizeof(struct device_i2s_dai));
+    memcpy(&info->dai, dai, sizeof(struct device_i2s_dai));
     if(clk_role == DEVICE_I2S_ROLE_MASTER) {
         info->mclk_role = DEVICE_I2S_ROLE_MASTER;
         info->bclk_role = DEVICE_I2S_ROLE_MASTER;
@@ -1371,8 +1371,9 @@ static int tsb_i2s_op_set_config(struct device *dev,
         info->wclk_role = DEVICE_I2S_ROLE_SLAVE;
     }
 
-    info->flags &= TSB_I2S_FLAG_CONFIGURED;
-    return 1;
+    info->flags |= TSB_I2S_FLAG_CONFIGURED;
+
+    return OK;
 }
 
 

@@ -130,11 +130,11 @@ static void i2s_test_print_usage(char *argv[])
 static int i2s_test_parse_cmdline(int argc, char *argv[],
                                   struct i2s_test_info *info)
 {
-    int Mcnt, mcnt, Bcnt, bcnt, tcnt, rcnt, icnt, lcnt, ccnt, errcnt;
+    int tcnt, rcnt, icnt, lcnt, ccnt, errcnt;
     int option;
     int ret = 0;
 
-    Mcnt = mcnt = Bcnt = bcnt = tcnt = rcnt = icnt = lcnt = ccnt = errcnt = 0;
+    tcnt = rcnt = icnt = lcnt = ccnt = errcnt = 0;
 
     if (argc > 11) {
         fprintf(stderr, "Too many arguments: %d\n",argc);
@@ -221,10 +221,8 @@ static int i2s_test_parse_cmdline(int argc, char *argv[],
         return -EINVAL;
     }
 
-    if (((Mcnt + mcnt) != 1) || ((Bcnt + bcnt) != 1) || (tcnt > 1) ||
-        (rcnt > 1) || ((tcnt != 1) && (rcnt != 1)) || ((icnt + lcnt) != 1) ||
-        (ccnt && !rcnt) || errcnt) {
-
+    if ((tcnt > 1) || (rcnt > 1) || ((tcnt != 1) && (rcnt != 1)) ||
+        ((icnt + lcnt) != 1) || (ccnt && !rcnt) || errcnt) {
         return -EINVAL;
     }
 
@@ -521,8 +519,6 @@ static void i2s_test_stop_receiver(struct device *dev)
 static int i2s_test_start_streaming_transmitter(struct i2s_test_info *info)
 {
     struct device *dev;
-    uint8_t clk_role;
-    struct device_i2s_pcm pcm;
     struct device_i2s_dai dai;
     int ret;
 
@@ -541,13 +537,11 @@ static int i2s_test_start_streaming_transmitter(struct i2s_test_info *info)
     /*validate transmitter configuration */
     ret = devcie_i2s_get_caps(dev,
                               DEVICE_I2S_ROLE_MASTER,
-                              &pcm,
+                              &test_pcm,
                               &dai);
 
     /* Check for matching test configuration */
-    if (!((pcm.format | test_pcm.format) &&
-         (pcm.rate | test_pcm.rate) &&
-         (pcm.channels == test_pcm.channels))) {
+    if (ret) {
 
         fprintf(stderr, "I2S master does support hard coded pcm test configuration\n");
         goto err_dev_close;
@@ -570,21 +564,23 @@ static int i2s_test_start_streaming_transmitter(struct i2s_test_info *info)
     test_dai.wclk_change_edge |= DEVICE_I2S_EDGE_FALLING;
 
     if (info->is_i2s) {
-        if(dai.protocol | DEVICE_I2S_PROTOCOL_I2S) {
+        if(!(dai.protocol | DEVICE_I2S_PROTOCOL_I2S)) {
             fprintf(stderr, "I2S master port does not support I2S protocol\n");
             goto err_dev_close;
         }
+        test_dai.protocol |= DEVICE_I2S_PROTOCOL_I2S;
     } else {
-        if(dai.protocol | DEVICE_I2S_PROTOCOL_LR_STEREO) {
+        if(!(dai.protocol | DEVICE_I2S_PROTOCOL_LR_STEREO)) {
             fprintf(stderr, "I2S master port does not support LR protocol\n");
             goto err_dev_close;
         }
+        test_dai.protocol |= DEVICE_I2S_PROTOCOL_LR_STEREO;
     }
 
-    ret = device_i2s_set_configuration(dev,
-                                       DEVICE_I2S_ROLE_MASTER,
-                                       &test_pcm,
-                                       &test_dai);
+    ret = devcie_i2s_set_config(dev,
+                                DEVICE_I2S_ROLE_MASTER,
+                                &test_pcm,
+                                &test_dai);
     if (ret) {
         fprintf(stderr, "set configuration failed: %d\n", ret);
         goto err_dev_close;
@@ -611,9 +607,6 @@ err_dev_close:
 static int i2s_test_start_streaming_receiver(struct i2s_test_info *info)
 {
     struct device *dev;
-    uint8_t clk_role;
-    struct device_i2s_pcm pcm;
-    struct device_i2s_dai dai;
     int ret;
 
     if ((info->is_transmitter) &&
@@ -648,10 +641,10 @@ static int i2s_test_start_streaming_receiver(struct i2s_test_info *info)
         goto err_dev_close;
     }
 
-    ret = device_i2s_set_configuration(dev,
-                                       DEVICE_I2S_ROLE_SLAVE,
-                                       &test_pcm,
-                                       &test_dai);
+    ret = devcie_i2s_set_config(dev,
+                               DEVICE_I2S_ROLE_SLAVE,
+                               &test_pcm,
+                               &test_dai);
     if (ret) {
         fprintf(stderr, "set configuration failed: %d\n", ret);
         goto err_dev_close;
