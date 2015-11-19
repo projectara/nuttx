@@ -398,11 +398,6 @@ int gbl_main(int argc, char *argv[])
         goto help;
     cmd = argv[argc - 1];
 
-    if (wait == 0) {
-        fprintf(stderr, "wait period must be greater than 0\n");
-        return EXIT_FAILURE;
-    }
-
     /* Bail-out if the cport is invalid since we would do nothing anyway. */
     if (cport >= 0 && !gb_loopback_cport_valid(cport)) {
         fprintf(stderr, "cport %d not registered for gb_loopback\n", cport);
