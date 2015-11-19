@@ -34,6 +34,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/i2c.h>
+#include "audcodec.h"
 #include "rt5647.h"
 
 // ignore unused warning message for current stage
@@ -84,6 +85,10 @@ struct rt5647_info {
     void* button_event_callback_arg;
 
     int clk_id; // sysclk source : mclk:0 , pll:1
+
+    /* hardware access function */
+    uint32_t (*codec_read)(uint32_t reg, uint32_t *value);
+    uint32_t (*codec_write)(uint32_t reg, uint32_t value);
 };
 
 struct rt5647_reg rt5647_init_regs[] = {
@@ -459,9 +464,36 @@ audio_route rt5647_routes[] = {
     { RT5647_WIDGET_SPK_AMP, RT5647_WIDGET_SPOR, NOCONTROL },
 };
 
-static uint32_t audcodec_read(uint32_t reg, uint32_t *value)
+struct device* get_codec_dev()
 {
-    struct device *dev = codec_dev;
+    return codec_dev;
+}
+
+void* get_codec_read_func(struct device *dev)
+{
+    struct rt5647_info *info = NULL;
+
+    if (!dev || !device_get_private(dev)) {
+        return NULL;
+    }
+    info = device_get_private(dev);
+    return (void*)info->codec_read;
+}
+
+void* get_codec_write_func(struct device *dev)
+{
+    struct rt5647_info *info = NULL;
+
+    if (!dev || !device_get_private(dev)) {
+        return NULL;
+    }
+    info = device_get_private(dev);
+    return (void*)info->codec_write;
+}
+
+static uint32_t rt5647_audcodec_hw_read(uint32_t reg, uint32_t *value)
+{
+    struct device *dev = get_codec_dev();
     struct rt5647_info *info = NULL;
     uint8_t cmd = 0;
     uint16_t data = 0;
@@ -499,9 +531,9 @@ static uint32_t audcodec_read(uint32_t reg, uint32_t *value)
     return 0;
 }
 
-static uint32_t audcodec_write(uint32_t reg, uint32_t value)
+static uint32_t rt5647_audcodec_hw_write(uint32_t reg, uint32_t value)
 {
-    struct device *dev = codec_dev;
+    struct device *dev = get_codec_dev();
     struct rt5647_info *info = NULL;
     uint8_t cmd[3] = {0x00, 0x00, 0x00};
     struct i2c_msg_s msg[] = {
@@ -529,364 +561,6 @@ static uint32_t audcodec_write(uint32_t reg, uint32_t value)
         return -EIO;
     }
     return 0;
-}
-
-static uint32_t audcodec_update(uint32_t reg, uint32_t value, uint32_t mask)
-{
-    uint32_t data = 0;
-
-    if (audcodec_read(reg, &data)) {
-        return -EIO;
-    }
-    data = (data & ~mask) | value;
-    if (audcodec_write(reg, data)) {
-        return -EIO;
-    }
-    return 0;
-}
-
-static int audcodec_bit_get(struct audio_control *control,
-                             struct gb_audio_ctl_elem_value *value)
-{
-    uint32_t reg = 0, inv = 0, shift = 0, data = 0, mask = 0;
-    int ret = 0;
-    struct bitctl *ctl = NULL;
-
-    if (!control || !control->priv || !value) {
-        return -EINVAL;
-    }
-    ctl = control->priv;
-
-    reg = ctl->reg;
-    shift = ctl->shift;
-    inv = ctl->inv;
-    mask = ctl->mask;
-
-    ret = audcodec_read(reg, &data);
-    if (ret) {
-        return -EIO;
-    }
-    data = (data >> shift) & mask;
-    if (inv) {
-        data = (data)? 0: 1;
-    }
-
-    value[0].value.integer_value = data;
-    return ret;
-}
-
-static int audcodec_bit_set(struct audio_control *control,
-                             struct gb_audio_ctl_elem_value *value)
-{
-    uint32_t reg = 0, inv = 0, shift = 0, data = 0, mask = 0;
-    int ret = 0;
-    struct bitctl *ctl = NULL;
-
-    if (!control || !control->priv || !value) {
-        return -EINVAL;
-    }
-    ctl = control->priv;
-
-    reg = ctl->reg;
-    shift = ctl->shift;
-    inv = ctl->inv;
-    mask = ctl->mask;
-
-    data = value[0].value.integer_value;
-
-    if (inv) {
-        data = (data)? 0: 1;
-    }
-    data = (data << shift);
-
-    ret = audcodec_update(reg, data, mask << shift);
-    if (ret) {
-        return -EIO;
-    }
-    return ret;
-}
-
-static int audcodec_bits_get(struct audio_control *control,
-                             struct gb_audio_ctl_elem_value *value)
-{
-    uint32_t reg1 = 0, reg2 = 0, inv = 0, mask = 0;
-    uint32_t shift1 = 0, shift2 = 0;
-    uint32_t data1 = 0, data2 = 0;
-    int ret = 0;
-    struct bitctl *ctl = NULL;
-
-    if (!control || !control->priv || !value) {
-        return -EINVAL;
-    }
-    ctl = control->priv;
-
-
-    reg1 = ctl->reg;
-    reg2 = ctl->reg2;
-    shift1 = ctl->shift;
-    shift2 = ctl->shift2;
-    inv = ctl->inv;
-    mask = ctl->mask;
-
-    ret = audcodec_read(reg1, &data1);
-    if (ret) {
-        return -EIO;
-    }
-    data1 = (data1 >> shift1) & mask;
-    if (inv) {
-        data1 = (data1)? 0: 1;
-    }
-    value[0].value.integer_value = data1;
-    if (((reg1 == reg2) && (shift1 != shift2)) || (reg1 != reg2)) {
-        /* second control */
-        ret = audcodec_read(reg2, &data2);
-        if (ret) {
-            return -EIO;
-        }
-        data2 = (data2 >> shift2) & mask;
-        if (inv) {
-            data2 = (data2)? 0: 1;
-        }
-        value[1].value.integer_value = data2;
-    }
-    return ret;
-}
-
-static int audcodec_bits_set(struct audio_control *control,
-                             struct gb_audio_ctl_elem_value *value)
-{
-    uint32_t reg1 = 0, reg2 = 0, inv = 0, mask = 0;
-    uint32_t shift1 = 0, shift2 = 0;
-    uint32_t data1 = 0, data2 = 0;
-    int ret = 0;
-    struct bitctl *ctl = NULL;
-
-    if (!control || !control->priv || !value) {
-        return -EINVAL;
-    }
-    ctl = control->priv;
-
-    reg1 = ctl->reg;
-    reg2 = ctl->reg2;
-    shift1 = ctl->shift;
-    shift2 = ctl->shift2;
-    inv = ctl->inv;
-    mask = ctl->mask;
-
-    data1 = value[0].value.integer_value;
-
-    if (inv) {
-        data1 = (data1)? 0: 1;
-    }
-    data1 = (data1 << shift1);
-
-    if (((reg1 == reg2) && (shift1 != shift2)) || (reg1 != reg2)) {
-        /* second control */
-        data2 = value[1].value.integer_value;
-        if (inv) {
-            data2 = (data2)? 0: 1;
-        }
-        data2 = (data2 << shift2);
-    }
-
-    if (reg1 == reg2) {
-        ret = audcodec_update(reg1, data1 | data2,
-                             (mask << shift1) | (mask << shift2));
-    } else {
-        ret = audcodec_update(reg1, data1, mask << shift1);
-        if (!ret) {
-            ret = audcodec_update(reg2, data2, mask << shift2);
-        }
-    }
-    return ret;
-}
-
-static int audcodec_value_get(struct audio_control *control,
-                              struct gb_audio_ctl_elem_value *value)
-{
-    uint32_t reg1 = 0, reg2 = 0, inv = 0;
-    uint32_t shift1 = 0, shift2 = 0;
-    uint32_t max = 0, min = 0, mask = 0;
-    uint32_t data1 = 0, data2 = 0;
-    int ret = 0;
-    struct bitctl *ctl = NULL;
-
-    if (!control || !control->priv || !value) {
-        return -EINVAL;
-    }
-    ctl = control->priv;
-
-    reg1 = ctl->reg;
-    reg2 = ctl->reg2;
-    shift1 = ctl->shift;
-    shift2 = ctl->shift2;
-    inv = ctl->inv;
-    max = ctl->max;
-    min = ctl->min;
-    mask = ctl->mask;
-
-    ret = audcodec_read(reg1, &data1);
-    if (ret) {
-        return -EIO;
-    }
-    data1 = (data1 >> shift1) & mask;
-    if (inv) {
-        data1 = max - data1;
-    }
-    data1 = data1 - min;
-    value[0].value.integer_value = data1;
-
-    if (((reg1 == reg2) && (shift1 != shift2)) || (reg1 != reg2)) {
-        /* two controls */
-        ret = audcodec_read(reg2, &data2);
-        if (ret) {
-            return -EIO;
-        }
-        data2 = (data2 >> shift2) & mask;
-        if (inv) {
-            data2 = max - data2;
-        }
-        data2 = data2 - min;
-        value[1].value.integer_value = data2;
-    }
-    return ret;
-}
-
-static int audcodec_value_set(struct audio_control *control,
-                              struct gb_audio_ctl_elem_value *value)
-{
-    uint32_t reg1 = 0, reg2 = 0, mask = 0;
-    uint32_t shift1 = 0, shift2 = 0, max = 0, min = 0;
-    uint32_t data1 = 0, data2 = 0;
-    int ret = 0;
-    struct bitctl *ctl = NULL;
-
-    if (!control || !control->priv || !value) {
-        return -EINVAL;
-    }
-    ctl = control->priv;
-
-    reg1 = ctl->reg;
-    reg2 = ctl->reg2;
-    shift1 = ctl->shift;
-    shift2 = ctl->shift2;
-    mask = ctl->mask;
-    max = ctl->max;
-    min = ctl->min;
-
-    data1 = value[0].value.integer_value;
-    data1 = (data1 > max)? max : data1;
-    data1 = (data1 < min)? min : data1;
-
-    data1 = (data1 << shift1);
-
-    if (((reg1 == reg2) && (shift1 != shift2)) || (reg1 != reg2)) {
-        /* second control */
-        data2 = value[1].value.integer_value;
-        data2 = (data2 > max)? max : data2;
-        data2 = (data2 < min)? min : data2;
-        data2 = (data2 << shift2);
-    }
-
-    if (reg1 == reg2) {
-        ret = audcodec_update(reg1, data1 | data2,
-                             (mask << shift1) | (mask << shift2));
-    } else {
-        ret = audcodec_update(reg1, data1, mask << shift1);
-        if (!ret) {
-            ret = audcodec_update(reg2, data2, mask << shift2);
-        }
-    }
-    return ret;
-}
-
-static int audcodec_enum_get(struct audio_control *control,
-                                   struct gb_audio_ctl_elem_value *value)
-{
-    uint32_t reg1 = 0, reg2 = 0;
-    uint32_t shift1 = 0, shift2 = 0;
-    uint32_t mask = 0;
-    uint32_t data1 = 0, data2 = 0;
-    int ret = 0;
-    struct enumctl *ctl = NULL;
-
-    if (!control || !control->priv || !value) {
-        return -EINVAL;
-    }
-    ctl = control->priv;
-
-    reg1 = ctl->reg;
-    reg2 = ctl->reg2;
-    shift1 = ctl->shift;
-    shift2 = ctl->shift2;
-    mask = ctl->mask;
-
-    ret = audcodec_read(reg1, &data1);
-    if (ret) {
-        return -EIO;
-    }
-    data1 = (data1 >> shift1) & mask;
-    value[0].value.integer_value = data1;
-
-    if (((reg1 == reg2) && (shift1 != shift2)) || (reg1 != reg2)) {
-        /* second control */
-        ret = audcodec_read(reg2, &data2);
-        if (ret) {
-            return -EIO;
-        }
-        data2 = (data2 >> shift2) & mask;
-        value[1].value.integer_value = data2;
-    }
-    return ret;
-}
-
-static int audcodec_enum_set(struct audio_control *control,
-                                   struct gb_audio_ctl_elem_value *value)
-{
-    uint32_t reg1 = 0, reg2 = 0;
-    uint32_t shift1 = 0, shift2 = 0;
-    uint32_t mask = 0, max = 0;
-    uint32_t data1 = 0, data2 = 0;
-    int ret = 0;
-    struct enumctl *ctl = NULL;
-
-    if (!control || !control->priv || !value) {
-        return -EINVAL;
-    }
-    ctl = control->priv;
-
-    reg1 = ctl->reg;
-    reg2 = ctl->reg2;
-    shift1 = ctl->shift;
-    shift2 = ctl->shift2;
-    mask = ctl->mask;
-    max = ctl->max;
-
-    data1 = value[0].value.integer_value;
-    if (data1 > max) {
-        data1 = max;
-    }
-    data1 = data1 << shift1;
-
-    if (((reg1 == reg2) && (shift1 != shift2)) || (reg1 != reg2)) {
-        /* second control */
-        data2 = value[1].value.integer_value;
-        if (data2 > max) {
-            data2 = max;
-        }
-        data2 = data2 << shift2;
-    }
-
-    if (reg1 == reg2) {
-        ret = audcodec_update(reg1, data1 | data2,
-                             (mask << shift1) | (mask << shift2));
-    } else {
-        ret = audcodec_update(reg1, data1, mask << shift1);
-        if (!ret) {
-            ret = audcodec_update(reg2, data2, mask << shift2);
-        }
-    }
-    return ret;
 }
 
 static int rt5647_get_topology_size(struct device *dev, uint16_t *size)
@@ -1495,8 +1169,11 @@ static int rt5647_audcodec_probe(struct device *dev)
         return -EIO;
     }
 
+    info->codec_read = rt5647_audcodec_hw_read;
+    info->codec_write = rt5647_audcodec_hw_write;
     device_set_private(dev, info);
     codec_dev = dev;
+
     return 0;
 }
 
@@ -1513,6 +1190,8 @@ static void rt5647_audcodec_remove(struct device *dev)
         up_i2cuninitialize(info->i2c);
         info->i2c = NULL;
     }
+    info->codec_read = NULL;
+    info->codec_write = NULL;
     device_set_private(dev, NULL);
     codec_dev = NULL;
     free(info);

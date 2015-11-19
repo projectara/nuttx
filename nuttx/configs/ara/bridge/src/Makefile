@@ -94,6 +94,7 @@ CSRCS += audio_board.c
 endif
 
 ifeq ($(CONFIG_ARCH_CHIP_DEVICE_CODEC_RT5647),y)
+CSRCS += audcodec.c
 CSRCS += rt5647.c
 endif
 
