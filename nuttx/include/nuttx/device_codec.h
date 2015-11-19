@@ -92,6 +92,11 @@ struct enumctl {
     uint32_t *values;
 };
 
+struct audio_dai {
+    struct gb_audio_dai dai;
+    struct device_codec_dai caps;
+};
+
 struct audio_control {
     struct gb_audio_control control;
     void *priv;
