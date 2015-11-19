@@ -97,6 +97,7 @@ static void loopback_ctx_unlock(struct loopback_context *ctx)
 
 static struct list_head loopback_ctx_list = LIST_INIT(loopback_ctx_list);
 static pthread_mutex_t loopback_ctx_list_mutex = PTHREAD_MUTEX_INITIALIZER;
+static int loopback_running_late;
 
 static void loopback_ctx_list_lock(void)
 {
@@ -261,10 +262,13 @@ int gb_loopback_service(void)
              * next iteration - don't call usleep().
              */
             if (sleep_time > 0) {
-                if (loop_time > sleep_time)
-                    fprintf(stderr, "%s running late\n", __FUNCTION__);
-                else
+                if (loop_time > sleep_time) {
+                    loopback_ctx_list_lock();
+                    loopback_running_late++;
+                    loopback_ctx_list_unlock();
+                } else {
                     usleep(sleep_time - loop_time);
+                }
             }
         }
 
@@ -280,8 +284,10 @@ static void print_status_normal(void)
     struct loopback_context *ctx;
     struct list_head *iter;
 
-    printf("  CPORT    ACTIVE    RECV ERR    SEND ERR    SENT    RECV    THROUGHPUT   LATENCY   REQ_PER_SEC\n");
     loopback_ctx_list_lock();
+    if (loopback_running_late)
+        printf("  Running late\n  %d\n", loopback_running_late);
+    printf("  CPORT    ACTIVE    RECV ERR    SEND ERR    SENT    RECV    THROUGHPUT   LATENCY   REQ_PER_SEC\n");
     list_foreach(&loopback_ctx_list, iter) {
         ctx = list_entry(iter, struct loopback_context, list);
 
@@ -413,6 +419,7 @@ int gbl_main(int argc, char *argv[])
 
         loopback_ctx_list_lock();
 
+        loopback_running_late = 0;
         list_foreach(&loopback_ctx_list, iter) {
             ctx = list_entry(iter, struct loopback_context, list);
 
