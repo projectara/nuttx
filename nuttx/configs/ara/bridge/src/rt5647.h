@@ -312,6 +312,28 @@
 #define RT5647_PWR6_MONOVOL_EN                7
 #define RT5647_PWR6_MICINDET_EN               5
 
+/* I2S1/I2S2/I2S3 control (MX-70,71,72) */
+#define RT5647_I2S_MODE                       15
+#define RT5647_I2S_MODE_MASTER                (0x0 << 15)
+#define RT5647_I2S_MODE_SLAVE                 (0x1 << 15)
+#define RT5647_I2S_OUT_COMP                   10
+#define RT5647_I2S_OUT_COMP_MASK              (0x3 << 10)
+#define RT5647_I2S_IN_COMP                    8
+#define RT5647_I2S_IN_COMP_MASK               (0x3 << 8)
+#define RT5647_I2S_INV_BCLK                   7
+#define RT5647_I2S_LEN                        2
+#define RT5647_I2S_LEN_MASK                   (0x3 << 2)
+#define RT5647_I2S_LEN_16                     (0x0 << 2)
+#define RT5647_I2S_LEN_20                     (0x1 << 2)
+#define RT5647_I2S_LEN_24                     (0x2 << 2)
+#define RT5647_I2S_LEN_8                      (0x3 << 2)
+#define RT5647_I2S_FORMAT                     0
+#define RT5647_I2S_FORMAT_MASK                (0x3 << 0)
+#define RT5647_I2S_FORMAT_I2S                 0
+#define RT5647_I2S_FORMAT_LEFT_J              1
+#define RT5647_I2S_FORMAT_PCM_A               2
+#define RT5647_I2S_FORMAT_PCM_B               3
+
 /* Global Clock Control (MX-80) */
 #define RT5647_SYSCLK_S_SFT                   14
 #define RT5647_SYSCLK_S_MASK                  (0x3 << 14)

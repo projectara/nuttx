@@ -86,6 +86,9 @@ struct rt5647_info {
 
     int clk_id; // sysclk source : mclk:0 , pll:1
 
+    uint8_t clk_role;
+    struct device_codec_pcm *pcm;
+    struct device_codec_dai *dai;
     /* hardware access function */
     uint32_t (*codec_read)(uint32_t reg, uint32_t *value);
     uint32_t (*codec_write)(uint32_t reg, uint32_t value);
@@ -147,8 +150,7 @@ struct audio_dai rt5647_dais[] = {
             .protocol = DEVICE_CODEC_PROTOCOL_PCM |
                         DEVICE_CODEC_PROTOCOL_I2S |
                         DEVICE_CODEC_PROTOCOL_LR_STEREO,
-            .wclk_polarity = DEVICE_CODEC_POLARITY_NORMAL |
-                             DEVICE_CODEC_POLARITY_REVERSED,
+            .wclk_polarity = DEVICE_CODEC_POLARITY_NORMAL,
             .wclk_change_edge = DEVICE_CODEC_EDGE_RISING |
                                 DEVICE_CODEC_EDGE_FALLING,
             .data_rx_edge = DEVICE_CODEC_EDGE_RISING |
@@ -758,6 +760,7 @@ static int rt5647_get_caps(struct device *dev, unsigned int dai_idx,
         /* In current audio module, we only supported slave mode. */
         return -EINVAL;
     }
+
     memcpy(dai, &info->dais[dai_idx].caps, sizeof(struct device_codec_dai));
     return 0;
 }
@@ -802,8 +805,8 @@ static int rt5647_set_config(struct device *dev, unsigned int dai_idx,
     struct rt5647_info *info = NULL;
     struct gb_audio_pcm *pbpcm = NULL;
     struct pll_code code;
-    int sysclk = 0, ratefreq = 0, numbits = 0, channels = 0, ret;
-    uint32_t value = 0, mask = 0;
+    int sysclk = 0, ratefreq = 0, numbits = 0, ret = 0;
+    uint32_t value = 0, mask = 0, format = 0;
 
     if (!dev || !device_get_private(dev) || !pcm || !dai) {
         return -EINVAL;
@@ -833,7 +836,6 @@ static int rt5647_set_config(struct device *dev, unsigned int dai_idx,
     // check clock setting
     ratefreq = rt5647_rate_to_freq(pcm->rate);
     numbits = rt5647_fmtbit_to_bitnum(pcm->format);
-    channels = pcm->channels;
 
     if (ratefreq <= 0 || numbits <= 0) {
         return -EINVAL;
@@ -844,8 +846,45 @@ static int rt5647_set_config(struct device *dev, unsigned int dai_idx,
     if (ret) {
         return -EINVAL;
     }
+
+    /* setup codec hw */
+    if (clk_role & DEVICE_CODEC_ROLE_SLAVE) {
+        format |= RT5647_I2S_MODE_SLAVE;
+    }
+
+    switch (dai->protocol) {
+    case DEVICE_CODEC_PROTOCOL_PCM:
+        format |= RT5647_I2S_FORMAT_PCM_A;
+        break;
+    case DEVICE_CODEC_PROTOCOL_I2S:
+        format |= RT5647_I2S_FORMAT_I2S;
+        break;
+    case DEVICE_CODEC_PROTOCOL_LR_STEREO:
+        format |= RT5647_I2S_FORMAT_LEFT_J;
+        break;
+    default:
+        return -EINVAL;
+    }
+
+    switch (numbits) {
+    case 8:
+        format |= RT5647_I2S_LEN_8;
+        break;
+    case 16:
+        format |= RT5647_I2S_LEN_16;
+        break;
+    case 20:
+        format |= RT5647_I2S_LEN_20;
+        break;
+    case 24:
+        format |= RT5647_I2S_LEN_24;
+        break;
+    default:
+        return -EINVAL;
+    }
+
     // write clock setting
-    value = RT5647_SYSCLK_S_MCLK | RT5647_PLL_S_MCLK;
+    value = RT5647_SYSCLK_S_PLL | RT5647_PLL_S_MCLK; /* MCLK->PLL->SYSCLK */
     mask = RT5647_SYSCLK_S_MASK | RT5647_PLL_S_MASK;
     audcodec_update(RT5647_GLOBAL_CLOCK, value, mask);
 
@@ -858,6 +897,16 @@ static int rt5647_set_config(struct device *dev, unsigned int dai_idx,
             (code.bp << RT5647_PLL_M_BYPASS_SFT);
     audcodec_write(RT5647_PLL2, value);
 
+    if (dai_idx == 0) { /* i2s1 */
+        audcodec_write(RT5647_I2S1_CTRL, format);
+    }
+
+    /* save config to dai[dai_idx] structure */
+    info->dais[dai_idx].clk_role = clk_role;
+    memcpy(&info->dais[dai_idx].pcm_config, pcm,
+           sizeof(struct device_codec_pcm));
+    memcpy(&info->dais[dai_idx].dai_config, dai,
+           sizeof(struct device_codec_dai));
     return 0;
 }
 
@@ -1002,6 +1051,7 @@ static int rt5647_get_tx_delay(struct device *dev, uint32_t *delay)
 
 static int rt5647_start_tx(struct device *dev, uint32_t dai_idx)
 {
+
     return 0;
 }
 
@@ -1040,11 +1090,37 @@ static int rt5647_get_rx_delay(struct device *dev, uint32_t *delay)
 
 static int rt5647_start_rx(struct device *dev, uint32_t dai_idx)
 {
+    struct rt5647_info *info = NULL;
+
+    if (!dev || !device_get_private(dev)) {
+        return -EINVAL;
+    }
+    info = device_get_private(dev);
+    if (dai_idx >= info->num_dais) {
+        return -EINVAL;
+    }
+    if (dai_idx == 0) { /* i2s1 */
+        audcodec_update(RT5647_PWR_MGT_1, 1 << RT5647_PWR1_I2S1_EN,
+                        1 << RT5647_PWR1_I2S1_EN);
+    }
     return 0;
 }
 
 static int rt5647_stop_rx(struct device *dev, uint32_t dai_idx)
 {
+    struct rt5647_info *info = NULL;
+
+    if (!dev || !device_get_private(dev)) {
+        return -EINVAL;
+    }
+    info = device_get_private(dev);
+    if (dai_idx >= info->num_dais) {
+        return -EINVAL;
+    }
+    if (dai_idx == 0) { /* i2s1 */
+        audcodec_update(RT5647_PWR_MGT_1, 0 << RT5647_PWR1_I2S1_EN,
+                        1 << RT5647_PWR1_I2S1_EN);
+    }
     return 0;
 }
 
