@@ -42,6 +42,13 @@
 
 #define RT5647_CODEC_NAME   "rt5647"
 
+#define CODEC_DEVICE_FLAG_PROBE           BIT(0)  /* device probed */
+#define CODEC_DEVICE_FLAG_OPEN            BIT(1)  /* device opened */
+#define CODEC_DEVICE_FLAG_CONFIG          BIT(2)  /* device configured */
+#define CODEC_DEVICE_FLAG_TX_START        BIT(3)  /* device tx started */
+#define CODEC_DEVICE_FLAG_RX_START        BIT(4)  /* device rx started */
+#define CODEC_DEVICE_FLAG_CLOSE           BIT(5)  /* device closed */
+
 static struct device *codec_dev = NULL;
 
 struct rt5647_reg {
@@ -60,6 +67,7 @@ struct rt5647_info {
     struct device *dev;
     struct i2c_dev_s *i2c;
     uint8_t name[AUDIO_CODEC_NAME_MAX];
+    int state;
 
     struct rt5647_reg *init_regs;
     int num_regs;
@@ -907,6 +915,8 @@ static int rt5647_set_config(struct device *dev, unsigned int dai_idx,
            sizeof(struct device_codec_pcm));
     memcpy(&info->dais[dai_idx].dai_config, dai,
            sizeof(struct device_codec_dai));
+
+    info->state |= CODEC_DEVICE_FLAG_CONFIG;
     return 0;
 }
 
@@ -1051,12 +1061,35 @@ static int rt5647_get_tx_delay(struct device *dev, uint32_t *delay)
 
 static int rt5647_start_tx(struct device *dev, uint32_t dai_idx)
 {
+    struct rt5647_info *info = NULL;
 
+    if (!dev || !device_get_private(dev)) {
+        return -EINVAL;
+    }
+    info = device_get_private(dev);
+
+    if (!(info->state & CODEC_DEVICE_FLAG_CONFIG)) {
+        /* device isn't configured. */
+        return -EIO;
+    }
+    info->state |= CODEC_DEVICE_FLAG_TX_START;
     return 0;
 }
 
 static int rt5647_stop_tx(struct device *dev, uint32_t dai_idx)
 {
+    struct rt5647_info *info = NULL;
+
+    if (!dev || !device_get_private(dev)) {
+        return -EINVAL;
+    }
+    info = device_get_private(dev);
+
+    if (!(info->state & CODEC_DEVICE_FLAG_TX_START)) {
+        /* device isn't start to transfer data. */
+        return -EIO;
+    }
+    info->state &= ~CODEC_DEVICE_FLAG_TX_START;
     return 0;
 }
 
@@ -1096,6 +1129,12 @@ static int rt5647_start_rx(struct device *dev, uint32_t dai_idx)
         return -EINVAL;
     }
     info = device_get_private(dev);
+
+    if (!(info->state & CODEC_DEVICE_FLAG_CONFIG)) {
+        /* device isn't configured. */
+        return -EIO;
+    }
+
     if (dai_idx >= info->num_dais) {
         return -EINVAL;
     }
@@ -1103,6 +1142,7 @@ static int rt5647_start_rx(struct device *dev, uint32_t dai_idx)
         audcodec_update(RT5647_PWR_MGT_1, 1 << RT5647_PWR1_I2S1_EN,
                         1 << RT5647_PWR1_I2S1_EN);
     }
+    info->state |= CODEC_DEVICE_FLAG_RX_START;
     return 0;
 }
 
@@ -1114,6 +1154,12 @@ static int rt5647_stop_rx(struct device *dev, uint32_t dai_idx)
         return -EINVAL;
     }
     info = device_get_private(dev);
+
+    if (!(info->state & CODEC_DEVICE_FLAG_RX_START)) {
+        /* device isn't start to receive data. */
+        return -EIO;
+    }
+
     if (dai_idx >= info->num_dais) {
         return -EINVAL;
     }
@@ -1121,6 +1167,7 @@ static int rt5647_stop_rx(struct device *dev, uint32_t dai_idx)
         audcodec_update(RT5647_PWR_MGT_1, 0 << RT5647_PWR1_I2S1_EN,
                         1 << RT5647_PWR1_I2S1_EN);
     }
+    info->state &= ~CODEC_DEVICE_FLAG_RX_START;
     return 0;
 }
 
@@ -1179,6 +1226,14 @@ static int rt5647_audcodec_open(struct device *dev)
     }
     info = device_get_private(dev);
 
+    if (!(info->state & CODEC_DEVICE_FLAG_PROBE)) {
+        return -EIO;
+    }
+
+    if (info->state & CODEC_DEVICE_FLAG_OPEN) {
+        /* device has been opened, return error */
+        return -EBUSY;
+    }
     /* codec power on sequence */
     audcodec_write(RT5647_RESET, 0);    /* software reset */
 
@@ -1200,6 +1255,24 @@ static void rt5647_audcodec_close(struct device *dev)
     }
     info = device_get_private(dev);
 
+    if (!(info->state & CODEC_DEVICE_FLAG_OPEN)) {
+        /* device isn't opened. */
+        return;
+    }
+
+    if (info->state & CODEC_DEVICE_FLAG_CONFIG) {
+        if (info->state & CODEC_DEVICE_FLAG_TX_START) {
+            for (i = 0; i < info->num_dais; i++) {
+                rt5647_stop_tx(dev, i);
+            }
+        }
+        if (info->state & CODEC_DEVICE_FLAG_RX_START) {
+            for (i = 0; i < info->num_dais; i++) {
+                rt5647_stop_rx(dev, i);
+            }
+        }
+    }
+
     /* disable all widget */
     widget = info->widgets;
 
@@ -1207,6 +1280,9 @@ static void rt5647_audcodec_close(struct device *dev)
         rt5647_disable_widget(dev,widget->widget.id);
         widget++;
     }
+
+    /* clear open state */
+    info->state &= ~(CODEC_DEVICE_FLAG_OPEN | CODEC_DEVICE_FLAG_CONFIG);
 }
 
 static int rt5647_audcodec_probe(struct device *dev)
@@ -1217,6 +1293,7 @@ static int rt5647_audcodec_probe(struct device *dev)
         return -EINVAL;
     }
 
+    /* allocate codec private information structure memory space */
     info = zalloc(sizeof(*info));
     if (!info) {
         return -ENOMEM;
@@ -1225,6 +1302,7 @@ static int rt5647_audcodec_probe(struct device *dev)
     info->dev = dev;
     strcpy((char*)info->name, RT5647_CODEC_NAME);
 
+    /* link pre-defined setting */
     info->init_regs = rt5647_init_regs;
     info->num_regs = ARRAY_SIZE(rt5647_init_regs);
     info->dais = rt5647_dais;
@@ -1245,11 +1323,16 @@ static int rt5647_audcodec_probe(struct device *dev)
         return -EIO;
     }
 
+    /* assign codec register access function,
+     * common codec function will use two function acces codec hardware
+     */
     info->codec_read = rt5647_audcodec_hw_read;
     info->codec_write = rt5647_audcodec_hw_write;
+
     device_set_private(dev, info);
     codec_dev = dev;
 
+    info->state |= CODEC_DEVICE_FLAG_PROBE;
     return 0;
 }
 
@@ -1262,12 +1345,16 @@ static void rt5647_audcodec_remove(struct device *dev)
     }
     info = device_get_private(dev);
 
+    if (info->state & CODEC_DEVICE_FLAG_OPEN) {
+        rt5647_audcodec_close(dev);
+    }
     if (info->i2c) {
         up_i2cuninitialize(info->i2c);
         info->i2c = NULL;
     }
     info->codec_read = NULL;
     info->codec_write = NULL;
+    info->state = 0;
     device_set_private(dev, NULL);
     codec_dev = NULL;
     free(info);
