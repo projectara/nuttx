@@ -34,6 +34,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/i2c.h>
+#include <nuttx/list.h>
 #include "audcodec.h"
 #include "rt5647.h"
 
@@ -50,6 +51,20 @@
 #define CODEC_DEVICE_FLAG_CLOSE           BIT(5)  /* device closed */
 
 static struct device *codec_dev = NULL;
+
+/**
+ * audio control linklist node
+ */
+struct control_node {
+    /* linklist head */
+    struct list_head list;
+    /* control index of widget */
+    int index;
+    /* audio control */
+    struct audio_control *control;
+    /* widget */
+    struct audio_widget *parent_widget;
+};
 
 /**
  * rt5647 codec register structure
@@ -109,6 +124,8 @@ struct rt5647_info {
     audio_route *routes;
     /** number of audio routing */
     int num_routes;
+
+    struct list_head control_list;
 
     /** rx delay count */
     uint32_t rx_delay;
@@ -461,73 +478,76 @@ struct audio_widget rt5647_widgets[] = {
  */
 audio_route rt5647_routes[] = {
     // AIF1RX
-    { RT5647_WIDGET_AIF1RX, RT5647_WIDGET_IF1_DAC1, NOCONTROL },
-    { RT5647_WIDGET_AIF1RX, RT5647_WIDGET_IF1_DAC2, NOCONTROL },
+    { RT5647_WIDGET_AIF1RX, RT5647_WIDGET_IF1_DAC1, NOCONTROL, 0 },
+    { RT5647_WIDGET_AIF1RX, RT5647_WIDGET_IF1_DAC2, NOCONTROL, 0 },
 
     // I2S1
-    { RT5647_WIDGET_I2S1, RT5647_WIDGET_IF1_ADC, NOCONTROL },
-    { RT5647_WIDGET_I2S1, RT5647_WIDGET_IF1_DAC1, NOCONTROL },
-    { RT5647_WIDGET_I2S1, RT5647_WIDGET_IF1_DAC2, NOCONTROL },
+    { RT5647_WIDGET_I2S1, RT5647_WIDGET_IF1_ADC, NOCONTROL, 0 },
+    { RT5647_WIDGET_I2S1, RT5647_WIDGET_IF1_DAC1, NOCONTROL, 0 },
+    { RT5647_WIDGET_I2S1, RT5647_WIDGET_IF1_DAC2, NOCONTROL, 0 },
 
     // IF1 DAC1
-    { RT5647_WIDGET_IF1_DAC1, RT5647_WIDGET_IF1_DAC1L, NOCONTROL },
-    { RT5647_WIDGET_IF1_DAC1, RT5647_WIDGET_IF1_DAC1R, NOCONTROL },
+    { RT5647_WIDGET_IF1_DAC1, RT5647_WIDGET_IF1_DAC1L, NOCONTROL, 0 },
+    { RT5647_WIDGET_IF1_DAC1, RT5647_WIDGET_IF1_DAC1R, NOCONTROL, 0 },
     // IF1 DAC2
-    { RT5647_WIDGET_IF1_DAC2, RT5647_WIDGET_IF1_DAC2L, NOCONTROL },
-    { RT5647_WIDGET_IF1_DAC2, RT5647_WIDGET_IF1_DAC2R, NOCONTROL },
+    { RT5647_WIDGET_IF1_DAC2, RT5647_WIDGET_IF1_DAC2L, NOCONTROL, 0 },
+    { RT5647_WIDGET_IF1_DAC2, RT5647_WIDGET_IF1_DAC2R, NOCONTROL, 0 },
 
     // IF1 DAC2 L
     { RT5647_WIDGET_IF1_DAC2L, RT5647_WIDGET_DACL2_MUX,
-      MUXID(RT5647_CTL_DAC2_LSRC, 0) },
+      RT5647_CTL_DAC2_LSRC, 0 },
     // IF1 DAC2 R
     { RT5647_WIDGET_IF1_DAC2R, RT5647_WIDGET_DACR2_MUX,
-      MUXID(RT5647_CTL_DAC2_RSRC, 0) },
+      RT5647_CTL_DAC2_RSRC, 0 },
 
     // DAC L2 Mux
-    { RT5647_WIDGET_DACL2_MUX, RT5647_WIDGET_DACL2_VOL, NOCONTROL },
+    { RT5647_WIDGET_DACL2_MUX, RT5647_WIDGET_DACL2_VOL, NOCONTROL, 0 },
     // DAC R2 Mux
-    { RT5647_WIDGET_DACR2_MUX, RT5647_WIDGET_DACR2_VOL, NOCONTROL },
+    { RT5647_WIDGET_DACR2_MUX, RT5647_WIDGET_DACR2_VOL, NOCONTROL, 0 },
 
 
     // DAC L2 Volume
     { RT5647_WIDGET_DACL2_VOL, RT5647_WIDGET_STODAC_MIXL,
-      RT5647_CTL_DACL2_MIXL },
+      RT5647_CTL_DACL2_MIXL, 0 },
     // DAC R2 Volume
     { RT5647_WIDGET_DACR2_VOL, RT5647_WIDGET_STODAC_MIXR,
-      RT5647_CTL_DACR2_MIXR },
+      RT5647_CTL_DACR2_MIXR, 0 },
 
     // Stereo DAC MIXL
-    { RT5647_WIDGET_STODAC_MIXL, RT5647_WIDGET_DAC_L1, NOCONTROL },
+    { RT5647_WIDGET_STODAC_MIXL, RT5647_WIDGET_DAC_L1, NOCONTROL, 0 },
     // Stereo DAC MIXR
-    { RT5647_WIDGET_STODAC_MIXR, RT5647_WIDGET_DAC_R1, NOCONTROL },
+    { RT5647_WIDGET_STODAC_MIXR, RT5647_WIDGET_DAC_R1, NOCONTROL, 0 },
 
     // DAC L1
-    { RT5647_WIDGET_DAC_L1, RT5647_WIDGET_SPK_MIXL, RT5647_CTL_SPKL_DACL1 },
-    { RT5647_WIDGET_DAC_L1, RT5647_WIDGET_SPOL_MIX, RT5647_CTL_SPOL_DACL1 },
+    { RT5647_WIDGET_DAC_L1, RT5647_WIDGET_SPK_MIXL, RT5647_CTL_SPKL_DACL1, 0 },
+    { RT5647_WIDGET_DAC_L1, RT5647_WIDGET_SPOL_MIX, RT5647_CTL_SPOL_DACL1, 0 },
     // DAC R1
-    { RT5647_WIDGET_DAC_R1, RT5647_WIDGET_SPK_MIXR, RT5647_CTL_SPKR_DACR1 },
-    { RT5647_WIDGET_DAC_R1, RT5647_WIDGET_SPOL_MIX, RT5647_CTL_SPOL_DACR1 },
-    { RT5647_WIDGET_DAC_R1, RT5647_WIDGET_SPOR_MIX, RT5647_CTL_SPOR_DACR1 },
+    { RT5647_WIDGET_DAC_R1, RT5647_WIDGET_SPK_MIXR, RT5647_CTL_SPKR_DACR1, 0 },
+    { RT5647_WIDGET_DAC_R1, RT5647_WIDGET_SPOL_MIX, RT5647_CTL_SPOL_DACR1, 0 },
+    { RT5647_WIDGET_DAC_R1, RT5647_WIDGET_SPOR_MIX, RT5647_CTL_SPOR_DACR1, 0 },
 
     // SPK MIXL
-    { RT5647_WIDGET_SPK_MIXL, RT5647_WIDGET_SPKVOLL, NOCONTROL },
+    { RT5647_WIDGET_SPK_MIXL, RT5647_WIDGET_SPKVOLL, NOCONTROL, 0 },
     // SPK MIXR
-    { RT5647_WIDGET_SPK_MIXR, RT5647_WIDGET_SPKVOLR, NOCONTROL },
+    { RT5647_WIDGET_SPK_MIXR, RT5647_WIDGET_SPKVOLR, NOCONTROL, 0 },
 
     // SPKVOL L
-    { RT5647_WIDGET_SPKVOLL, RT5647_WIDGET_SPOL_MIX, RT5647_CTL_SPOL_SPKVOLL },
+    { RT5647_WIDGET_SPKVOLL, RT5647_WIDGET_SPOL_MIX,
+      RT5647_CTL_SPOL_SPKVOLL, 0 },
     // SPKVOL R
-    { RT5647_WIDGET_SPKVOLR, RT5647_WIDGET_SPOL_MIX, RT5647_CTL_SPOL_SPKVOLR },
-    { RT5647_WIDGET_SPKVOLR, RT5647_WIDGET_SPOR_MIX, RT5647_CTL_SPOR_SPKVOLR },
+    { RT5647_WIDGET_SPKVOLR, RT5647_WIDGET_SPOL_MIX,
+      RT5647_CTL_SPOL_SPKVOLR, 0 },
+    { RT5647_WIDGET_SPKVOLR, RT5647_WIDGET_SPOR_MIX,
+      RT5647_CTL_SPOR_SPKVOLR, 0 },
 
     // SPOL MIX
-    { RT5647_WIDGET_SPOL_MIX, RT5647_WIDGET_SPK_AMP, NOCONTROL },
+    { RT5647_WIDGET_SPOL_MIX, RT5647_WIDGET_SPK_AMP, NOCONTROL, 0 },
     // SPOR MIX
-    { RT5647_WIDGET_SPOR_MIX, RT5647_WIDGET_SPK_AMP, NOCONTROL },
+    { RT5647_WIDGET_SPOR_MIX, RT5647_WIDGET_SPK_AMP, NOCONTROL, 0 },
 
     // SPK amp
-    { RT5647_WIDGET_SPK_AMP, RT5647_WIDGET_SPOL, NOCONTROL },
-    { RT5647_WIDGET_SPK_AMP, RT5647_WIDGET_SPOR, NOCONTROL },
+    { RT5647_WIDGET_SPK_AMP, RT5647_WIDGET_SPOL, NOCONTROL, 0 },
+    { RT5647_WIDGET_SPK_AMP, RT5647_WIDGET_SPOR, NOCONTROL, 0 },
 };
 
 /**
@@ -1068,28 +1088,31 @@ static int rt5647_set_config(struct device *dev, unsigned int dai_idx,
  *
  * @param dev - pointer to structure of device data
  * @param control_id - control id
+ * @param index - index of control (for mux control)
  * @param value - audio control return value
  * @return 0 on success, negative errno on error
  */
 static int rt5647_get_control(struct device *dev, uint8_t control_id,
-                              struct gb_audio_ctl_elem_value *value)
+                          uint8_t index, struct gb_audio_ctl_elem_value *value)
 {
     struct rt5647_info *info = NULL;
-    int i = 0;
-    struct audio_control *controls = NULL;
+    struct list_head *iter, *iter_next;
+    struct control_node *ctl = NULL;
+    struct audio_control *aud_ctl = NULL;
 
     if (!dev || !device_get_private(dev)) {
         return -EINVAL;
     }
     info = device_get_private(dev);
-    controls = info->controls;
 
     /* find an audio control by control id */
-    for (i = 0; i < info->num_controls; i++) {
-        if (controls[i].control.id == control_id) {
-            if (controls[i].get) {
+    list_foreach_safe(&info->control_list, iter, iter_next) {
+        ctl = list_entry(iter, struct control_node, list);
+        aud_ctl = ctl->control;
+        if ((aud_ctl->control.id == control_id) && (ctl->index == index)) {
+            if (aud_ctl->get) {
                 /* perform get() to get control value or codec register */ 
-                return controls[i].get(&controls[i], value);
+                return aud_ctl->get(aud_ctl, value);
             }
         }
     }
@@ -1101,28 +1124,31 @@ static int rt5647_get_control(struct device *dev, uint8_t control_id,
  *
  * @param dev - pointer to structure of device data
  * @param control_id - control id
+ * @param index - index of control (for mux control)
  * @param value - audio control value
  * @return 0 on success, negative errno on error
  */
 static int rt5647_set_control(struct device *dev, uint8_t control_id,
-                              struct gb_audio_ctl_elem_value *value)
+                          uint8_t index, struct gb_audio_ctl_elem_value *value)
 {
     struct rt5647_info *info = NULL;
-    int i = 0;
-    struct audio_control *controls = NULL;
+    struct list_head *iter, *iter_next;
+    struct control_node *ctl = NULL;
+    struct audio_control *aud_ctl = NULL;
 
     if (!dev || !device_get_private(dev)) {
         return -EINVAL;
     }
     info = device_get_private(dev);
-    controls = info->controls;
 
     /* find an audio control by control id */
-    for (i = 0; i < info->num_controls; i++) {
-        if (controls[i].control.id == control_id) {
-            if (controls[i].set) {
-                /* perform get() to set control calue or write codec register */ 
-                return controls[i].set(&controls[i], value);
+    list_foreach_safe(&info->control_list, iter, iter_next) {
+        ctl = list_entry(iter, struct control_node, list);
+        aud_ctl = ctl->control;
+        if ((aud_ctl->control.id == control_id) && (ctl->index == index)) {
+            if (aud_ctl->set) {
+                /* perform set() to write control value or codec register */ 
+                return aud_ctl->set(aud_ctl, value);
             }
         }
     }
@@ -1571,7 +1597,11 @@ static void rt5647_audcodec_close(struct device *dev)
  */
 static int rt5647_audcodec_probe(struct device *dev)
 {
-    struct rt5647_info *info;
+    struct rt5647_info *info = NULL;
+    struct control_node *node = NULL;
+    struct audio_control *controls = NULL;
+    struct audio_widget *widgets = NULL;
+    int i = 0, j = 0;
 
     if (!dev) {
         return -EINVAL;
@@ -1616,6 +1646,37 @@ static int rt5647_audcodec_probe(struct device *dev)
     device_set_private(dev, info);
     codec_dev = dev;
 
+    /* create control object linklist to link all controls */
+    controls = info->controls;
+    widgets = info->widgets;
+
+    list_init(&info->control_list);
+
+    for (i = 0; i < info->num_controls; i++) {
+        node = zalloc(sizeof(struct control_node)); 
+        if (!node) {
+            return -ENOMEM;
+        }
+        node->control = &controls[i];
+        node->index = 0;
+        node->parent_widget = NULL;
+        list_add(&info->control_list, &node->list);
+    }
+    for (i = 0; i < info->num_widgets; i++) {
+        if (!widgets[i].controls) {
+            continue;
+        }
+        for (j = 0; j < widgets[i].num_controls; j++) {
+            node = zalloc(sizeof(struct control_node)); 
+            if (!node) {
+                return -ENOMEM;
+            }
+            node->control = &widgets[i].controls[j];
+            node->index = j;
+            node->parent_widget = &widgets[i];
+            list_add(&info->control_list, &node->list);
+        }
+    }
     info->state |= CODEC_DEVICE_FLAG_PROBE;
     return 0;
 }
@@ -1634,6 +1695,8 @@ static int rt5647_audcodec_probe(struct device *dev)
 static void rt5647_audcodec_remove(struct device *dev)
 {
     struct rt5647_info *info = NULL;
+    struct list_head *iter, *iter_next;
+    struct control_node *ctlnode = NULL;
 
     if (!dev || !device_get_private(dev)) {
         return;
@@ -1650,6 +1713,12 @@ static void rt5647_audcodec_remove(struct device *dev)
     info->codec_read = NULL;
     info->codec_write = NULL;
     info->state = 0;
+
+    /* free control linklist */
+    list_foreach_safe(&info->control_list, iter, iter_next) {
+        ctlnode = list_entry(iter, struct control_node, list);
+        list_del(&ctlnode->list);
+    }
     device_set_private(dev, NULL);
     codec_dev = NULL;
     free(info);
