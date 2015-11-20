@@ -105,9 +105,9 @@ typedef int (*device_codec_button_event_callback)(struct device *dev,
 struct device_codec_type_ops {
     int (*get_topology_size)(struct device *dev, uint16_t *size);
     int (*get_topology)(struct device *dev, struct gb_audio_topology *topology);
-    int (*get_control)(struct device *dev, uint8_t control_id,
+    int (*get_control)(struct device *dev, uint8_t control_id, uint8_t index,
                        struct gb_audio_ctl_elem_value *value);
-    int (*set_control)(struct device *dev, uint8_t control_id,
+    int (*set_control)(struct device *dev, uint8_t control_id, uint8_t index,
                        struct gb_audio_ctl_elem_value *value);
     int (*enable_widget)(struct device *dev, uint8_t widget_id);
     int (*disable_widget)(struct device *dev, uint8_t widget_id);
@@ -165,7 +165,8 @@ static inline int device_codec_get_topology(struct device *dev,
 }
 
 static inline int device_codec_get_control(struct device *dev,
-                     uint8_t control_id, struct gb_audio_ctl_elem_value *value)
+                                           uint8_t control_id, uint8_t index,
+                                         struct gb_audio_ctl_elem_value *value)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -174,13 +175,14 @@ static inline int device_codec_get_control(struct device *dev,
     }
     if (DEVICE_DRIVER_GET_OPS(dev, codec)->get_control) {
         return DEVICE_DRIVER_GET_OPS(dev, codec)->get_control(dev, control_id,
-                                                              value);
+                                                              index, value);
     }
     return -ENOSYS;
 }
 
 static inline int device_codec_set_control(struct device *dev,
-                     uint8_t control_id, struct gb_audio_ctl_elem_value *value)
+                                           uint8_t control_id, uint8_t index,
+                                         struct gb_audio_ctl_elem_value *value)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -189,7 +191,7 @@ static inline int device_codec_set_control(struct device *dev,
     }
     if (DEVICE_DRIVER_GET_OPS(dev, codec)->set_control) {
         return DEVICE_DRIVER_GET_OPS(dev, codec)->set_control(dev, control_id,
-                                                              value);
+                                                              index, value);
     }
     return -ENOSYS;
 }

@@ -278,7 +278,8 @@ struct gb_audio_widget {
 struct gb_audio_route {
 	__u8	source_id;	/* widget id */
 	__u8	destination_id;	/* widget id */
-	__le16	control_id;	/* low byte: control id, high byte: index */
+	__u8	control_id;	/* 0-63 */
+	__u8	index;
 } __packed;
 
 struct gb_audio_topology {
@@ -305,6 +306,7 @@ struct gb_audio_get_topology_response {
 
 struct gb_audio_get_control_request {
 	__u8	control_id;
+	__u8	index;
 } __packed;
 
 struct gb_audio_get_control_response {
@@ -313,6 +315,7 @@ struct gb_audio_get_control_response {
 
 struct gb_audio_set_control_request {
 	__u8	control_id;
+	__u8	index;
 	struct gb_audio_ctl_elem_value	value;
 } __packed;
 
@@ -412,8 +415,10 @@ struct gb_audio_send_data_request {
 int get_topology_size(__le16 *size);
 int get_topology(struct gb_audio_topology *topology);
 
-int get_control(__u8 control_id, struct gb_audio_ctl_elem_value *value);
-int set_control(__u8 control_id, struct gb_audio_ctl_elem_value *value);
+int get_control(__u8 control_id, __u8 index,
+                struct gb_audio_ctl_elem_value *value);
+int set_control(__u8 control_id, __u8 index,
+                struct gb_audio_ctl_elem_value *value);
 
 int enable_widget(__u8 widget_id);
 int disable_widget(__u8 widget_id);
