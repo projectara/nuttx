@@ -36,14 +36,25 @@
 
 #define NOCONTROL 0xFF /* no control object for struct gb_audio_route */
 
+/**
+ * codec register access structure
+ */
 struct bitctl {
+    /** register-1 address */
     uint32_t reg;
+    /** register-2 address */
     uint32_t reg2;
+    /** number of bit shift for reg-1 */
     uint32_t shift;
+    /** number of bit shift for reg-2 */
     uint32_t shift2;
+    /** mask value */
     uint32_t mask;
+    /** invert */
     uint32_t inv;
+    /** max value */
     uint32_t max;
+    /** min value */
     uint32_t min;
 };
 

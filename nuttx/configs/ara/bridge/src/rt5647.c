@@ -51,57 +51,95 @@
 
 static struct device *codec_dev = NULL;
 
+/**
+ * rt5647 codec register structure
+ */
 struct rt5647_reg {
+    /** register address */
     uint8_t reg;
+    /** register value */
     uint16_t val;
 };
 
+/**
+ * rt5647 pll code
+ */
 struct pll_code {
+    /** PLL_M_CODE */
     int m;
+    /** PLL_N_CODE */
     int n;
+    /** PLL_K_CODE */
     int k;
+    /** PLL_M_BYPASS */
     int bp;
 };
 
+/**
+ * rt5647 private information
+ */
 struct rt5647_info {
+    /** Driver model representation of the device */
     struct device *dev;
+    /** i2c device handle */
     struct i2c_dev_s *i2c;
+    /** codec name */
     uint8_t name[AUDIO_CODEC_NAME_MAX];
+    /** device state */
     int state;
 
+    /** rt5647 codec initialization array */
     struct rt5647_reg *init_regs;
+    /** number of codec initialization array */
     int num_regs;
 
+    /** DAI device array */
     struct audio_dai *dais;
+    /** number of DAI device */
     int num_dais;
+    /** audio control array */
     struct audio_control *controls;
+    /** number of audio control */
     int num_controls;
+    /** audio widget array */
     struct audio_widget *widgets;
+    /** number of audio widget */
     int num_widgets;
+    /** audio routing table */
     audio_route *routes;
+    /** number of audio routing */
     int num_routes;
 
+    /** rx delay count */
     uint32_t rx_delay;
+    /** rx callback event */
     device_codec_event_callback *rx_callback;
+    /** rx callback event argument */
     void* rx_callback_arg;
+    /** tx delay count */
     uint32_t tx_delay;
+    /** tx callback event */
     device_codec_event_callback *tx_callback;
+    /** tx callback event argument */
     void* tx_callback_arg;
+    /** jack callback event */
     device_codec_jack_event_callback *jack_event_callback;
+    /** jack callback event argument */
     void* jack_event_callback_arg;
+    /** button callback event */
     device_codec_button_event_callback *button_event_callback;
+    /** button callback event argument */
     void* button_event_callback_arg;
 
-    int clk_id; // sysclk source : mclk:0 , pll:1
-
-    uint8_t clk_role;
-    struct device_codec_pcm *pcm;
-    struct device_codec_dai *dai;
-    /* hardware access function */
+    /** codec hardware access function for read */
     uint32_t (*codec_read)(uint32_t reg, uint32_t *value);
+    /** codec hardware access function for write */
     uint32_t (*codec_write)(uint32_t reg, uint32_t value);
 };
 
+/**
+ * codec register initialization table
+ */
 struct rt5647_reg rt5647_init_regs[] = {
     { RT5647_GENERAL_CTRL_1, 0x2061 }, /* enable MCLK Gate Control */
     { RT5647_ADC_DAC_CLK_CTRL, 0x0000 },
@@ -134,6 +172,9 @@ struct rt5647_reg rt5647_init_regs[] = {
     { RT5647_STO1_ADC_DIGI_VOL, 0xAFAF },/* Mute STO1 ADC for depop, Digital Input Gain */
 };
 
+/**
+ * DAI device table
+ */
 struct audio_dai rt5647_dais[] = {
     {
         .dai = {
@@ -169,6 +210,9 @@ struct audio_dai rt5647_dais[] = {
     },
 };
 
+/**
+ * audio control id
+ */
 enum {
     RT5647_CTL_SPKOUT_MUTE,
     RT5647_CTL_SPKOUT_VOL,
@@ -204,6 +248,9 @@ enum {
     RT5647_CTL_MAX
 };
 
+/**
+ * audio widget id
+ */
 enum {
     RT5647_WIDGET_AIF1TX,
     RT5647_WIDGET_AIF1RX,
@@ -237,6 +284,9 @@ enum {
     RT5647_WIDGET_MAX
 };
 
+/**
+ * audio control list
+ */
 struct audio_control rt5647_controls[] = {
     AUDCTL_BITS("SPKOUT Mute", RT5647_CTL_SPKOUT_MUTE, MIXER, RT5647_SPKOUT_VOL,
                 RT5647_L_MUTE_SFT, RT5647_R_MUTE_SFT, 1),
@@ -340,6 +390,9 @@ struct audio_control rt5647_spo_r_mix[] = {
                RT5647_SPO_MIXER_CTRL, RT5647_SPOMIX_R_SPKVOLR_SFT, 1),
 };
 
+/**
+ * audio widget table
+ */
 struct audio_widget rt5647_widgets[] = {
 
     WIDGET("AIF1TX", RT5647_WIDGET_AIF1TX, AIF_OUT, NULL, NOPWRCTL, 0, 0),
@@ -403,6 +456,9 @@ struct audio_widget rt5647_widgets[] = {
     WIDGET("SPOR", RT5647_WIDGET_SPOR, OUTPUT, NULL, NOPWRCTL, 0, 0),
 };
 
+/**
+ * audio route table
+ */
 audio_route rt5647_routes[] = {
     // AIF1RX
     { RT5647_WIDGET_AIF1RX, RT5647_WIDGET_IF1_DAC1, NOCONTROL },
@@ -474,11 +530,22 @@ audio_route rt5647_routes[] = {
     { RT5647_WIDGET_SPK_AMP, RT5647_WIDGET_SPOR, NOCONTROL },
 };
 
+/**
+ * @brief get codec driver device handle
+ *
+ * @return codec driver handle on success, NULL on error
+ */
 struct device* get_codec_dev()
 {
     return codec_dev;
 }
 
+/**
+ * @brief get codec-specific register read function
+ *
+ * @param dev - pointer to structure of device data
+ * @return read() function pointer on success, NULL on error
+ */
 void* get_codec_read_func(struct device *dev)
 {
     struct rt5647_info *info = NULL;
@@ -490,6 +557,12 @@ void* get_codec_read_func(struct device *dev)
     return (void*)info->codec_read;
 }
 
+/**
+ * @brief get codec-specific register write function
+ *
+ * @param dev - pointer to structure of device data
+ * @return write() function pointer on success, NULL on error
+ */
 void* get_codec_write_func(struct device *dev)
 {
     struct rt5647_info *info = NULL;
@@ -501,6 +574,13 @@ void* get_codec_write_func(struct device *dev)
     return (void*)info->codec_write;
 }
 
+/**
+ * @brief read data from codec register
+ *
+ * @param reg - rt5645 codec register
+ * @param value - data buffer of read
+ * @return 0 on success, negative errno on error
+ */
 static uint32_t rt5647_audcodec_hw_read(uint32_t reg, uint32_t *value)
 {
     struct device *dev = get_codec_dev();
@@ -541,6 +621,13 @@ static uint32_t rt5647_audcodec_hw_read(uint32_t reg, uint32_t *value)
     return 0;
 }
 
+/**
+ * @brief write data to codec register
+ *
+ * @param reg - rt5645 codec register
+ * @param value - register value that we want to write
+ * @return 0 on success, negative errno on error
+ */
 static uint32_t rt5647_audcodec_hw_write(uint32_t reg, uint32_t value)
 {
     struct device *dev = get_codec_dev();
@@ -573,6 +660,13 @@ static uint32_t rt5647_audcodec_hw_write(uint32_t reg, uint32_t value)
     return 0;
 }
 
+/**
+ * @brief get audio topology data size
+ *
+ * @param dev - pointer to structure of device data
+ * @param size - size of audio topology data
+ * @return 0 on success, negative errno on error
+ */
 static int rt5647_get_topology_size(struct device *dev, uint16_t *size)
 {
     struct rt5647_info *info = NULL;
@@ -593,6 +687,13 @@ static int rt5647_get_topology_size(struct device *dev, uint16_t *size)
     return 0;
 }
 
+/**
+ * @brief get audio topology binary data
+ *
+ * @param dev - pointer to structure of device data
+ * @param topology - audio topology data
+ * @return 0 on success, negative errno on error
+ */
 static int rt5647_get_topology(struct device *dev,
                                struct gb_audio_topology *topology)
 {
@@ -645,6 +746,12 @@ static int rt5647_get_topology(struct device *dev,
     return 0;
 }
 
+/**
+ * @brief convert pcm rate setting to frequency
+ *
+ * @param rate - pcm rate
+ * @return frequency on success, negative errno on error
+ */
 static int rt5647_rate_to_freq(uint32_t rate)
 {
     uint32_t freq = 0;
@@ -699,6 +806,12 @@ static int rt5647_rate_to_freq(uint32_t rate)
     return freq;
 }
 
+/**
+ * @brief convert pcm format setting to bit number
+ *
+ * @param fmtbit - pcm format
+ * @return bit number on success, negative errno on error
+ */
 static int rt5647_fmtbit_to_bitnum(uint32_t fmtbit)
 {
     uint32_t bits = 0;
@@ -736,6 +849,16 @@ static int rt5647_fmtbit_to_bitnum(uint32_t fmtbit)
     return bits;
 }
 
+/**
+ * @brief get audio dai setting and capability
+ *
+ * @param dev - pointer to structure of device data
+ * @param dai_idx - dai index
+ * @param clk_role - codec mode, master or slave
+ * @param pcm - audio pcm setting
+ * @param dai - audio dai setting
+ * @return 0 on success, negative errno on error
+ */
 static int rt5647_get_caps(struct device *dev, unsigned int dai_idx,
                            uint8_t clk_role, struct device_codec_pcm *pcm,
                            struct device_codec_dai *dai)
@@ -769,10 +892,20 @@ static int rt5647_get_caps(struct device *dev, unsigned int dai_idx,
         return -EINVAL;
     }
 
+    /* return default DAI setting */
     memcpy(dai, &info->dais[dai_idx].caps, sizeof(struct device_codec_dai));
     return 0;
 }
 
+/**
+ * @brief calculate codec pll setting 
+ *
+ * @param dev - pointer to structure of device data
+ * @param infreq - mclk frequency
+ * @param outfreq - sysclk frequency
+ * @param code - pll_code structure, included m,n,k,bypass setting
+ * @return 0 on success, negative errno on error
+ */
 int rt5647_pll_calc(uint32_t infreq, uint32_t outfreq, struct pll_code *code) {
     int m = 0, n = 0, k = 0, find = 0;
     int t = 0, t1 = 0, out;
@@ -806,6 +939,16 @@ findout:
     return -EINVAL;
 }
 
+/**
+ * @brief set audio dai setting
+ *
+ * @param dev - pointer to structure of device data
+ * @param dai_idx - dai index
+ * @param clk_role - codec mode, master or slave
+ * @param pcm - audio pcm setting
+ * @param dai - audio dai setting
+ * @return 0 on success, negative errno on error
+ */
 static int rt5647_set_config(struct device *dev, unsigned int dai_idx,
                              uint8_t clk_role, struct device_codec_pcm *pcm,
                              struct device_codec_dai *dai)
@@ -920,6 +1063,14 @@ static int rt5647_set_config(struct device *dev, unsigned int dai_idx,
     return 0;
 }
 
+/**
+ * @brief get audio control value
+ *
+ * @param dev - pointer to structure of device data
+ * @param control_id - control id
+ * @param value - audio control return value
+ * @return 0 on success, negative errno on error
+ */
 static int rt5647_get_control(struct device *dev, uint8_t control_id,
                               struct gb_audio_ctl_elem_value *value)
 {
@@ -933,9 +1084,11 @@ static int rt5647_get_control(struct device *dev, uint8_t control_id,
     info = device_get_private(dev);
     controls = info->controls;
 
+    /* find an audio control by control id */
     for (i = 0; i < info->num_controls; i++) {
         if (controls[i].control.id == control_id) {
             if (controls[i].get) {
+                /* perform get() to get control value or codec register */ 
                 return controls[i].get(&controls[i], value);
             }
         }
@@ -943,6 +1096,14 @@ static int rt5647_get_control(struct device *dev, uint8_t control_id,
     return -EINVAL;
 }
 
+/**
+ * @brief set audio control
+ *
+ * @param dev - pointer to structure of device data
+ * @param control_id - control id
+ * @param value - audio control value
+ * @return 0 on success, negative errno on error
+ */
 static int rt5647_set_control(struct device *dev, uint8_t control_id,
                               struct gb_audio_ctl_elem_value *value)
 {
@@ -956,9 +1117,11 @@ static int rt5647_set_control(struct device *dev, uint8_t control_id,
     info = device_get_private(dev);
     controls = info->controls;
 
+    /* find an audio control by control id */
     for (i = 0; i < info->num_controls; i++) {
         if (controls[i].control.id == control_id) {
             if (controls[i].set) {
+                /* perform get() to set control calue or write codec register */ 
                 return controls[i].set(&controls[i], value);
             }
         }
@@ -966,6 +1129,13 @@ static int rt5647_set_control(struct device *dev, uint8_t control_id,
     return -EINVAL;
 }
 
+/**
+ * @brief enable widget
+ *
+ * @param dev - pointer to structure of device data
+ * @param widget_id - widget id
+ * @return 0 on success, negative errno on error
+ */
 static int rt5647_enable_widget(struct device *dev, uint8_t widget_id)
 {
     struct rt5647_info *info = NULL;
@@ -1006,6 +1176,13 @@ static int rt5647_enable_widget(struct device *dev, uint8_t widget_id)
     return -EINVAL;
 }
 
+/**
+ * @brief disable widget
+ *
+ * @param dev - pointer to structure of device data
+ * @param widget_id - widget id
+ * @return 0 on success, negative errno on error
+ */
 static int rt5647_disable_widget(struct device *dev, uint8_t widget_id)
 {
     struct rt5647_info *info = NULL;
@@ -1046,6 +1223,13 @@ static int rt5647_disable_widget(struct device *dev, uint8_t widget_id)
     return -EINVAL;
 }
 
+/**
+ * @brief get tx delay count
+ *
+ * @param dev - pointer to structure of device data
+ * @param delay - buffer for get delay count
+ * @return 0 on success, negative errno on error
+ */
 static int rt5647_get_tx_delay(struct device *dev, uint32_t *delay)
 {
     struct rt5647_info *info = NULL;
@@ -1059,6 +1243,13 @@ static int rt5647_get_tx_delay(struct device *dev, uint32_t *delay)
     return 0;
 }
 
+/**
+ * @brief start to transfer audio streaming
+ *
+ * @param dev - pointer to structure of device data
+ * @param dai_idx - DAI index
+ * @return 0 on success, negative errno on error
+ */
 static int rt5647_start_tx(struct device *dev, uint32_t dai_idx)
 {
     struct rt5647_info *info = NULL;
@@ -1076,6 +1267,13 @@ static int rt5647_start_tx(struct device *dev, uint32_t dai_idx)
     return 0;
 }
 
+/**
+ * @brief stop to transfer audio streaming
+ *
+ * @param dev - pointer to structure of device data
+ * @param dai_idx - DAI index
+ * @return 0 on success, negative errno on error
+ */
 static int rt5647_stop_tx(struct device *dev, uint32_t dai_idx)
 {
     struct rt5647_info *info = NULL;
@@ -1093,6 +1291,14 @@ static int rt5647_stop_tx(struct device *dev, uint32_t dai_idx)
     return 0;
 }
 
+/**
+ * @brief register tx callback event
+ *
+ * @param dev - pointer to structure of device data
+ * @param callback - callback function for notify tx event
+ * @param arg - argument for callback event
+ * @return 0 on success, negative errno on error
+ */
 static int rt5647_register_tx_callback(struct device *dev,
                                        device_codec_event_callback *callback,
                                        void *arg)
@@ -1108,6 +1314,13 @@ static int rt5647_register_tx_callback(struct device *dev,
     return 0;
 }
 
+/**
+ * @brief get rx delay count
+ *
+ * @param dev - pointer to structure of device data
+ * @param delay - buffer for get delay count
+ * @return 0 on success, negative errno on error
+ */
 static int rt5647_get_rx_delay(struct device *dev, uint32_t *delay)
 {
     struct rt5647_info *info = NULL;
@@ -1121,6 +1334,13 @@ static int rt5647_get_rx_delay(struct device *dev, uint32_t *delay)
     return 0;
 }
 
+/**
+ * @brief start to receive audio streaming
+ *
+ * @param dev - pointer to structure of device data
+ * @param dai_idx - DAI index
+ * @return 0 on success, negative errno on error
+ */
 static int rt5647_start_rx(struct device *dev, uint32_t dai_idx)
 {
     struct rt5647_info *info = NULL;
@@ -1146,6 +1366,13 @@ static int rt5647_start_rx(struct device *dev, uint32_t dai_idx)
     return 0;
 }
 
+/**
+ * @brief stop to receive audio streaming
+ *
+ * @param dev - pointer to structure of device data
+ * @param dai_idx - DAI index
+ * @return 0 on success, negative errno on error
+ */
 static int rt5647_stop_rx(struct device *dev, uint32_t dai_idx)
 {
     struct rt5647_info *info = NULL;
@@ -1171,6 +1398,14 @@ static int rt5647_stop_rx(struct device *dev, uint32_t dai_idx)
     return 0;
 }
 
+/**
+ * @brief register rx callback event
+ *
+ * @param dev - pointer to structure of device data
+ * @param callback - callback function for notify rx event
+ * @param arg - argument for callback event
+ * @return 0 on success, negative errno on error
+ */
 static int rt5647_register_rx_callback(struct device *dev,
                                        device_codec_event_callback *callback,
                                        void *arg)
@@ -1186,6 +1421,14 @@ static int rt5647_register_rx_callback(struct device *dev,
     return 0;
 }
 
+/**
+ * @brief register jack callback event
+ *
+ * @param dev - pointer to structure of device data
+ * @param callback - callback function for notify jack event
+ * @param arg - argument for callback event
+ * @return 0 on success, negative errno on error
+ */
 static int rt5647_register_jack_event_callback(struct device *dev,
                                     device_codec_jack_event_callback *callback,
                                     void *arg)
@@ -1201,6 +1444,14 @@ static int rt5647_register_jack_event_callback(struct device *dev,
     return 0;
 }
 
+/**
+ * @brief register button callback event
+ *
+ * @param dev - pointer to structure of device data
+ * @param callback - callback function for notify button event
+ * @param arg - argument for callback event
+ * @return 0 on success, negative errno on error
+ */
 static int rt5647_register_button_event_callback(struct device *dev,
                                   device_codec_button_event_callback *callback,
                                   void *arg)
@@ -1216,6 +1467,17 @@ static int rt5647_register_button_event_callback(struct device *dev,
     return 0;
 }
 
+/**
+ * @brief Open audio codec device
+ *
+ * This function is called when the caller is preparing to use this device
+ * driver. This function should be called after probe () function and need to
+ * check whether the driver already open or not. If driver was opened, it needs
+ * to return an error code to the caller to notify the driver was opened.
+ *
+ * @param dev - pointer to structure of device data
+ * @return 0 on success, negative errno on error
+ */
 static int rt5647_audcodec_open(struct device *dev)
 {
     struct rt5647_info *info = NULL;
@@ -1244,6 +1506,16 @@ static int rt5647_audcodec_open(struct device *dev)
     return ret;
 }
 
+/**
+ * @brief Close audio codec device
+ *
+ * This function is called when the caller no longer using this driver. It
+ * should release or close all resources that allocated by the open() function.
+ * This function should be called after the open() function. If the device
+ * is not opened yet, this function should return without any operations.
+ *
+ * @param dev - pointer to structure of device data
+ */
 static void rt5647_audcodec_close(struct device *dev)
 {
     struct rt5647_info *info = NULL;
@@ -1260,6 +1532,7 @@ static void rt5647_audcodec_close(struct device *dev)
         return;
     }
 
+    /* check device state */
     if (info->state & CODEC_DEVICE_FLAG_CONFIG) {
         if (info->state & CODEC_DEVICE_FLAG_TX_START) {
             for (i = 0; i < info->num_dais; i++) {
@@ -1285,6 +1558,17 @@ static void rt5647_audcodec_close(struct device *dev)
     info->state &= ~(CODEC_DEVICE_FLAG_OPEN | CODEC_DEVICE_FLAG_CONFIG);
 }
 
+/**
+ * @brief Probe audio codec device
+ *
+ * This function is called by the system to register the driver when the system
+ * boot up. This function allocates memory for the private codec device
+ * information, and then setup the hardware resource and interrupt handler if
+ * driver needed.
+ *
+ * @param dev - pointer to structure of device data
+ * @return 0 on success, negative errno on error
+ */
 static int rt5647_audcodec_probe(struct device *dev)
 {
     struct rt5647_info *info;
@@ -1336,6 +1620,17 @@ static int rt5647_audcodec_probe(struct device *dev)
     return 0;
 }
 
+/**
+ * @brief Remove audio codec device
+ *
+ * This function is called by the system to unregister the driver. It should
+ * release the hardware resource and interrupt setting, and then free memory
+ * that allocated by the probe() function.
+ * This function should be called after probe() function. If driver was opened,
+ * this function should call close() function before releasing resources.
+ *
+ * @param dev - pointer to structure of device data
+ */
 static void rt5647_audcodec_remove(struct device *dev)
 {
     struct rt5647_info *info = NULL;
