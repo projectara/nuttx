@@ -49,11 +49,6 @@
 #define DEVICE_CODEC_EDGE_RISING                          BIT(0)
 #define DEVICE_CODEC_EDGE_FALLING                         BIT(1)
 
-#define MUXID(id, idx) ((id & 0xFF) | (idx << 8)) /* control_id macro for
-                                                   * struct gb_audio_route */
-
-#define NOCONTROL 0xFF /* no control object for struct gb_audio_route */
-
 struct device_codec_pcm {
     uint32_t    format;   /* same as GB_AUDIO */
     uint32_t    rate;     /* same as GB_AUDIO */
@@ -69,57 +64,6 @@ struct device_codec_dai {
     uint8_t     data_rx_edge;
     uint8_t     data_tx_edge;
 };
-
-struct bitctl {
-    uint32_t reg;
-    uint32_t reg2;
-    uint32_t shift;
-    uint32_t shift2;
-    uint32_t mask;
-    uint32_t inv;
-    uint32_t max;
-    uint32_t min;
-};
-
-struct enumctl {
-    uint32_t reg;
-    uint32_t reg2;
-    uint32_t shift;
-    uint32_t shift2;
-    uint32_t max;
-    uint32_t mask;
-    char **texts;
-    uint32_t *values;
-};
-
-struct audio_dai {
-    struct gb_audio_dai dai;
-    struct device_codec_dai caps;
-    uint8_t clk_role;
-    struct device_codec_pcm pcm_config;
-    struct device_codec_dai dai_config;
-};
-
-struct audio_control {
-    struct gb_audio_control control;
-    void *priv;
-    int (*get)(struct audio_control *ctl,
-               struct gb_audio_ctl_elem_value *value);
-    int (*set)(struct audio_control *ctl,
-               struct gb_audio_ctl_elem_value *value);
-};
-
-struct audio_widget {
-    struct gb_audio_widget widget;
-    struct audio_control *controls;
-    uint32_t num_controls;
-    /* widget power control */
-    uint32_t reg;
-    uint32_t shift;
-    uint32_t inv;
-};
-
-typedef struct gb_audio_route audio_route;
 
 enum device_codec_event {
     DEVICE_CODEC_EVENT_INVALID,
