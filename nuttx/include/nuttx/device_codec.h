@@ -75,8 +75,7 @@ enum device_codec_event {
     DEVICE_CODEC_EVENT_DATA_LEN,
 };
 
-typedef int (*device_codec_event_callback)(struct device *dev,
-                                           unsigned int dai_idx,
+typedef int (*device_codec_event_callback)(unsigned int dai_idx,
                                            enum device_codec_event event,
                                            void *arg);
 
@@ -86,8 +85,7 @@ enum {
     DEVICE_CODEC_JACK_EVENT_REMOVAL,
 };
 
-typedef int (*device_codec_jack_event_callback)(struct device *dev,
-                                           uint8_t widget_id,
+typedef int (*device_codec_jack_event_callback)(uint8_t widget_id,
                                            uint8_t widget_type,
                                            enum device_codec_jack_event event);
 
@@ -97,8 +95,7 @@ enum {
     DEVICE_CODEC_BUTTON_EVENT_RELEASE,
 };
 
-typedef int (*device_codec_button_event_callback)(struct device *dev,
-                                         uint8_t widget_id,
+typedef int (*device_codec_button_event_callback)(uint8_t widget_id,
                                          uint8_t button_id,
                                          enum device_codec_button_event event);
 
