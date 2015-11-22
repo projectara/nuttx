@@ -76,6 +76,11 @@ config BOARD_HAVE_AUDIO
 	bool "Audio support for board"
 	default n
 
+config BOARD_CODEC_RT5647
+	bool "Realteck ALC5647 Audio Codec Support "
+	select BOARD_HAVE_AUDIO
+	default n
+
 choice
 	prompt "Select a bridge firmware configuration"
 	depends on ARA_BRIDGE_HAVE_CAMERA || BOARD_HAVE_DISPLAY
