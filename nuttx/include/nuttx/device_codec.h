@@ -72,7 +72,6 @@ enum device_codec_event {
     DEVICE_CODEC_EVENT_UNDERRUN,
     DEVICE_CODEC_EVENT_OVERRUN,
     DEVICE_CODEC_EVENT_CLOCKING,
-    DEVICE_CODEC_EVENT_DATA_LEN,
 };
 
 typedef int (*device_codec_event_callback)(unsigned int dai_idx,
