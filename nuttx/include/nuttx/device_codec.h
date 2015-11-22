@@ -85,8 +85,9 @@ enum {
 };
 
 typedef int (*device_codec_jack_event_callback)(uint8_t widget_id,
-                                           uint8_t widget_type,
-                                           enum device_codec_jack_event event);
+                                            uint8_t widget_type,
+                                            enum device_codec_jack_event event,
+                                            void *arg);
 
 enum {
     DEVICE_CODEC_BUTTON_EVENT_INVALID,
@@ -95,8 +96,9 @@ enum {
 };
 
 typedef int (*device_codec_button_event_callback)(uint8_t widget_id,
-                                         uint8_t button_id,
-                                         enum device_codec_button_event event);
+                                          uint8_t button_id,
+                                          enum device_codec_button_event event,
+                                          void *arg);
 
 struct device_codec_type_ops {
     int (*get_topology_size)(struct device *dev, uint16_t *size);
