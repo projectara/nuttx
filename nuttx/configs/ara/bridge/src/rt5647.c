@@ -196,7 +196,7 @@ struct audio_dai rt5647_dais[] = {
     {
         .dai = {
             .name = "rt5647-aif1",
-            .cport = 0,
+            .data_cport = 0,
             .capture = {
                 .stream_name = "AIF1 Capture",
                 .formats = RT5647_FORMATS,

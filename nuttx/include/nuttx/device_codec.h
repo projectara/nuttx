@@ -31,7 +31,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "audio.h"
+#include "../../drivers/greybus/audio-gb.h"
 
 #define DEVICE_TYPE_CODEC_HW        "codec"
 #define AUDIO_CODEC_NAME_MAX        32

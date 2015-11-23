@@ -29,7 +29,7 @@
 #ifndef __AUDIO_GB_H__
 #define __AUDIO_GB_H__
 
-#include <nuttx/util.h>
+#include <nuttx/greybus/types.h>
 
 #define GB_AUDIO_TYPE_PROTOCOL_VERSION          0x01
 #define GB_AUDIO_TYPE_GET_TOPOLOGY_SIZE         0x02
