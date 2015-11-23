@@ -297,6 +297,7 @@ struct gb_audio_get_topology_response {
 
 struct gb_audio_get_control_request {
     __u8    control_id;
+    __u8    index;
 } __packed;
 
 struct gb_audio_get_control_response {
@@ -305,6 +306,7 @@ struct gb_audio_get_control_response {
 
 struct gb_audio_set_control_request {
     __u8    control_id;
+    __u8    index;
     struct gb_audio_ctl_elem_value  value;
 } __packed;
 
