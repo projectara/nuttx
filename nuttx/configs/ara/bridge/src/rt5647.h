@@ -369,6 +369,8 @@
 #define RT5647_PLL_M_CODE_MAX                 0xF
 #define RT5647_PLL_M_BYPASS_SFT               11
 
+/* RT5647 vendor id (MX-FE) */
+#define RT5647_DEFAULT_VID                    0x10EC
 
 #define RT5647_FORMATS (GB_AUDIO_PCM_FMT_S8 | GB_AUDIO_PCM_FMT_S16_LE | \
                        GB_AUDIO_PCM_FMT_S24_LE)

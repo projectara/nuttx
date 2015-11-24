@@ -1516,6 +1516,7 @@ static int rt5647_audcodec_open(struct device *dev)
 {
     struct rt5647_info *info = NULL;
     int ret = 0, i = 0;
+    uint32_t id = 0;
 
     if (!dev || !device_get_private(dev)) {
         return -EINVAL;
@@ -1530,6 +1531,13 @@ static int rt5647_audcodec_open(struct device *dev)
         /* device has been opened, return error */
         return -EBUSY;
     }
+
+    /* verify codec id */
+    if (audcodec_read(RT5647_VENDOR_ID, &id) || (id != RT5647_DEFAULT_VID)) {
+        /* can't read codec register or vendor id isn't correct */
+        return -EIO;
+    }
+
     /* codec power on sequence */
     audcodec_write(RT5647_RESET, 0);    /* software reset */
 
