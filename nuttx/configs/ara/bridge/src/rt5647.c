@@ -608,6 +608,9 @@ static uint32_t rt5647_audcodec_hw_read(uint32_t reg, uint32_t *value)
     uint8_t cmd = 0;
     uint16_t data = 0;
 
+    /* rt5647 i2c read format :
+     * [SA + W] + [DA] + [SA + R] + [DATA_HIGH] + [DATA_LOW]
+     */
     struct i2c_msg_s msg[] = {
         {
             .addr = RT5647_I2C_ADDR,
@@ -637,7 +640,7 @@ static uint32_t rt5647_audcodec_hw_read(uint32_t reg, uint32_t *value)
         return -EIO;
     }
 
-    *value = (uint32_t)data;
+    *value = (uint32_t) (data & 0xFF) << 8 | ((data >> 8) & 0xFF);
     return 0;
 }
 
@@ -653,6 +656,11 @@ static uint32_t rt5647_audcodec_hw_write(uint32_t reg, uint32_t value)
     struct device *dev = get_codec_dev();
     struct rt5647_info *info = NULL;
     uint8_t cmd[3] = {0x00, 0x00, 0x00};
+
+    /* rt5647 i2c write format :
+     * [SA + W] + [DA] + [DATA_HIGH] + [DATA_LOW]
+     */
+
     struct i2c_msg_s msg[] = {
         {
             .addr = RT5647_I2C_ADDR,
@@ -671,8 +679,8 @@ static uint32_t rt5647_audcodec_hw_write(uint32_t reg, uint32_t value)
     }
 
     cmd[0] = (uint8_t)reg;
-    cmd[1] = (uint8_t)(value & 0xFF);
-    cmd[2] = (uint8_t)((value >> 8) & 0xFF);
+    cmd[1] = (uint8_t)((value >> 8) & 0xFF);
+    cmd[2] = (uint8_t)(value & 0xFF);
 
     if (I2C_TRANSFER(info->i2c, msg, 1)) {
         return -EIO;
