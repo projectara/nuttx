@@ -915,7 +915,7 @@ static int rt5647_get_caps(struct device *dev, unsigned int dai_idx,
         return -EINVAL;
     }
 
-    if (!(clk_role & DEVICE_CODEC_ROLE_SLAVE)) {
+    if (clk_role != DEVICE_CODEC_ROLE_SLAVE) {
         /* In current audio module, we only supported slave mode. */
         return -EINVAL;
     }
@@ -1008,7 +1008,7 @@ static int rt5647_set_config(struct device *dev, unsigned int dai_idx,
         return -EINVAL;
     }
 
-    if (!(clk_role & DEVICE_CODEC_ROLE_SLAVE)) {
+    if (clk_role != DEVICE_CODEC_ROLE_SLAVE) {
         /* In current audio module, we only supported slave mode. */
         return -EINVAL;
     }
