@@ -535,7 +535,7 @@ static int i2s_test_start_streaming_transmitter(struct i2s_test_info *info)
     }
 
     /*validate transmitter configuration */
-    ret = devcie_i2s_get_caps(dev,
+    ret = device_i2s_get_caps(dev,
                               DEVICE_I2S_ROLE_MASTER,
                               &test_pcm,
                               &dai);
@@ -577,7 +577,7 @@ static int i2s_test_start_streaming_transmitter(struct i2s_test_info *info)
         test_dai.protocol |= DEVICE_I2S_PROTOCOL_LR_STEREO;
     }
 
-    ret = devcie_i2s_set_config(dev,
+    ret = device_i2s_set_config(dev,
                                 DEVICE_I2S_ROLE_MASTER,
                                 &test_pcm,
                                 &test_dai);
@@ -631,7 +631,7 @@ static int i2s_test_start_streaming_receiver(struct i2s_test_info *info)
     /* slave is opposite the master setting */
     test_dai.wclk_change_edge |= DEVICE_I2S_EDGE_RISING;
 
-    ret = devcie_i2s_get_caps(dev,
+    ret = device_i2s_get_caps(dev,
                               DEVICE_I2S_ROLE_SLAVE,
                               &test_pcm,
                               &test_dai);
@@ -641,7 +641,7 @@ static int i2s_test_start_streaming_receiver(struct i2s_test_info *info)
         goto err_dev_close;
     }
 
-    ret = devcie_i2s_set_config(dev,
+    ret = device_i2s_set_config(dev,
                                DEVICE_I2S_ROLE_SLAVE,
                                &test_pcm,
                                &test_dai);

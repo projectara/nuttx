@@ -134,7 +134,7 @@ struct device_i2s_type_ops {
  * @return 0: Delay value returned successfully
  *         -errno: Cause of failure
  */
-static inline int devcie_i2s_get_caps(struct device *dev, uint8_t clk_role,
+static inline int device_i2s_get_caps(struct device *dev, uint8_t clk_role,
                                       struct device_i2s_pcm *pcm,
                                       struct device_i2s_dai *dai)
 {
@@ -159,7 +159,7 @@ static inline int devcie_i2s_get_caps(struct device *dev, uint8_t clk_role,
  * @return 0: Delay value returned successfully
  *         -errno: Cause of failure
  */
-static inline int devcie_i2s_set_config(struct device *dev, uint8_t clk_role,
+static inline int device_i2s_set_config(struct device *dev, uint8_t clk_role,
                                         struct device_i2s_pcm *pcm,
                                         struct device_i2s_dai *dai)
 {
