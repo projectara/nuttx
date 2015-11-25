@@ -217,7 +217,7 @@ int audcodec_enum_set(struct audio_control *control,
         .control = { \
             .name = xname, .id = xid, .iface = GB_AUDIO_IFACE_##xiface, \
         }, \
-        .get = audcodec_bit_get, .set = audcodec_bit_set, \
+        .get = audcodec_enum_get, .set = audcodec_enum_set, \
         .priv = ENUMCTL(xreg, xreg, xshift, xshift, xmask, ARRAY_SIZE(xtexts), \
                         xtexts, NULL), \
     }
@@ -228,7 +228,7 @@ int audcodec_enum_set(struct audio_control *control,
         .control = { \
             .name = xname, .id = xid, .iface = GB_AUDIO_IFACE_##xiface, \
         }, \
-        .get = audcodec_bit_get, .set = audcodec_bit_set, \
+        .get = audcodec_enum_get, .set = audcodec_enum_set, \
         .priv = ENUMCTL(xreg, xreg2, xshift, xshift2, xmask, \
                         ARRAY_SIZE(xtexts), xtexts, NULL), \
     }
@@ -238,7 +238,7 @@ int audcodec_enum_set(struct audio_control *control,
         .control = { \
             .name = xname, .id = xid, .iface = GB_AUDIO_IFACE_##xiface, \
         }, \
-        .get = audcodec_bit_get, .set = audcodec_bit_set, \
+        .get = audcodec_enum_get, .set = audcodec_enum_set, \
         .priv = ENUMCTL(xreg, xreg, xshift, xshift, xmask, ARRAY_SIZE(xtexts), \
                         xtexts, xvalues), \
     }
