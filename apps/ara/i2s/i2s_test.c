@@ -46,6 +46,7 @@
 #include <nuttx/ring_buf.h>
 #include "i2s_test.h"
 #include "gen_pcm.h"
+#include "codec_test.h"
 
 #ifndef SIGKILL
 #define SIGKILL     9
@@ -178,7 +179,7 @@ static int i2s_test_parse_cmdline(int argc, char *argv[],
             }
             break;
         case 'C':
-            info->init_codec = 1;
+            info->use_codec = 1;
             ccnt++;
             break;
         case 'c':
@@ -195,7 +196,7 @@ static int i2s_test_parse_cmdline(int argc, char *argv[],
         return -EINVAL;
     }
 
-    if (!info->is_gen_audio && info->init_codec) {
+    if (!info->is_gen_audio && info->use_codec) {
             fprintf(stderr, "Must enable generate audio to configure the codec\n");
             return -EINVAL;
         }
@@ -223,8 +224,8 @@ static void i2s_test_print_cmdline_summary(struct i2s_test_info *info)
         printf("Generate Audio Frequency: %lu Hz, Volume %lu\n",
                 info->aud_frequency,
                 info->aud_volume);
-        if (info->init_codec) {
-            printf("Codec initialized for playback\n");
+        if (info->use_codec) {
+            printf("Use Codec for playback\n");
         }
     }
 }
@@ -317,8 +318,8 @@ static void i2s_test_tx_callback(struct ring_buf *rb,
     sem_post(&i2s_test_done_sem);
 }
 
-static int i2s_test_start_transmitter(struct i2s_test_info *info,
-                                      struct device *dev)
+int i2s_test_start_transmitter(struct i2s_test_info *info,
+                               struct device *dev)
 {
     struct ring_buf *rb;
     int ret;
@@ -355,7 +356,7 @@ err_free_ring:
     return ret;
 }
 
-static void i2s_test_stop_transmitter(struct device *dev)
+void i2s_test_stop_transmitter(struct device *dev)
 {
     int ret;
 
@@ -708,7 +709,12 @@ int i2s_test_main(int argc, char *argv[])
     }
 
     if (info->is_transmitter) {
-        ret = i2s_test_start_streaming_transmitter(info);
+        if(info->use_codec)
+        {
+            ret = play_sine_wave_via_codec(info);
+        } else {
+            ret = i2s_test_start_streaming_transmitter(info);
+        }
     } else {
         ret = i2s_test_start_streaming_receiver(info);
     }

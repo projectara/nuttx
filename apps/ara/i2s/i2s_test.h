@@ -44,7 +44,7 @@ struct i2s_test_info {
     uint8_t                 is_gen_audio;
     uint32_t                aud_frequency;
     uint32_t                aud_volume;
-    uint8_t                 init_codec;
+    uint8_t                 use_codec;
     uint8_t                 check_rx_data;
     unsigned long           rb_entries;
     unsigned long           samples_per_rb_entry;
@@ -55,5 +55,9 @@ struct i2s_test_info {
 
 extern sem_t i2s_test_done_sem;
 extern struct device_i2s_pcm i2s_test_pcm;
+
+int i2s_test_start_transmitter(struct i2s_test_info *info,
+                               struct device *dev);
+void i2s_test_stop_transmitter(struct device *dev);
 
 #endif /* __I2S_TEST_H__ */

@@ -26,10 +26,9 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __TEST_CODEC_H__
-#define __TEST_CODEC_H__
+#ifndef __CODEC_TEST_H__
+#define __CODEC_TEST_H__
 
-int find_common_dai_settings(struct i2s_test_info *info);
-int set_common_dai_settings(struct i2s_test_info *info);
+int play_sine_wave_via_codec(struct i2s_test_info *info);
 
-#endif /* __TEST_CODEC_H__ */
+#endif /* __CODEC_TEST_H__ */

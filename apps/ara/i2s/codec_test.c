@@ -41,6 +41,7 @@
 #include <nuttx/device_i2s.h>
 #include <nuttx/device_codec.h>
 #include "i2s_test.h"
+#include "gen_pcm.h"
 
 /**
  * hard coded test configuration parameters
@@ -67,8 +68,8 @@ struct device_dai test_dai = {
 };
 
 /* these variables are set by calling find_common_pcm_settings */
-bool i2s_is_master = false;
-bool codec_is_master = false;
+bool i2s_is_mclk_master = false;
+bool codec_is_mclk_master = false;
 struct device_dai compatible_dai;
 
 static uint32_t choose_single_bit(uint32_t bit_field)
@@ -87,33 +88,15 @@ static uint32_t choose_single_bit(uint32_t bit_field)
     return 0;
 }
 
-int find_common_dai_settings(struct i2s_test_info *info)
+static int find_common_dai_settings(struct i2s_test_info *info,
+                                    struct device *i2s_dev,
+                                    struct device *codec_dev)
 {
-    struct device *i2s_dev;
-    struct device *codec_dev;
     struct device_dai i2s_dai;
     struct device_dai codec_dai;
-    bool i2s_supports_master;
-    bool codec_supports_master;
+    bool i2s_supports_mclk_master;
+    bool codec_supports_mclk_master;
     int ret = OK;
-
-    if ((!info->is_transmitter) ||
-        (!info->init_codec)) {
-        fprintf(stderr, "Settings not for Codec setup\n");
-        ret = -EINVAL;
-    }
-
-    i2s_dev = device_open(DEVICE_TYPE_I2S_HW, 0);
-    if (!i2s_dev) {
-        fprintf(stderr, "open i2s failed\n");
-        return -EIO;
-    }
-
-    codec_dev = device_open(DEVICE_TYPE_CODEC_HW, 0);
-    if (!codec_dev) {
-        fprintf(stderr, "open codec failed\n");
-        goto dev_close;
-    }
 
     /*get i2s master capabilities */
     ret = device_i2s_get_caps(i2s_dev,
@@ -124,13 +107,13 @@ int find_common_dai_settings(struct i2s_test_info *info)
     if (ret) {
         if (ret == -EOPNOTSUPP) {
             fprintf(stderr, "I2S does support master role\n");
-            i2s_supports_master = false;
+            i2s_supports_mclk_master = false;
         } else {
             fprintf(stderr, "I2S PCM settings not supported\n");
             goto dev_close;
         }
     } else {
-        i2s_supports_master = true;
+        i2s_supports_mclk_master = true;
     }
 
     /*get codec master capabilities of first dai index */
@@ -143,13 +126,13 @@ int find_common_dai_settings(struct i2s_test_info *info)
     if (ret) {
         if (ret == -EOPNOTSUPP) {
             fprintf(stderr, "Codec does support master role\n");
-            codec_supports_master = false;
+            codec_supports_mclk_master = false;
         } else {
             fprintf(stderr, "Codec PCM settings not supported\n");
             goto dev_close;
         }
     } else {
-        codec_supports_master = true;
+        codec_supports_mclk_master = true;
     }
 
     /* get compatible set of dai settings */
@@ -192,7 +175,7 @@ int find_common_dai_settings(struct i2s_test_info *info)
     }
 
     /* find a master */
-    if (i2s_supports_master) {
+    if (i2s_supports_mclk_master) {
         /* check if the codec slave works with the i2s mclk */
         compatible_dai.mclk_freq = i2s_dai.mclk_freq;
         ret = device_codec_get_caps(codec_dev,
@@ -204,13 +187,13 @@ int find_common_dai_settings(struct i2s_test_info *info)
         if(ret == OK)
         {
             fprintf(stderr, "Found compatible settings for I2S as master\n");
-            i2s_is_master = true;
+            i2s_is_mclk_master = true;
             goto dev_close;
         }
     }
 
     /* find a master */
-    if (codec_supports_master) {
+    if (codec_supports_mclk_master) {
         /* check if the i2s slave works with the codec mclk */
         compatible_dai.mclk_freq = codec_dai.mclk_freq;
         ret = device_i2s_get_caps(i2s_dev,
@@ -221,7 +204,7 @@ int find_common_dai_settings(struct i2s_test_info *info)
         if(ret == OK)
         {
             fprintf(stderr, "Found compatible settings for Codec as master\n");
-            codec_is_master = true;
+            codec_is_mclk_master = true;
             goto dev_close;
         }
     }
@@ -231,46 +214,17 @@ int find_common_dai_settings(struct i2s_test_info *info)
     ret = -EOPNOTSUPP;
 
 dev_close:
-    device_close(i2s_dev);
-    if (codec_dev) {
-        device_close(codec_dev);
-    }
 
     return ret;
 }
 
-int set_common_dai_settings(struct i2s_test_info *info)
+static int set_common_dai_settings(struct i2s_test_info *info,
+                                   struct device *i2s_dev,
+                                   struct device *codec_dev)
 {
-
-    struct device *i2s_dev;
-    struct device *codec_dev;
     int ret = OK;
 
-    if ((!info->is_transmitter) ||
-        (!info->init_codec)) {
-        fprintf(stderr, "Settings not for Codec setup\n");
-        ret = -EINVAL;
-    }
-
-    if ((!i2s_is_master) &&
-        (!codec_is_master)) {
-        fprintf(stderr, "in compatable settig to I2S and Codec\n");
-        ret = -EINVAL;
-    }
-
-    i2s_dev = device_open(DEVICE_TYPE_I2S_HW, 0);
-    if (!i2s_dev) {
-        fprintf(stderr, "open i2s failed\n");
-        return -EIO;
-    }
-
-    codec_dev = device_open(DEVICE_TYPE_CODEC_HW, 0);
-    if (!codec_dev) {
-        fprintf(stderr, "open codec failed\n");
-        goto dev_close;
-    }
-
-    if (i2s_is_master) {
+    if (i2s_is_mclk_master) {
         ret = device_i2s_set_config(i2s_dev,
                                    DEVICE_DAI_ROLE_MASTER,
                                    &i2s_test_pcm,
@@ -289,7 +243,7 @@ int set_common_dai_settings(struct i2s_test_info *info)
             fprintf(stderr, "set Codec configuration failed: %d\n", ret);
             goto dev_close;
         }
-    } else if (codec_is_master) {
+    } else if (codec_is_mclk_master) {
         ret = device_i2s_set_config(i2s_dev,
                                    DEVICE_DAI_ROLE_SLAVE,
                                    &i2s_test_pcm,
@@ -311,7 +265,156 @@ int set_common_dai_settings(struct i2s_test_info *info)
     }
 
 dev_close:
-    device_close(i2s_dev);
+
+    return ret;
+}
+
+static int stream_i2s_to_codec(struct i2s_test_info *info,
+                               struct device *i2s_dev,
+                               struct device *codec_dev)
+{
+    int ret = OK;
+
+    ret = device_codec_start_tx(codec_dev, 0);
+    if (ret)
+        goto err_codec;
+
+    ret = i2s_test_start_transmitter(info, i2s_dev);
+    if (ret)
+        goto err_i2s;
+
+    /*
+     * Wait forever.  Can't just exit because callback is still being
+     * called by driver to keep filling/draining the ring buffer.
+     */
+    while (sem_wait(&i2s_test_done_sem) && (errno == EINTR));
+
+    i2s_test_stop_transmitter(i2s_dev);
+
+err_i2s:
+    device_codec_stop_tx(codec_dev, 0);
+
+err_codec:
+
+    return ret;
+}
+
+/*copied from codec driver */
+enum {
+    RT5647_CTL_SPKOUT_MUTE,
+    RT5647_CTL_SPKOUT_VOL,
+    RT5647_CTL_SPKVOL_MUTE,
+    RT5647_CTL_DAC2_SWITCH,
+    RT5647_CTL_DAC2_VOL
+};
+
+
+static int enable_codec_speaker(struct i2s_test_info *info,
+                                struct device *codec_dev)
+{
+    int ret = OK;
+    struct gb_audio_ctl_elem_value value;
+
+    value.value.integer_value = 0; //? is 0 mute off
+    ret = device_codec_set_control(codec_dev,
+                                   RT5647_CTL_SPKOUT_MUTE,
+                                   0,
+                                   &value);
+    if (ret) {
+        fprintf(stderr, "RT5647_CTL_SPKOUT_MUTE did not work: error %d\n",ret);
+        goto dev_close;
+    }
+
+    value.value.integer_value = 39; //? is 39 max volume
+    ret = device_codec_set_control(codec_dev,
+                                   RT5647_CTL_SPKOUT_VOL,
+                                   0,  //no parent widget
+                                   &value);
+    if (ret) {
+        fprintf(stderr, "RT5647_CTL_SPKOUT_MUTE did not work: error %d\n",ret);
+        goto dev_close;
+    }
+
+    value.value.integer_value = 0; //? is 0 mute off
+    ret = device_codec_set_control(codec_dev,
+                                   RT5647_CTL_SPKVOL_MUTE,
+                                   0,  //no parent widget
+                                   &value); //? is 0 mute off
+    if (ret) {
+        fprintf(stderr, "RT5647_CTL_SPKVOL_MUTE did not work: error %d\n",ret);
+        goto dev_close;
+    }
+
+    value.value.integer_value = 1; //? enable dac 2
+    ret = device_codec_set_control(codec_dev,
+                                   RT5647_CTL_DAC2_SWITCH,
+                                   0,  //no parent widget
+                                   &value);
+    if (ret) {
+        fprintf(stderr, "RT5647_CTL_DAC2_SWITCH did not work: error %d\n",ret);
+        goto dev_close;
+    }
+
+    value.value.integer_value = 175; //? 175 max volume
+    ret = device_codec_set_control(codec_dev,
+                                   RT5647_CTL_DAC2_VOL,
+                                   0,  //no parent widget
+                                   &value);
+    if (ret) {
+        fprintf(stderr, "RT5647_CTL_DAC2_VOL did not work: error %d\n",ret);
+        goto dev_close;
+    }
+
+dev_close:
+
+    return ret;
+}
+
+int play_sine_wave_via_codec(struct i2s_test_info *info)
+{
+    struct device *i2s_dev = NULL;
+    struct device *codec_dev = NULL;
+    int ret = OK;
+
+    if ((!info->is_transmitter) ||
+        (!info->use_codec)) {
+        fprintf(stderr, "Settings not for Codec setup\n");
+        ret = -EINVAL;
+    }
+
+    i2s_dev = device_open(DEVICE_TYPE_I2S_HW, 0);
+    if (!i2s_dev) {
+        fprintf(stderr, "open i2s failed\n");
+        ret = -EIO;
+    }
+
+    codec_dev = device_open(DEVICE_TYPE_CODEC_HW, 0);
+    if (!codec_dev) {
+        fprintf(stderr, "open codec failed\n");
+        ret = -EIO;
+        goto dev_close;
+    }
+
+    ret = find_common_dai_settings(info, i2s_dev, codec_dev);
+    if(ret)
+        goto dev_close;
+
+    ret = set_common_dai_settings(info, i2s_dev, codec_dev);
+    if(ret)
+        goto dev_close;
+
+    ret = enable_codec_speaker(info, codec_dev);
+    if(ret)
+        goto dev_close;
+
+    ret = stream_i2s_to_codec(info, i2s_dev, codec_dev);
+    if(ret)
+        goto dev_close;
+
+dev_close:
+    if (i2s_dev) {
+        device_close(i2s_dev);
+    }
     if (codec_dev) {
         device_close(codec_dev);
     }
