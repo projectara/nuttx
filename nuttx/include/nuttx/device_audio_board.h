@@ -110,8 +110,8 @@ static inline int device_audio_board_get_mgmt_cport(struct device *dev,
  * @return 0 on success, negative errno on error.
  */
 static inline int device_audio_board_get_codec_dev_id(struct device *dev,
-                                                      unsigned int bundle_idx,
-                                                      uint16_t *codec_dev_id)
+                                                    unsigned int bundle_idx,
+                                                    unsigned int *codec_dev_id)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
