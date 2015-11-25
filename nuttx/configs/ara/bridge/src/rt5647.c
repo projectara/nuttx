@@ -130,21 +130,21 @@ struct rt5647_info {
     /** rx delay count */
     uint32_t rx_delay;
     /** rx callback event */
-    device_codec_event_callback *rx_callback;
+    device_codec_event_callback rx_callback;
     /** rx callback event argument */
     void* rx_callback_arg;
     /** tx delay count */
     uint32_t tx_delay;
     /** tx callback event */
-    device_codec_event_callback *tx_callback;
+    device_codec_event_callback tx_callback;
     /** tx callback event argument */
     void* tx_callback_arg;
     /** jack callback event */
-    device_codec_jack_event_callback *jack_event_callback;
+    device_codec_jack_event_callback jack_event_callback;
     /** jack callback event argument */
     void* jack_event_callback_arg;
     /** button callback event */
-    device_codec_button_event_callback *button_event_callback;
+    device_codec_button_event_callback button_event_callback;
     /** button callback event argument */
     void* button_event_callback_arg;
 
@@ -1334,7 +1334,7 @@ static int rt5647_stop_tx(struct device *dev, uint32_t dai_idx)
  * @return 0 on success, negative errno on error
  */
 static int rt5647_register_tx_callback(struct device *dev,
-                                       device_codec_event_callback *callback,
+                                       device_codec_event_callback callback,
                                        void *arg)
 {
     struct rt5647_info *info = NULL;
@@ -1441,7 +1441,7 @@ static int rt5647_stop_rx(struct device *dev, uint32_t dai_idx)
  * @return 0 on success, negative errno on error
  */
 static int rt5647_register_rx_callback(struct device *dev,
-                                       device_codec_event_callback *callback,
+                                       device_codec_event_callback callback,
                                        void *arg)
 {
     struct rt5647_info *info = NULL;
@@ -1464,7 +1464,7 @@ static int rt5647_register_rx_callback(struct device *dev,
  * @return 0 on success, negative errno on error
  */
 static int rt5647_register_jack_event_callback(struct device *dev,
-                                    device_codec_jack_event_callback *callback,
+                                    device_codec_jack_event_callback callback,
                                     void *arg)
 {
     struct rt5647_info *info = NULL;
@@ -1487,7 +1487,7 @@ static int rt5647_register_jack_event_callback(struct device *dev,
  * @return 0 on success, negative errno on error
  */
 static int rt5647_register_button_event_callback(struct device *dev,
-                                  device_codec_button_event_callback *callback,
+                                  device_codec_button_event_callback callback,
                                   void *arg)
 {
     struct rt5647_info *info = NULL;

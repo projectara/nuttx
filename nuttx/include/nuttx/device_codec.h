@@ -118,19 +118,19 @@ struct device_codec_type_ops {
     int (*start_tx)(struct device *dev, uint32_t dai_idx);
     int (*stop_tx)(struct device *dev, uint32_t dai_idx);
     int (*register_tx_callback)(struct device *dev,
-                                device_codec_event_callback *callback,
+                                device_codec_event_callback callback,
                                 void *arg);
     int (*get_rx_delay)(struct device *dev, uint32_t *delay);
     int (*start_rx)(struct device *dev, uint32_t dai_idx);
     int (*stop_rx)(struct device *dev, uint32_t dai_idx);
     int (*register_rx_callback)(struct device *dev,
-                                device_codec_event_callback *callback,
+                                device_codec_event_callback callback,
                                 void *arg);
     int (*register_jack_event_callback)(struct device *dev,
-                                  device_codec_jack_event_callback *callback,
+                                  device_codec_jack_event_callback callback,
                                   void *arg);
     int (*register_button_event_callback)(struct device *dev,
-                                  device_codec_button_event_callback *callback,
+                                  device_codec_button_event_callback callback,
                                   void *arg);
 };
 
@@ -301,7 +301,7 @@ static inline int device_codec_stop_tx(struct device *dev, unsigned int dai_idx)
 }
 
 static inline int device_codec_register_tx_callback(struct device *dev,
-                                         device_codec_event_callback *callback,
+                                         device_codec_event_callback callback,
                                          void *arg)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
@@ -311,8 +311,8 @@ static inline int device_codec_register_tx_callback(struct device *dev,
     }
     if (DEVICE_DRIVER_GET_OPS(dev, codec)->register_tx_callback) {
         return DEVICE_DRIVER_GET_OPS(dev, codec)->register_tx_callback(dev,
-                                                                      callback,
-                                                                      arg);
+                                                                       callback,
+                                                                       arg);
     }
     return -ENOSYS;
 }
@@ -358,8 +358,8 @@ static inline int device_codec_stop_rx(struct device *dev, unsigned int dai_idx)
 }
 
 static inline int device_codec_register_rx_callback(struct device *dev,
-                                         device_codec_event_callback *callback,
-                                         void *arg)
+                                          device_codec_event_callback callback,
+                                          void *arg)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -368,15 +368,15 @@ static inline int device_codec_register_rx_callback(struct device *dev,
     }
     if (DEVICE_DRIVER_GET_OPS(dev, codec)->register_rx_callback) {
         return DEVICE_DRIVER_GET_OPS(dev, codec)->register_rx_callback(dev,
-                                                                      callback,
-                                                                      arg);
+                                                                       callback,
+                                                                       arg);
     }
     return -ENOSYS;
 }
 
 static inline int device_codec_register_jack_event_callback(struct device *dev,
-                                    device_codec_jack_event_callback *callback,
-                                    void *arg)
+                                     device_codec_jack_event_callback callback,
+                                     void *arg)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -394,7 +394,7 @@ static inline int device_codec_register_jack_event_callback(struct device *dev,
 
 static inline int device_codec_register_button_event_callback(
                                   struct device *dev,
-                                  device_codec_button_event_callback *callback,
+                                  device_codec_button_event_callback callback,
                                   void *arg)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
