@@ -26,34 +26,10 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __I2S_TEST_H__
-#define __I2S_TEST_H__
+#ifndef __TEST_CODEC_H__
+#define __TEST_CODEC_H__
 
-struct i2s_test_stats {
-    unsigned int    tx_cnt;
-    unsigned int    tx_err_cnt;
-    unsigned int    rx_cnt;
-    unsigned int    rx_err_cnt;
-    unsigned int    rx_bad_data_cnt;
-};
+int find_common_dai_settings(struct i2s_test_info *info);
+int set_common_dai_settings(struct i2s_test_info *info);
 
-struct i2s_test_info {
-    uint8_t                 is_transmitter;
-    uint8_t                 is_receiver;
-    uint8_t                 is_i2s;
-    uint8_t                 is_gen_audio;
-    uint32_t                aud_frequency;
-    uint32_t                aud_volume;
-    uint8_t                 init_codec;
-    uint8_t                 check_rx_data;
-    unsigned long           rb_entries;
-    unsigned long           samples_per_rb_entry;
-    uint16_t                left;
-    uint16_t                right;
-    struct i2s_test_stats   stats;
-};
-
-extern sem_t i2s_test_done_sem;
-extern struct device_i2s_pcm i2s_test_pcm;
-
-#endif /* __I2S_TEST_H__ */
+#endif /* __TEST_CODEC_H__ */

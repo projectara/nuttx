@@ -64,7 +64,7 @@ PRIORITY = SCHED_PRIORITY_DEFAULT
 STACKSIZE = 2048
 
 ASRCS =
-MAINSRC = i2s_test.c gen_pcm.c codec.c
+MAINSRC = i2s_test.c gen_pcm.c codec_test.c
 
 AOBJS = $(ASRCS:.S=$(OBJEXT))
 COBJS = $(CSRCS:.c=$(OBJEXT))

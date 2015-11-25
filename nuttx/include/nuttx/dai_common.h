@@ -26,34 +26,38 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __I2S_TEST_H__
-#define __I2S_TEST_H__
+/* common audo data types between Codec and I2S drivers */
 
-struct i2s_test_stats {
-    unsigned int    tx_cnt;
-    unsigned int    tx_err_cnt;
-    unsigned int    rx_cnt;
-    unsigned int    rx_err_cnt;
-    unsigned int    rx_bad_data_cnt;
+#ifndef __DAI_COMMON_H
+#define __DAI_COMMON_H
+
+#include "../../drivers/greybus/audio-gb.h"
+
+#define DEVICE_DAI_PROTOCOL_PCM                         BIT(0)
+#define DEVICE_DAI_PROTOCOL_I2S                         BIT(1)
+#define DEVICE_DAI_PROTOCOL_LR_STEREO                   BIT(2)
+
+#define DEVICE_DAI_ROLE_MASTER                          BIT(0)
+#define DEVICE_DAI_ROLE_SLAVE                           BIT(1)
+
+#define DEVICE_DAI_POLARITY_NORMAL                      BIT(0)
+#define DEVICE_DAI_POLARITY_REVERSED                    BIT(1)
+
+#define DEVICE_DAI_EDGE_RISING                          BIT(0)
+#define DEVICE_DAI_EDGE_FALLING                         BIT(1)
+
+/* low level DAI communication capabilities of a driver
+ * Most capabilities are bitfields,
+ * To find matching capabilities between drivers AND the bitfields
+ * returned from get_caps
+ */
+struct device_dai {
+    uint32_t    mclk_freq;          /* mclk frequency generated/required */
+    uint8_t     protocol;           /* DEVICE_DAI_PROTOCOL_* */
+    uint8_t     wclk_polarity;      /* DEVICE_DAI_POLARITY_* */
+    uint8_t     wclk_change_edge;   /* DEVICE_DAI_EDGE_* */
+    uint8_t     data_rx_edge;       /* DEVICE_DAI_EDGE_* */
+    uint8_t     data_tx_edge;       /* DEVICE_DAI_EDGE_* */
 };
 
-struct i2s_test_info {
-    uint8_t                 is_transmitter;
-    uint8_t                 is_receiver;
-    uint8_t                 is_i2s;
-    uint8_t                 is_gen_audio;
-    uint32_t                aud_frequency;
-    uint32_t                aud_volume;
-    uint8_t                 init_codec;
-    uint8_t                 check_rx_data;
-    unsigned long           rb_entries;
-    unsigned long           samples_per_rb_entry;
-    uint16_t                left;
-    uint16_t                right;
-    struct i2s_test_stats   stats;
-};
-
-extern sem_t i2s_test_done_sem;
-extern struct device_i2s_pcm i2s_test_pcm;
-
-#endif /* __I2S_TEST_H__ */
+#endif /* __DAI_COMMON_H */

@@ -31,38 +31,17 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "../../drivers/greybus/audio-gb.h"
+#include <nuttx/dai_common.h>
 
 #define DEVICE_TYPE_CODEC_HW        "codec"
 #define AUDIO_CODEC_NAME_MAX        32
 
-#define DEVICE_CODEC_PROTOCOL_PCM                         BIT(0)
-#define DEVICE_CODEC_PROTOCOL_I2S                         BIT(1)
-#define DEVICE_CODEC_PROTOCOL_LR_STEREO                   BIT(2)
-
-#define DEVICE_CODEC_ROLE_MASTER                          BIT(0)
-#define DEVICE_CODEC_ROLE_SLAVE                           BIT(1)
-
-#define DEVICE_CODEC_POLARITY_NORMAL                      BIT(0)
-#define DEVICE_CODEC_POLARITY_REVERSED                    BIT(1)
-
-#define DEVICE_CODEC_EDGE_RISING                          BIT(0)
-#define DEVICE_CODEC_EDGE_FALLING                         BIT(1)
 
 struct device_codec_pcm {
     uint32_t    format;   /* same as GB_AUDIO */
     uint32_t    rate;     /* same as GB_AUDIO */
     uint8_t     channels; /* same as GB_AUDIO */
     uint8_t     sig_bits; /* same as GB_AUDIO - may be able to remove */
-};
-
-struct device_codec_dai {
-    uint32_t    mclk_freq;
-    uint32_t    protocol; /* low-level protocol defining WCLK, offset, etc. */
-    uint8_t     wclk_polarity;
-    uint8_t     wclk_change_edge;
-    uint8_t     data_rx_edge;
-    uint8_t     data_tx_edge;
 };
 
 enum device_codec_event {
@@ -110,10 +89,10 @@ struct device_codec_type_ops {
     int (*enable_widget)(struct device *dev, uint8_t widget_id);
     int (*disable_widget)(struct device *dev, uint8_t widget_id);
     int (*get_caps)(struct device *dev, unsigned int dai_idx, uint8_t clk_role,
-                    struct device_codec_pcm *pcm, struct device_codec_dai *dai);
+                    struct device_codec_pcm *pcm, struct device_dai *dai);
     int (*set_config)(struct device *dev, unsigned int dai_idx,
                       uint8_t clk_role, struct device_codec_pcm *pcm,
-                      struct device_codec_dai *dai);
+                      struct device_dai *dai);
     int (*get_tx_delay)(struct device *dev, uint32_t *delay);
     int (*start_tx)(struct device *dev, uint32_t dai_idx);
     int (*stop_tx)(struct device *dev, uint32_t dai_idx);
@@ -227,7 +206,7 @@ static inline int device_codec_disable_widget(struct device *dev,
 static inline int device_codec_get_caps(struct device *dev,
                                         unsigned int dai_idx, uint8_t clk_role,
                                         struct device_codec_pcm *pcm,
-                                        struct device_codec_dai *dai)
+                                        struct device_dai *dai)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -245,7 +224,7 @@ static inline int device_codec_set_config(struct device *dev,
                                           unsigned int dai_idx,
                                           uint8_t clk_role,
                                           struct device_codec_pcm *pcm,
-                                          struct device_codec_dai *dai)
+                                          struct device_dai *dai)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 

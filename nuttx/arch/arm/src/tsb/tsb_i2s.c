@@ -44,6 +44,7 @@
 #include <nuttx/device.h>
 #include <nuttx/device_pll.h>
 #include <nuttx/device_i2s.h>
+#include <nuttx/dai_common.h>
 
 #include <arch/byteorder.h>
 
@@ -65,13 +66,13 @@
     DEVICE_I2S_PCM_RATE_32000  | \
     DEVICE_I2S_PCM_RATE_48000)
 
-#define TSB_I2S_PROTOCOL_MASK (DEVICE_I2S_PROTOCOL_PCM | \
-                               DEVICE_I2S_PROTOCOL_I2S | \
-                               DEVICE_I2S_PROTOCOL_LR_STEREO)
-#define TSB_I2S_WCLK_PALARITY_MASK (DEVICE_I2S_POLARITY_NORMAL | DEVICE_I2S_POLARITY_REVERSED)
-#define TSB_I2S_WCLK_EDGE_MASK (DEVICE_I2S_EDGE_RISING | DEVICE_I2S_EDGE_FALLING)
-#define TSB_I2S_RXCLK_EDGE_MASK (DEVICE_I2S_EDGE_RISING | DEVICE_I2S_EDGE_FALLING)
-#define TSB_I2S_TXCLK_EDGE_MASK (DEVICE_I2S_EDGE_RISING | DEVICE_I2S_EDGE_FALLING)
+#define TSB_I2S_PROTOCOL_MASK (DEVICE_DAI_PROTOCOL_PCM | \
+                               DEVICE_DAI_PROTOCOL_I2S | \
+                               DEVICE_DAI_PROTOCOL_LR_STEREO)
+#define TSB_I2S_WCLK_PALARITY_MASK (DEVICE_DAI_POLARITY_NORMAL | DEVICE_DAI_POLARITY_REVERSED)
+#define TSB_I2S_WCLK_EDGE_MASK (DEVICE_DAI_EDGE_RISING | DEVICE_DAI_EDGE_FALLING)
+#define TSB_I2S_RXCLK_EDGE_MASK (DEVICE_DAI_EDGE_RISING | DEVICE_DAI_EDGE_FALLING)
+#define TSB_I2S_TXCLK_EDGE_MASK (DEVICE_DAI_EDGE_RISING | DEVICE_DAI_EDGE_FALLING)
 
 
 /*
@@ -201,7 +202,7 @@ struct tsb_i2s_info {
     int                             sierr_irq;
     int                             si_irq;
     struct device_i2s_pcm           pcm;
-    struct device_i2s_dai           dai;
+    struct device_dai               dai;
     uint8_t                         mclk_role;
     uint8_t                         bclk_role;
     uint8_t                         wclk_role;
@@ -594,7 +595,7 @@ static void tsb_i2s_init_block(struct tsb_i2s_info *info,
 
 static int tsb_i2s_config_hw(struct tsb_i2s_info *info)
 {
-    struct device_i2s_dai *dai = &info->dai;
+    struct device_dai *dai = &info->dai;
     struct device_i2s_pcm *pcm = &info->pcm;
     uint32_t sc_audioset, so_audioset, si_audioset, modeset;
     uint32_t bits_per_channel;
@@ -612,34 +613,34 @@ static int tsb_i2s_config_hw(struct tsb_i2s_info *info)
         si_audioset |= TSB_I2S_REG_AUDIOSET_SCLKTOWS;
     }
 
-    if (dai->wclk_change_edge == DEVICE_I2S_EDGE_RISING) {
+    if (dai->wclk_change_edge == DEVICE_DAI_EDGE_RISING) {
         sc_audioset |= TSB_I2S_REG_AUDIOSET_EDGE;
         si_audioset |= TSB_I2S_REG_AUDIOSET_EDGE;
     } else {
         so_audioset |= TSB_I2S_REG_AUDIOSET_EDGE;
     }
 
-    if (dai->data_tx_edge == DEVICE_I2S_EDGE_RISING)
+    if (dai->data_tx_edge == DEVICE_DAI_EDGE_RISING)
         so_audioset |= TSB_I2S_REG_AUDIOSET_SDEDGE;
 
-    if (dai->data_rx_edge == DEVICE_I2S_EDGE_RISING)
+    if (dai->data_rx_edge == DEVICE_DAI_EDGE_RISING)
         si_audioset |= TSB_I2S_REG_AUDIOSET_SDEDGE;
 
     so_audioset |= (bits_per_channel);
     si_audioset |= (bits_per_channel);
 
     switch (dai->protocol) {
-    case DEVICE_I2S_PROTOCOL_PCM:
-        if (dai->wclk_change_edge == DEVICE_I2S_POLARITY_REVERSED)
+    case DEVICE_DAI_PROTOCOL_PCM:
+        if (dai->wclk_change_edge == DEVICE_DAI_POLARITY_REVERSED)
             modeset |= TSB_I2S_REG_MODESET_PCM_MONO_REV_POL;
         else
             modeset |= TSB_I2S_REG_MODESET_PCM_MONO;
         break;
-    case DEVICE_I2S_PROTOCOL_I2S:
+    case DEVICE_DAI_PROTOCOL_I2S:
         modeset |= TSB_I2S_REG_MODESET_I2S_STEREO;
         break;
-    case DEVICE_I2S_PROTOCOL_LR_STEREO:
-        if (dai->wclk_change_edge == DEVICE_I2S_POLARITY_REVERSED)
+    case DEVICE_DAI_PROTOCOL_LR_STEREO:
+        if (dai->wclk_change_edge == DEVICE_DAI_POLARITY_REVERSED)
             modeset |= TSB_I2S_REG_MODESET_LR_STEREO;
         else
             modeset |= TSB_I2S_REG_MODESET_LR_STEREO_REV_POL;
@@ -672,7 +673,7 @@ static int tsb_i2s_start_clocks(struct tsb_i2s_info *info)
 
     bclk_freq = tsb_i2s_calc_bclk(&info->pcm);
 
-    if (info->mclk_role == DEVICE_I2S_ROLE_MASTER) {
+    if (info->mclk_role == DEVICE_DAI_ROLE_MASTER) {
         info->pll_dev = device_open(DEVICE_TYPE_PLL_HW, TSB_I2S_PLLA_ID);
         if (!info->pll_dev)
             return -EIO;
@@ -707,7 +708,7 @@ static int tsb_i2s_start_clocks(struct tsb_i2s_info *info)
         i2s_clk_sel |= TSB_CG_BRIDGE_I2S_CLOCK_SELECTOR_MASTER_CLOCK_SEL;
     }
 
-    if (info->mclk_role == DEVICE_I2S_ROLE_SLAVE)
+    if (info->mclk_role == DEVICE_DAI_ROLE_SLAVE)
         i2s_clk_sel |= TSB_CG_BRIDGE_I2S_CLOCK_SELECTOR_LR_BCLK_SEL;
 
     /* This write starts MCLK & BCLK (not WCLK) if they are clock masters */
@@ -733,7 +734,7 @@ static void tsb_i2s_stop_clocks(struct tsb_i2s_info *info)
                         TSB_CG_BRIDGE_I2S_CLOCK_SELECTOR_MASTER_CLOCK_SEL |
                             TSB_CG_BRIDGE_I2S_CLOCK_SELECTOR_LR_BCLK_SEL);
 
-    if (info->mclk_role == DEVICE_I2S_ROLE_MASTER) {
+    if (info->mclk_role == DEVICE_DAI_ROLE_MASTER) {
         device_pll_stop(info->pll_dev);
         device_close(info->pll_dev);
         info->pll_dev = NULL;
@@ -834,14 +835,14 @@ static int tsb_i2s_start(struct tsb_i2s_info *info, enum tsb_i2s_block block)
 {
     int ret;
 
-    if (info->bclk_role == DEVICE_I2S_ROLE_MASTER) {
+    if (info->bclk_role == DEVICE_DAI_ROLE_MASTER) {
         ret = tsb_i2s_start_block(info, TSB_I2S_BLOCK_SC);
         if (ret)
             return ret;
     }
 
     ret = tsb_i2s_start_block(info, block);
-    if (ret && (info->bclk_role == DEVICE_I2S_ROLE_MASTER))
+    if (ret && (info->bclk_role == DEVICE_DAI_ROLE_MASTER))
         tsb_i2s_stop_block(info, TSB_I2S_BLOCK_SC, 0);
 
     return ret;
@@ -852,7 +853,7 @@ static void tsb_i2s_stop(struct tsb_i2s_info *info, enum tsb_i2s_block block,
 {
     tsb_i2s_stop_block(info, block, is_err);
 
-    if (info->bclk_role == DEVICE_I2S_ROLE_MASTER)
+    if (info->bclk_role == DEVICE_DAI_ROLE_MASTER)
         tsb_i2s_stop_block(info, TSB_I2S_BLOCK_SC, is_err);
 }
 
@@ -1246,7 +1247,7 @@ static int tsb_i2s_op_get_delay_transmitter(struct device *dev,
 static int tsb_i2s_op_get_caps(struct device *dev,
                                uint8_t clk_role,
                                struct device_i2s_pcm *pcm,
-                               struct device_i2s_dai *dai)
+                               struct device_dai *dai)
 {
     struct tsb_i2s_info *info = device_get_private(dev);
     int ret;
@@ -1258,7 +1259,7 @@ static int tsb_i2s_op_get_caps(struct device *dev,
         return ret;
     }
 
-    if (clk_role == DEVICE_I2S_ROLE_MASTER) {
+    if (clk_role == DEVICE_DAI_ROLE_MASTER) {
 
         ret = tsb_i2s_test_mclk(info->pll_dev, pcm);
         if (ret < 0) {
@@ -1318,7 +1319,7 @@ static int tsb_i2s_op_get_caps(struct device *dev,
 static int tsb_i2s_op_set_config(struct device *dev,
                                uint8_t clk_role,
                                struct device_i2s_pcm *pcm,
-                               struct device_i2s_dai *dai)
+                               struct device_dai *dai)
 {
     struct tsb_i2s_info *info = device_get_private(dev);
     int ret;
@@ -1347,7 +1348,7 @@ static int tsb_i2s_op_set_config(struct device *dev,
         return -ERANGE;
     }
 
-    if (clk_role == DEVICE_I2S_ROLE_MASTER) {
+    if (clk_role == DEVICE_DAI_ROLE_MASTER) {
         ret = tsb_i2s_test_mclk(info->pll_dev, pcm);
         if (ret < 0) {
             return ret;
@@ -1360,15 +1361,15 @@ static int tsb_i2s_op_set_config(struct device *dev,
     }
 
     memcpy(&info->pcm, pcm, sizeof(struct device_i2s_pcm));
-    memcpy(&info->dai, dai, sizeof(struct device_i2s_dai));
-    if(clk_role == DEVICE_I2S_ROLE_MASTER) {
-        info->mclk_role = DEVICE_I2S_ROLE_MASTER;
-        info->bclk_role = DEVICE_I2S_ROLE_MASTER;
-        info->wclk_role = DEVICE_I2S_ROLE_MASTER;
+    memcpy(&info->dai, dai, sizeof(struct device_dai));
+    if(clk_role == DEVICE_DAI_ROLE_MASTER) {
+        info->mclk_role = DEVICE_DAI_ROLE_MASTER;
+        info->bclk_role = DEVICE_DAI_ROLE_MASTER;
+        info->wclk_role = DEVICE_DAI_ROLE_MASTER;
     } else {
-        info->mclk_role = DEVICE_I2S_ROLE_SLAVE;
-        info->bclk_role = DEVICE_I2S_ROLE_SLAVE;
-        info->wclk_role = DEVICE_I2S_ROLE_SLAVE;
+        info->mclk_role = DEVICE_DAI_ROLE_SLAVE;
+        info->bclk_role = DEVICE_DAI_ROLE_SLAVE;
+        info->wclk_role = DEVICE_DAI_ROLE_SLAVE;
     }
 
     info->flags |= TSB_I2S_FLAG_CONFIGURED;
