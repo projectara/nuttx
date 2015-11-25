@@ -78,7 +78,7 @@ typedef int (*device_codec_event_callback)(unsigned int dai_idx,
                                            enum device_codec_event event,
                                            void *arg);
 
-enum {
+enum device_codec_jack_event {
     DEVICE_CODEC_JACK_EVENT_INVALID,
     DEVICE_CODEC_JACK_EVENT_INSERTION,
     DEVICE_CODEC_JACK_EVENT_REMOVAL,
@@ -89,7 +89,7 @@ typedef int (*device_codec_jack_event_callback)(uint8_t widget_id,
                                             enum device_codec_jack_event event,
                                             void *arg);
 
-enum {
+enum device_codec_button_event {
     DEVICE_CODEC_BUTTON_EVENT_INVALID,
     DEVICE_CODEC_BUTTON_EVENT_PRESS,
     DEVICE_CODEC_BUTTON_EVENT_RELEASE,
