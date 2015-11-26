@@ -94,6 +94,7 @@ struct audio_widget {
     uint32_t reg;
     uint32_t shift;
     uint32_t inv;
+    int (*event)(struct device *dev, uint8_t widget_id, uint8_t event);
 };
 
 typedef struct gb_audio_route audio_route;
@@ -128,6 +129,12 @@ int audcodec_enum_set(struct audio_control *control,
                                    struct gb_audio_ctl_elem_value *value);
 
 #define NOPWRCTL        (0xFFFFFFFF)    /* No power control for widget */
+
+/* Audio widget power event */
+#define WIDGET_EVENT_PRE_PWRUP          0x1 /* before widget power up */
+#define WIDGET_EVENT_POST_PWRUP         0x2 /* after widget power up */
+#define WIDGET_EVENT_PRE_PWRDOWN        0x4 /* before widget power down */
+#define WIDGET_EVENT_POST_PWRDOWN       0x8 /* after widget power down */
 
 /* Audio control Macro */
 
@@ -251,6 +258,16 @@ int audcodec_enum_set(struct audio_control *control,
             .state = GB_AUDIO_WIDGET_STATE_DISABLED \
         }, \
         .controls = xcontrols, .num_controls = ARRAY_SIZE(xcontrols), \
-        .reg = xreg, .shift = xshift, .inv = xinv \
+        .reg = xreg, .shift = xshift, .inv = xinv, .event = NULL \
+    }
+
+#define WIDGET_E(xname, xid, xtype, xcontrols, xreg, xshift, xinv, xevent) \
+    { \
+        .widget = { \
+            .name = xname, .id = xid, .type = GB_AUDIO_WIDGET_TYPE_##xtype, \
+            .state = GB_AUDIO_WIDGET_STATE_DISABLED \
+        }, \
+        .controls = xcontrols, .num_controls = ARRAY_SIZE(xcontrols), \
+        .reg = xreg, .shift = xshift, .inv = xinv, .event = xevent \
     }
 #endif /* __AUDCODEC_H__ */

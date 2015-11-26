@@ -1195,20 +1195,24 @@ static int rt5647_enable_widget(struct device *dev, uint8_t widget_id)
                 /* widget has enabled */
                 return 0;
             }
-            if (widget->reg == NOPWRCTL) {
-                widget->widget.state = GB_AUDIO_WIDGET_STATE_ENAABLED;
-                return 0;
+            if (widget->event) {
+                widget->event(dev, widget_id, WIDGET_EVENT_PRE_PWRUP);
             }
-            /* turn on the widget */
-            if (audcodec_read(widget->reg, &data)) {
-                return -EIO;
-            }
-            mask = 1 << widget->shift;
-            data = (data & ~mask) | ((widget->inv)? 0 : mask);
-            if (audcodec_write(widget->reg, data)) {
-                return -EIO;
+            if (widget->reg != NOPWRCTL) {
+                /* turn on the widget */
+                if (audcodec_read(widget->reg, &data)) {
+                    return -EIO;
+                }
+                mask = 1 << widget->shift;
+                data = (data & ~mask) | ((widget->inv)? 0 : mask);
+                if (audcodec_write(widget->reg, data)) {
+                    return -EIO;
+                }
             }
             widget->widget.state = GB_AUDIO_WIDGET_STATE_ENAABLED;
+            if (widget->event) {
+                widget->event(dev, widget_id, WIDGET_EVENT_POST_PWRUP);
+            }
             return 0;
         }
         widget++;
@@ -1242,20 +1246,24 @@ static int rt5647_disable_widget(struct device *dev, uint8_t widget_id)
                 /* widget has disabled */
                 return 0;
             }
-            if (widget->reg == NOPWRCTL) {
-                widget->widget.state = GB_AUDIO_WIDGET_STATE_DISABLED;
-                return 0;
+            if (widget->event) {
+                widget->event(dev, widget_id, WIDGET_EVENT_PRE_PWRDOWN);
             }
-            /* turn off the widget */
-            if (audcodec_read(widget->reg, &data)) {
-                return -EIO;
-            }
-            mask = 1 << widget->shift;
-            data = (data & ~mask) | ((widget->inv)? mask : 0);
-            if (audcodec_write(widget->reg, data)) {
-                return -EIO;
+            if (widget->reg != NOPWRCTL) {
+                /* turn off the widget */
+                if (audcodec_read(widget->reg, &data)) {
+                    return -EIO;
+                }
+                mask = 1 << widget->shift;
+                data = (data & ~mask) | ((widget->inv)? mask : 0);
+                if (audcodec_write(widget->reg, data)) {
+                    return -EIO;
+                }
             }
             widget->widget.state = GB_AUDIO_WIDGET_STATE_DISABLED;
+            if (widget->event) {
+                widget->event(dev, widget_id, WIDGET_EVENT_POST_PWRDOWN);
+            }
             return 0;
         }
         widget++;
