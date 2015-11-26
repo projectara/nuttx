@@ -50,6 +50,9 @@
 #define CODEC_DEVICE_FLAG_RX_START        BIT(4)  /* device rx started */
 #define CODEC_DEVICE_FLAG_CLOSE           BIT(5)  /* device closed */
 
+static int rt5647_speaker_event(struct device *dev, uint8_t widget_id,
+                                uint8_t event);
+
 static struct device *codec_dev = NULL;
 
 /**
@@ -467,7 +470,8 @@ struct audio_widget rt5647_widgets[] = {
     WIDGET("SPOR MIX", RT5647_WIDGET_SPOR_MIX, MIXER, rt5647_spo_r_mix,
            NOPWRCTL, 0, 0),
 
-    WIDGET("SPK amp", RT5647_WIDGET_SPK_AMP, PGA, NULL, NOPWRCTL, 0, 0),
+    WIDGET_E("SPK amp", RT5647_WIDGET_SPK_AMP, PGA, NULL, NOPWRCTL, 0, 0,
+             rt5647_speaker_event),
 
     WIDGET("SPOL", RT5647_WIDGET_SPOL, OUTPUT, NULL, NOPWRCTL, 0, 0),
     WIDGET("SPOR", RT5647_WIDGET_SPOR, OUTPUT, NULL, NOPWRCTL, 0, 0),
@@ -1515,6 +1519,24 @@ static int rt5647_register_button_event_callback(struct device *dev,
     return 0;
 }
 
+static int rt5647_speaker_event(struct device *dev, uint8_t widget_id,
+                                uint8_t event)
+{
+    uint32_t mask = 0;
+    switch (event) {
+    case WIDGET_EVENT_POST_PWRUP:
+        /* turn on Class-D power */
+        mask = 1 << RT5647_PWR1_CLSD_R_EN | 1 << RT5647_PWR1_CLSD_L_EN | \
+               1 << RT5647_PWR1_CLSD_EN;
+        audcodec_update(RT5647_PWR_MGT_1, mask, mask);
+        break;
+    case WIDGET_EVENT_PRE_PWRDOWN:
+        /* turn off Class-D power */
+        audcodec_update(RT5647_PWR_MGT_1, 0, mask);
+        break;
+    }
+    return 0;
+}
 /**
  * @brief Open audio codec device
  *
