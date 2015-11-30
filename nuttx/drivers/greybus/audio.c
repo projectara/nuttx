@@ -1690,7 +1690,7 @@ static struct gb_driver gb_audio_mgmt_driver = {
     .op_handlers_count  = ARRAY_SIZE(gb_audio_mgmt_handlers),
 };
 
-void gb_audio_register(int mgmt_cport)
+void gb_audio_mgmt_register(int mgmt_cport)
 {
     gb_register_driver(mgmt_cport, &gb_audio_mgmt_driver);
 }
@@ -1759,7 +1759,7 @@ static struct gb_driver gb_audio_data_driver = {
     .op_handlers_count  = ARRAY_SIZE(gb_audio_data_handlers),
 };
 
-void gb_audio_receiver_register(int data_cport)
+void gb_audio_data_register(int data_cport)
 {
     gb_register_driver(data_cport, &gb_audio_data_driver);
 }
