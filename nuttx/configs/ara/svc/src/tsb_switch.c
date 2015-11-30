@@ -76,12 +76,6 @@
 #define CPORT_DEFAULT_T_PROTOCOLID         0
 #define CPORT_DEFAULT_TSB_MAXSEGMENTCONFIG 0x118
 
-/* MaskId entry update */
-#define SET_VALID_ENTRY(entry) \
-    id_mask[15 - ((entry) / 8)] |= (1 << ((entry)) % 8)
-#define SET_INVALID_ENTRY(entry) \
-    id_mask[15 - ((entry) / 8)] &= ~(1 << ((entry)) % 8)
-
 static inline void dev_ids_update(struct tsb_switch *sw,
                                   uint8_t port_id,
                                   uint8_t dev_id) {
