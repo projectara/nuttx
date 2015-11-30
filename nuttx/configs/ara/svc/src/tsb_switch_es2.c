@@ -94,9 +94,6 @@ struct sw_es2_priv {
     #define TSB_MPHY_MAP_NORMAL         (0x00)
     #define TSB_MPHY_MAP_TSB_REGISTER_2 (0x81)
 
-#define CHECK_VALID_ENTRY(entry) \
-    (valid_bitmask[15 - ((entry) / 8)] & (1 << ((entry)) % 8))
-
 #define WSTATUS0_TXENTFIFOREMAIN_MASK  (0x03)
 #define WSTATUS1_TXENTFIFOREMAIN_MASK  (0xff)
 #define WSTATUS2_TXDATAFIFOREMAIN_MASK (0x7f)
@@ -1262,19 +1259,19 @@ static int es2_lut_get(struct tsb_switch *sw,
  */
 static int es2_dump_routing_table(struct tsb_switch *sw) {
     int i, j, devid, unipro_portid;
-    uint8_t p = 0, valid_bitmask[16];
+    uint8_t p = 0, id_mask[16];
 
     dbg_info("======================================================\n");
     dbg_info("Routing table:\n");
     dbg_info(" [Port,DevId] -> [Port]\n");
 
     for (unipro_portid = 0; unipro_portid <= SWITCH_PORT_ID; unipro_portid++) {
-        if (switch_dev_id_mask_get(sw, unipro_portid, valid_bitmask)) {
+        if (switch_dev_id_mask_get(sw, unipro_portid, id_mask)) {
             dbg_error("%s() Failed to retrieve routing table.\n", __func__);
             return -1;
         }
         dbg_insane("%s(): Mask ID %d\n", __func__, unipro_portid);
-        dbg_print_buf(ARADBG_INSANE, valid_bitmask, sizeof(valid_bitmask));
+        dbg_print_buf(ARADBG_INSANE, id_mask, sizeof(id_mask));
 
         for (i = 0; i < 8; i++) {
             for (j = 0; j < 16; j++) {
