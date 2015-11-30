@@ -78,6 +78,14 @@
 #define TSB_INTERRUPT_SPIPORT5_RX   (1 << 21)
 #define TSB_INTERRUPT_SWINTERNAL    (1 << 31)
 
+/* Routing table: MaskId table helpers */
+#define SET_VALID_ENTRY(entry) \
+    id_mask[15 - ((entry) / 8)] |= (1 << ((entry)) % 8)
+#define SET_INVALID_ENTRY(entry) \
+    id_mask[15 - ((entry) / 8)] &= ~(1 << ((entry)) % 8)
+#define CHECK_VALID_ENTRY(entry) \
+    (id_mask[15 - ((entry) / 8)] & (1 << ((entry)) % 8))
+
 int tsb_switch_es2_fct_enable(struct tsb_switch *);
 
 int tsb_switch_es2_init(struct tsb_switch *, unsigned int spi_bus);
