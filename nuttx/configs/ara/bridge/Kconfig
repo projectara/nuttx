@@ -120,6 +120,18 @@ config CAMERA_RX_CDSI1
 	bool "Initialize csi-2 rx on CDSI1"
 endchoice
 
+config APBRIDGEA_AUDIO
+    bool "APBridgeA Direct Audio Streaming"
+    depends on APBRIDGEA && APBRIDGEA_LOCAL_RX
+    select DEVICE_CORE
+    select LIB_RING_BUF
+    default n
+	---help---
+        When enabled, audio data may be streamed directly to APBridgeA
+        where it will be packetized into Greybus Audio Device Class
+        Protocol messages and sent to the specified CPort.  Audio data
+        may also be streamed in the opposite direction.
+
 config FOR_GOOGLE_IO_DEMO
 	bool "Start stream for Google I/O Demo"
 	depends on ARA_BRIDGE_HAVE_CAMERA && APB_CAMERA

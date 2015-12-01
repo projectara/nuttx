@@ -74,6 +74,10 @@
 #include <nuttx/device_codec.h>
 #endif
 
+#ifdef CONFIG_APBRIDGEA_AUDIO
+#include <arch/board/apbridgea_audio.h>
+#endif
+
 #ifdef CONFIG_APBRIDGEA
 /* must pull up or drive high on SDB APBridgeA to bring Helium out of reset */
 #define HELIUM_EXT_NRST_BTN_GPIO 0
@@ -282,6 +286,13 @@ static void board_camera_init(void)
 #endif
 }
 
+static void board_apbridgea_audio_init(void)
+{
+#ifdef CONFIG_APBRIDGEA_AUDIO
+    apbridgea_audio_init();
+#endif
+}
+
 static void sdb_fixups(void)
 {
     /**
@@ -347,4 +358,6 @@ void ara_module_init(void)
 
     board_display_init();
     board_camera_init();
+
+    board_apbridgea_audio_init();
 }

@@ -67,6 +67,7 @@
 #include <arch/byteorder.h>
 #include <arch/board/common_gadget.h>
 #include <arch/board/apbridgea_gadget.h>
+#include <arch/board/apbridgea_audio.h>
 #include <nuttx/wdog.h>
 #include <nuttx/greybus/greybus_timestamp.h>
 
@@ -158,6 +159,7 @@
 #define APBRIDGE_WOREQUEST_CPORT_RESET          (0x05)
 #define APBRIDGE_ROREQUEST_LATENCY_TAG_EN       (0x06)
 #define APBRIDGE_ROREQUEST_LATENCY_TAG_DIS      (0x07)
+#define APBRIDGE_RWREQUEST_AUDIO_APBRIDGEA      (0x08)
 
 #define TIMEOUT_IN_MS           300
 #define ONE_SEC_IN_MSEC         1000
@@ -1474,6 +1476,16 @@ static int usbclass_setup(struct usbdevclass_driver_s *driver,
                             lldbg("disable tagging for cportid %d\n", value);
                         }
                     }
+#ifdef CONFIG_APBRIDGEA_AUDIO
+                } else if (ctrl->req == APBRIDGE_RWREQUEST_AUDIO_APBRIDGEA) {
+                    if (ctrl->type & USB_DIR_IN) {
+                        ret = apbridgea_audio_in_demux(value, index, req->buf,
+                                                       len);
+                    } else {
+                        ret = apbridgea_audio_out_demux(value, index, req->buf,
+                                                        len);
+                    }
+#endif
                 } else {
                     usbtrace(TRACE_CLSERROR
                              (USBSER_TRACEERR_UNSUPPORTEDCLASSREQ),

@@ -98,6 +98,10 @@ CSRCS += audcodec.c
 CSRCS += rt5647.c
 endif
 
+ifeq ($(CONFIG_APBRIDGEA_AUDIO),y)
+CSRCS += apbridgea_audio.c
+endif
+
 COBJS		= $(CSRCS:.c=$(OBJEXT))
 
 SRCS		= $(ASRCS) $(CSRCS)
