@@ -1565,7 +1565,7 @@ static void gb_audio_alloc_info_list(void)
             }
 
             dai->i2s_dev = device_open(DEVICE_TYPE_I2S_HW, i2s_dev_id);
-            if (!info->codec_dev) {
+            if (!dai->i2s_dev) {
                 free(dai);
                 continue;
             }
