@@ -69,21 +69,18 @@ protocol = 0x03
 [bundle-descriptor 3]
 class = 3
 
-; UART protocol on CPort 5
+; Audio MGMT protocol on CPort 5
 [cport-descriptor 5]
 bundle = 4
-protocol = 0x04
+protocol = 0x12
+
+; Audio DATA protocol on CPort 6
+[cport-descriptor 6]
+bundle = 4
+protocol = 0x13
 
 [bundle-descriptor 4]
 class = 4
-
-; USB protocol on CPort 6
-[cport-descriptor 6]
-bundle = 6
-protocol = 0x06
-
-[bundle-descriptor 6]
-class = 6
 
 ; SDIO protocol on CPort 7
 [cport-descriptor 7]
