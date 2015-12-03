@@ -288,6 +288,21 @@
 #define RT5647_PWR1_ADC_R_EN                  1
 #define RT5647_PWR1_CLSD_EN                   0
 
+// Power management control 3 (MX-63)
+#define RT5647_PWR3_VREF1_EN                  15
+#define RT5647_PWR3_FASTB1_EN                 14
+#define RT5647_PWR3_MBIAS_EN                  13
+#define RT5647_PWR3_LOUT_EN                   12
+#define RT5647_PWR3_BGBIAS_EN                 11
+#define RT5647_PWR3_MONO_EN                   10
+#define RT5647_PWR3_HPL_EN                    7
+#define RT5647_PWR3_HPR_EN                    6
+#define RT5647_PWR3_HPAMP_EN                  5
+#define RT5647_PWR3_VREF2_EN                  4
+#define RT5647_PWR3_FASTB2_EN                 3
+#define RT5647_PWR3_LDO1_EN                   0
+#define RT5647_PWR3_LDO1_MASK                 (0x3 << 0)
+
 // Power management control 5 (MX-65)
 #define RT5647_PWR5_OUTMIXL_EN                15
 #define RT5647_PWR5_OUTMIXR_EN                14

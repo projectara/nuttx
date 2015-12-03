@@ -28,6 +28,7 @@
 
 #include <stddef.h>
 #include <string.h>
+#include <stdio.h>
 #include <errno.h>
 #include <nuttx/lib.h>
 #include <nuttx/util.h>
@@ -161,6 +162,9 @@ struct rt5647_info {
  * codec register initialization table
  */
 struct rt5647_reg rt5647_init_regs[] = {
+    { RT5647_PR_INDEX, 0x003d },
+    { RT5647_PR_DATA, 0x3600 }, /* turn on ADC/DAC clock generator */
+
     { RT5647_GENERAL_CTRL_1, 0x2061 }, /* enable MCLK Gate Control */
     { RT5647_ADC_DAC_CLK_CTRL, 0x0000 },
     { RT5647_PR_INDEX, 0x003d },
@@ -194,6 +198,7 @@ struct rt5647_reg rt5647_init_regs[] = {
     { RT5647_PWR_MGT_2, 0x0E00 }, /* turn on filter power */
     { RT5647_PWR_MGT_4, 0x0200 }, /* turn on PLL power */
     { RT5647_PWR_MGT_5, 0x3002 }, /* turn on LDO2 power */
+    { RT5647_CLS_D_AMP, 0xA0E8 }, /* enable auto powerdown when over current */
 };
 
 /**
@@ -1611,10 +1616,21 @@ static int rt5647_audcodec_open(struct device *dev)
     /* codec power on sequence */
     audcodec_write(RT5647_RESET, 0);    /* software reset */
 
+    audcodec_update(RT5647_PWR_MGT_3,
+                    BIT(RT5647_PWR3_VREF1_EN) | BIT(RT5647_PWR3_MBIAS_EN) |
+                    BIT(RT5647_PWR3_BGBIAS_EN) | BIT(RT5647_PWR3_VREF2_EN),
+                    BIT(RT5647_PWR3_VREF1_EN) | BIT(RT5647_PWR3_MBIAS_EN) |
+                    BIT(RT5647_PWR3_BGBIAS_EN) | BIT(RT5647_PWR3_VREF2_EN));
+    usleep(10000);
+    audcodec_update(RT5647_PWR_MGT_3,
+                    BIT(RT5647_PWR3_FASTB1_EN) | BIT(RT5647_PWR3_FASTB2_EN),
+                    BIT(RT5647_PWR3_FASTB1_EN) | BIT(RT5647_PWR3_FASTB2_EN));
+
     /* initialize audio codec */
     for (i = 0; i < info->num_regs; i++) {
         audcodec_write(info->init_regs[i].reg , info->init_regs[i].val);
     }
+    audcodec_update(RT5647_PWR_MGT_3, 0x02, RT5647_PWR3_LDO1_MASK);
     return ret;
 }
 
@@ -1665,6 +1681,8 @@ static void rt5647_audcodec_close(struct device *dev)
         rt5647_disable_widget(dev,widget->widget.id);
         widget++;
     }
+
+    audcodec_write(RT5647_RESET, 0);    /* software reset */
 
     /* clear open state */
     info->state &= ~(CODEC_DEVICE_FLAG_OPEN | CODEC_DEVICE_FLAG_CONFIG);
