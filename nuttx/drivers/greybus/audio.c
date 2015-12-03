@@ -103,7 +103,7 @@ struct gb_audio_dai_info {
     struct list_head        list;       /* next gb_audio_dai_info struct */
 };
 
-static struct list_head gb_audio_info_list = LIST_INIT(gb_audio_info_list);
+static LIST_DECLARE(gb_audio_info_list);
 
 static struct gb_audio_info *gb_audio_find_info(uint16_t mgmt_cport)
 {
