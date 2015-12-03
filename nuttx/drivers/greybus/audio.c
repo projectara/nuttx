@@ -729,29 +729,31 @@ static int gb_audio_set_config(struct gb_audio_dai_info *dai,
     return 0;
 }
 
-static int gb_audio_config_connection(struct gb_audio_dai_info *dai)
+static int gb_audio_config_connection(struct gb_audio_dai_info *dai,
+                                      uint32_t format, uint32_t rate,
+                                      uint8_t channels, uint8_t sig_bits)
 {
     struct device_codec_pcm codec_pcm;
     struct device_i2s_pcm i2s_pcm;
     unsigned int bytes, freq;
     int ret;
 
-    codec_pcm.format = dai->format;
-    codec_pcm.rate = dai->rate;
-    codec_pcm.channels = dai->channels;
-    codec_pcm.sig_bits = dai->sig_bits;
+    codec_pcm.format = format;
+    codec_pcm.rate = rate;
+    codec_pcm.channels = channels;
+    codec_pcm.sig_bits = sig_bits;
 
-    ret = gb_audio_gb_to_i2s_format(dai->format, &i2s_pcm.format, &bytes);
+    ret = gb_audio_gb_to_i2s_format(format, &i2s_pcm.format, &bytes);
     if (ret) {
         return ret;
     }
 
-    ret = gb_audio_convert_rate(dai->rate, &i2s_pcm.rate, &freq);
+    ret = gb_audio_convert_rate(rate, &i2s_pcm.rate, &freq);
     if (ret) {
         return ret;
     }
 
-    i2s_pcm.channels = dai->channels;
+    i2s_pcm.channels = channels;
 
     ret = gb_audio_set_config(dai, DEVICE_CODEC_ROLE_MASTER, &codec_pcm,
                               &i2s_pcm);
@@ -775,6 +777,8 @@ static uint8_t gb_audio_set_pcm_handler(struct gb_operation *operation)
                 gb_operation_get_request_payload(operation);
     struct gb_audio_info *info;
     struct gb_audio_dai_info *dai;
+    uint32_t format, rate;
+    uint8_t channels, sig_bits;
     int ret;
 
     if (gb_operation_get_request_payload_size(operation) < sizeof(*request)) {
@@ -797,17 +801,21 @@ static uint8_t gb_audio_set_pcm_handler(struct gb_operation *operation)
         return GB_OP_PROTOCOL_BAD;
     }
 
-    /* XXX shouldn't update until successfully changed */
-    dai->format = le32_to_cpu(request->format);
-    dai->rate = le32_to_cpu(request->rate);
-    dai->channels = request->channels;
-    dai->sig_bits = request->sig_bits;
+    format = le32_to_cpu(request->format);
+    rate = le32_to_cpu(request->rate);
+    channels = request->channels;
+    sig_bits = request->sig_bits;
 
-    ret = gb_audio_config_connection(dai);
+    ret = gb_audio_config_connection(dai, format, rate, channels, sig_bits);
     if (ret) {
         dai->flags &= ~GB_AUDIO_FLAG_PCM_SET;
         return gb_errno_to_op_result(ret);
     }
+
+    dai->format = format;
+    dai->rate = rate;
+    dai->channels = channels;
+    dai->sig_bits = sig_bits;
 
     dai->flags |= GB_AUDIO_FLAG_PCM_SET;
 
@@ -1000,19 +1008,31 @@ static uint8_t gb_audio_activate_tx_handler(struct gb_operation *operation)
         return GB_OP_NO_MEMORY;
     }
 
+    dai->tx_dummy_data = zalloc(dai->tx_data_size);
+    if (!dai->tx_dummy_data) {
+        ret = -ENOMEM;
+        goto err_free_tx_rb;
+    }
+
     /* Greybus i2s message receiver is local i2s transmitter */
     ret = device_i2s_prepare_transmitter(dai->i2s_dev, dai->tx_rb,
                                          gb_audio_i2s_tx_cb, dai);
     if (ret) {
-        ring_buf_free_ring(dai->tx_rb, NULL, NULL);
-        dai->tx_rb = NULL;
-
-        return gb_errno_to_op_result(ret);
+        goto err_free_dummy_data;
     }
 
     dai->flags |= GB_AUDIO_FLAG_TX_ACTIVE;
 
     return GB_OP_SUCCESS;
+
+err_free_dummy_data:
+    free(dai->tx_dummy_data);
+    dai->tx_dummy_data = NULL;
+err_free_tx_rb:
+    ring_buf_free_ring(dai->tx_rb, NULL, NULL);
+    dai->tx_rb = NULL;
+
+    return gb_errno_to_op_result(ret);
 }
 
 static uint8_t gb_audio_deactivate_tx_handler(struct gb_operation *operation)
@@ -1047,8 +1067,11 @@ static uint8_t gb_audio_deactivate_tx_handler(struct gb_operation *operation)
     }
 
     device_i2s_shutdown_transmitter(dai->i2s_dev);
+
     ring_buf_free_ring(dai->tx_rb, NULL, NULL);
     dai->tx_rb = NULL;
+    free(dai->tx_dummy_data);
+    dai->tx_dummy_data = NULL;
 
     dai->flags &= ~GB_AUDIO_FLAG_TX_ACTIVE;
 
