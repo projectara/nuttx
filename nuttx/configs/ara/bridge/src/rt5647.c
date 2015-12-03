@@ -110,6 +110,9 @@ struct rt5647_info {
     /** device state */
     int state;
 
+    /** enable TDM mode */
+    int tdm_en;
+
     /** rt5647 codec initialization array */
     struct rt5647_reg *init_regs;
     /** number of codec initialization array */
@@ -232,16 +235,11 @@ struct audio_dai rt5647_dais[] = {
             },
         },
         .caps = {
-            .protocol = DEVICE_DAI_PROTOCOL_PCM |
-                        DEVICE_DAI_PROTOCOL_I2S |
-                        DEVICE_DAI_PROTOCOL_LR_STEREO,
+            .protocol = DEVICE_DAI_PROTOCOL_I2S,
             .wclk_polarity = DEVICE_DAI_POLARITY_NORMAL,
-            .wclk_change_edge = DEVICE_DAI_EDGE_RISING |
-                                DEVICE_DAI_EDGE_FALLING,
-            .data_rx_edge = DEVICE_DAI_EDGE_RISING |
-                            DEVICE_DAI_EDGE_FALLING,
-            .data_tx_edge = DEVICE_DAI_EDGE_RISING |
-                            DEVICE_DAI_EDGE_FALLING,
+            .wclk_change_edge = DEVICE_DAI_EDGE_FALLING,
+            .data_rx_edge = DEVICE_DAI_EDGE_RISING,
+            .data_tx_edge = DEVICE_DAI_EDGE_FALLING,
         },
     },
 };
@@ -1134,6 +1132,7 @@ static int rt5647_set_config(struct device *dev, unsigned int dai_idx,
     struct pll_code code;
     int sysclk = 0, ratefreq = 0, numbits = 0, ret = 0;
     uint32_t value = 0, mask = 0, format = 0;
+    uint32_t tdm1 = 0, tdm2 = 0, tdm3 = 0;
 
     if (!dev || !device_get_private(dev) || !pcm || !dai) {
         return -EINVAL;
@@ -1174,6 +1173,11 @@ static int rt5647_set_config(struct device *dev, unsigned int dai_idx,
         return -EINVAL;
     }
 
+// enable tdm mode
+    rt5647_audcodec_hw_write(0x77,0x4000);
+    rt5647_audcodec_hw_write(0x78,0x00FF);
+    rt5647_audcodec_hw_write(0x79,0x2301);
+
     /* setup codec hw */
     if (clk_role & DEVICE_DAI_ROLE_SLAVE) {
         format |= RT5647_I2S_MODE_SLAVE;
@@ -1185,6 +1189,11 @@ static int rt5647_set_config(struct device *dev, unsigned int dai_idx,
         break;
     case DEVICE_DAI_PROTOCOL_I2S:
         format |= RT5647_I2S_FORMAT_I2S;
+        if (info->tdm_en) {
+            /* enable TDM mode */
+            tdm1 = RT5647_TDM_MODE_TDM |
+                  (RT5647_TDM_SWAP_LR << RT5647_TDM_RXCH2_SWAP);
+        }
         break;
     case DEVICE_DAI_PROTOCOL_LR_STEREO:
         format |= RT5647_I2S_FORMAT_LEFT_J;
@@ -1196,20 +1205,43 @@ static int rt5647_set_config(struct device *dev, unsigned int dai_idx,
     switch (numbits) {
     case 8:
         format |= RT5647_I2S_LEN_8;
+        if (info->tdm_en) {
+            /* use 16 bits */
+            tdm1 |= RT5647_TDM_CH_LEN_16;
+        }
         break;
     case 16:
         format |= RT5647_I2S_LEN_16;
+        if (info->tdm_en) {
+            tdm1 |= RT5647_TDM_CH_LEN_16;
+        }
         break;
     case 20:
         format |= RT5647_I2S_LEN_20;
+        if (info->tdm_en) {
+            tdm1 |= RT5647_TDM_CH_LEN_20;
+        }
         break;
     case 24:
         format |= RT5647_I2S_LEN_24;
+        if (info->tdm_en) {
+            tdm1 |= RT5647_TDM_CH_LEN_24;
+        }
         break;
     default:
         return -EINVAL;
     }
 
+    if (info->tdm_en) {
+        if (dai->wclk_polarity == DEVICE_DAI_POLARITY_REVERSED) {
+            tdm2 |= 1 << RT5647_TDM_LRCK_POL;
+        }
+
+        tdm3 = RT5647_TDM_SLOT2 << RT5647_TDM_TXL_CH2 |
+               RT5647_TDM_SLOT3 << RT5647_TDM_TXR_CH2 |
+               RT5647_TDM_SLOT0 << RT5647_TDM_TXL_CH4 |
+               RT5647_TDM_SLOT1 << RT5647_TDM_TXR_CH4;
+    }
     // write clock setting
     value = RT5647_SYSCLK_S_PLL | RT5647_PLL_S_MCLK; /* MCLK->PLL->SYSCLK */
     mask = RT5647_SYSCLK_S_MASK | RT5647_PLL_S_MASK;
@@ -1225,6 +1257,11 @@ static int rt5647_set_config(struct device *dev, unsigned int dai_idx,
     audcodec_write(RT5647_PLL2, value);
 
     if (dai_idx == 0) { /* i2s1 */
+        if (info->tdm_en) {
+            audcodec_write(RT5647_TDM1, tdm1);
+            audcodec_write(RT5647_TDM2, tdm2);
+            audcodec_write(RT5647_TDM3, tdm3);
+        }
         audcodec_write(RT5647_I2S1_CTRL, format);
     }
 
@@ -1832,6 +1869,9 @@ static int rt5647_audcodec_probe(struct device *dev)
     info->num_routes = ARRAY_SIZE(rt5647_routes);
     info->rx_delay = 0;
     info->tx_delay = 0;
+
+    /* enable TDM mode support */
+    info->tdm_en = 1;
 
     /* initialize i2c bus */
     info->i2c = up_i2cinitialize(0);

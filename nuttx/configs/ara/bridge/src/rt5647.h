@@ -355,6 +355,67 @@
 #define RT5647_I2S_FORMAT_PCM_A               2
 #define RT5647_I2S_FORMAT_PCM_B               3
 
+/* TDM interface control 1 (MX-77) */
+#define RT5647_TDM_MODE_SEL                   14
+#define RT5647_TDM_MODE_I2S                   (0 << 14)
+#define RT5647_TDM_MODE_TDM                   (1 << 14)
+#define RT5647_TDM_SLOTNUM_SEL                12
+#define RT5647_TDM_SLOTNUM_SEL_MASK           (0x3 << 12)
+#define RT5647_TDM_SLOTNUM_2CH                (0x0 << 12)
+#define RT5647_TDM_SLOTNUM_4CH                (0x1 << 12)
+#define RT5647_TDM_SLOTNUM_6CH                (0x2 << 12)
+#define RT5647_TDM_SLOTNUM_8CH                (0x3 << 12)
+#define RT5647_TDM_CH_LEN                     10
+#define RT5647_TDM_CH_LEN_MASK                (0x3 << 10)
+#define RT5647_TDM_CH_LEN_16                  (0x0 << 10)
+#define RT5647_TDM_CH_LEN_20                  (0x1 << 10)
+#define RT5647_TDM_CH_LEN_24                  (0x2 << 10)
+#define RT5647_TDM_CH_LEN_32                  (0x3 << 10)
+#define RT5647_TDM_RXDAC_SEL                  8
+#define RT5647_TDM_RXDAC_SEL_MASK             (0x3 << 8)
+#define RT5647_TDM_RXCH2_SWAP                 6
+#define RT5647_TDM_RXCH2_SWAP_MASK            (0x3 << 6)
+#define RT5647_TDM_RXCH4_SWAP                 4
+#define RT5647_TDM_RXCH4_SWAP_MASK            (0x3 << 4)
+#define RT5647_TDM_RXCH6_SWAP                 2
+#define RT5647_TDM_RXCH6_SWAP_MASK            (0x3 << 2)
+#define RT5647_TDM_RXCH8_SWAP                 0
+#define RT5647_TDM_RXCH8_SWAP_MASK            (0x3 << 0)
+#define RT5647_TDM_SWAP_LR                    0
+#define RT5647_TDM_SWAP_RL                    1
+#define RT5647_TDM_SWAP_LL                    2
+#define RT5647_TDM_SWAP_RR                    3
+
+/* TDM interface control 2 (MX-78) */
+#define RT5647_TDM_LRCK_POL                   15
+#define RT5647_TDM_LRCK_PULSE                 11
+#define RT5647_TDM_OUTL2_MUTE                 7
+#define RT5647_TDM_OUTR2_MUTE                 6
+#define RT5647_TDM_OUTL4_MUTE                 5
+#define RT5647_TDM_OUTR4_MUTE                 4
+#define RT5647_TDM_OUTL6_MUTE                 3
+#define RT5647_TDM_OUTR6_MUTE                 2
+#define RT5647_TDM_OUTL8_MUTE                 1
+#define RT5647_TDM_OUTR8_MUTE                 0
+
+/* TDM interface control 3 (MX-79) */
+#define RT5647_TDM_TXL_CH2                    12
+#define RT5647_TDM_TXL_CH2_MASK               (0x7 << 12)
+#define RT5647_TDM_TXR_CH2                    8
+#define RT5647_TDM_TXR_CH2_MASK               (0x7 << 8)
+#define RT5647_TDM_TXL_CH4                    4
+#define RT5647_TDM_TXL_CH4_MASK               (0x7 << 4)
+#define RT5647_TDM_TXR_CH4                    0
+#define RT5647_TDM_TXR_CH4_MASK               (0x7 << 0)
+#define RT5647_TDM_SLOT0                      0
+#define RT5647_TDM_SLOT1                      1
+#define RT5647_TDM_SLOT2                      2
+#define RT5647_TDM_SLOT3                      3
+#define RT5647_TDM_SLOT4                      4
+#define RT5647_TDM_SLOT5                      5
+#define RT5647_TDM_SLOT6                      6
+#define RT5647_TDM_SLOT7                      7
+
 /* Global Clock Control (MX-80) */
 #define RT5647_SYSCLK_S_SFT                   14
 #define RT5647_SYSCLK_S_MASK                  (0x3 << 14)
