@@ -1173,11 +1173,6 @@ static int rt5647_set_config(struct device *dev, unsigned int dai_idx,
         return -EINVAL;
     }
 
-// enable tdm mode
-    rt5647_audcodec_hw_write(0x77,0x4000);
-    rt5647_audcodec_hw_write(0x78,0x00FF);
-    rt5647_audcodec_hw_write(0x79,0x2301);
-
     /* setup codec hw */
     if (clk_role & DEVICE_DAI_ROLE_SLAVE) {
         format |= RT5647_I2S_MODE_SLAVE;
