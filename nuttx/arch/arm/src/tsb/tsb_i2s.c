@@ -54,10 +54,10 @@
 
 
 #define TSB_I2S_FMT_MASK \
-    DEVICE_I2S_PCM_FMT_8      | \
+    (DEVICE_I2S_PCM_FMT_8      | \
     DEVICE_I2S_PCM_FMT_16     | \
     DEVICE_I2S_PCM_FMT_24     | \
-    DEVICE_I2S_PCM_FMT_32     | \
+    DEVICE_I2S_PCM_FMT_32)
 
 #define TSB_I2S_RATE_MASK \
     (DEVICE_I2S_PCM_RATE_8000   | \
@@ -229,7 +229,7 @@ static int tsb_i2s_verify_pcm_support(uint8_t clk_role, struct device_i2s_pcm *p
     if (!ONE_BIT_IS_SET(pcm->format) ||
         !ONE_BIT_IS_SET(pcm->rate)) {
         ret = -EINVAL;
-    } else if (!(pcm->format & TSB_I2S_RATE_MASK)) {
+    } else if (!(pcm->format & TSB_I2S_FMT_MASK)) {
         ret = -EINVAL;
     } else if (!(pcm->rate & TSB_I2S_RATE_MASK)) {
         ret = -EINVAL;
