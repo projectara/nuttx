@@ -54,6 +54,7 @@
 static int rt5647_speaker_event(struct device *dev, uint8_t widget_id,
                                 uint8_t event);
 
+//#define ENABLE_HAPTIC_TEST                1
 static struct device *codec_dev = NULL;
 
 /**
@@ -199,6 +200,10 @@ struct rt5647_reg rt5647_init_regs[] = {
     { RT5647_PWR_MGT_4, 0x0200 }, /* turn on PLL power */
     { RT5647_PWR_MGT_5, 0x3002 }, /* turn on LDO2 power */
     { RT5647_CLS_D_AMP, 0xA0E8 }, /* enable auto powerdown when over current */
+#ifdef ENABLE_HAPTIC_TEST
+    /* turn on Haptic generator control for testing */
+    { RT5647_HAPTIC_CTRL1, 0x2888 }, // AC and 888Hz
+#endif
 };
 
 /**
@@ -511,7 +516,11 @@ audio_route rt5647_routes[] = {
       RT5647_CTL_DAC2_LSRC, 0 },
     // IF1 DAC2 R
     { RT5647_WIDGET_IF1_DAC2R, RT5647_WIDGET_DACR2_MUX,
+#ifndef ENABLE_HAPTIC_TEST
       RT5647_CTL_DAC2_RSRC, 0 },
+#else
+      RT5647_CTL_DAC2_RSRC, 4 }, /* input source : haptic control */
+#endif /* ENABLE_HAPTIC_TEST */
 
     // DAC L2 Mux
     { RT5647_WIDGET_DACL2_MUX, RT5647_WIDGET_DACL2_VOL, NOCONTROL, 0 },

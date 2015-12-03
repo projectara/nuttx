@@ -274,6 +274,12 @@
 #define RT5647_SPOMIX_R_BST3_SFT              2
 #define RT5647_SPOMIX_R_SPKVOLR_SFT           1
 
+// Haptic Generator control (MX-56)
+#define RT5645_HAPTIC_TYPE                    11
+#define RT5645_HAPTIC_ACTMODE                 12
+#define RT5645_HAPTIC_ACTMODE_MASK            (0x3 << 12)
+#define RT5645_HAPTIC_FREQ                    0
+
 // Power management control 1 (MX-61)
 #define RT5647_PWR1_I2S1_EN                   15
 #define RT5647_PWR1_I2S2_EN                   14
