@@ -1022,7 +1022,7 @@ static int rt5647_set_config(struct device *dev, unsigned int dai_idx,
     ratefreq = rt5647_rate_to_freq(pcm->rate);
     numbits = rt5647_fmtbit_to_bitnum(pcm->format);
 
-    if (ratefreq <= 0 || numbits <= 0) {
+    if (ratefreq <= 0 || numbits <= 0 || numbits < pcm->sig_bits) {
         return -EINVAL;
     }
 
