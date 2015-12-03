@@ -893,6 +893,7 @@ static int rt5647_get_caps(struct device *dev, unsigned int dai_idx,
 {
     struct rt5647_info *info = NULL;
     struct gb_audio_pcm *pbpcm = NULL;
+    uint32_t mclk_freq;
 
     if (!dev || !device_get_private(dev) || !pcm || !dai) {
         return -EINVAL;
@@ -920,8 +921,13 @@ static int rt5647_get_caps(struct device *dev, unsigned int dai_idx,
         return -EINVAL;
     }
 
+    /* TODO: When clk_role is slave, check that mclk_freq is supported */
+
     /* return default DAI setting */
+    mclk_freq = dai->mclk_freq;
     memcpy(dai, &info->dais[dai_idx].caps, sizeof(struct device_codec_dai));
+    dai->mclk_freq = mclk_freq;
+
     return 0;
 }
 
