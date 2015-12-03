@@ -101,11 +101,11 @@ static void i2s_test_print_usage(char *argv[])
 static int i2s_test_parse_cmdline(int argc, char *argv[],
                                   struct i2s_test_info *info)
 {
-    int tcnt, rcnt, icnt, lcnt, ccnt, errcnt;
+    int tcnt, rcnt, icnt, lcnt, ccnt, codec_cnt, vcnt, fcnt, errcnt;
     int option;
     int ret = 0;
 
-    tcnt = rcnt = icnt = lcnt = ccnt = errcnt = 0;
+    tcnt = rcnt = icnt = lcnt = ccnt = codec_cnt = vcnt = fcnt = errcnt = 0;
 
     if (argc > 11) {
         fprintf(stderr, "Too many arguments: %d\n",argc);
@@ -116,7 +116,7 @@ static int i2s_test_parse_cmdline(int argc, char *argv[],
     info->aud_volume = DEFAULT_AUDIO_VOLUME;
 
     optind = -1;
-    while ((option = getopt(argc, argv, "trilf:v:C:c")) != ERROR) {
+    while ((option = getopt(argc, argv, "trilf:v:Cc")) != ERROR) {
         switch(option) {
         case 't':
             info->is_transmitter = 1;
@@ -135,6 +135,7 @@ static int i2s_test_parse_cmdline(int argc, char *argv[],
             break;
         case 'f':
             info->is_gen_audio = 1;
+            fcnt++;
             ret = sscanf(optarg, "%u", &info->aud_frequency);
             if (ret != 1) {
                 info->aud_frequency = DEFAULT_AUDIO_FREQUENCY;
@@ -158,6 +159,7 @@ static int i2s_test_parse_cmdline(int argc, char *argv[],
 
         case 'v':
             info->is_gen_audio = 1;
+            vcnt++;
             ret = sscanf(optarg, "%u", &info->aud_volume);
             if (ret != 1) {
                 info->aud_volume = DEFAULT_AUDIO_VOLUME;
@@ -180,7 +182,7 @@ static int i2s_test_parse_cmdline(int argc, char *argv[],
             break;
         case 'C':
             info->use_codec = 1;
-            ccnt++;
+            codec_cnt++;
             break;
         case 'c':
             info->check_rx_data = 1;
@@ -202,7 +204,10 @@ static int i2s_test_parse_cmdline(int argc, char *argv[],
         }
 
     if ((tcnt > 1) || (rcnt > 1) || ((tcnt != 1) && (rcnt != 1)) ||
-        ((icnt + lcnt) != 1) || (ccnt && !rcnt) || errcnt) {
+        ((icnt + lcnt) != 1) || (ccnt && !rcnt) ||
+        ((vcnt | fcnt) && !tcnt) ||
+        ((codec_cnt && !tcnt) || (codec_cnt && !(vcnt | fcnt))) ||
+        errcnt){
         return -EINVAL;
     }
 
