@@ -1490,6 +1490,9 @@ static void gb_audio_alloc_info_list(void)
             continue;
         }
 
+        list_init(&info->dai_list);
+        list_init(&info->list);
+
         ret = device_audio_board_get_mgmt_cport(dev, i, &info->mgmt_cport);
         if (ret) {
             free(info);
@@ -1520,6 +1523,9 @@ static void gb_audio_alloc_info_list(void)
             if (!dai) {
                 continue;
             }
+
+            dai->info = info;
+            list_init(&dai->list);
 
             ret = device_audio_board_get_data_cport(dev, i, j,
                                                     &dai->data_cport);
