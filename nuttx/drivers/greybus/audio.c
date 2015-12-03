@@ -207,36 +207,6 @@ static struct gb_audio_dai_info *gb_audio_find_dai(uint16_t data_cport)
     return NULL;
 }
 
-static uint8_t gb_audio_errno2gb(int ret)
-{
-    uint8_t rc;
-
-    switch (ret) {
-    case 0:
-        rc = GB_OP_SUCCESS;
-        break;
-    case EIO:
-        rc = GB_OP_UNKNOWN_ERROR;
-        break;
-    case ENOMEM:
-        rc = GB_OP_NO_MEMORY;
-        break;
-    case EBUSY:
-        rc = GB_OP_RETRY;
-        break;
-    case EINVAL:
-        rc = GB_OP_INVALID;
-        break;
-    case EPROTO:
-        rc = GB_OP_PROTOCOL_BAD;
-        break;
-    default:
-        rc = GB_OP_UNKNOWN_ERROR;
-    }
-
-    return rc;
-}
-
 static void gb_audio_report_event(struct gb_audio_dai_info *dai, uint32_t event)
 {
     struct gb_operation *operation;
@@ -293,7 +263,7 @@ static uint8_t gb_audio_get_topology_size_handler(
 
     ret = device_codec_get_topology_size(info->codec_dev, &size);
     if (ret) {
-        return gb_audio_errno2gb(-ret);
+        return gb_errno_to_op_result(ret);
     }
 
     response->size = cpu_to_le16(size);
@@ -315,7 +285,7 @@ static uint8_t gb_audio_get_topology_handler(struct gb_operation *operation)
 
     ret = device_codec_get_topology_size(info->codec_dev, &size);
     if (ret) {
-        return gb_audio_errno2gb(-ret);
+        return gb_errno_to_op_result(ret);
     }
 
     response = gb_operation_alloc_response(operation, size);
@@ -325,7 +295,7 @@ static uint8_t gb_audio_get_topology_handler(struct gb_operation *operation)
 
     ret = device_codec_get_topology(info->codec_dev, &response->topology);
     if (ret) {
-        return gb_audio_errno2gb(-ret);
+        return gb_errno_to_op_result(ret);
     }
 
     return GB_OP_SUCCESS;
@@ -357,7 +327,7 @@ static uint8_t gb_audio_get_control_handler(struct gb_operation *operation)
     ret = device_codec_get_control(info->codec_dev, request->control_id,
                                    request->index, &response->value);
     if (ret) {
-        return gb_audio_errno2gb(-ret);
+        return gb_errno_to_op_result(ret);
     }
 
     return GB_OP_SUCCESS;
@@ -383,7 +353,7 @@ static uint8_t gb_audio_set_control_handler(struct gb_operation *operation)
     ret = device_codec_set_control(info->codec_dev, request->control_id,
                                    request->index, &request->value);
     if (ret) {
-        return gb_audio_errno2gb(-ret);
+        return gb_errno_to_op_result(ret);
     }
 
     return GB_OP_SUCCESS;
@@ -408,7 +378,7 @@ static uint8_t gb_audio_enable_widget_handler(struct gb_operation *operation)
 
     ret = device_codec_enable_widget(info->codec_dev, request->widget_id);
     if (ret) {
-        return gb_audio_errno2gb(-ret);
+        return gb_errno_to_op_result(ret);
     }
 
     return GB_OP_SUCCESS;
@@ -433,7 +403,7 @@ static uint8_t gb_audio_disable_widget_handler(struct gb_operation *operation)
 
     ret = device_codec_disable_widget(info->codec_dev, request->widget_id);
     if (ret) {
-        return gb_audio_errno2gb(-ret);
+        return gb_errno_to_op_result(ret);
     }
 
     return GB_OP_SUCCESS;
@@ -836,7 +806,7 @@ static uint8_t gb_audio_set_pcm_handler(struct gb_operation *operation)
     ret = gb_audio_config_connection(dai);
     if (ret) {
         dai->flags &= ~GB_AUDIO_FLAG_PCM_SET;
-        return gb_audio_errno2gb(-ret);
+        return gb_errno_to_op_result(ret);
     }
 
     dai->flags |= GB_AUDIO_FLAG_PCM_SET;
@@ -919,12 +889,12 @@ static uint8_t gb_audio_get_tx_delay_handler(struct gb_operation *operation)
 
     ret = device_codec_get_tx_delay(info->codec_dev, &codec_delay);
     if (ret) {
-        return gb_audio_errno2gb(-ret);
+        return gb_errno_to_op_result(ret);
     }
 
     ret = device_i2s_get_delay_transmitter(dai->i2s_dev, &i2s_delay);
     if (ret) {
-        return gb_audio_errno2gb(-ret);
+        return gb_errno_to_op_result(ret);
     }
 
     /* TODO: Determine delay from this driver and add in */
@@ -1037,7 +1007,7 @@ static uint8_t gb_audio_activate_tx_handler(struct gb_operation *operation)
         ring_buf_free_ring(dai->tx_rb, NULL, NULL);
         dai->tx_rb = NULL;
 
-        return gb_audio_errno2gb(ret);
+        return gb_errno_to_op_result(ret);
     }
 
     dai->flags |= GB_AUDIO_FLAG_TX_ACTIVE;
@@ -1160,12 +1130,12 @@ static uint8_t gb_audio_get_rx_delay_handler(struct gb_operation *operation)
 
     ret = device_codec_get_rx_delay(info->codec_dev, &codec_delay);
     if (ret) {
-        return gb_audio_errno2gb(-ret);
+        return gb_errno_to_op_result(ret);
     }
 
     ret = device_i2s_get_delay_transmitter(dai->i2s_dev, &i2s_delay);
     if (ret) {
-        return gb_audio_errno2gb(-ret);
+        return gb_errno_to_op_result(ret);
     }
 
     /* TODO: Determine delay from this driver and add in */
@@ -1216,7 +1186,7 @@ static void gb_audio_i2s_rx_cb(struct ring_buf *rb,
     case DEVICE_I2S_EVENT_RX_COMPLETE:
         ret = gb_audio_send_data(dai, rb);
         if (ret) {
-            gb_audio_report_event(dai, gb_audio_errno2gb(-ret));
+            gb_audio_report_event(dai, gb_errno_to_op_result(ret));
             return;
         }
         break;
