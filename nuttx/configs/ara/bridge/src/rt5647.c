@@ -55,6 +55,8 @@ static int rt5647_speaker_event(struct device *dev, uint8_t widget_id,
                                 uint8_t event);
 
 //#define ENABLE_HAPTIC_TEST                1
+//#define VERBOSE_MSG                       1
+
 static struct device *codec_dev = NULL;
 
 /**
@@ -663,6 +665,9 @@ static uint32_t rt5647_audcodec_hw_read(uint32_t reg, uint32_t *value)
     }
 
     *value = (uint32_t) (data & 0xFF) << 8 | ((data >> 8) & 0xFF);
+#ifdef VERBOSE_MSG
+    printf("I2C-R %02X %04X\n", reg, *value);
+#endif
     return 0;
 }
 
@@ -707,8 +712,93 @@ static uint32_t rt5647_audcodec_hw_write(uint32_t reg, uint32_t value)
     if (I2C_TRANSFER(info->i2c, msg, 1)) {
         return -EIO;
     }
+#ifdef VERBOSE_MSG
+    printf("I2C-W %02X %04X\n", reg, value);
+#endif
     return 0;
 }
+
+/**
+ * @brief read data from codec private register
+ *
+ * @param reg - rt5645 codec PR-xx register
+ * @param value - data buffer of read
+ * @return 0 on success, negative errno on error
+ */
+static uint32_t rt5647_audcodec_hw_pr_read(uint32_t reg, uint32_t *value)
+{
+    if(rt5647_audcodec_hw_write(RT5647_PR_INDEX, reg)) {
+        return -EIO;
+    }
+    if(rt5647_audcodec_hw_read(RT5647_PR_DATA, value)) {
+        return -EIO;
+    }
+#ifdef VERBOSE_MSG
+    printf("I2C-R PR-%02X %04X\n", reg, *value);
+#endif
+    return 0;
+}
+
+/**
+ * @brief write data to codec private register
+ *
+ * @param reg - rt5645 codec PR-xx register
+ * @param value - register value that we want to write
+ * @return 0 on success, negative errno on error
+ */
+static uint32_t rt5647_audcodec_hw_pr_write(uint32_t reg, uint32_t value)
+{
+    if(rt5647_audcodec_hw_write(RT5647_PR_INDEX, reg)) {
+        return -EIO;
+    }
+    if(rt5647_audcodec_hw_write(RT5647_PR_DATA, value)) {
+        return -EIO;
+    }
+#ifdef VERBOSE_MSG
+    printf("I2C-W PR-%02X %04X\n", reg, value);
+#endif
+    return 0;
+}
+
+#ifdef VERBOSE_MSG
+/* RT5647 register map */
+const uint8_t rt5647_reg_map[] = {
+    0x00,0x01,0x02,0x03,0x04,0x05,0x0A,0x0B,0x0C,0x0D,0x0E,0x0F,0x18,0x19,0x1A,
+    0x1B,0x1C,0x1D,0x1E,0x20,0x27,0x28,0x29,0x2A,0x2B,0x2C,0x2F,0x31,0x3B,0x3C,
+    0x3D,0x3E,0x3F,0x40,0x41,0x42,0x45,0x46,0x47,0x48,0x4A,0x4B,0x4C,0x4D,0x4E,
+    0x4F,0x50,0x51,0x52,0x53,0x56,0x57,0x58,0x59,0x5A,0x5B,0x5C,0x5D,0x5E,0x5F,
+    0x61,0x62,0x63,0x64,0x65,0x66,0x6A,0x6C,0x70,0x71,0x72,0x73,0x74,0x75,0x76,
+    0x77,0x78,0x79,0x80,0x81,0x82,0x83,0x84,0x85,0x8A,0x8E,0x8F,0x93,0x94,0xA0,
+    0xAE,0xAF,0xB0,0xB1,0xB3,0xB4,0xB5,0xB6,0xB7,0xBB,0xBC,0xBD,0xBE,0xBF,0xC0,
+    0xC1,0xC2,0xC3,0xCF,0xD0,0xD1,0xD3,0xD4,0xD6,0xD9,0xDA,0xDB,0xDC,0xDD,0xEC,
+    0xED,0xF8,0xF9,0xFA,0xFE
+};
+
+/**
+ * @brief dump all rt5647 register
+ */
+static void rt5647_dump_register(void)
+{
+    int i = 0, j = 0, k = 0;
+    uint32_t value = 0;
+    uint8_t bstr[20];
+
+    printf("\nDump RT5647 register:\n");
+    for (i = 0; i < ARRAY_SIZE(rt5647_reg_map); i++) {
+        if (rt5647_audcodec_hw_read(rt5647_reg_map[i], &value)) {
+            continue;
+        }
+        bstr[19] = 0;
+        for (j = 0, k = 0; j < 16; j++) {
+            bstr[k++] = (value & (1 << (15 - j)))? 0x31: 0x30;
+            if (j == 3 || j == 7 || j == 11) {
+                bstr[k++] = 0x20;
+            }
+        }
+        printf("REG[%02X] = %04X, %s\n", rt5647_reg_map[i], value, bstr);
+    }
+}
+#endif
 
 /**
  * @brief get audio topology data size
