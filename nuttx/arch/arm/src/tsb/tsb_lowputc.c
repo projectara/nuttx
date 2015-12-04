@@ -28,6 +28,7 @@
 
 #include <nuttx/config.h>
 #include <arch/arm/semihosting.h>
+#include <arch/arm/itm.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include "chip.h"
@@ -104,6 +105,8 @@ void tsb_lowsetup(void) {
 void up_lowputc(int c){
 #if defined(CONFIG_ARM_SEMIHOSTING)
     semihosting_putc(c);
+#elif defined(CONFIG_ARM_ITM)
+    itm_putc(CONFIG_ARM_ITM_CONSOLE_PORT, c);
 #elif defined(CONFIG_APB_USB_LOG)
     usb_putc(c);
 #else
