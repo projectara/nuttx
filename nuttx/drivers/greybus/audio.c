@@ -1193,7 +1193,7 @@ static int gb_audio_send_data(struct gb_audio_dai_info *dai,
     ring_buf_reset(rb);
     ring_buf_pass(rb);
 
-    return device_i2s_start_receiver(dai->i2s_dev);
+    return 0;
 }
 
 /* Callback for low-level i2s receive operations */
@@ -1313,17 +1313,14 @@ static uint8_t gb_audio_activate_rx_handler(struct gb_operation *operation)
                                      gb_audio_rb_alloc_gb_op,
                                      gb_audio_rb_free_gb_op, dai);
     if (!dai->rx_rb) {
-        return -ENOMEM;
+        return gb_errno_to_op_result(ENOMEM);
     }
 
     /* Greybus i2s message transmitter is local i2s receiver */
     ret = device_i2s_prepare_receiver(dai->i2s_dev, dai->rx_rb,
                                       gb_audio_i2s_rx_cb, dai);
     if (ret) {
-        ring_buf_free_ring(dai->rx_rb, gb_audio_rb_free_gb_op, dai);
-        dai->rx_rb = NULL;
-
-        return ret;
+        goto err_free_rx_rb;
     }
 
     dai->flags |= GB_AUDIO_FLAG_RX_ACTIVE;
@@ -1337,10 +1334,17 @@ static uint8_t gb_audio_activate_rx_handler(struct gb_operation *operation)
 
     dai->flags |= GB_AUDIO_FLAG_RX_STARTED;
 
-err_irqrestore:
     irqrestore(flags);
 
     return GB_OP_SUCCESS;
+
+err_irqrestore:
+    irqrestore(flags);
+err_free_rx_rb:
+    ring_buf_free_ring(dai->rx_rb, gb_audio_rb_free_gb_op, dai);
+    dai->rx_rb = NULL;
+
+    return gb_errno_to_op_result(ret);
 }
 
 static uint8_t gb_audio_deactivate_rx_handler(struct gb_operation *operation)
@@ -1349,6 +1353,7 @@ static uint8_t gb_audio_deactivate_rx_handler(struct gb_operation *operation)
                 gb_operation_get_request_payload(operation);
     struct gb_audio_info *info;
     struct gb_audio_dai_info *dai;
+    irqstate_t flags;
 
     if (gb_operation_get_request_payload_size(operation) < sizeof(*request)) {
         gb_error("dropping short message\n");
@@ -1369,6 +1374,8 @@ static uint8_t gb_audio_deactivate_rx_handler(struct gb_operation *operation)
         return GB_OP_PROTOCOL_BAD;
     }
 
+    flags = irqsave();
+
     device_i2s_stop_receiver(dai->i2s_dev);
     device_i2s_shutdown_receiver(dai->i2s_dev);
 
@@ -1376,6 +1383,8 @@ static uint8_t gb_audio_deactivate_rx_handler(struct gb_operation *operation)
     dai->rx_rb = NULL;
 
     dai->flags &= ~(GB_AUDIO_FLAG_RX_ACTIVE | GB_AUDIO_FLAG_RX_STARTED);
+
+    irqrestore(flags);
 
     return GB_OP_SUCCESS;
 }
