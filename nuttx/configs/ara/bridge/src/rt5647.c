@@ -55,7 +55,7 @@ static int rt5647_speaker_event(struct device *dev, uint8_t widget_id,
                                 uint8_t event);
 
 //#define ENABLE_HAPTIC_TEST                1
-//#define VERBOSE_MSG                       1
+#define VERBOSE_MSG                       1
 
 static struct device *codec_dev = NULL;
 
@@ -671,7 +671,7 @@ static uint32_t rt5647_audcodec_hw_read(uint32_t reg, uint32_t *value)
 
     *value = (uint32_t) (data & 0xFF) << 8 | ((data >> 8) & 0xFF);
 #ifdef VERBOSE_MSG
-    printf("I2C-R %02X %04X\n", reg, *value);
+    //printf("I2C-R %02X %04X\n", reg, *value);
 #endif
     return 0;
 }
@@ -1010,7 +1010,6 @@ static int rt5647_get_caps(struct device *dev, unsigned int dai_idx,
 {
     struct rt5647_info *info = NULL;
     struct gb_audio_pcm *pbpcm = NULL;
-    uint32_t mclk_freq;
 
     if (!dev || !device_get_private(dev) || !pcm || !dai) {
         return -EINVAL;
@@ -1046,18 +1045,15 @@ static int rt5647_get_caps(struct device *dev, unsigned int dai_idx,
           Test if mclk will work
           return full set of slave hardware capabilities
         */
+        uint32_t mclk_temp = dai->mclk_freq;
 
         memcpy(dai, &info->dais[dai_idx].s_caps, sizeof(struct device_codec_dai));
 
-        /* TODO check if the mclk value will work in slave mode*/
+        /* restore the value overwritten */
+        dai->mclk_freq = mclk_temp;
+
+        /* TODO check if the pcm->mclk value will work in slave mode*/
     }
-
-    /* TODO: When clk_role is slave, check that mclk_freq is supported */
-
-    /* return default DAI setting */
-    mclk_freq = dai->mclk_freq;
-    memcpy(dai, &info->dais[dai_idx].caps, sizeof(struct device_dai));
-    dai->mclk_freq = mclk_freq;
 
     return 0;
 }
@@ -1232,7 +1228,7 @@ static int rt5647_set_config(struct device *dev, unsigned int dai_idx,
     }
 
     if (info->tdm_en) {
-        if (dai->wclk_polarity == DEVICE_DAI_POLARITY_REVERSED) {
+        if (dai->wclk_polarity == DEVICE_CODEC_POLARITY_REVERSED) {
             tdm2 |= 1 << RT5647_TDM_LRCK_POL;
         }
 
@@ -1281,6 +1277,8 @@ static int rt5647_set_config(struct device *dev, unsigned int dai_idx,
  * @param dev - pointer to structure of device data
  * @param control_id - control id
  * @param index - index of control (for mux control)
+        return -EINVAL;
+    }
  * @param value - audio control return value
  * @return 0 on success, negative errno on error
  */
@@ -1589,6 +1587,8 @@ static int rt5647_start_rx(struct device *dev, uint32_t dai_idx)
                         1 << RT5647_PWR1_I2S1_EN);
     }
     info->state |= CODEC_DEVICE_FLAG_RX_START;
+
+    rt5647_dump_register();
     return 0;
 }
 

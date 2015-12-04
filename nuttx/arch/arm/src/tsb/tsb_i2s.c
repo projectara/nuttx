@@ -360,6 +360,8 @@ static int tsb_i2s_test_mclk(struct device *pll_dev,
     uint32_t bclk_freq;
     uint32_t mclk_freq;
 
+    //rem chris make one function
+
     /* can we generate mclk to match pcm setting*/
     ret = tsb_i2s_calc_bclk(pcm);
     if (ret < 0) {
