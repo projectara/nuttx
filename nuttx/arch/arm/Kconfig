@@ -172,6 +172,12 @@ config ARCH_HAVE_HIRES_TIMER
 	bool
 	default n
 
+config ARM_ITM
+	bool "ARM ITM"
+	default n
+	---help---
+		Enable ARM ITM driver
+
 if ARCH_CORTEXM3 || ARCH_CORTEXM4
 source arch/arm/src/armv7-m/Kconfig
 endif

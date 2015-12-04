@@ -55,6 +55,10 @@ ifeq ($(CONFIG_ARM_SEMIHOSTING),y)
 CMN_CSRCS += up_semihosting.c
 endif
 
+ifeq ($(CONFIG_ARM_ITM),y)
+CMN_CSRCS += up_itm.c
+endif
+
 ifeq ($(CONFIG_DEBUG_STACK),y)
 CMN_CSRCS += up_checkstack.c
 endif
