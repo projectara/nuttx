@@ -234,12 +234,19 @@ struct audio_dai rt5647_dais[] = {
                 .chan_max = 2,
             },
         },
-        .caps = {
-            .protocol = DEVICE_DAI_PROTOCOL_I2S,
-            .wclk_polarity = DEVICE_DAI_POLARITY_NORMAL,
-            .wclk_change_edge = DEVICE_DAI_EDGE_FALLING,
-            .data_rx_edge = DEVICE_DAI_EDGE_RISING,
-            .data_tx_edge = DEVICE_DAI_EDGE_FALLING,
+        .m_caps = {
+            .protocol = 0,
+            .wclk_polarity = 0,
+            .wclk_change_edge = 0,
+            .data_rx_edge = 0,
+            .data_tx_edge = 0,
+        },
+        .s_caps = {
+            .protocol = DEVICE_CODEC_PROTOCOL_I2S,
+            .wclk_polarity = DEVICE_CODEC_POLARITY_NORMAL,
+            .wclk_change_edge = DEVICE_CODEC_EDGE_RISING,
+            .data_rx_edge = DEVICE_CODEC_EDGE_RISING,
+            .data_tx_edge = DEVICE_CODEC_EDGE_FALLING,
         },
     },
 };
@@ -999,7 +1006,7 @@ static int rt5647_fmtbit_to_bitnum(uint32_t fmtbit)
  */
 static int rt5647_get_caps(struct device *dev, unsigned int dai_idx,
                            uint8_t clk_role, struct device_codec_pcm *pcm,
-                           struct device_dai *dai)
+                           struct device_codec_dai *dai)
 {
     struct rt5647_info *info = NULL;
     struct gb_audio_pcm *pbpcm = NULL;
@@ -1026,24 +1033,21 @@ static int rt5647_get_caps(struct device *dev, unsigned int dai_idx,
         return -EINVAL;
     }
 
-    if ((clk_role == DEVICE_DAI_ROLE_MASTER)) {
-        /* in master role, get_caps should return supported all dai configurations
-         * even when master role is not supported */
-         memcpy(dai, &info->dais[dai_idx].caps, sizeof(struct device_dai));
+    if (clk_role != DEVICE_CODEC_ROLE_SLAVE) {
+        /* query for master,
+         * return full set of master hardware capabilities
+         */
+         memcpy(dai, &info->dais[dai_idx].m_caps, sizeof(struct device_codec_dai));
 
         /* In current audio module, we only supported slave mode. */
         return -EOPNOTSUPP;
     } else {
-        /* in slave role, get_caps is a test for support of a specific dai configuration */
+        /* query for slave
+          Test if mclk will work
+          return full set of slave hardware capabilities
+        */
 
-        /* check that bit field settings match our capabilities */
-        if( !(dai->protocol         & info->dais[dai_idx].caps.protocol) ||
-            !(dai->wclk_polarity    & info->dais[dai_idx].caps.wclk_polarity) ||
-            !(dai->wclk_change_edge & info->dais[dai_idx].caps.wclk_change_edge) ||
-            !(dai->data_rx_edge     & info->dais[dai_idx].caps.data_rx_edge) ||
-            !(dai->data_tx_edge     & info->dais[dai_idx].caps.data_tx_edge)) {
-            return -ERANGE;
-        }
+        memcpy(dai, &info->dais[dai_idx].s_caps, sizeof(struct device_codec_dai));
 
         /* TODO check if the mclk value will work in slave mode*/
     }
@@ -1125,7 +1129,7 @@ findout:
  */
 static int rt5647_set_config(struct device *dev, unsigned int dai_idx,
                              uint8_t clk_role, struct device_codec_pcm *pcm,
-                             struct device_dai *dai)
+                             struct device_codec_dai *dai)
 {
     struct rt5647_info *info = NULL;
     struct gb_audio_pcm *pbpcm = NULL;
@@ -1155,7 +1159,7 @@ static int rt5647_set_config(struct device *dev, unsigned int dai_idx,
         return -EINVAL;
     }
 
-    if (clk_role != DEVICE_DAI_ROLE_SLAVE) {
+    if (clk_role != DEVICE_CODEC_ROLE_SLAVE) {
         /* In current audio module, we only supported slave mode. */
         return -EINVAL;
     }
@@ -1174,15 +1178,15 @@ static int rt5647_set_config(struct device *dev, unsigned int dai_idx,
     }
 
     /* setup codec hw */
-    if (clk_role & DEVICE_DAI_ROLE_SLAVE) {
+    if (clk_role & DEVICE_CODEC_ROLE_SLAVE) {
         format |= RT5647_I2S_MODE_SLAVE;
     }
 
     switch (dai->protocol) {
-    case DEVICE_DAI_PROTOCOL_PCM:
+    case DEVICE_CODEC_PROTOCOL_PCM:
         format |= RT5647_I2S_FORMAT_PCM_A;
         break;
-    case DEVICE_DAI_PROTOCOL_I2S:
+    case DEVICE_CODEC_PROTOCOL_I2S:
         format |= RT5647_I2S_FORMAT_I2S;
         if (info->tdm_en) {
             /* enable TDM mode */
@@ -1190,7 +1194,7 @@ static int rt5647_set_config(struct device *dev, unsigned int dai_idx,
                   (RT5647_TDM_SWAP_LR << RT5647_TDM_RXCH2_SWAP);
         }
         break;
-    case DEVICE_DAI_PROTOCOL_LR_STEREO:
+    case DEVICE_CODEC_PROTOCOL_LR_STEREO:
         format |= RT5647_I2S_FORMAT_LEFT_J;
         break;
     default:
@@ -1265,7 +1269,7 @@ static int rt5647_set_config(struct device *dev, unsigned int dai_idx,
     memcpy(&info->dais[dai_idx].pcm_config, pcm,
            sizeof(struct device_codec_pcm));
     memcpy(&info->dais[dai_idx].dai_config, dai,
-           sizeof(struct device_dai));
+           sizeof(struct device_codec_dai));
 
     info->state |= CODEC_DEVICE_FLAG_CONFIG;
     return 0;

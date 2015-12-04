@@ -35,7 +35,6 @@
 
 #include <nuttx/util.h>
 #include <nuttx/device.h>
-#include <nuttx/dai_common.h>
 
 #define DEVICE_TYPE_I2S_HW                      "i2s"
 
@@ -59,6 +58,19 @@
 #define DEVICE_I2S_PCM_RATE_176400              BIT(11)
 #define DEVICE_I2S_PCM_RATE_192000              BIT(12)
 
+#define DEVICE_I2S_PROTOCOL_PCM                 BIT(0)
+#define DEVICE_I2S_PROTOCOL_I2S                 BIT(1)
+#define DEVICE_I2S_PROTOCOL_LR_STEREO           BIT(2)
+
+#define DEVICE_I2S_ROLE_MASTER                  BIT(0)
+#define DEVICE_I2S_ROLE_SLAVE                   BIT(1)
+
+#define DEVICE_I2S_POLARITY_NORMAL              BIT(0)
+#define DEVICE_I2S_POLARITY_REVERSED            BIT(1)
+
+#define DEVICE_I2S_EDGE_RISING                  BIT(0)
+#define DEVICE_I2S_EDGE_FALLING                 BIT(1)
+
 enum device_i2s_event {
     DEVICE_I2S_EVENT_INVALID,
     DEVICE_I2S_EVENT_NONE,
@@ -80,11 +92,25 @@ struct device_i2s_pcm {
     uint8_t     channels;
 };
 
+/* low level DAI communication capabilities of a driver
+ * Most capabilities are bitfields,
+ * To find matching capabilities between drivers AND the bitfields
+ * returned from get_caps
+ */
+struct device_i2s_dai {
+    uint32_t    mclk_freq;          /* mclk frequency generated/required */
+    uint8_t     protocol;           /* DEVICE_I2S_PROTOCOL_* */
+    uint8_t     wclk_polarity;      /* DEVICE_I2S_POLARITY_* */
+    uint8_t     wclk_change_edge;   /* DEVICE_I2S_EDGE_* */
+    uint8_t     data_rx_edge;       /* DEVICE_I2S_EDGE_* */
+    uint8_t     data_tx_edge;       /* DEVICE_I2S_EDGE_* */
+};
+
 struct device_i2s_type_ops {
     int (*get_caps)(struct device *dev, uint8_t clk_role,
-                    struct device_i2s_pcm *pcm, struct device_dai *dai);
+                    struct device_i2s_pcm *pcm, struct device_i2s_dai *dai);
     int (*set_config)(struct device *dev, uint8_t clk_role,
-                      struct device_i2s_pcm *pcm, struct device_dai *dai);
+                      struct device_i2s_pcm *pcm, struct device_i2s_dai *dai);
     int (*get_delay_receiver)(struct device *dev, uint32_t *delay);
     int (*prepare_receiver)(struct device *dev, struct ring_buf *rx_rb,
                             device_i2s_callback callback, void *arg);
@@ -110,7 +136,7 @@ struct device_i2s_type_ops {
  */
 static inline int device_i2s_get_caps(struct device *dev, uint8_t clk_role,
                                       struct device_i2s_pcm *pcm,
-                                      struct device_dai *dai)
+                                      struct device_i2s_dai *dai)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -135,7 +161,7 @@ static inline int device_i2s_get_caps(struct device *dev, uint8_t clk_role,
  */
 static inline int device_i2s_set_config(struct device *dev, uint8_t clk_role,
                                         struct device_i2s_pcm *pcm,
-                                        struct device_dai *dai)
+                                        struct device_i2s_dai *dai)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 

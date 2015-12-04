@@ -71,13 +71,13 @@ struct i2s_test_sample {
     uint16_t    right;
 };
 
-struct device_dai i2s_test_dai = {
+static struct device_i2s_dai test_i2s_dai = {
     6144000,
     0,
-    DEVICE_DAI_POLARITY_NORMAL,
+    DEVICE_I2S_POLARITY_NORMAL,
     0,
-    DEVICE_DAI_EDGE_RISING,
-    DEVICE_DAI_EDGE_FALLING
+    DEVICE_I2S_EDGE_RISING,
+    DEVICE_I2S_EDGE_FALLING
 };
 
 static void i2s_test_print_usage(char *argv[])
@@ -507,7 +507,7 @@ static void i2s_test_stop_receiver(struct device *dev)
 static int i2s_test_start_streaming_transmitter(struct i2s_test_info *info)
 {
     struct device *dev;
-    struct device_dai dai;
+    struct device_i2s_dai dai;
     int ret;
 
     if ((!info->is_transmitter) ||
@@ -524,7 +524,7 @@ static int i2s_test_start_streaming_transmitter(struct i2s_test_info *info)
 
     /*validate transmitter configuration */
     ret = device_i2s_get_caps(dev,
-                              DEVICE_DAI_ROLE_MASTER,
+                              DEVICE_I2S_ROLE_MASTER,
                               &i2s_test_pcm,
                               &dai);
 
@@ -535,40 +535,40 @@ static int i2s_test_start_streaming_transmitter(struct i2s_test_info *info)
         goto err_dev_close;
     }
 
-    if (!((dai.mclk_freq == i2s_test_dai.mclk_freq) &&
-         (dai.wclk_polarity | i2s_test_dai.wclk_polarity) &&
-         (dai.data_rx_edge | i2s_test_dai.data_rx_edge) &&
-         (dai.data_tx_edge | i2s_test_dai.data_tx_edge))) {
+    if (!((dai.mclk_freq == test_i2s_dai.mclk_freq) &&
+         (dai.wclk_polarity | test_i2s_dai.wclk_polarity) &&
+         (dai.data_rx_edge | test_i2s_dai.data_rx_edge) &&
+         (dai.data_tx_edge | test_i2s_dai.data_tx_edge))) {
 
         fprintf(stderr, "I2S master does support hard coded dai test configuration\n");
         goto err_dev_close;
     }
 
     /* master is opposite the slave setting */
-    if (!(dai.wclk_change_edge | DEVICE_DAI_EDGE_FALLING)) {
+    if (!(dai.wclk_change_edge | DEVICE_I2S_EDGE_FALLING)) {
         fprintf(stderr, "Transmitter test mode settings require wclk falling\n");
         goto err_dev_close;
     }
-    i2s_test_dai.wclk_change_edge |= DEVICE_DAI_EDGE_FALLING;
+    test_i2s_dai.wclk_change_edge |= DEVICE_I2S_EDGE_FALLING;
 
     if (info->is_i2s) {
-        if(!(dai.protocol | DEVICE_DAI_PROTOCOL_I2S)) {
+        if(!(dai.protocol | DEVICE_I2S_PROTOCOL_I2S)) {
             fprintf(stderr, "I2S master port does not support I2S protocol\n");
             goto err_dev_close;
         }
-        i2s_test_dai.protocol |= DEVICE_DAI_PROTOCOL_I2S;
+        test_i2s_dai.protocol |= DEVICE_I2S_PROTOCOL_I2S;
     } else {
-        if(!(dai.protocol | DEVICE_DAI_PROTOCOL_LR_STEREO)) {
+        if(!(dai.protocol | DEVICE_I2S_PROTOCOL_LR_STEREO)) {
             fprintf(stderr, "I2S master port does not support LR protocol\n");
             goto err_dev_close;
         }
-        i2s_test_dai.protocol |= DEVICE_DAI_PROTOCOL_LR_STEREO;
+        test_i2s_dai.protocol |= DEVICE_I2S_PROTOCOL_LR_STEREO;
     }
 
     ret = device_i2s_set_config(dev,
-                                DEVICE_DAI_ROLE_MASTER,
+                                DEVICE_I2S_ROLE_MASTER,
                                 &i2s_test_pcm,
-                                &i2s_test_dai);
+                                &test_i2s_dai);
     if (ret) {
         fprintf(stderr, "set configuration failed: %d\n", ret);
         goto err_dev_close;
@@ -611,18 +611,18 @@ static int i2s_test_start_streaming_receiver(struct i2s_test_info *info)
 
     /* validate receiver configuration */
     if (info->is_i2s) {
-        i2s_test_dai.protocol |= DEVICE_DAI_PROTOCOL_I2S;
+        test_i2s_dai.protocol |= DEVICE_I2S_PROTOCOL_I2S;
     } else {
-        i2s_test_dai.protocol |= DEVICE_DAI_PROTOCOL_LR_STEREO;
+        test_i2s_dai.protocol |= DEVICE_I2S_PROTOCOL_LR_STEREO;
     }
 
     /* slave is opposite the master setting */
-    i2s_test_dai.wclk_change_edge |= DEVICE_DAI_EDGE_RISING;
+    test_i2s_dai.wclk_change_edge |= DEVICE_I2S_EDGE_RISING;
 
     ret = device_i2s_get_caps(dev,
-                              DEVICE_DAI_ROLE_SLAVE,
+                              DEVICE_I2S_ROLE_SLAVE,
                               &i2s_test_pcm,
-                              &i2s_test_dai);
+                              &test_i2s_dai);
 
     if (ret) {
         fprintf(stderr, "I2S slave configuration does not support test mode settings\n");
@@ -630,9 +630,9 @@ static int i2s_test_start_streaming_receiver(struct i2s_test_info *info)
     }
 
     ret = device_i2s_set_config(dev,
-                               DEVICE_DAI_ROLE_SLAVE,
+                               DEVICE_I2S_ROLE_SLAVE,
                                &i2s_test_pcm,
-                               &i2s_test_dai);
+                               &test_i2s_dai);
     if (ret) {
         fprintf(stderr, "set configuration failed: %d\n", ret);
         goto err_dev_close;

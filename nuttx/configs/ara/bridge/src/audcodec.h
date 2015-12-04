@@ -71,10 +71,11 @@ struct enumctl {
 
 struct audio_dai {
     struct gb_audio_dai dai;
-    struct device_dai caps;
+    struct device_codec_dai m_caps;
+    struct device_codec_dai s_caps;
     uint8_t clk_role;
     struct device_codec_pcm pcm_config;
-    struct device_dai dai_config;
+    struct device_codec_dai dai_config;
 };
 
 struct audio_control {
