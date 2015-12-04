@@ -27,14 +27,7 @@
  */
 
 /**
- * @file nuttx/configs/ara/svc/src/vreg.h
- * @brief "voltage regulator" framework
- *
- * This API started out life as a refcounted mechanism for managing
- * voltage regulators which are controlled using GPIOs, and which need
- * to be enabled/disabled in a defined order. Over time, it started to
- * be used for other purposes, such as controlling clock enable lines
- * that need to be handled similarly.
+ * @brief: Manage a voltage regulator
  */
 
 #ifndef  _VREG_H_
@@ -95,10 +88,6 @@ enum vreg_pwr_state vreg_get_pwr_state(struct vreg *);
         .active_high = 0,                                      \
         .def_val = 1,                                          \
     }
-
-
-/* Helper for module clock gating control. */
-#define INIT_MODULE_CLK_DATA(g) INIT_ACTIVE_HIGH_VREG_DATA(g, 0)
 
 /* vreg build helper */
 #define __MAKE_VREG(n) n ## _vreg

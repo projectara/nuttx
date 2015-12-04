@@ -131,23 +131,18 @@
 /* PINSHARE bits */
 #define TSB_PIN_UART_RXTX       BIT(0)
 #define TSB_PIN_UART_CTSRTS     BIT(1)
+#define TSB_PIN_SDIO            BIT(2)
 #define TSB_PIN_GPIO9           BIT(3)
 #define TSB_PIN_ETM             BIT(4)
 #define TSB_PIN_GPIO10          BIT(5)
 #define TSB_PIN_GPIO13          BIT(6)
 #define TSB_PIN_GPIO15          BIT(7)
-
-#if defined(CONFIG_TSB_CHIP_REV_ES2)
-#define TSB_PIN_SDIO            BIT(2)
 #define TSB_PIN_GPIO16          BIT(10)
 #define TSB_PIN_GPIO18          BIT(11)
 #define TSB_PIN_GPIO19          BIT(12)
 #define TSB_PIN_GPIO20          BIT(13)
 #define TSB_PIN_GPIO21          BIT(14)
 #define TSB_PIN_GPIO22          BIT(15)
-#else
-#error "unsupported hardware version"
-#endif
 
 
 /* IO_DRIVE_STRENGTH: 2 Bits per Output */
@@ -169,7 +164,11 @@ enum tsb_drivestrength {
 #define TSB_PWM_DRIVESTRENGTH     (TSB_SCM_REG1 | 20)
 #define TSB_I2S_DRIVESTRENGTH     (TSB_SCM_REG1 | 18)
 #else
-#error "unsupported hardware"
+#define TSB_TRACE_DRIVESTRENGTH   (TSB_SCM_REG2 | 10)
+#define TSB_SPI_DRIVESTRENGTH     (TSB_SCM_REG2 | 8)
+#define TSB_PWM1_DRIVESTRENGTH    (TSB_SCM_REG2 | 6)
+#define TSB_PWM0_DRIVESTRENGTH    (TSB_SCM_REG2 | 4)
+#define TSB_I2S_DRIVESTRENGTH     (TSB_SCM_REG2 | 0)
 #endif
 
 /*
@@ -212,11 +211,13 @@ void tsb_clk_disable(uint32_t clk);
 uint32_t tsb_clk_status(uint32_t clk);
 void tsb_clk_dump(void);
 void tsb_reset(uint32_t rst);
-void tsb_set_pinshare(uint32_t pin);
-void tsb_clr_pinshare(uint32_t pin);
+int tsb_set_pinshare(uint32_t pin);
+int tsb_clr_pinshare(uint32_t pin);
 uint32_t tsb_get_pinshare(void);
 void tsb_set_drivestrength(uint32_t ds_id, enum tsb_drivestrength value);
 enum tsb_drivestrength tsb_get_drivestrength(uint32_t ds_id);
 enum tsb_product_id tsb_get_product_id(void);
+int tsb_request_pinshare(uint32_t bits);
+int tsb_release_pinshare(uint32_t bits);
 
 #endif /* __ARCH_ARM_SRC_TSB_TSB_SCM_H */

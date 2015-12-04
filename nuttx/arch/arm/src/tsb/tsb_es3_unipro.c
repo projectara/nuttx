@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2015 Google Inc.
  * All rights reserved.
  *
@@ -26,45 +26,44 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _ARA_COMMON_ES2_MPHY_FIXUPS_H_
-#define _ARA_COMMON_ES2_MPHY_FIXUPS_H_
+#include "debug.h"
 
-#include <stdint.h>
+#include <nuttx/unipro/unipro.h>
+#include <nuttx/greybus/tsb_unipro.h>
 
-/*
- * This specifies an M-PHY "fixup"; i.e., a value that must be set to
- * a DME attribute while the link is still in PWM-G1, before
- * transitioning to HS link power modes.
- *
- * Use tsb_mphy_r1_fixup_is_magic() to test if a register 1 map fixup
- * must have its value drawn from M-PHY trim values or magic debug
- * registers (switch ports and bridges handle this case differently).
- */
-struct tsb_mphy_fixup {
-    uint16_t attrid;
-    uint16_t select_index;
-    uint32_t value;
+#include <errno.h>
 
-#define TSB_MPHY_FIXUP_LAST     0x1
-#define TSB_MPHY_FIXUP_MAGIC_R1 0x2
-    uint32_t flags;
-};
+int tsb_unipro_set_init_status(uint32_t val)
+{
+    int retval;
+    uint32_t status;
 
-/*
- * Use tsb_mphy_fixup_is_last() to test if a fixup is the last one in
- * each of these array.
- */
-extern const struct tsb_mphy_fixup tsb_register_1_map_mphy_fixups[];
-extern const struct tsb_mphy_fixup tsb_register_2_map_mphy_fixups[];
+    /*
+     * See SW-1228
+     *  -> https://projectara.atlassian.net/browse/SW-1228?focusedCommentId=28889&page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-28889
+     */
+    if (val & INIT_STATUS_ERROR_CODE_MASK) {
+        lowsyslog("%s() cannot override the init status error code (init status: %u).\n",
+                  __func__, val);
+        return -EINVAL;
+    }
 
-static inline int tsb_mphy_fixup_is_last(const struct tsb_mphy_fixup *fu) {
-    return !!(fu->flags & TSB_MPHY_FIXUP_LAST);
+    retval = unipro_attr_local_read(TSB_DME_ES3_INIT_STATUS, &status,
+                                    UNIPRO_SELINDEX_NULL);
+    if (retval) {
+        lowsyslog("init-status read failed: retval = %d\n", retval);
+        return retval;
+    }
+
+    /* preserve error code: see SW-1228 */
+    val |= status & INIT_STATUS_ERROR_CODE_MASK;
+
+    retval = unipro_attr_local_write(TSB_DME_ES3_INIT_STATUS, val,
+                                     UNIPRO_SELINDEX_NULL);
+    if (retval) {
+        lowsyslog("init-status write failed: retval = %d\n", retval);
+        return retval;
+    }
+
+    return 0;
 }
-
-static inline int tsb_mphy_r1_fixup_is_magic(const struct tsb_mphy_fixup *fu) {
-    return !!(fu->flags & TSB_MPHY_FIXUP_MAGIC_R1);
-}
-
-void es2_apply_mphy_fixup(void);
-
-#endif

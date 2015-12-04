@@ -36,11 +36,20 @@
 #include <string.h>
 #include <debug.h>
 #include <errno.h>
+#include <stdlib.h>
 
 #include "tsb_scm.h"
 #include "up_arch.h"
 #include "nuttx/arch.h"
 #include "irq/irq.h"
+
+#if defined(CONFIG_TSB_CHIP_REV_ES2)
+#define APBRIDGE_LINE_COUNT     23
+#define GPBRIDGE_LINE_COUNT     27
+#elif defined(CONFIG_TSB_CHIP_REV_ES3)
+#define APBRIDGE_LINE_COUNT     24
+#define GPBRIDGE_LINE_COUNT     32
+#endif
 
 #define GPIO_BASE           0x40003000
 #define GPIO_DATA           (GPIO_BASE)
@@ -61,8 +70,8 @@
 #define GPIO_INTCTRL3       (GPIO_BASE + 0x3c)
 
 /* A table of handlers for each GPIO interrupt */
-static xcpt_t tsb_gpio_irq_vector[NR_GPIO_IRQS];
-static uint8_t tsb_gpio_irq_gpio_base[NR_GPIO_IRQS];
+static xcpt_t *tsb_gpio_irq_vector;
+static uint8_t *tsb_gpio_irq_gpio_base;
 static volatile uint32_t refcount;
 
 int tsb_gpio_get_direction(void *driver_data, uint8_t which)
@@ -104,7 +113,13 @@ void tsb_gpio_deactivate(void *driver_data, uint8_t which)
 
 uint8_t tsb_gpio_line_count(void *driver_data)
 {
-    return NR_GPIO_IRQS;
+    static uint8_t line_count;
+    if (!line_count) {
+        line_count = tsb_get_product_id() == tsb_pid_apbridge ?
+                        APBRIDGE_LINE_COUNT : GPBRIDGE_LINE_COUNT;
+    }
+
+    return line_count;
 }
 
 int tsb_gpio_mask_irq(void *driver_data, uint8_t which)
@@ -177,6 +192,7 @@ static int tsb_gpio_irq_handler(int irq, void *context)
     uint32_t irqstat;
     uint8_t base;
     int pin;
+    size_t nr_gpio = tsb_nr_gpio();
 
     /*
      * Clear all GPIO interrupts that we are going to process. "The GPIO_RAWINTSTAT
@@ -188,7 +204,7 @@ static int tsb_gpio_irq_handler(int irq, void *context)
     putreg32(irqstat, GPIO_RAWINTSTAT);
 
     /* Now process each IRQ pending in the GPIO */
-    for (pin = 0; pin < NR_GPIO_IRQS && irqstat != 0; pin++, irqstat >>= 1) {
+    for (pin = 0; pin < nr_gpio && irqstat != 0; pin++, irqstat >>= 1) {
         if ((irqstat & 1) != 0) {
             base = tsb_gpio_irq_gpio_base[pin];
             tsb_gpio_irq_vector[pin](base + pin, context);
@@ -202,7 +218,7 @@ int tsb_gpio_irqattach(void *driver_data, uint8_t irq, xcpt_t isr, uint8_t base)
 {
     irqstate_t flags;
 
-    if (irq >= NR_GPIO_IRQS)
+    if (irq >= tsb_nr_gpio())
         return -EINVAL;
 
     flags = irqsave();
@@ -229,7 +245,7 @@ static void tsb_gpio_irqinitialize(void)
     int i;
 
     /* Point all interrupt vectors to the unexpected interrupt */
-    for (i = 0; i < NR_GPIO_IRQS; i++) {
+    for (i = 0; i < tsb_nr_gpio(); i++) {
         tsb_gpio_irq_vector[i] = irq_unexpected_isr;
     }
 }
@@ -293,5 +309,31 @@ struct gpio_ops_s tsb_gpio_ops = {
 
 int tsb_gpio_register(void *driver_data)
 {
-    return register_gpio_chip(&tsb_gpio_ops, TSB_GPIO_CHIP_BASE, driver_data);
+    int retval;
+
+    tsb_gpio_irq_vector = calloc(sizeof(*tsb_gpio_irq_vector), tsb_nr_gpio());
+    if (!tsb_gpio_irq_vector)
+        return -ENOMEM;
+
+    tsb_gpio_irq_gpio_base =
+        calloc(sizeof(*tsb_gpio_irq_gpio_base), tsb_nr_gpio());
+    if (!tsb_gpio_irq_gpio_base) {
+        retval = -ENOMEM;
+        goto err_irq_gpio_base_alloc;
+    }
+
+    retval = register_gpio_chip(&tsb_gpio_ops, TSB_GPIO_CHIP_BASE, driver_data);
+    if (retval)
+        goto err_register_gpio_chip;
+
+    return 0;
+
+err_register_gpio_chip:
+    free(tsb_gpio_irq_gpio_base);
+    tsb_gpio_irq_gpio_base = NULL;
+err_irq_gpio_base_alloc:
+    free(tsb_gpio_irq_vector);
+    tsb_gpio_irq_vector = NULL;
+
+    return retval;
 }

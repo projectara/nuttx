@@ -25,7 +25,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * @brief MIPI UniPro stack for ES2 Bridges
+ * @brief MIPI UniPro stack for Bridges
  */
 
 #include <string.h>
@@ -47,8 +47,6 @@
 #include "tsb_es2_mphy_fixups.h"
 
 #define UNIPRO_LUP_DONE     BIT(0)
-
-#define MPHY_FIXUP_RETRIES  3
 
 #define TRANSFER_MODE_2_CTRL_0 (0xAAAAAAAA) // Transfer mode 2 for CPorts 0-15
 /*
@@ -74,8 +72,13 @@
 static struct cport *cporttable;
 static unipro_event_handler_t evt_handler;
 
+#if defined(CONFIG_TSB_CHIP_REV_ES2)
 #define APBRIDGE_CPORT_MAX 44 // number of CPorts available on the APBridges
 #define GPBRIDGE_CPORT_MAX 16 // number of CPorts available on the GPBridges
+#else
+#define APBRIDGE_CPORT_MAX 40 // number of CPorts available on the APBridges
+#define GPBRIDGE_CPORT_MAX 16 // number of CPorts available on the GPBridges
+#endif
 
 /*
  * During unipro_unit(), we'll compute and cache the number of CPorts that this
@@ -116,14 +119,6 @@ static void dump_regs(void);
 static int irq_rx_eom(int, void*);
 static int irq_unipro(int, void*);
 
-/*
- * "Map" constants for M-PHY fixups.
- */
-#define TSB_MPHY_MAP (0x7F)
-    #define TSB_MPHY_MAP_TSB_REGISTER_1 (0x01)
-    #define TSB_MPHY_MAP_NORMAL         (0x00)
-    #define TSB_MPHY_MAP_TSB_REGISTER_2 (0x81)
-
 static uint32_t unipro_read(uint32_t offset) {
     return getreg32((volatile unsigned int*)(AIO_UNIPRO_BASE + offset));
 }
@@ -132,75 +127,7 @@ static void unipro_write(uint32_t offset, uint32_t v) {
     putreg32(v, (volatile unsigned int*)(AIO_UNIPRO_BASE + offset));
 }
 
-static int es2_fixup_mphy(void)
-{
-    uint32_t debug_0720 = tsb_get_debug_reg(0x0720);
-    int rc;
-    const struct tsb_mphy_fixup *fu;
 
-    /*
-     * Apply the "register 2" map fixups.
-     */
-    rc = unipro_attr_local_write(TSB_MPHY_MAP, TSB_MPHY_MAP_TSB_REGISTER_2, 0);
-    if (rc) {
-        lldbg("%s: failed to switch to register 2 map: %d\n", __func__, rc);
-        return rc;
-    }
-    fu = tsb_register_2_map_mphy_fixups;
-    do {
-        rc = unipro_attr_local_write(fu->attrid, fu->value, fu->select_index);
-        if (rc) {
-            lldbg("%s: failed to apply register 1 map fixup: %d\n", __func__,
-                  rc);
-            return rc;
-        }
-    } while (!tsb_mphy_fixup_is_last(fu++));
-
-    /*
-     * Switch to "normal" map.
-     */
-    rc = unipro_attr_local_write(TSB_MPHY_MAP, TSB_MPHY_MAP_NORMAL, 0);
-    if (rc) {
-        lldbg("%s: failed to switch to normal map: %d\n", __func__, rc);
-        return rc;
-    }
-
-    /*
-     * Apply the "register 1" map fixups.
-     */
-    rc = unipro_attr_local_write(TSB_MPHY_MAP, TSB_MPHY_MAP_TSB_REGISTER_1, 0);
-    if (rc) {
-        lldbg("%s: failed to switch to register 1 map: %d\n", __func__, rc);
-        return rc;
-    }
-    fu = tsb_register_1_map_mphy_fixups;
-    do {
-        if (tsb_mphy_r1_fixup_is_magic(fu)) {
-            /* The magic R1 fixups come from the mysterious and solemn
-             * debug register 0x0720. */
-            rc = unipro_attr_local_write(0x8002, (debug_0720 >> 1) & 0x1f, 0);
-        } else {
-            rc = unipro_attr_local_write(fu->attrid, fu->value,
-                                         fu->select_index);
-        }
-        if (rc) {
-            lldbg("%s: failed to apply register 1 map fixup: %d\n", __func__,
-                  rc);
-            return rc;
-        }
-    } while (!tsb_mphy_fixup_is_last(fu++));
-
-    /*
-     * Switch to "normal" map.
-     */
-    rc = unipro_attr_local_write(TSB_MPHY_MAP, TSB_MPHY_MAP_NORMAL, 0);
-    if (rc) {
-        lldbg("%s: failed to switch to normal map: %d\n", __func__, rc);
-        return rc;
-    }
-
-    return rc;
-}
 
 /**
  * @brief Read CPort status from unipro controller
@@ -477,9 +404,6 @@ static int mailbox_evt(void)
 
 static void unipro_evt_handler(enum unipro_event evt)
 {
-    int i;
-    int retval;
-
     DBG_UNIPRO("UniPro: event %d.\n", evt);
 
     switch (evt) {
@@ -488,14 +412,9 @@ static void unipro_evt_handler(enum unipro_event evt)
         break;
 
     case UNIPRO_EVT_LUP_DONE:
-        lowsyslog("UniPro: applying TSB ES2 M-PHY fixups: ");
-
-        retval = -EIO;
-        for (i = 0; i < MPHY_FIXUP_RETRIES && retval; i++) {
-            retval = es2_fixup_mphy();
-        }
-
-        lowsyslog(retval ? "FAILED\n" : "DONE\n");
+#if defined(CONFIG_TSB_CHIP_REV_ES2)
+        es2_apply_mphy_fixup();
+#endif
         break;
     }
 
@@ -968,6 +887,11 @@ int unipro_reset_cport(unsigned int cportid, cport_reset_completion_cb_t cb,
     if (!cport)
         return -EINVAL;
 
+    if (cport->pending_reset || cport->reset_completion_cb ||
+        cport->reset_completion_cb_priv) {
+        return -EINPROGRESS;
+    }
+
     cport->reset_completion_cb_priv = priv;
     cport->reset_completion_cb = cb;
     cport->pending_reset = true;
@@ -1062,17 +986,4 @@ static int tsb_unipro_mbox_ack(uint16_t val) {
     return 0;
 }
 
-#define ES2_INIT_STATUS(x) (x >> 24)
 
-int tsb_unipro_set_init_status(uint32_t val) {
-    int rc;
-
-    rc = unipro_attr_local_write(T_TSTSRCINCREMENT, ES2_INIT_STATUS(val),
-                                 UNIPRO_SELINDEX_NULL);
-    if (rc) {
-        lldbg("init-status write failed: rc=%d\n", rc);
-        return rc;
-    }
-
-    return 0;
-}

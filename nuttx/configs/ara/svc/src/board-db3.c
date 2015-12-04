@@ -65,6 +65,28 @@
 #define IOEXP_U4550_I2C_ADDR    0x21
 #define IOEXP_U4570_I2C_ADDR    0x20
 
+/*
+ * Modules 19.2MHz clock gating control: active high.
+ * Asserted at start-up and de-asserted after the regulators are enabled.
+ */
+#define INIT_MODULE_CLK_DATA(g)     \
+    {                               \
+        .gpio = g,                  \
+        .hold_time = 0,             \
+        .active_high = 1,           \
+        .def_val = 0,               \
+    }
+
+/* Module power on hold time */
+#define HOLD_TIME_MODULE                (10000) // 10ms
+
+/*
+ * How long to leave hold each regulator before the next.
+ */
+#define HOLD_TIME_SW_1P1                (50000) // 50ms for 1P1
+#define HOLD_TIME_SW_1P8                (10000) // 10ms for 1P8
+#define POWER_SWITCH_OFF_STAB_TIME_US   (10000) // 10ms switch off
+
 /* 19.2MHz system reference clocks */
 #define REFCLK_REQ        STM32_GPIO_PIN(GPIO_PORTB | GPIO_PIN9)
 #define REFCLK_APB1_EN    U4570_GPIO_PIN(0) // On-board APB1
@@ -365,16 +387,14 @@ static struct ara_board_info db3_board_info = {
     .nr_spring_interfaces = 0,
 
     .sw_data = {
-        .vreg             = &sw_vreg,
-        .gpio_reset       = (GPIO_OUTPUT | GPIO_OUTPUT_CLEAR |
-                             GPIO_PORTD | GPIO_PIN11),
-        .gpio_irq         = (GPIO_INPUT | GPIO_FLOAT | GPIO_EXTI | \
-                             GPIO_PORTC | GPIO_PIN9),
-        .irq_rising_edge  = true,
-        .rev              = SWITCH_REV_ES2,
-        .bus              = SW_SPI_PORT_2,
-        .spi_cs           = (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_OUTPUT_SET | \
-                             GPIO_PORTB | GPIO_PIN12)
+        .vreg       = &sw_vreg,
+        .gpio_reset = (GPIO_OUTPUT | GPIO_OUTPUT_CLEAR | GPIO_PORTD | GPIO_PIN11),
+        .gpio_irq   = (GPIO_INPUT | GPIO_FLOAT | GPIO_EXTI | \
+                       GPIO_PORTC | GPIO_PIN9),
+        .rev        = SWITCH_REV_ES2,
+        .bus        = SW_SPI_PORT_2,
+        .spi_cs     = (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_OUTPUT_SET | \
+                       GPIO_PORTB | GPIO_PIN12)
     },
 
     .io_expanders   = db3_io_expanders,

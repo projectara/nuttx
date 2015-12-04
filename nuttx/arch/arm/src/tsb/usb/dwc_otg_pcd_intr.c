@@ -2420,8 +2420,17 @@ static void complete_ep(dwc_otg_pcd_ep_t * ep)
 					byte_count = residue;
 				} else {
 #endif
-					desc_sts = req->dma_desc->status;
-					byte_count += desc_sts.b.bytes;
+					if (ep->dwc_ep.type == DWC_OTG_EP_TYPE_BULK) {
+						desc_sts = req->dma_desc->status;
+						byte_count += desc_sts.b.bytes;
+					} else {
+						for (i = 0; i < ep->dwc_ep.desc_cnt;
+						     ++i) {
+							desc_sts = dma_desc->status;
+							byte_count += desc_sts.b.bytes;
+							dma_desc++;
+						}
+					}
 #ifdef DWC_UTE_CFI
 				}
 #endif
@@ -3255,13 +3264,10 @@ static void dwc_otg_pcd_handle_noniso_bna(dwc_otg_pcd_ep_t * ep)
 	dev_dma_desc_sts_t sts = {.d32 = 0 };
 	dwc_otg_core_if_t *core_if = ep->pcd->core_if;
 	int i, start;
-	int enable_ep = 0;
 
 	if (!dwc_ep->desc_cnt)
 		DWC_WARN("Ep%d %s Descriptor count = %d \n", dwc_ep->num,
 			 (dwc_ep->is_in ? "IN" : "OUT"), dwc_ep->desc_cnt);
-
-	ep->bna = 1;
 
 	if (core_if->core_params->cont_on_bna && !dwc_ep->is_in
 							&& dwc_ep->type != DWC_OTG_EP_TYPE_CONTROL) {
@@ -3276,12 +3282,18 @@ static void dwc_otg_pcd_handle_noniso_bna(dwc_otg_pcd_ep_t * ep)
 		dma_desc = dwc_ep->desc_addr;
 	}
 	
-	for (i = 0; i < dwc_ep->desc_cnt; ++i, ++dma_desc) {
-		if (dwc_ep->is_in) {
+	if (!dwc_ep->is_in && dwc_ep->type == DWC_OTG_EP_TYPE_BULK) {
+		ep->bna = 1;
+		if (start >= dwc_ep->desc_cnt)
+			dma_desc = &(dwc_ep->desc_addr[0]);
+		sts.d32 = dma_desc->status.d32;
+		if (sts.b.bs != BS_HOST_READY)
+			return;
+	} else {
+		for (i = start; i < dwc_ep->desc_cnt; ++i, ++dma_desc) {
 			sts.d32 = dma_desc->status.d32;
 			sts.b.bs = BS_HOST_READY;
 			dma_desc->status.d32 = sts.d32;
-			enable_ep = 1;
 		}
 	}
 
@@ -3293,13 +3305,8 @@ static void dwc_otg_pcd_handle_noniso_bna(dwc_otg_pcd_ep_t * ep)
 		addr =
 		    &GET_CORE_IF(pcd)->dev_if->in_ep_regs[dwc_ep->num]->diepctl;
 	}
-
-	/* Only enable endpoint if there are requests ready for transfer */
-	if (enable_ep) {
-		depctl.b.epena = 1;
-		depctl.b.cnak = 1;
-		ep->bna = 0;
-	}
+	depctl.b.epena = 1;
+	depctl.b.cnak = 1;
 	DWC_MODIFY_REG32(addr, 0, depctl.d32);
 }
 
@@ -4748,9 +4755,7 @@ exit_xfercompl:
 					if (core_if->dma_desc_enable && dwc_ep->type == DWC_OTG_EP_TYPE_ISOC) {
 						handle_xfercompl_iso_ddma(core_if->dev_if, ep);
 					} else {
-						if (ep->dwc_ep.is_in) {
-							complete_ep(ep);
-						} else {
+						if (ep->dwc_ep.type == DWC_OTG_EP_TYPE_BULK) {
 							int i;
 							for (i = 0; i < ep->dwc_ep.desc_cnt; i++) {
 								if (ep->dwc_ep.desc_addr[i].status.b.bs == BS_DMA_DONE) {
@@ -4758,6 +4763,8 @@ exit_xfercompl:
 									complete_ep(ep);
 								}
 							}
+						} else {
+							complete_ep(ep);
 						}
 					}
 				}
