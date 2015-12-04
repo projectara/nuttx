@@ -104,7 +104,7 @@ int audcodec_bit_get(struct audio_control *control,
         data = (data)? 0: 1;
     }
 
-    value[0].value.integer_value = data;
+    value->value.integer_value[0] = data;
     return ret;
 }
 
@@ -125,7 +125,7 @@ int audcodec_bit_set(struct audio_control *control,
     inv = ctl->inv;
     mask = ctl->mask;
 
-    data = value[0].value.integer_value;
+    data = value->value.integer_value[0];
 
     if (inv) {
         data = (data)? 0: 1;
@@ -169,7 +169,7 @@ int audcodec_bits_get(struct audio_control *control,
     if (inv) {
         data1 = (data1)? 0: 1;
     }
-    value[0].value.integer_value = data1;
+    value->value.integer_value[0] = data1;
     if (((reg1 == reg2) && (shift1 != shift2)) || (reg1 != reg2)) {
         /* second control */
         ret = audcodec_read(reg2, &data2);
@@ -180,7 +180,7 @@ int audcodec_bits_get(struct audio_control *control,
         if (inv) {
             data2 = (data2)? 0: 1;
         }
-        value[1].value.integer_value = data2;
+        value->value.integer_value[1] = data2;
     }
     return ret;
 }
@@ -206,7 +206,7 @@ int audcodec_bits_set(struct audio_control *control,
     inv = ctl->inv;
     mask = ctl->mask;
 
-    data1 = value[0].value.integer_value;
+    data1 = value->value.integer_value[0];
 
     if (inv) {
         data1 = (data1)? 0: 1;
@@ -215,7 +215,7 @@ int audcodec_bits_set(struct audio_control *control,
 
     if (((reg1 == reg2) && (shift1 != shift2)) || (reg1 != reg2)) {
         /* second control */
-        data2 = value[1].value.integer_value;
+        data2 = value->value.integer_value[1];
         if (inv) {
             data2 = (data2)? 0: 1;
         }
@@ -267,7 +267,7 @@ int audcodec_value_get(struct audio_control *control,
         data1 = max - data1;
     }
     data1 = data1 - min;
-    value[0].value.integer_value = data1;
+    value->value.integer_value[0] = data1;
 
     if (((reg1 == reg2) && (shift1 != shift2)) || (reg1 != reg2)) {
         /* two controls */
@@ -280,7 +280,7 @@ int audcodec_value_get(struct audio_control *control,
             data2 = max - data2;
         }
         data2 = data2 - min;
-        value[1].value.integer_value = data2;
+        value->value.integer_value[1] = data2;
     }
     return ret;
 }
@@ -307,7 +307,7 @@ int audcodec_value_set(struct audio_control *control,
     max = ctl->max;
     min = ctl->min;
 
-    data1 = value[0].value.integer_value;
+    data1 = value->value.integer_value[0];
     data1 = (data1 > max)? max : data1;
     data1 = (data1 < min)? min : data1;
 
@@ -315,7 +315,7 @@ int audcodec_value_set(struct audio_control *control,
 
     if (((reg1 == reg2) && (shift1 != shift2)) || (reg1 != reg2)) {
         /* second control */
-        data2 = value[1].value.integer_value;
+        data2 = value->value.integer_value[1];
         data2 = (data2 > max)? max : data2;
         data2 = (data2 < min)? min : data2;
         data2 = (data2 << shift2);
@@ -359,7 +359,7 @@ int audcodec_enum_get(struct audio_control *control,
         return -EIO;
     }
     data1 = (data1 >> shift1) & mask;
-    value[0].value.integer_value = data1;
+    value->value.integer_value[0] = data1;
 
     if (((reg1 == reg2) && (shift1 != shift2)) || (reg1 != reg2)) {
         /* second control */
@@ -368,7 +368,7 @@ int audcodec_enum_get(struct audio_control *control,
             return -EIO;
         }
         data2 = (data2 >> shift2) & mask;
-        value[1].value.integer_value = data2;
+        value->value.integer_value[1] = data2;
     }
     return ret;
 }
@@ -395,7 +395,7 @@ int audcodec_enum_set(struct audio_control *control,
     mask = ctl->mask;
     max = ctl->max;
 
-    data1 = value[0].value.integer_value;
+    data1 = value->value.integer_value[0];
     if (data1 > max) {
         data1 = max;
     }
@@ -403,7 +403,7 @@ int audcodec_enum_set(struct audio_control *control,
 
     if (((reg1 == reg2) && (shift1 != shift2)) || (reg1 != reg2)) {
         /* second control */
-        data2 = value[1].value.integer_value;
+        data2 = value->value.integer_value[1];
         if (data2 > max) {
             data2 = max;
         }

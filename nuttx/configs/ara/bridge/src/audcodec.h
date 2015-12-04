@@ -164,7 +164,8 @@ int audcodec_enum_set(struct audio_control *control,
 #define AUDCTL_BIT(xname, xid, xiface, xreg, xshift, xinv) \
     { \
         .control = { \
-            .name = xname, .id = xid, .iface = GB_AUDIO_IFACE_##xiface, \
+            .name = xname, .id = xid, .count_values = 1, \
+            .iface = GB_AUDIO_CTL_ELEM_IFACE_##xiface, \
         }, \
         .get = audcodec_bit_get, .set = audcodec_bit_set, \
         .priv = BITCTL(xreg, xshift, xinv), \
@@ -173,7 +174,8 @@ int audcodec_enum_set(struct audio_control *control,
 #define AUDCTL_BITS(xname, xid, xiface, xreg, xshift, xshift2, xinv) \
     { \
         .control = { \
-            .name = xname, .id = xid, .iface = GB_AUDIO_IFACE_##xiface, \
+            .name = xname, .id = xid, .count_values = 2, \
+            .iface = GB_AUDIO_CTL_ELEM_IFACE_##xiface, \
         }, \
         .get = audcodec_bits_get, .set = audcodec_bits_set, \
         .priv = BITSCTL(xreg, xshift, xshift2, xinv) \
@@ -182,7 +184,8 @@ int audcodec_enum_set(struct audio_control *control,
 #define AUDCTL_BITSR(xname, xid, xiface, xreg, xshift, xreg2, xshift2, xinv) \
     { \
         .control = { \
-            .name = xname, .id = xid, .iface = GB_AUDIO_IFACE_##xiface, \
+            .name = xname, .id = xid, .count_values = 2, \
+            .iface = GB_AUDIO_CTL_ELEM_IFACE_##xiface, \
         }, \
         .get = (control_get*)audcodec_bits_get, .set = (control_set *)audcodec_bits_set, \
         .priv = BITSRCTL(xreg, xreg2, xshift, xshift2, xinv) \
@@ -192,7 +195,8 @@ int audcodec_enum_set(struct audio_control *control,
                       xmask, xmax, xmin) \
     { \
         .control = { \
-            .name = xname, .id = xid, .iface = GB_AUDIO_IFACE_##xiface, \
+            .name = xname, .id = xid, .count_values = 2, \
+            .iface = GB_AUDIO_CTL_ELEM_IFACE_##xiface, \
         }, \
         .get = audcodec_value_get, .set = audcodec_value_set, \
         .priv = BITSRVCTL(xreg, xreg2, xshift, xshift2, xinv, xmask, xmax, \
@@ -203,7 +207,8 @@ int audcodec_enum_set(struct audio_control *control,
                       xmask, xmax, xmin) \
     { \
         .control = { \
-            .name = xname, .id = xid, .iface = GB_AUDIO_IFACE_##xiface, \
+            .name = xname, .id = xid, .count_values = 2, \
+            .iface = GB_AUDIO_CTL_ELEM_IFACE_##xiface, \
         }, \
         .get = audcodec_value_get, .set = audcodec_value_set, \
         .priv = BITSRVCTL(xreg, xreg, xshift, xshift2, xinv, xmask, xmax, \
@@ -213,7 +218,8 @@ int audcodec_enum_set(struct audio_control *control,
 #define AUDCTL_BITV(xname, xid, xiface, xreg, xshift, xinv, xmask, xmax, xmin) \
     { \
         .control = { \
-            .name = xname, .id = xid, .iface = GB_AUDIO_IFACE_##xiface, \
+            .name = xname, .id = xid, .count_values = 1, \
+            .iface = GB_AUDIO_CTL_ELEM_IFACE_##xiface, \
         }, \
         .get = audcodec_value_get, .set = audcodec_value_set, \
         .priv = BITSRVCTL(xreg, xreg, xshift, xshift, xinv, xmask, xmax, \
@@ -223,7 +229,8 @@ int audcodec_enum_set(struct audio_control *control,
 #define AUDCTL_ENUM(xname, xid, xiface, xreg, xshift, xmask, xtexts) \
     { \
         .control = { \
-            .name = xname, .id = xid, .iface = GB_AUDIO_IFACE_##xiface, \
+            .name = xname, .id = xid, .count_values = 1, \
+            .iface = GB_AUDIO_CTL_ELEM_IFACE_##xiface, \
         }, \
         .get = audcodec_enum_get, .set = audcodec_enum_set, \
         .priv = ENUMCTL(xreg, xreg, xshift, xshift, xmask, ARRAY_SIZE(xtexts), \
@@ -234,7 +241,8 @@ int audcodec_enum_set(struct audio_control *control,
                      xtexts) \
     { \
         .control = { \
-            .name = xname, .id = xid, .iface = GB_AUDIO_IFACE_##xiface, \
+            .name = xname, .id = xid, .count_values = 2, \
+            .iface = GB_AUDIO_CTL_ELEM_IFACE_##xiface, \
         }, \
         .get = audcodec_enum_get, .set = audcodec_enum_set, \
         .priv = ENUMCTL(xreg, xreg2, xshift, xshift2, xmask, \
@@ -244,7 +252,8 @@ int audcodec_enum_set(struct audio_control *control,
 #define AUDCTL_ENUMV(xname, xid, xiface, xreg, xshift, xmask, xtexts, xvalues) \
     { \
         .control = { \
-            .name = xname, .id = xid, .iface = GB_AUDIO_IFACE_##xiface, \
+            .name = xname, .id = xid, .count_values = 1, \
+            .iface = GB_AUDIO_CTL_ELEM_IFACE_##xiface, \
         }, \
         .get = audcodec_enum_get, .set = audcodec_enum_set, \
         .priv = ENUMCTL(xreg, xreg, xshift, xshift, xmask, ARRAY_SIZE(xtexts), \
@@ -252,23 +261,34 @@ int audcodec_enum_set(struct audio_control *control,
     }
 
 /* Audio widget macro */
-#define WIDGET(xname, xid, xtype, xcontrols, xreg, xshift, xinv) \
+#define WIDGET(xname, xid, xtype, xcontrols, xnum, xreg, xshift, xinv) \
     { \
         .widget = { \
             .name = xname, .id = xid, .type = GB_AUDIO_WIDGET_TYPE_##xtype, \
-            .state = GB_AUDIO_WIDGET_STATE_DISABLED \
+            .state = GB_AUDIO_WIDGET_STATE_DISABLED, .ncontrols = xnum, \
         }, \
-        .controls = xcontrols, .num_controls = ARRAY_SIZE(xcontrols), \
+        .controls = xcontrols, .num_controls = xnum, \
         .reg = xreg, .shift = xshift, .inv = xinv, .event = NULL \
     }
 
-#define WIDGET_E(xname, xid, xtype, xcontrols, xreg, xshift, xinv, xevent) \
+#define WIDGET_E(xname, xid, xtype, xcontrols, xnum, xreg, xshift, xinv, xevent) \
     { \
         .widget = { \
             .name = xname, .id = xid, .type = GB_AUDIO_WIDGET_TYPE_##xtype, \
-            .state = GB_AUDIO_WIDGET_STATE_DISABLED \
+            .state = GB_AUDIO_WIDGET_STATE_DISABLED, .ncontrols = xnum, \
         }, \
-        .controls = xcontrols, .num_controls = ARRAY_SIZE(xcontrols), \
+        .controls = xcontrols, .num_controls = xnum, \
         .reg = xreg, .shift = xshift, .inv = xinv, .event = xevent \
+    }
+
+#define WIDGET_S(xname, xsname, xid, xtype, xcontrols, xnum, xreg, xshift, xinv) \
+    { \
+        .widget = { \
+            .name = xname, .id = xid, .type = GB_AUDIO_WIDGET_TYPE_##xtype, \
+            .state = GB_AUDIO_WIDGET_STATE_DISABLED, .same = xsname, \
+            .ncontrols = xnum, \
+        }, \
+        .controls = xcontrols, .num_controls = xnum, \
+        .reg = xreg, .shift = xshift, .inv = xinv, .event = NULL \
     }
 #endif /* __AUDCODEC_H__ */

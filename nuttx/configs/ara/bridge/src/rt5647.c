@@ -436,66 +436,72 @@ struct audio_control rt5647_spo_r_mix[] = {
  */
 struct audio_widget rt5647_widgets[] = {
 
-    WIDGET("AIF1TX", RT5647_WIDGET_AIF1TX, AIF_OUT, NULL, NOPWRCTL, 0, 0),
-    WIDGET("IF1 ADC", RT5647_WIDGET_IF1_ADC, PGA, NULL, NOPWRCTL, 0, 0),
+    WIDGET_S("AIF1TX", "AIF1 Capture", RT5647_WIDGET_AIF1TX, AIF_OUT, NULL, 0,
+             NOPWRCTL, 0, 0),
+    WIDGET("IF1 ADC", RT5647_WIDGET_IF1_ADC, PGA, NULL, 0, NOPWRCTL, 0, 0),
 
-    WIDGET("AIF1RX", RT5647_WIDGET_AIF1RX, AIF_IN, NULL, NOPWRCTL, 0, 0),
+    WIDGET_S("AIF1RX", "AIF1 Playback", RT5647_WIDGET_AIF1RX, AIF_IN, NULL, 0,
+             NOPWRCTL, 0, 0),
 
-    WIDGET("I2S1", RT5647_WIDGET_I2S1, SUPPLY, NULL, RT5647_PWR_MGT_1,
+    WIDGET("I2S1", RT5647_WIDGET_I2S1, SUPPLY, NULL, 0, RT5647_PWR_MGT_1,
            RT5647_PWR1_I2S1_EN, 0),
 
-    WIDGET("IF1 DAC1", RT5647_WIDGET_IF1_DAC1, PGA, NULL, NOPWRCTL, 0, 0),
-    WIDGET("IF1 DAC1 L", RT5647_WIDGET_IF1_DAC1L, PGA, NULL, NOPWRCTL, 0, 0),
-    WIDGET("IF1 DAC1 R", RT5647_WIDGET_IF1_DAC1R, PGA, NULL, NOPWRCTL, 0, 0),
+    WIDGET("IF1 DAC1", RT5647_WIDGET_IF1_DAC1, PGA, NULL, 0, NOPWRCTL, 0, 0),
+    WIDGET("IF1 DAC1 L", RT5647_WIDGET_IF1_DAC1L, PGA, NULL, 0, NOPWRCTL, 0, 0),
+    WIDGET("IF1 DAC1 R", RT5647_WIDGET_IF1_DAC1R, PGA, NULL, 0, NOPWRCTL, 0, 0),
 
-    WIDGET("IF1 DAC2", RT5647_WIDGET_IF1_DAC2, PGA, NULL, NOPWRCTL, 0, 0),
-    WIDGET("IF1 DAC2 L", RT5647_WIDGET_IF1_DAC2L, PGA, NULL, NOPWRCTL, 0, 0),
-    WIDGET("IF1 DAC2 R", RT5647_WIDGET_IF1_DAC2R, PGA, NULL, NOPWRCTL, 0, 0),
+    WIDGET("IF1 DAC2", RT5647_WIDGET_IF1_DAC2, PGA, NULL, 0, NOPWRCTL, 0, 0),
+    WIDGET("IF1 DAC2 L", RT5647_WIDGET_IF1_DAC2L, PGA, NULL, 0, NOPWRCTL, 0, 0),
+    WIDGET("IF1 DAC2 R", RT5647_WIDGET_IF1_DAC2R, PGA, NULL, 0, NOPWRCTL, 0, 0),
 
     WIDGET("DAC L2 MUX", RT5647_WIDGET_DACL2_MUX, MUX, rt5647_dac_l2_mux,
-           NOPWRCTL, 0, 0),
+           ARRAY_SIZE(rt5647_dac_l2_mux),NOPWRCTL, 0, 0),
     WIDGET("DAC R2 MUX", RT5647_WIDGET_DACR2_MUX, MUX, rt5647_dac_r2_mux,
-           NOPWRCTL, 0, 0),
+           ARRAY_SIZE(rt5647_dac_r2_mux), NOPWRCTL, 0, 0),
 
     WIDGET("DAC L2 Volume", RT5647_WIDGET_DACL2_VOL, PGA, NULL,
-           RT5647_PWR_MGT_1, RT5647_PWR1_DACL2_EN, 0),
+           0, RT5647_PWR_MGT_1, RT5647_PWR1_DACL2_EN, 0),
     WIDGET("DAC R2 Volume", RT5647_WIDGET_DACR2_VOL, PGA, NULL,
-           RT5647_PWR_MGT_1, RT5647_PWR1_DACR2_EN, 0),
+           0, RT5647_PWR_MGT_1, RT5647_PWR1_DACR2_EN, 0),
 
     WIDGET("Stereo DAC MIXL", RT5647_WIDGET_STODAC_MIXL, MIXER,
-           rt5647_stereo_dac_l_mix, NOPWRCTL, 0, 0),
+           rt5647_stereo_dac_l_mix, ARRAY_SIZE(rt5647_stereo_dac_l_mix),
+           NOPWRCTL, 0, 0),
     WIDGET("Stereo DAC MIXR", RT5647_WIDGET_STODAC_MIXR, MIXER,
-           rt5647_stereo_dac_r_mix, NOPWRCTL, 0, 0),
+           rt5647_stereo_dac_r_mix, ARRAY_SIZE(rt5647_stereo_dac_r_mix),
+           NOPWRCTL, 0, 0),
 
-    WIDGET("DAC L1", RT5647_WIDGET_DAC_L1, DAC, NULL, RT5647_PWR_MGT_1,
+    WIDGET("DAC L1", RT5647_WIDGET_DAC_L1, DAC, NULL, 0, RT5647_PWR_MGT_1,
            RT5647_PWR1_DACL1_EN, 0),
-    WIDGET("DAC L2", RT5647_WIDGET_DAC_L2, DAC, NULL, RT5647_PWR_MGT_1,
+    WIDGET("DAC L2", RT5647_WIDGET_DAC_L2, DAC, NULL, 0, RT5647_PWR_MGT_1,
            RT5647_PWR1_DACL2_EN, 0),
-    WIDGET("DAC R1", RT5647_WIDGET_DAC_R1, DAC, NULL, RT5647_PWR_MGT_1,
+    WIDGET("DAC R1", RT5647_WIDGET_DAC_R1, DAC, NULL, 0, RT5647_PWR_MGT_1,
            RT5647_PWR1_DACR1_EN, 0),
-    WIDGET("DAC R2", RT5647_WIDGET_DAC_R2, DAC, NULL, RT5647_PWR_MGT_1,
+    WIDGET("DAC R2", RT5647_WIDGET_DAC_R2, DAC, NULL, 0, RT5647_PWR_MGT_1,
            RT5647_PWR1_DACR2_EN, 0),
 
     WIDGET("SPK MIXL", RT5647_WIDGET_SPK_MIXL, MIXER, rt5647_spk_l_mix,
-           RT5647_PWR_MGT_5, RT5647_PWR5_SPKMIXL_EN, 0),
+           ARRAY_SIZE(rt5647_spk_l_mix), RT5647_PWR_MGT_5,
+           RT5647_PWR5_SPKMIXL_EN, 0),
     WIDGET("SPK MIXR", RT5647_WIDGET_SPK_MIXR, MIXER, rt5647_spk_r_mix,
-           RT5647_PWR_MGT_5, RT5647_PWR5_SPKMIXR_EN, 0),
+           ARRAY_SIZE(rt5647_spk_r_mix), RT5647_PWR_MGT_5,
+           RT5647_PWR5_SPKMIXR_EN, 0),
 
-    WIDGET("SPKVOL L", RT5647_WIDGET_SPKVOLL, PGA, NULL, RT5647_PWR_MGT_6,
+    WIDGET("SPKVOL L", RT5647_WIDGET_SPKVOLL, PGA, NULL, 0, RT5647_PWR_MGT_6,
            RT5647_PWR6_SPOVOLL_EN, 0),
-    WIDGET("SPKVOL R", RT5647_WIDGET_SPKVOLR, PGA, NULL, RT5647_PWR_MGT_6,
+    WIDGET("SPKVOL R", RT5647_WIDGET_SPKVOLR, PGA, NULL, 0, RT5647_PWR_MGT_6,
            RT5647_PWR6_SPOVOLR_EN, 0),
 
     WIDGET("SPOL MIX", RT5647_WIDGET_SPOL_MIX, MIXER, rt5647_spo_l_mix,
-           NOPWRCTL, 0, 0),
+           ARRAY_SIZE(rt5647_spo_l_mix), NOPWRCTL, 0, 0),
     WIDGET("SPOR MIX", RT5647_WIDGET_SPOR_MIX, MIXER, rt5647_spo_r_mix,
-           NOPWRCTL, 0, 0),
+           ARRAY_SIZE(rt5647_spo_r_mix), NOPWRCTL, 0, 0),
 
-    WIDGET_E("SPK amp", RT5647_WIDGET_SPK_AMP, PGA, NULL, NOPWRCTL, 0, 0,
+    WIDGET_E("SPK amp", RT5647_WIDGET_SPK_AMP, PGA, NULL, 0, NOPWRCTL, 0, 0,
              rt5647_speaker_event),
 
-    WIDGET("SPOL", RT5647_WIDGET_SPOL, OUTPUT, NULL, NOPWRCTL, 0, 0),
-    WIDGET("SPOR", RT5647_WIDGET_SPOR, OUTPUT, NULL, NOPWRCTL, 0, 0),
+    WIDGET("SPOL", RT5647_WIDGET_SPOL, OUTPUT, NULL, 0, NOPWRCTL, 0, 0),
+    WIDGET("SPOR", RT5647_WIDGET_SPOR, OUTPUT, NULL, 0, NOPWRCTL, 0, 0),
 };
 
 /**
@@ -815,7 +821,8 @@ static void rt5647_dump_register(void)
 static int rt5647_get_topology_size(struct device *dev, uint16_t *size)
 {
     struct rt5647_info *info = NULL;
-    int tpg_size = 0;
+    struct audio_widget *widgets = NULL;
+    int tpg_size = 0, i = 0;
 
     if (!dev || !device_get_private(dev) || !size) {
         return -EINVAL;
@@ -826,8 +833,15 @@ static int rt5647_get_topology_size(struct device *dev, uint16_t *size)
     tpg_size += info->num_dais * sizeof(struct gb_audio_dai);
     tpg_size += info->num_controls * sizeof(struct gb_audio_control);
     tpg_size += info->num_widgets * sizeof(struct gb_audio_widget);
+    
+    widgets = info->widgets;
+    for (i = 0; i < info->num_widgets; i++) {
+        if (widgets[i].num_controls) {
+            tpg_size += widgets[i].num_controls *
+                        sizeof(struct gb_audio_control);
+        }
+    }
     tpg_size += info->num_routes * sizeof(struct gb_audio_route);
-
     *size = tpg_size;
     return 0;
 }
@@ -843,7 +857,10 @@ static int rt5647_get_topology(struct device *dev,
                                struct gb_audio_topology *topology)
 {
     struct rt5647_info *info = NULL;
-    int len = 0, i = 0;
+    struct audio_widget *widgets = NULL;
+    struct audio_control *controls = NULL;
+    int i = 0, j = 0;
+    int dsize = 0, csize = 0, wsize = 0, rsize = 0;
     uint8_t *data = NULL;
 
     if (!dev || !device_get_private(dev) || !topology) {
@@ -855,38 +872,55 @@ static int rt5647_get_topology(struct device *dev,
         return -EINVAL;
     }
 
+    dsize = sizeof(struct gb_audio_dai);
+    csize = sizeof(struct gb_audio_control);
+    wsize = sizeof(struct gb_audio_widget);
+    rsize = sizeof(struct gb_audio_route);
+
     topology->num_dais = info->num_dais;
     topology->num_controls = info->num_controls;
     topology->num_widgets = info->num_widgets;
     topology->num_routes = info->num_routes;
 
+    topology->size_dais = info->num_dais * dsize;
+    topology->size_controls = info->num_controls * csize;
+    topology->size_widgets = info->num_widgets * wsize;
+    topology->size_routes = info->num_routes * rsize;
+
     data = topology->data;
     /* fill dai object */
-    len = sizeof(struct gb_audio_dai);
     for (i = 0; i < info->num_dais; i++) {
-        memcpy(data, &info->dais[i].dai, len);
-        data += len;
+        memcpy(data, &info->dais[i].dai, dsize);
+        data += dsize;
     }
 
     /* fill audio control object */
-    len = sizeof(struct gb_audio_control);
     for (i = 0; i < info->num_controls; i++) {
-        memcpy(data, &info->controls[i].control, len);
-        data += len;
+        memcpy(data, &info->controls[i].control, csize);
+        data += csize;
     }
 
     /* fill audio widget object */
-    len = sizeof(struct gb_audio_widget);
+    widgets = info->widgets;
     for (i = 0; i < info->num_widgets; i++) {
-        memcpy(data, &info->widgets[i].widget, len);
-        data += len;
+        memcpy(data, &widgets[i].widget, wsize);
+        data += wsize;
+        /* fill widget's control objects */
+        controls = widgets[i].controls;
+        
+        if (controls) {
+            for (j = 0; j < widgets[i].num_controls; j++) {
+                memcpy(data, &controls[j].control, csize);
+                topology->size_widgets += csize;
+                data += csize;;
+            }
+        }
     }
 
     /* fill audio route object */
-    len = sizeof(struct gb_audio_route);
     for (i = 0; i < info->num_routes; i++) {
-        memcpy(data, &info->routes[i], len);
-        data += len;
+        memcpy(data, &info->routes[i], rsize);
+        data += rsize;
     }
     return 0;
 }

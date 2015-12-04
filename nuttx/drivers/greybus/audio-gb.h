@@ -98,26 +98,18 @@
 #define GB_AUDIO_CTL_ELEM_ACCESS_READ           BIT(0)
 #define GB_AUDIO_CTL_ELEM_ACCESS_WRITE          BIT(1)
 
-#define GB_AUDIO_IFACE_CARD                     0x1
-#define GB_AUDIO_IFACE_HWDEP                    0x2
-#define GB_AUDIO_IFACE_MIXER                    0x3
-#define GB_AUDIO_IFACE_PCM                      0x4
-#define GB_AUDIO_IFACE_RAWMIDI                  0x5
-#define GB_AUDIO_IFACE_TIMER                    0x6
-#define GB_AUDIO_IFACE_SEQUENCER                0x7
-
 #define GB_AUDIO_CTL_ELEM_TYPE_BOOLEAN          0x01
 #define GB_AUDIO_CTL_ELEM_TYPE_INTEGER          0x02
 #define GB_AUDIO_CTL_ELEM_TYPE_ENUMERATED       0x03
 #define GB_AUDIO_CTL_ELEM_TYPE_INTEGER64        0x06
 
-#define GB_AUDIO_CTL_ELEM_IFACE_CARD            0x01
-#define GB_AUDIO_CTL_ELEM_IFACE_HWDEP           0x02
-#define GB_AUDIO_CTL_ELEM_IFACE_MIXER           0x03
-#define GB_AUDIO_CTL_ELEM_IFACE_PCM             0x04
-#define GB_AUDIO_CTL_ELEM_IFACE_RAWMIDI         0x05
-#define GB_AUDIO_CTL_ELEM_IFACE_TIMER           0x06
-#define GB_AUDIO_CTL_ELEM_IFACE_SEQUENCER       0x07
+#define GB_AUDIO_CTL_ELEM_IFACE_CARD            0x00
+#define GB_AUDIO_CTL_ELEM_IFACE_HWDEP           0x01
+#define GB_AUDIO_CTL_ELEM_IFACE_MIXER           0x02
+#define GB_AUDIO_CTL_ELEM_IFACE_PCM             0x03
+#define GB_AUDIO_CTL_ELEM_IFACE_RAWMIDI         0x04
+#define GB_AUDIO_CTL_ELEM_IFACE_TIMER           0x05
+#define GB_AUDIO_CTL_ELEM_IFACE_SEQUENCER       0x06
 
 #define GB_AUDIO_ACCESS_READ                    BIT(0)
 #define GB_AUDIO_ACCESS_WRITE                   BIT(1)
@@ -130,36 +122,35 @@
 #define GB_AUDIO_ACCESS_LOCK                    BIT(8)
 #define GB_AUDIO_ACCESS_OWNER                   BIT(9)
 
-#define GB_AUDIO_WIDGET_TYPE_INPUT              0x1
-#define GB_AUDIO_WIDGET_TYPE_OUTPUT             0x2
-#define GB_AUDIO_WIDGET_TYPE_MUX                0x3
-#define GB_AUDIO_WIDGET_TYPE_VIRT_MUX           0x4
-#define GB_AUDIO_WIDGET_TYPE_VALUE_MUX          0x5
-#define GB_AUDIO_WIDGET_TYPE_MIXER              0x6
-#define GB_AUDIO_WIDGET_TYPE_MIXER_NAMED_CTL    0x7
-#define GB_AUDIO_WIDGET_TYPE_PGA                0x8
-#define GB_AUDIO_WIDGET_TYPE_OUT_DRV            0x9
-#define GB_AUDIO_WIDGET_TYPE_ADC                0xa
-#define GB_AUDIO_WIDGET_TYPE_DAC                0xb
-#define GB_AUDIO_WIDGET_TYPE_MICBIAS            0xc
-#define GB_AUDIO_WIDGET_TYPE_MIC                0xd
-#define GB_AUDIO_WIDGET_TYPE_HP                 0xe
-#define GB_AUDIO_WIDGET_TYPE_HS                 0xf
-#define GB_AUDIO_WIDGET_TYPE_SPK                0x10
-#define GB_AUDIO_WIDGET_TYPE_LINE               0x11
-#define GB_AUDIO_WIDGET_TYPE_SWITCH             0x12
-#define GB_AUDIO_WIDGET_TYPE_VMID               0x13
-#define GB_AUDIO_WIDGET_TYPE_PRE                0x14
-#define GB_AUDIO_WIDGET_TYPE_POST               0x15
-#define GB_AUDIO_WIDGET_TYPE_SUPPLY             0x16
-#define GB_AUDIO_WIDGET_TYPE_REGULATOR_SUPPLY   0x17
-#define GB_AUDIO_WIDGET_TYPE_CLOCK_SUPPLY       0x18
-#define GB_AUDIO_WIDGET_TYPE_AIF_IN             0x19
-#define GB_AUDIO_WIDGET_TYPE_AIF_OUT            0x1a
-#define GB_AUDIO_WIDGET_TYPE_SIGGEN             0x1b
-#define GB_AUDIO_WIDGET_TYPE_DAI_IN             0x1c
-#define GB_AUDIO_WIDGET_TYPE_DAI_OUT            0x1d
-#define GB_AUDIO_WIDGET_TYPE_DAI_LINK           0x1e
+#define GB_AUDIO_WIDGET_TYPE_INPUT              0x0
+#define GB_AUDIO_WIDGET_TYPE_OUTPUT             0x1
+#define GB_AUDIO_WIDGET_TYPE_MUX                0x2
+#define GB_AUDIO_WIDGET_TYPE_VIRT_MUX           0x3
+#define GB_AUDIO_WIDGET_TYPE_VALUE_MUX          0x4
+#define GB_AUDIO_WIDGET_TYPE_MIXER              0x5
+#define GB_AUDIO_WIDGET_TYPE_MIXER_NAMED_CTL    0x6
+#define GB_AUDIO_WIDGET_TYPE_PGA                0x7
+#define GB_AUDIO_WIDGET_TYPE_OUT_DRV            0x8
+#define GB_AUDIO_WIDGET_TYPE_ADC                0x9
+#define GB_AUDIO_WIDGET_TYPE_DAC                0xa
+#define GB_AUDIO_WIDGET_TYPE_MICBIAS            0xb
+#define GB_AUDIO_WIDGET_TYPE_MIC                0xc
+#define GB_AUDIO_WIDGET_TYPE_HP                 0xd
+#define GB_AUDIO_WIDGET_TYPE_SPK                0xe
+#define GB_AUDIO_WIDGET_TYPE_LINE               0xf
+#define GB_AUDIO_WIDGET_TYPE_SWITCH             0x10
+#define GB_AUDIO_WIDGET_TYPE_VMID               0x11
+#define GB_AUDIO_WIDGET_TYPE_PRE                0x12
+#define GB_AUDIO_WIDGET_TYPE_POST               0x13
+#define GB_AUDIO_WIDGET_TYPE_SUPPLY             0x14
+#define GB_AUDIO_WIDGET_TYPE_REGULATOR_SUPPLY   0x15
+#define GB_AUDIO_WIDGET_TYPE_CLOCK_SUPPLY       0x16
+#define GB_AUDIO_WIDGET_TYPE_AIF_IN             0x17
+#define GB_AUDIO_WIDGET_TYPE_AIF_OUT            0x18
+#define GB_AUDIO_WIDGET_TYPE_SIGGEN             0x19
+#define GB_AUDIO_WIDGET_TYPE_DAI_IN             0x1a
+#define GB_AUDIO_WIDGET_TYPE_DAI_OUT            0x1b
+#define GB_AUDIO_WIDGET_TYPE_DAI_LINK           0x1c
 
 #define GB_AUDIO_WIDGET_STATE_DISABLED          0x01
 #define GB_AUDIO_WIDGET_STATE_ENAABLED          0x02
@@ -196,13 +187,6 @@ struct gb_audio_dai {
     struct gb_audio_pcm playback;
 };
 
-struct gb_audio_ctl_elem_id { /* See snd_ctl_elem_id in Linux source */
-    __u8    numid;
-    __u8    iface;      /* GB_AUDIO_IFACE_* */
-    __u8    name[AUDIO_CTL_ELEM_NAME_MAX];
-    __u8    index;
-} __packed;
-
 struct gb_audio_integer {
     __le32  min;
     __le32  max;
@@ -222,10 +206,7 @@ struct gb_audio_enumerated {
 };
 
 struct gb_audio_ctl_elem_info { /* See snd_ctl_elem_info in Linux source */
-    struct gb_audio_ctl_elem_id id;
     __u8        type;       /* GB_AUDIO_CTL_ELEM_TYPE_* */
-    __le32      access;     /* GB_AUDIO_ACCESS_* */
-    __u8        count;
     __le16      dimen[4];
     union {
         struct gb_audio_integer     integer;
@@ -235,30 +216,33 @@ struct gb_audio_ctl_elem_info { /* See snd_ctl_elem_info in Linux source */
 } __packed;
 
 struct gb_audio_ctl_elem_value { /* See snd_ctl_elem_value in Linux source */
-    struct gb_audio_ctl_elem_id id;
-    __le64              timestamp; /* XXX needed? */
+    __le64  timestamp; /* XXX needed? */
     union {
-        __le32  integer_value;
-        __le64  integer64_value;
-        __le32  enumerated_item;
+        __le32  integer_value[2];   /* consider CTL_DOUBLE_xxx */
+        __le64  integer64_value[2];
+        __le32  enumerated_item[2];
     } value;
 } __packed;
 
 struct gb_audio_control {
     __u8    name[AUDIO_CONTROL_NAME_MAX];
-    __u8    id;     /* 0-63 */
-    __u8    iface;      /* GB_AUDIO_IFACE_* */
+    __u8    id;             /* 0-63 */
+    __u8    iface;          /* GB_AUDIO_IFACE_* */
     __le16  data_cport;
-    __le32  access;     /* GB_AUDIO_ACCESS_* */
-    __u8    count;
-    struct gb_audio_ctl_elem_info   info[0]; /* 'count' entries */
+    __le32  access;         /* GB_AUDIO_ACCESS_* */
+    __u8    count;          /* count of same elements */
+    __u8    count_values;   /* count of values, max=2 for CTL_DOUBLE_xxx */
+    struct gb_audio_ctl_elem_info   info;
 } __packed;
 
 struct gb_audio_widget {
     __u8    name[AUDIO_WIDGET_NAME_MAX];
+    __u8    same[AUDIO_WIDGET_NAME_MAX];
     __u8    id;
     __u8    type;       /* GB_AUDIO_WIDGET_TYPE_* */
     __u8    state;      /* GB_AUDIO_WIDGET_STATE_* */
+    __u8    ncontrols;
+    struct gb_audio_control ctl[0];   /* 'ncontrols' entries */
 } __packed;
 
 struct gb_audio_route {
@@ -273,6 +257,10 @@ struct gb_audio_topology {
     __u8    num_controls;
     __u8    num_widgets;
     __u8    num_routes;
+    __le32  size_dais;
+    __le32  size_controls;
+    __le32  size_widgets;
+    __le32  size_routes;
     /*
      * struct gb_audio_dai      dai[num_dais];
      * struct gb_audio_control  controls[num_controls];

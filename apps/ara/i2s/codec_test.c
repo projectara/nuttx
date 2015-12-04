@@ -142,10 +142,16 @@ struct gb_audio_widget * find_widget(struct gb_audio_widget *widgets,
                                      int num_widgets, int id)
 {
     int i = 0;
+    struct gb_audio_widget *widget = NULL;
+    struct gb_audio_control *controls = NULL;
+    
+    widget = &widgets[0];
     for (i = 0; i < num_widgets; i++) {
-        if (widgets[i].id == id) {
-            return &widgets[i];
+        if (widget->id == id) {
+            return widget;
         }
+        controls =  widget->ctl;
+        widget = (struct gb_audio_widget *)&controls[widget->ncontrols];
     }
     return NULL;
 }
@@ -153,17 +159,16 @@ struct gb_audio_widget * find_widget(struct gb_audio_widget *widgets,
 static int enable_codec_speaker(struct i2s_test_info *info,
                                 struct device *dev)
 {
-    int ret = 0, i = 0, offset = 0;
+    int ret = 0, i = 0, j = 0;
     uint16_t tp_size = 0;
     struct gb_audio_topology *tp = NULL;
     struct gb_audio_dai *dais = NULL;
     struct gb_audio_control *controls = NULL;
-    struct gb_audio_widget *widgets = NULL, *src = NULL, *dst = NULL;
+    struct gb_audio_widget *widgets = NULL, *src = NULL, *dst = NULL, *widget;
     struct gb_audio_route *routes = NULL;
     uint8_t *buf = NULL;
-    struct gb_audio_ctl_elem_value values[2];
+    struct gb_audio_ctl_elem_value value;
 
-    printf("%s\n",__func__);
     if (!dev) {
         return -EINVAL;
     }
@@ -174,7 +179,6 @@ static int enable_codec_speaker(struct i2s_test_info *info,
         return -EINVAL;
     }
 
-    printf("tp_size = %d\n",tp_size);
     tp = zalloc(tp_size);
     if (!tp) {
         printf("failed to allocate memory. size = %d\n", tp_size);
@@ -187,19 +191,21 @@ static int enable_codec_speaker(struct i2s_test_info *info,
         goto codec_err;
     }
 
+    printf("audio topology data:\n");
+    printf("dai: nums=%d, size=%d\n", tp->num_dais, tp->size_dais);
+    printf("control: nums=%d, size=%d\n", tp->num_controls, tp->size_controls);
+    printf("widget: nums=%d, size=%d\n", tp->num_widgets, tp->size_widgets);
+    printf("route: nums=%d, size=%d\n", tp->num_routes, tp->size_routes);
+    printf("total topology size=%d\n", tp_size);
+
     buf = tp->data;
-    offset = 0;
 
-    dais = (struct gb_audio_dai *)(buf + offset);
-    offset += tp->num_dais * sizeof(struct gb_audio_dai);
-
-    controls = (struct gb_audio_control *)(buf + offset);
-    offset += tp->num_controls * sizeof(struct gb_audio_control);
-
-    widgets = (struct gb_audio_widget *)(buf + offset);
-    offset += tp->num_widgets * sizeof(struct gb_audio_widget);
-
-    routes = (struct gb_audio_route *)(buf + offset);
+    dais = (struct gb_audio_dai *)buf;
+    controls = (struct gb_audio_control *)(buf + tp->size_dais);
+    widgets = (struct gb_audio_widget *)(buf + tp->size_dais +
+                                         tp->size_controls);
+    routes = (struct gb_audio_route *)(buf + tp->size_dais +
+                                       tp->size_controls + tp->size_widgets);
 
     // list all component
     for (i = 0; i < tp->num_dais; i++) {
@@ -208,9 +214,20 @@ static int enable_codec_speaker(struct i2s_test_info *info,
     for (i = 0; i < tp->num_controls; i++) {
         printf("control[%d] : %s\n", i, controls[i].name);
     }
+
+    widget = &widgets[0];
+    buf = (uint8_t*)widgets;
     for (i = 0; i < tp->num_widgets; i++) {
-        printf("widget[%d] : %s\n", i, widgets[i].name);
+        widget = (struct gb_audio_widget *) buf;
+        printf("widget[%d] %s\n", i, widget->name);
+        controls =  widget->ctl;
+        for (j = 0; j < widget->ncontrols; j++) {
+            printf("  control[%d] : %s\n", j, controls[j].name);
+        }
+        buf += sizeof(struct gb_audio_widget) +
+               (widget->ncontrols * sizeof(struct gb_audio_control));
     }
+
     for (i = 0; i < tp->num_routes; i++) {
         printf("route[%d] : %d -> %d ->%d-%d\n", i, routes[i].source_id,
              routes[i].control_id, routes[i].destination_id, routes[i].index );
@@ -234,42 +251,42 @@ static int enable_codec_speaker(struct i2s_test_info *info,
 
         if (routes[i].control_id != 0xFF) {
             if (dst->type == GB_AUDIO_WIDGET_TYPE_MUX) {
-                values[0].value.integer_value = routes[i].index;
+                value.value.integer_value[0] = routes[i].index;
             } else {
-                values[0].value.integer_value = 1;
+                value.value.integer_value[0] = 1;
             }
             device_codec_set_control(dev, routes[i].control_id, 
-                                     0, values);
+                                     0, &value);
         }
     }
 
     // enable audio controls
-    values[0].value.integer_value = 8;
-    values[1].value.integer_value = 8;
+    value.value.integer_value[0] = 8;
+    value.value.integer_value[1] = 8;
     ret = device_codec_set_control(dev,
                                    RT5647_CTL_SPKOUT_VOL,
                                    0,  //no parent widget
-                                   values);
+                                   &value);
     if (ret) {
         fprintf(stderr, "RT5647_CTL_SPKOUT_VOL did not work: error %d\n",ret);
         goto codec_err;
     }
-    values[0].value.integer_value =0x75;
-    values[1].value.integer_value = 0x75;
+    value.value.integer_value[0] =0x75;
+    value.value.integer_value[1] = 0x75;
     ret = device_codec_set_control(dev,
                                    RT5647_CTL_DAC2_VOL,
                                    0,  //no parent widget
-                                   values);
+                                   &value);
     if (ret) {
         fprintf(stderr, "RT5647_CTL_DAC2_VOL did not work: error %d\n",ret);
         goto codec_err;
     }
-    values[0].value.integer_value = 1;
-    values[1].value.integer_value = 1;
+    value.value.integer_value[0] = 1;
+    value.value.integer_value[1] = 1;
     ret = device_codec_set_control(dev,
                                    RT5647_CTL_SPKOUT_MUTE,
                                    0,  //no parent widget
-                                   values);
+                                   &value);
     if (ret) {
         fprintf(stderr, "RT5647_CTL_SPKOUT_MUTE did not work: error %d\n",ret);
         goto codec_err;
@@ -277,7 +294,7 @@ static int enable_codec_speaker(struct i2s_test_info *info,
     ret = device_codec_set_control(dev,
                                    RT5647_CTL_SPKVOL_MUTE,
                                    0,  //no parent widget
-                                   values);
+                                   &value);
     if (ret) {
         fprintf(stderr, "RT5647_CTL_SPKVOL_MUTE did not work: error %d\n",ret);
         goto codec_err;
@@ -285,7 +302,7 @@ static int enable_codec_speaker(struct i2s_test_info *info,
     ret = device_codec_set_control(dev,
                                    RT5647_CTL_DAC2_SWITCH,
                                    0,  //no parent widget
-                                   values);
+                                   &value);
     if (ret) {
         fprintf(stderr, "RT5647_CTL_DAC2_SWITCH did not work: error %d\n",ret);
         goto codec_err;
@@ -300,7 +317,7 @@ static int disable_codec_speaker(struct i2s_test_info *info,
                                 struct device *dev)
 {
     int ret = 0;
-    struct gb_audio_ctl_elem_value values[2];
+    struct gb_audio_ctl_elem_value value;
 
     printf("%s\n",__func__);
     if (!dev) {
@@ -308,32 +325,32 @@ static int disable_codec_speaker(struct i2s_test_info *info,
     }
 
     // enable audio controls
-    values[0].value.integer_value = 0x27;
-    values[1].value.integer_value = 0x27;
+    value.value.integer_value[0] = 0x27;
+    value.value.integer_value[1] = 0x27;
     ret = device_codec_set_control(dev,
                                    RT5647_CTL_SPKOUT_VOL,
                                    0,  //no parent widget
-                                   values);
+                                   &value);
     if (ret) {
         fprintf(stderr, "RT5647_CTL_SPKOUT_VOL did not work: error %d\n",ret);
         goto codec_err;
     }
-    values[0].value.integer_value = 0x0;
-    values[1].value.integer_value = 0x0;
+    value.value.integer_value[0] = 0x0;
+    value.value.integer_value[1] = 0x0;
     ret = device_codec_set_control(dev,
                                    RT5647_CTL_DAC2_VOL,
                                    0,  //no parent widget
-                                   values);
+                                   &value);
     if (ret) {
         fprintf(stderr, "RT5647_CTL_DAC2_VOL did not work: error %d\n",ret);
         goto codec_err;
     }
-    values[0].value.integer_value = 0;
-    values[1].value.integer_value = 0;
+    value.value.integer_value[0] = 0;
+    value.value.integer_value[1] = 0;
     ret = device_codec_set_control(dev,
                                    RT5647_CTL_SPKOUT_MUTE,
                                    0,  //no parent widget
-                                   values);
+                                   &value);
     if (ret) {
         fprintf(stderr, "RT5647_CTL_SPKOUT_MUTE did not work: error %d\n",ret);
         goto codec_err;
@@ -341,7 +358,7 @@ static int disable_codec_speaker(struct i2s_test_info *info,
     ret = device_codec_set_control(dev,
                                    RT5647_CTL_SPKVOL_MUTE,
                                    0,  //no parent widget
-                                   values);
+                                   &value);
     if (ret) {
         fprintf(stderr, "RT5647_CTL_SPKVOL_MUTE did not work: error %d\n",ret);
         goto codec_err;
@@ -349,7 +366,7 @@ static int disable_codec_speaker(struct i2s_test_info *info,
     ret = device_codec_set_control(dev,
                                    RT5647_CTL_DAC2_SWITCH,
                                    0,  //no parent widget
-                                   values);
+                                   &value);
     if (ret) {
         fprintf(stderr, "RT5647_CTL_DAC2_SWITCH did not work: error %d\n",ret);
         goto codec_err;
