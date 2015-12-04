@@ -55,7 +55,7 @@ static int rt5647_speaker_event(struct device *dev, uint8_t widget_id,
                                 uint8_t event);
 
 //#define ENABLE_HAPTIC_TEST                1
-#define VERBOSE_MSG                       1
+#undef VERBOSE_MSG
 
 static struct device *codec_dev = NULL;
 
@@ -1588,7 +1588,9 @@ static int rt5647_start_rx(struct device *dev, uint32_t dai_idx)
     }
     info->state |= CODEC_DEVICE_FLAG_RX_START;
 
+#ifdef VERBOSE_MSG
     rt5647_dump_register();
+#endif
     return 0;
 }
 
