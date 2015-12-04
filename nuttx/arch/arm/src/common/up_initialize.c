@@ -251,6 +251,8 @@ void up_initialize(void)
   ramlog_consoleinit();
 #elif defined(CONFIG_ARM_SEMIHOSTING_CONSOLE)
   semihosting_consoleinit();
+#elif defined(CONFIG_ARM_ITM_CONSOLE)
+  itm_consoleinit();
 #elif defined(CONFIG_APB_USB_LOG)
   usb_log_init();
 #endif

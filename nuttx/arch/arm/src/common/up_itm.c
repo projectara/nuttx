@@ -28,11 +28,13 @@
  * Author: Fabien Parent <fparent@baylibre.com>
  */
 
+#include <nuttx/config.h>
 #include <nuttx/fs/fs.h>
 #include <arch/arm/itm.h>
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
+#include <errno.h>
 
 #include "chip.h"
 #include "up_arch.h"
@@ -101,4 +103,29 @@ ssize_t itm_write(int port, const char *buffer, size_t buflen)
         itm_putc(port, buffer[i]);
 
     return buflen;
+}
+
+static ssize_t itmfs_write(struct file *filep, const char *buffer,
+                           size_t buflen)
+{
+    return itm_write((int) filep->f_inode->i_private, buffer, buflen);
+}
+
+static ssize_t itmfs_read(struct file *filep, char *buffer, size_t buflen)
+{
+    return -ENOSYS;
+}
+
+static const struct file_operations itmfs_ops = {
+    .write = itmfs_write,
+    .read = itmfs_read,
+};
+
+void itm_consoleinit(void)
+{
+    itm_init();
+
+    itm_enable_port(CONFIG_ARM_ITM_CONSOLE_PORT);
+    register_driver("/dev/console", &itmfs_ops, 0666,
+                    (void*) CONFIG_ARM_ITM_CONSOLE_PORT);
 }

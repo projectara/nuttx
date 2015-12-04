@@ -471,6 +471,7 @@ void lowconsole_init(void);
 #endif
 
 void semihosting_consoleinit(void);
+void itm_consoleinit(void);
 
 /* DMA **********************************************************************/
 

@@ -570,6 +570,20 @@ config ARM_SEMIHOSTING_CONSOLE
 	select ARM_SEMIHOSTING
 	depends on ARCH_ARM
 
+config ARM_ITM_CONSOLE
+	bool "ARM ITM"
+	select ARM_ITM
+	depends on ARCH_ARM
+	---help---
+		Output NuttX's stdout and stderror using ARM ITM
+
+config ARM_ITM_CONSOLE_PORT
+	int "ARM ITM Console Port"
+	default 0
+	depends on ARM_ITM_CONSOLE
+	---help---
+		ITM port that will be used to display NuttX's stdout and stderr
+
 config UART_SERIAL_CONSOLE
 	bool "UART"
 	depends on ARCH_HAVE_UART
