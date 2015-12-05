@@ -1033,11 +1033,6 @@ static int rt5647_get_caps(struct device *dev, unsigned int dai_idx,
     }
 
     if (clk_role != DEVICE_CODEC_ROLE_SLAVE) {
-        /* query for master,
-         * return full set of master hardware capabilities
-         */
-         memcpy(dai, &info->dais[dai_idx].m_caps, sizeof(struct device_codec_dai));
-
         /* In current audio module, we only supported slave mode. */
         return -EOPNOTSUPP;
     } else {
