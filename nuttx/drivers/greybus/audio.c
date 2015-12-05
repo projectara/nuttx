@@ -1329,7 +1329,7 @@ static uint8_t gb_audio_activate_rx_handler(struct gb_operation *operation)
 
     ret = device_i2s_start_receiver(dai->i2s_dev);
     if (ret) {
-        goto err_irqrestore;
+        goto err_shutdown_receiver;
     }
 
     dai->flags |= GB_AUDIO_FLAG_RX_STARTED;
@@ -1338,8 +1338,9 @@ static uint8_t gb_audio_activate_rx_handler(struct gb_operation *operation)
 
     return GB_OP_SUCCESS;
 
-err_irqrestore:
+err_shutdown_receiver:
     irqrestore(flags);
+    device_i2s_shutdown_receiver(dai->i2s_dev);
 err_free_rx_rb:
     ring_buf_free_ring(dai->rx_rb, gb_audio_rb_free_gb_op, dai);
     dai->rx_rb = NULL;
