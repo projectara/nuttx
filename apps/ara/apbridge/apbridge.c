@@ -57,6 +57,66 @@ static struct apbridge_dev_s *g_usbdev = NULL;
 static pthread_t g_apbridge_thread;
 static struct apbridge_backend apbridge_backend;
 
+#ifdef CONFIG_APBRIDGEA_LOCAL_RX
+struct apbridgea_local_rx_info {
+    bool                        enabled;
+    apbridgea_local_rx_handler  handler;
+};
+
+static struct apbridgea_local_rx_info *apbridgea_local_rx_tbl;
+
+int apbridgea_local_rx_enable(unsigned int cportid,
+                              apbridgea_local_rx_handler handler)
+{
+    irqstate_t flags;
+
+    if ((cportid >= unipro_cport_count()) || !handler) {
+        return -EINVAL;
+    }
+
+    flags = irqsave();
+    apbridgea_local_rx_tbl[cportid].enabled = true;
+    apbridgea_local_rx_tbl[cportid].handler = handler;
+    irqrestore(flags);
+
+    return 0;
+}
+
+int apbridgea_local_rx_disable(unsigned int cportid)
+{
+    irqstate_t flags;
+
+    if (cportid >= unipro_cport_count()) {
+        return -EINVAL;
+    }
+
+    flags = irqsave();
+    apbridgea_local_rx_tbl[cportid].enabled = false;
+    apbridgea_local_rx_tbl[cportid].handler = NULL;
+    irqrestore(flags);
+
+    return 0;
+}
+
+static int apbridgea_local_rx_init(void)
+{
+    unsigned int i, count;
+
+    count = unipro_cport_count();
+
+    apbridgea_local_rx_tbl = malloc(count * sizeof(*apbridgea_local_rx_tbl));
+    if (!apbridgea_local_rx_tbl) {
+        return -ENOMEM;
+    }
+
+    for (i = 0; i < count; i++) {
+        apbridgea_local_rx_disable(i);
+    }
+
+    return 0;
+}
+#endif
+
 static int release_buffer(int status, const void *buf, void *priv)
 {
     return usb_release_buffer(priv, buf);
@@ -86,7 +146,15 @@ int recv_from_unipro(unsigned int cportid, void *buf, size_t len)
     if (len < sizeof(struct gb_operation_hdr))
         return -EPROTO;
 
+#ifdef CONFIG_APBRIDGEA_LOCAL_RX
+    if (apbridgea_local_rx_tbl[cportid].enabled) {
+        return apbridgea_local_rx_tbl[cportid].handler(cportid, buf, len);
+    } else {
+        return unipro_to_usb(g_usbdev, cportid, buf, len);
+    }
+#else
     return unipro_to_usb(g_usbdev, cportid, buf, len);
+#endif
 }
 
 static void *apbridge_wait_and_init(void *p_data)
@@ -169,6 +237,13 @@ int bridge_main(int argc, char *argv[])
     if (ret) {
         printf("Can not init usb: error %d\n", ret);
     }
+
+#ifdef CONFIG_APBRIDGEA_LOCAL_RX
+    ret = apbridgea_local_rx_init();
+    if (ret) {
+        printf("Cannot init local reciever support: %d\n", -ret);
+    }
+#endif
 
 #ifdef CONFIG_EXAMPLES_NSH
     printf("Calling NSH\n");

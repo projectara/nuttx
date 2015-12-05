@@ -33,6 +33,9 @@
 
 enum ep_mapping;
 
+typedef int (*apbridgea_local_rx_handler)(unsigned int cportid, void *buf,
+                                          size_t len);
+
 struct apbridge_backend {
     int (*usb_to_unipro)(unsigned int cportid, void *buf, size_t len,
                          unipro_send_completion_t callback, void *priv);
@@ -43,6 +46,10 @@ struct apbridge_backend {
 
 int recv_from_unipro(unsigned int cportid, void *buf, size_t len);
 void apbridge_backend_register(struct apbridge_backend *apbridge_backend);
+
+int apbridgea_local_rx_enable(unsigned int cportid,
+                              apbridgea_local_rx_handler handler);
+int apbridgea_local_rx_disable(unsigned int cportid);
 
 #endif /* APBRIDGE_BACKEND_H */
 
