@@ -30,6 +30,8 @@
 #include <string.h>
 #include <errno.h>
 #include <stdio.h>
+#include <semaphore.h>
+#include <time.h>
 
 #include <nuttx/lib.h>
 #include <nuttx/util.h>
@@ -42,6 +44,14 @@
 #include "i2s_test.h"
 #include "gen_pcm.h"
 #include "gb_mirror.h"
+
+#define FOR_AUDIO_DEMO                      1
+
+#ifdef FOR_AUDIO_DEMO
+#define RT5647_CTL_PLAYBACK_VOL             32
+#define RT5647_CTL_PLAYBACK_MUTE            31
+#define RT5647_WIDGET_SPK_AMP_SWITCH        29
+#endif
 
 /**
  * hard coded test configuration parameters
@@ -58,6 +68,10 @@ struct device_codec_pcm codec_test_pcm = {
     16
 };
 
+static int disable_codec_speaker(struct i2s_test_info *info,
+                                struct device *dev);
+static int enable_codec_speaker(struct i2s_test_info *info,
+                                struct device *dev);
 // rem chris i2s_test -t -i -f 1000 -v 19 -C 2 100
 int negotiate_i2s_to_codec_interface(struct i2s_test_info *info,
                                      struct device *i2s_dev,
@@ -94,6 +108,9 @@ static int stream_i2s_to_codec(struct i2s_test_info *info,
                                struct device *codec_dev)
 {
     int ret = OK;
+#ifdef FOR_AUDIO_DEMO
+    struct timespec timeout;
+#endif
 
     ret = device_codec_start_rx(codec_dev, 0);
     if (ret)
@@ -104,18 +121,35 @@ static int stream_i2s_to_codec(struct i2s_test_info *info,
     if (ret)
         goto err_i2s;
 
-#if 1
+#ifndef FOR_AUDIO_DEMO
     /*
      * Wait forever.  Can't just exit because callback is still being
      * called by driver to keep filling/draining the ring buffer.
      */
     while (sem_wait(&i2s_test_done_sem) && (errno == EINTR));
 #else
-    i = 0;
+    clock_gettime(CLOCK_REALTIME, &timeout);
+    timeout.tv_sec += 5;
+    sem_timedwait(&i2s_test_done_sem, &timeout);
 
-    // delay 15s
-    for (i = 0; i < 1000; i++) {
-        usleep(1000);
+    ret = disable_codec_speaker(info, codec_dev);
+    if (ret) {
+        printf("disable speaker error!\n");
+    }
+    clock_gettime(CLOCK_REALTIME, &timeout);
+    timeout.tv_sec += 5;
+    sem_timedwait(&i2s_test_done_sem, &timeout);
+
+    ret =enable_codec_speaker(info, codec_dev);
+    if (ret) {
+        printf("disable speaker error!\n");
+    }
+    clock_gettime(CLOCK_REALTIME, &timeout);
+    timeout.tv_sec += 5;
+    sem_timedwait(&i2s_test_done_sem, &timeout);
+    ret = disable_codec_speaker(info, codec_dev);
+    if (ret) {
+        printf("disable speaker error!\n");
     }
 #endif
     printf("stop to playback.\n");
@@ -144,7 +178,7 @@ struct gb_audio_widget * find_widget(struct gb_audio_widget *widgets,
     int i = 0;
     struct gb_audio_widget *widget = NULL;
     struct gb_audio_control *controls = NULL;
-    
+
     widget = &widgets[0];
     for (i = 0; i < num_widgets; i++) {
         if (widget->id == id) {
@@ -159,7 +193,9 @@ struct gb_audio_widget * find_widget(struct gb_audio_widget *widgets,
 static int enable_codec_speaker(struct i2s_test_info *info,
                                 struct device *dev)
 {
-    int ret = 0, i = 0, j = 0;
+    int ret = 0;
+#ifndef FOR_AUDIO_DEMO
+    int i = 0, j = 0;
     uint16_t tp_size = 0;
     struct gb_audio_topology *tp = NULL;
     struct gb_audio_dai *dais = NULL;
@@ -167,12 +203,14 @@ static int enable_codec_speaker(struct i2s_test_info *info,
     struct gb_audio_widget *widgets = NULL, *src = NULL, *dst = NULL, *widget;
     struct gb_audio_route *routes = NULL;
     uint8_t *buf = NULL;
+#endif
     struct gb_audio_ctl_elem_value value;
 
+    printf("%s\n",__func__);
     if (!dev) {
         return -EINVAL;
     }
-
+#ifndef FOR_AUDIO_DEMO
     ret = device_codec_get_topology_size(dev, &tp_size);
     if (ret) {
         printf("get topology size fail!\n");
@@ -255,7 +293,7 @@ static int enable_codec_speaker(struct i2s_test_info *info,
             } else {
                 value.value.integer_value[0] = 1;
             }
-            device_codec_set_control(dev, routes[i].control_id, 
+            device_codec_set_control(dev, routes[i].control_id,
                                      0, &value);
         }
     }
@@ -271,8 +309,8 @@ static int enable_codec_speaker(struct i2s_test_info *info,
         fprintf(stderr, "RT5647_CTL_SPKOUT_VOL did not work: error %d\n",ret);
         goto codec_err;
     }
-    value.value.integer_value[0] =0x75;
-    value.value.integer_value[1] = 0x75;
+    value.value.integer_value[0] = 0xA0;
+    value.value.integer_value[1] = 0xA0;
     ret = device_codec_set_control(dev,
                                    RT5647_CTL_DAC2_VOL,
                                    0,  //no parent widget
@@ -307,9 +345,40 @@ static int enable_codec_speaker(struct i2s_test_info *info,
         fprintf(stderr, "RT5647_CTL_DAC2_SWITCH did not work: error %d\n",ret);
         goto codec_err;
     }
+#else
+    // enable audio controls
+    value.value.integer_value[0] = 0x75;
+    value.value.integer_value[1] = 0x75;
+    ret = device_codec_set_control(dev,
+                                   RT5647_CTL_PLAYBACK_VOL,
+                                   0,  //no parent widget
+                                   &value);
+    if (ret) {
+        fprintf(stderr, "playback vol did not work: error %d\n",ret);
+        goto codec_err;
+    }
 
+    value.value.integer_value[0] = 1;
+    value.value.integer_value[1] = 1;
+    ret = device_codec_set_control(dev,
+                                   RT5647_CTL_PLAYBACK_MUTE,
+                                   0,  //no parent widget
+                                   &value);
+    if (ret) {
+        fprintf(stderr, "playback mute did not work: error %d\n",ret);
+        goto codec_err;
+    }
+
+    ret = device_codec_enable_widget(dev, RT5647_WIDGET_SPK_AMP_SWITCH);
+    if (ret) {
+        fprintf(stderr, "Spk amp switch did not work: error %d\n",ret);
+        goto codec_err;
+    }
+#endif
 codec_err:
+#ifndef FOR_AUDIO_DEMO
     free(tp);
+#endif
     return ret;
 }
 
@@ -323,8 +392,8 @@ static int disable_codec_speaker(struct i2s_test_info *info,
     if (!dev) {
         return -EINVAL;
     }
-
-    // enable audio controls
+#ifndef FOR_AUDIO_DEMO
+    // disable audio controls
     value.value.integer_value[0] = 0x27;
     value.value.integer_value[1] = 0x27;
     ret = device_codec_set_control(dev,
@@ -371,7 +440,36 @@ static int disable_codec_speaker(struct i2s_test_info *info,
         fprintf(stderr, "RT5647_CTL_DAC2_SWITCH did not work: error %d\n",ret);
         goto codec_err;
     }
+#else
+    // disable audio controls
+    value.value.integer_value[0] = 0x0;
+    value.value.integer_value[1] = 0x0;
+    ret = device_codec_set_control(dev,
+                                   RT5647_CTL_PLAYBACK_VOL,
+                                   0,  //no parent widget
+                                   &value);
+    if (ret) {
+        fprintf(stderr, "playback vol did not work: error %d\n",ret);
+        goto codec_err;
+    }
 
+    value.value.integer_value[0] = 0;
+    value.value.integer_value[1] = 0;
+    ret = device_codec_set_control(dev,
+                                   RT5647_CTL_PLAYBACK_MUTE,
+                                   0,  //no parent widget
+                                   &value);
+    if (ret) {
+        fprintf(stderr, "playback mute did not work: error %d\n",ret);
+        goto codec_err;
+    }
+
+    ret = device_codec_disable_widget(dev, RT5647_WIDGET_SPK_AMP_SWITCH);
+    if (ret) {
+        fprintf(stderr, "Spk amp switch did not work: error %d\n",ret);
+        goto codec_err;
+    }
+#endif
 codec_err:
     return ret;
 }
@@ -413,9 +511,6 @@ int play_sine_wave_via_codec(struct i2s_test_info *info)
     if(ret)
         goto dev_close;
 
-    ret = disable_codec_speaker(info, codec_dev);
-    if(ret)
-        goto dev_close;
 dev_close:
     if (i2s_dev) {
         device_close(i2s_dev);
