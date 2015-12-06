@@ -534,7 +534,7 @@ struct audio_widget rt5647_widgets[] = {
     WIDGET("SPOL", RT5647_WIDGET_SPOL, OUTPUT, NULL, 0, NOPWRCTL, 0, 0),
     WIDGET("SPOR", RT5647_WIDGET_SPOR, OUTPUT, NULL, 0, NOPWRCTL, 0, 0),
 #else
-    WIDGET_E("SPK Amp Switch", RT5647_WIDGET_SPK_AMP_SWITCH, PGA,
+    WIDGET_E("SPK Amp Switch", RT5647_WIDGET_SPK_AMP_SWITCH, SWITCH,
              rt5647_spk_amp_switch, ARRAY_SIZE(rt5647_spk_amp_switch),
              NOPWRCTL, 0, 0, rt5647_speaker_event),
 #endif
