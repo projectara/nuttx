@@ -297,6 +297,7 @@ enum {
 #ifdef FOR_AUDIO_DEMO
     RT5647_CTL_PLAYBACK_MUTE,
     RT5647_CTL_PLAYBACK_VOL,
+    RT5647_CTL_SPKAMP_SWITCH,
 #endif
     RT5647_CTL_MAX
 };
@@ -454,6 +455,13 @@ struct audio_control rt5647_spo_r_mix[] = {
                RT5647_SPO_MIXER_CTRL, RT5647_SPOMIX_R_SPKVOLR_SFT, 1),
 };
 
+#ifdef FOR_AUDIO_DEMO
+struct audio_control rt5647_spk_amp_switch[] = {
+    AUDCTL_BITS("Switch", RT5647_CTL_SPKAMP_SWITCH, MIXER,
+               RT5647_SPKOUT_VOL, RT5647_VOL_L_SFT, RT5647_VOL_R_SFT, 1),
+};
+#endif
+
 /**
  * audio widget table
  */
@@ -526,7 +534,8 @@ struct audio_widget rt5647_widgets[] = {
     WIDGET("SPOL", RT5647_WIDGET_SPOL, OUTPUT, NULL, 0, NOPWRCTL, 0, 0),
     WIDGET("SPOR", RT5647_WIDGET_SPOR, OUTPUT, NULL, 0, NOPWRCTL, 0, 0),
 #else
-    WIDGET_E("SPK Amp Switch", RT5647_WIDGET_SPK_AMP_SWITCH, PGA, NULL, 0,
+    WIDGET_E("SPK Amp Switch", RT5647_WIDGET_SPK_AMP_SWITCH, PGA,
+             rt5647_spk_amp_switch, ARRAY_SIZE(rt5647_spk_amp_switch),
              NOPWRCTL, 0, 0, rt5647_speaker_event),
 #endif
 };
@@ -1764,16 +1773,8 @@ static int rt5647_speaker_event(struct device *dev, uint8_t widget_id,
                1 << RT5647_PWR1_CLSD_EN;
         audcodec_update(RT5647_PWR_MGT_1, mask, mask);
 
-#ifdef FOR_AUDIO_DEMO
-        mask = 1 << RT5647_VOL_L_SFT | 1 << RT5647_VOL_R_SFT;
-        audcodec_update(RT5647_SPKOUT_VOL, 0, mask);
-#endif
         break;
     case WIDGET_EVENT_PRE_PWRDOWN:
-#ifdef FOR_AUDIO_DEMO
-        mask = 1 << RT5647_VOL_L_SFT | 1 << RT5647_VOL_R_SFT;
-        audcodec_update(RT5647_SPKOUT_VOL, 0, mask);
-#endif
         /* turn off Class-D power */
         audcodec_update(RT5647_PWR_MGT_1, 0, mask);
         break;
