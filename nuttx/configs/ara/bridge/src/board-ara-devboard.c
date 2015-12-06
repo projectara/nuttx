@@ -140,7 +140,7 @@ static struct device_resource sdio_board_resources[] = {
 #ifdef CONFIG_BOARD_HAVE_AUDIO
 static struct audio_board_dai audio_board_dai_tbl[] = {
     {
-        .data_cport = 0,
+        .data_cport = 6,
         .i2s_dev_id = 0,
     },
 };
