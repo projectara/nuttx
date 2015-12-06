@@ -280,6 +280,27 @@ int audcodec_enum_set(struct audio_control *control,
                           xmin) \
     }
 
+#define AUDCTL_BITSVE(xname, xid, xiface, xreg, xshift, xshift2, xinv, \
+                      xmask, xregmax, xctlmax, xmin, xget, xset) \
+    { \
+        .control = { \
+            .name = xname, .id = xid, .count = 1, .count_values = 2, \
+            .iface = GB_AUDIO_CTL_ELEM_IFACE_##xiface, \
+            .info = { \
+                .type = GB_AUDIO_CTL_ELEM_TYPE_INTEGER, \
+                .dimen = {0,0,0,0}, \
+                .value = { \
+                    .integer = { \
+                        .min = xmin, .max = xctlmax, .step = 1 \
+                    } \
+                } \
+            } \
+        }, \
+        .get = xget, .set = xset, \
+        .priv = BITSRVCTL(xreg, xreg, xshift, xshift2, xinv, xmask, xregmax, \
+                          xmin) \
+    }
+
 #define AUDCTL_ENUM(xname, xid, xiface, xreg, xshift, xmask, xtexts) \
     { \
         .control = { \

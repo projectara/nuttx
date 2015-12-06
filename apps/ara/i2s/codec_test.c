@@ -347,8 +347,8 @@ static int enable_codec_speaker(struct i2s_test_info *info,
     }
 #else
     // enable audio controls
-    value.value.integer_value[0] = 0x75;
-    value.value.integer_value[1] = 0x75;
+    value.value.integer_value[0] = 95;
+    value.value.integer_value[1] = 95;
     ret = device_codec_set_control(dev,
                                    RT5647_CTL_PLAYBACK_VOL,
                                    0,  //no parent widget

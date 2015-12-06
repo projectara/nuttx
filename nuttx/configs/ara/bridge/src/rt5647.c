@@ -51,12 +51,16 @@
 #define CODEC_DEVICE_FLAG_RX_START        BIT(4)  /* device rx started */
 #define CODEC_DEVICE_FLAG_CLOSE           BIT(5)  /* device closed */
 
-static int rt5647_speaker_event(struct device *dev, uint8_t widget_id,
-                                uint8_t event);
-
 //#define ENABLE_HAPTIC_TEST                1
 #undef VERBOSE_MSG
 #define FOR_AUDIO_DEMO 1
+
+static int rt5647_speaker_event(struct device *dev, uint8_t widget_id,
+                                uint8_t event);
+int rt5647_playback_vol_set(struct audio_control *control,
+                              struct gb_audio_ctl_elem_value *value);
+int rt5647_playback_vol_get(struct audio_control *control,
+                              struct gb_audio_ctl_elem_value *value);
 
 static struct device *codec_dev = NULL;
 
@@ -363,9 +367,10 @@ struct audio_control rt5647_controls[] = {
 #else
     AUDCTL_BITS("Playback Mute", RT5647_CTL_PLAYBACK_MUTE, MIXER,
                 RT5647_SPKOUT_VOL, RT5647_L_MUTE_SFT, RT5647_R_MUTE_SFT, 1),
-    AUDCTL_BITSV("Playback Volume", RT5647_CTL_PLAYBACK_VOL, MIXER,
+    AUDCTL_BITSVE("Playback Volume", RT5647_CTL_PLAYBACK_VOL, MIXER,
                  RT5647_DACL2_R2_DIGI_VOL, RT5647_L_VOL_SFT, RT5647_R_VOL_SFT,
-                 0, 8, 0xAF, 0),
+                 0, 8, 0xAF, 0x7F, 0, rt5647_playback_vol_get,
+                 rt5647_playback_vol_set),
 #endif
 };
 
@@ -846,6 +851,60 @@ static void rt5647_dump_register(void)
         }
         printf("REG[%02X] = %04X, %s\n", rt5647_reg_map[i], value, bstr);
     }
+}
+#endif
+
+#ifdef FOR_AUDIO_DEMO
+int rt5647_playback_vol_get(struct audio_control *control,
+                              struct gb_audio_ctl_elem_value *value)
+{
+    int ret = 0, volr = 0, voll = 0, regmax = 0, ctlmax = 0;
+    struct bitctl *ctl = NULL;
+    struct gb_audio_ctl_elem_info   *info;
+
+    ret = audcodec_value_get(control, value);
+    if (ret) {
+        return ret;
+    }
+    ctl = control->priv;
+    info = &control->control.info;
+
+    regmax = ctl->max;
+    ctlmax = info->value.integer.max;
+
+    voll = value->value.integer_value[0];
+    volr = value->value.integer_value[1];
+
+    value->value.integer_value[0] = voll * ctlmax / regmax;
+    value->value.integer_value[1] = volr * ctlmax / regmax;
+    return 0;
+}
+
+int rt5647_playback_vol_set(struct audio_control *control,
+                              struct gb_audio_ctl_elem_value *value)
+{
+    int volr = 0, voll = 0, regmax = 0, ctlmax = 0;
+    struct bitctl *ctl = NULL;
+    struct gb_audio_ctl_elem_info   *info;
+
+    if (!control || !control->priv || !value) {
+        return -EINVAL;
+    }
+    ctl = control->priv;
+    info = &control->control.info;
+
+    regmax = ctl->max;
+    ctlmax = info->value.integer.max;
+
+    voll = value->value.integer_value[0];
+    volr = value->value.integer_value[1];
+
+    voll = (voll > ctlmax)? ctlmax : voll;
+    volr = (volr > ctlmax)? ctlmax : volr;
+
+    value->value.integer_value[0] = voll * regmax / ctlmax;
+    value->value.integer_value[1] = volr * regmax / ctlmax;
+    return audcodec_value_set(control, value);
 }
 #endif
 
