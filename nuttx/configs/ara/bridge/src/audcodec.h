@@ -166,6 +166,15 @@ int audcodec_enum_set(struct audio_control *control,
         .control = { \
             .name = xname, .id = xid, .count = 1, .count_values = 1, \
             .iface = GB_AUDIO_CTL_ELEM_IFACE_##xiface, \
+            .info = { \
+                .type = GB_AUDIO_CTL_ELEM_TYPE_INTEGER, \
+                .dimen = {0,0,0,0}, \
+                .value = { \
+                    .integer = { \
+                        .min = 0, .max = 1, .step = 1 \
+                    } \
+                } \
+            } \
         }, \
         .get = audcodec_bit_get, .set = audcodec_bit_set, \
         .priv = BITCTL(xreg, xshift, xinv), \
@@ -176,6 +185,15 @@ int audcodec_enum_set(struct audio_control *control,
         .control = { \
             .name = xname, .id = xid, .count = 1, .count_values = 2, \
             .iface = GB_AUDIO_CTL_ELEM_IFACE_##xiface, \
+            .info = { \
+                .type = GB_AUDIO_CTL_ELEM_TYPE_INTEGER, \
+                .dimen = {0,0,0,0}, \
+                .value = { \
+                    .integer = { \
+                        .min = 0, .max = 1, .step = 1 \
+                    } \
+                } \
+            } \
         }, \
         .get = audcodec_bits_get, .set = audcodec_bits_set, \
         .priv = BITSCTL(xreg, xshift, xshift2, xinv) \
@@ -186,6 +204,15 @@ int audcodec_enum_set(struct audio_control *control,
         .control = { \
             .name = xname, .id = xid, .count = 1, .count_values = 2, \
             .iface = GB_AUDIO_CTL_ELEM_IFACE_##xiface, \
+            .info = { \
+                .type = GB_AUDIO_CTL_ELEM_TYPE_INTEGER, \
+                .dimen = {0,0,0,0}, \
+                .value = { \
+                    .integer = { \
+                        .min = 0, .max = 1, .step = 1 \
+                    } \
+                } \
+            } \
         }, \
         .get = (control_get*)audcodec_bits_get, .set = (control_set *)audcodec_bits_set, \
         .priv = BITSRCTL(xreg, xreg2, xshift, xshift2, xinv) \
@@ -197,6 +224,15 @@ int audcodec_enum_set(struct audio_control *control,
         .control = { \
             .name = xname, .id = xid, .count = 1, .count_values = 2, \
             .iface = GB_AUDIO_CTL_ELEM_IFACE_##xiface, \
+            .info = { \
+                .type = GB_AUDIO_CTL_ELEM_TYPE_INTEGER, \
+                .dimen = {0,0,0,0}, \
+                .value = { \
+                    .integer = { \
+                        .min = xmin, .max = xmax, .step = 1 \
+                    } \
+                } \
+            } \
         }, \
         .get = audcodec_value_get, .set = audcodec_value_set, \
         .priv = BITSRVCTL(xreg, xreg2, xshift, xshift2, xinv, xmask, xmax, \
@@ -209,6 +245,15 @@ int audcodec_enum_set(struct audio_control *control,
         .control = { \
             .name = xname, .id = xid, .count = 1, .count_values = 2, \
             .iface = GB_AUDIO_CTL_ELEM_IFACE_##xiface, \
+            .info = { \
+                .type = GB_AUDIO_CTL_ELEM_TYPE_INTEGER, \
+                .dimen = {0,0,0,0}, \
+                .value = { \
+                    .integer = { \
+                        .min = xmin, .max = xmax, .step = 1 \
+                    } \
+                } \
+            } \
         }, \
         .get = audcodec_value_get, .set = audcodec_value_set, \
         .priv = BITSRVCTL(xreg, xreg, xshift, xshift2, xinv, xmask, xmax, \
@@ -220,6 +265,15 @@ int audcodec_enum_set(struct audio_control *control,
         .control = { \
             .name = xname, .id = xid, .count = 1, .count_values = 1, \
             .iface = GB_AUDIO_CTL_ELEM_IFACE_##xiface, \
+            .info = { \
+                .type = GB_AUDIO_CTL_ELEM_TYPE_INTEGER, \
+                .dimen = {0,0,0,0}, \
+                .value = { \
+                    .integer = { \
+                        .min = xmin, .max = xmax, .step = 1 \
+                    } \
+                } \
+            } \
         }, \
         .get = audcodec_value_get, .set = audcodec_value_set, \
         .priv = BITSRVCTL(xreg, xreg, xshift, xshift, xinv, xmask, xmax, \
