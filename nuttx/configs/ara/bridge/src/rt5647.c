@@ -464,8 +464,8 @@ struct audio_control rt5647_spo_r_mix[] = {
 
 #ifdef FOR_AUDIO_DEMO
 struct audio_control rt5647_spk_amp_switch[] = {
-    AUDCTL_BITS("Switch", RT5647_CTL_SPKAMP_SWITCH, MIXER,
-               RT5647_SPKOUT_VOL, RT5647_VOL_L_SFT, RT5647_VOL_R_SFT, 1),
+    AUDCTL_BIT("Switch", RT5647_CTL_SPKAMP_SWITCH, MIXER,
+               RT5647_SPKOUT_VOL, RT5647_VOL_L_SFT, 0),
 };
 #endif
 
