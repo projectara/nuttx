@@ -225,6 +225,7 @@ enum ctrlreq_state {
     USB_REQ,
     GREYBUS_LOG,
     GREYBUS_EP_MAPPING,
+    AUDIO_SPECIAL_PROTO,
 };
 
 /****************************************************************************
@@ -835,8 +836,12 @@ static void usbclass_ep0incomplete(struct usbdev_ep_s *ep,
 
     req_priv = (int *)request_get_priv(req);
     if (req_priv) {
-        if (*req_priv == GREYBUS_EP_MAPPING)
+        if (*req_priv == GREYBUS_EP_MAPPING) {
             map_cport_to_ep(priv, (struct cport_to_ep *)req->buf);
+        } else if (*req_priv == AUDIO_SPECIAL_PROTO) {
+            apbridgea_audio_out_demux(req->buf, req->len);
+        }
+
         kmm_free(req_priv);
     }
     put_request(req);
@@ -1479,11 +1484,12 @@ static int usbclass_setup(struct usbdevclass_driver_s *driver,
 #ifdef CONFIG_APBRIDGEA_AUDIO
                 } else if (ctrl->req == APBRIDGE_RWREQUEST_AUDIO_APBRIDGEA) {
                     if (ctrl->type & USB_DIR_IN) {
-                        ret = apbridgea_audio_in_demux(value, index, req->buf,
-                                                       len);
+                        /* TODO: Finish implementing */
+                        ret = apbridgea_audio_in_demux(value, index, dataout,
+                                                       outlen);
                     } else {
-                        ret = apbridgea_audio_out_demux(value, index, req->buf,
-                                                        len);
+                        *req_priv = AUDIO_SPECIAL_PROTO;
+                        ret = len;
                     }
 #endif
                 } else {

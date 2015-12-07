@@ -31,8 +31,7 @@
 
 extern int apbridgea_audio_in_demux(uint16_t data_cportid, uint16_t i2s_port,
                                     uint8_t *buf, uint16_t len);
-extern int apbridgea_audio_out_demux(uint16_t data_cportid, uint16_t i2s_port,
-                                     uint8_t *buf, uint16_t len);
+extern int apbridgea_audio_out_demux(void *buf, uint16_t len);
 extern int apbridgea_audio_init(void);
 
 #endif /* _APBRIDGEA_AUDIO_H_ */

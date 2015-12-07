@@ -75,9 +75,7 @@ struct apbridgea_audio_cport {
     struct list_head            list;
 };
 
-struct apbridgea_audio_hdr {
-    __u8    type;
-};
+static atomic_t request_id;
 
 static LIST_DECLARE(apbridgea_audio_info_list);
 
@@ -167,8 +165,7 @@ XXX check that not AUDIO_IS_CONFIGURED(_info, _type)
 int apbridgea_audio_in_demux(uint16_t data_cportid, uint16_t i2s_port,
                                    uint8_t *buf, uint16_t len)
 {
-    struct apbridgea_audio_hdr *hdr =
-                (struct apbridgea_audio_hdr *)buf;
+    struct audio_apbridgea_hdr *hdr = (struct audio_apbridgea_hdr *)buf;
     int ret;
 
     if (!hdr || (len < sizeof(*hdr))) {
@@ -288,10 +285,9 @@ static int apbridgea_audio_convert_rate(uint32_t audio_rate, uint32_t *i2s_rate,
 }
 
 static int apbridgea_audio_set_config(struct apbridgea_audio_info *info,
-                                      uint8_t *buf, uint16_t len)
+                                      void *buf, uint16_t len)
 {
-    struct audio_apbridgea_set_config_request *req =
-                (struct audio_apbridgea_set_config_request *)buf;
+    struct audio_apbridgea_set_config_request *req = buf;
     struct device_i2s_pcm pcm;
     struct device_i2s_dai dai;
     uint32_t format, rate;
@@ -350,8 +346,10 @@ static int apbridgea_audio_rx_handler(unsigned int cportid, void *buf,
 }
 
 static int apbridgea_audio_register_cport(struct apbridgea_audio_info *info,
-                                          uint16_t data_cportid)
+                                          void *buf, uint16_t len)
 {
+    struct audio_apbridgea_register_cport_request *req = buf;
+    uint16_t data_cportid = le16_to_cpu(req->cport);
     struct apbridgea_audio_cport *cport;
     irqstate_t flags;
     int ret;
@@ -392,8 +390,10 @@ err_irqrestore:
 }
 
 static int apbridgea_audio_unregister_cport(struct apbridgea_audio_info *info,
-                                            uint16_t data_cportid)
+                                            void *buf, uint16_t len)
 {
+    struct audio_apbridgea_unregister_cport_request *req = buf;
+    uint16_t data_cportid = le16_to_cpu(req->cport);
     struct apbridgea_audio_cport *cport;
     irqstate_t flags;
     int ret;
@@ -424,10 +424,9 @@ err_irqrestore:
 }
 
 static int apbridgea_audio_set_tx_data_size(struct apbridgea_audio_info *info,
-                                            uint8_t *buf, uint16_t len)
+                                            void *buf, uint16_t len)
 {
-    struct audio_apbridgea_set_tx_data_size_request *req =
-                (struct audio_apbridgea_set_tx_data_size_request *)buf;
+    struct audio_apbridgea_set_tx_data_size_request *req = buf;
 
     if (!req || (len < sizeof(*req))) {
         return -EINVAL;
@@ -447,18 +446,19 @@ static int apbridgea_audio_send_data(struct apbridgea_audio_info *info,
                                      struct ring_buf *rb)
 {
     struct apbridgea_audio_cport *cport;
+    struct gb_operation_hdr *hdr;
     struct list_head *iter;
-    void *op;
-    size_t size;
 
-    op = ring_buf_get_priv(rb);
-    size = sizeof(struct gb_operation_hdr) +
-           sizeof(struct gb_audio_send_data_request) + info->tx_data_size;
+    hdr = ring_buf_get_priv(rb);
+
+    hdr->id = cpu_to_le16(atomic_inc(&request_id));
+    if (hdr->id == 0) /* ID 0 is for request with no response */
+        hdr->id = cpu_to_le16(atomic_inc(&request_id));
 
     list_foreach(&info->cport_list, iter) {
         cport = list_entry(iter, struct apbridgea_audio_info, list);
 
-        unipro_send(cport->data_cportid, op, size);
+        unipro_send(cport->data_cportid, hdr, le16_to_cpu(hdr->size));
     }
 
     ring_buf_reset(rb);
@@ -485,20 +485,24 @@ static int apbridgea_audio_rb_alloc(struct ring_buf *rb, void *arg)
 {
     struct apbridgea_audio_info *info = arg;
     struct gb_audio_send_data_request *request;
-    size_t hdr_size;
+    struct gb_operation_hdr *hdr;
+    size_t hdr_size, total_size;
     void *op;
 
-    hdr_size = sizeof(struct gb_operation_hdr) + sizeof(*request);
+    hdr_size = sizeof(*hdr) + sizeof(*request);
+    total_size = hdr_size + info->tx_data_size;
 
-    op = malloc(hdr_size + info->tx_data_size);
+    op = malloc(total_size);
     if (!op) {
         return -ENOMEM;
     }
 
     ring_buf_init(rb, op, hdr_size, info->tx_data_size);
 
-    request = (struct gb_audio_send_data_request *)
-                  (op + sizeof(struct gb_operation_hdr));
+    hdr->size = cpu_to_le16(total_size);
+    hdr->type = GB_AUDIO_TYPE_SEND_DATA;
+
+    request = (struct gb_audio_send_data_request *)(op + sizeof(*hdr));
     request->timestamp = 0; /* TODO: Implement timestamp support */
 
     ring_buf_set_priv(rb, op);
@@ -513,10 +517,9 @@ static void apbridgea_audio_rb_free(struct ring_buf *rb, void *arg)
 
 /* "Transmitting" means receiving from I2S and transmitting over Greybus */
 static int apbridgea_audio_start_tx(struct apbridgea_audio_info *info,
-                                    uint8_t *buf, uint16_t len)
+                                    void *buf, uint16_t len)
 {
-    struct audio_apbridgea_start_tx_request *req =
-                (struct audio_apbridgea_start_tx_request *)buf;
+    struct audio_apbridgea_start_tx_request *req = buf;
     irqstate_t flags;
     int ret;
 
@@ -586,11 +589,10 @@ static int apbridgea_audio_stop_tx(struct apbridgea_audio_info *info)
 }
 
 static int apbridgea_audio_set_rx_data_size(struct apbridgea_audio_info *info,
-                                            uint8_t *buf, uint16_t len)
+                                            void *buf, uint16_t len)
 {
 #if 0 /* FIXME */
-    struct audio_apbridgea_set_rx_data_size_request *req =
-                (struct audio_apbridgea_set_rx_data_size_request *)buf;
+    struct audio_apbridgea_set_rx_data_size_request *req = buf;
     int ret;
 
     if (!req || (len < sizeof(*req))) {
@@ -624,16 +626,18 @@ static int apbridgea_audio_stop_rx(struct apbridgea_audio_info *info)
     return -ENOSYS;
 }
 
-int apbridgea_audio_out_demux(uint16_t data_cportid, uint16_t i2s_port,
-                                    uint8_t *buf, uint16_t len)
+int apbridgea_audio_out_demux(void *buf, uint16_t len)
 {
     struct apbridgea_audio_info *info;
-    struct apbridgea_audio_hdr *hdr = (struct apbridgea_audio_hdr *)buf;
+    struct audio_apbridgea_hdr *hdr = (struct audio_apbridgea_hdr *)buf;
     int ret;
+    uint16_t i2s_port;
 
     if (!hdr || (len < sizeof(*hdr))) {
         return -EINVAL;
     }
+
+    i2s_port = le16_to_cpu(hdr->i2s_port);
 
     info = apbridgea_audio_find_info(i2s_port);
     if (!info) {
@@ -645,10 +649,10 @@ int apbridgea_audio_out_demux(uint16_t data_cportid, uint16_t i2s_port,
         ret = apbridgea_audio_set_config(info, buf, len);
         break;
     case AUDIO_APBRIDGEA_TYPE_REGISTER_CPORT:
-        ret = apbridgea_audio_register_cport(info, data_cportid);
+        ret = apbridgea_audio_register_cport(info, buf, len);
         break;
     case AUDIO_APBRIDGEA_TYPE_UNREGISTER_CPORT:
-        ret = apbridgea_audio_unregister_cport(info, data_cportid);
+        ret = apbridgea_audio_unregister_cport(info, buf, len);
         break;
     case AUDIO_APBRIDGEA_TYPE_SET_TX_DATA_SIZE:
         ret = apbridgea_audio_set_tx_data_size(info, buf, len);
@@ -696,6 +700,10 @@ int apbridgea_audio_init(void)
 
     list_init(&info->cport_list);
     list_init(&info->list);
+
+    list_add(&apbridgea_audio_info_list, &info->list);
+
+    atomic_init(&request_id, 0);
 
     return 0;
 

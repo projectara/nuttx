@@ -78,62 +78,72 @@
 /* The I2S port is passed in the 'index' parameter of the USB request */
 /* The CPort is passed in the 'value' parameter of the USB request */
 
-struct audio_apbridgea_set_config_request {
+struct audio_apbridgea_hdr {
     __u8    type;
-    __le32   format;        /* AUDIO_APBRIDGEA_PCM_FMT_* */
-    __le32   rate;          /* AUDIO_APBRIDGEA_PCM_RATE_* */
-    __le32   mclk_freq;     /* XXX May be able to remove */
+    __le16  i2s_port;
+    __u8    data[0];
+};
+
+struct audio_apbridgea_set_config_request {
+    struct audio_apbridgea_hdr  hdr;
+    __le32                      format;        /* AUDIO_APBRIDGEA_PCM_FMT_* */
+    __le32                      rate;          /* AUDIO_APBRIDGEA_PCM_RATE_* */
+    __le32                      mclk_freq;     /* Remove? */
 } __packed;
 
 struct audio_apbridgea_register_cport_request {
-    __u8    type;
+    struct audio_apbridgea_hdr  hdr;
+    __le16                      cport;
 } __packed;
 
 struct audio_apbridgea_unregister_cport_request {
-    __u8    type;
+    struct audio_apbridgea_hdr  hdr;
+    __le16                      cport;
 } __packed;
 
 struct audio_apbridgea_set_tx_data_size_request {
-    __u8    type;
-    __le16  size;
+    struct audio_apbridgea_hdr  hdr;
+    __le16                      size;
 } __packed;
 
 struct audio_apbridgea_get_tx_delay_request {
-    __u8    type;
+    struct audio_apbridgea_hdr  hdr;
 } __packed;
 
 struct audio_apbridgea_get_tx_delay_response {
-    __le16  delay;
+    struct audio_apbridgea_hdr  hdr;
+    __le16                      delay;
 } __packed;
 
 struct audio_apbridgea_start_tx_request {
-    __u8    type;
-    __le64  timestamp;
+    struct audio_apbridgea_hdr  hdr;
+    __le64                      timestamp;
 } __packed;
 
 struct audio_apbridgea_stop_tx_request {
-    __u8    type;
+    struct audio_apbridgea_hdr  hdr;
 } __packed;
 
 struct audio_apbridgea_set_rx_data_size_request {
-    __u8    type;
-    __le16  size;
+    struct audio_apbridgea_hdr  hdr;
+    __le16                      size;
 } __packed;
 
 struct audio_apbridgea_get_rx_delay_request {
-    __u8    type;
+    struct audio_apbridgea_hdr  hdr;
 } __packed;
 
 struct audio_apbridgea_get_rx_delay_response {
-    __le16  delay;
+    struct audio_apbridgea_hdr  hdr;
+    __le16                      delay;
 } __packed;
 
 struct audio_apbridgea_start_rx_request {
-    __u8    type;
+    struct audio_apbridgea_hdr  hdr;
 } __packed;
 
 struct audio_apbridgea_stop_rx_request {
-    __u8    type;
+    struct audio_apbridgea_hdr  hdr;
 } __packed;
 
 #endif /*__AUDIO_APBRIDGEA_H */
