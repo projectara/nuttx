@@ -194,7 +194,6 @@ static int enable_codec_speaker(struct i2s_test_info *info,
                                 struct device *dev)
 {
     int ret = 0;
-#ifndef FOR_AUDIO_DEMO
     int i = 0, j = 0;
     uint16_t tp_size = 0;
     struct gb_audio_topology *tp = NULL;
@@ -203,14 +202,13 @@ static int enable_codec_speaker(struct i2s_test_info *info,
     struct gb_audio_widget *widgets = NULL, *src = NULL, *dst = NULL, *widget;
     struct gb_audio_route *routes = NULL;
     uint8_t *buf = NULL;
-#endif
     struct gb_audio_ctl_elem_value value;
 
     printf("%s\n",__func__);
     if (!dev) {
         return -EINVAL;
     }
-#ifndef FOR_AUDIO_DEMO
+
     ret = device_codec_get_topology_size(dev, &tp_size);
     if (ret) {
         printf("get topology size fail!\n");
@@ -298,6 +296,8 @@ static int enable_codec_speaker(struct i2s_test_info *info,
         }
     }
 
+#ifndef FOR_AUDIO_DEMO
+
     // enable audio controls
     value.value.integer_value[0] = 8;
     value.value.integer_value[1] = 8;
@@ -376,9 +376,7 @@ static int enable_codec_speaker(struct i2s_test_info *info,
     }
 #endif
 codec_err:
-#ifndef FOR_AUDIO_DEMO
     free(tp);
-#endif
     return ret;
 }
 
