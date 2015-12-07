@@ -36,6 +36,7 @@
 #include <nuttx/wqueue.h>
 #include <nuttx/i2c.h>
 #include <nuttx/list.h>
+#include <nuttx/device_audio_board.h>
 #include "audcodec.h"
 #include "rt5647.h"
 
@@ -43,7 +44,8 @@
 #pragma GCC diagnostic ignored "-Wunused-function"
 
 #define RT5647_CODEC_NAME   "rt5647"
-
+/* One bundle count for each codec on the audio module */
+#define CODEC_BUNDLE        0
 #define CODEC_DEVICE_FLAG_PROBE           BIT(0)  /* device probed */
 #define CODEC_DEVICE_FLAG_OPEN            BIT(1)  /* device opened */
 #define CODEC_DEVICE_FLAG_CONFIG          BIT(2)  /* device configured */
@@ -854,6 +856,23 @@ static void rt5647_dump_register(void)
 }
 #endif
 
+static int get_data_cport(unsigned int bundle_index, unsigned int dai_index, uint16_t *data_cport)
+{
+    struct device *dev;
+    int ret;
+
+    dev = device_open(DEVICE_TYPE_AUDIO_BOARD_HW, 0);
+    if (!dev) {
+        return ret = -EIO;
+    }
+
+    ret = device_audio_board_get_data_cport(dev, CODEC_BUNDLE, dai_index, data_cport);
+
+    device_close(dev);
+
+    return ret;
+}
+
 #ifdef FOR_AUDIO_DEMO
 int rt5647_playback_vol_get(struct audio_control *control,
                               struct gb_audio_ctl_elem_value *value)
@@ -958,6 +977,8 @@ static int rt5647_get_topology(struct device *dev,
     struct audio_control *controls = NULL;
     int i = 0, j = 0;
     int dsize = 0, csize = 0, wsize = 0, rsize = 0;
+    int ret;
+    uint16_t data_cport;
     uint8_t *data = NULL;
 
     if (!dev || !device_get_private(dev) || !topology) {
@@ -987,7 +1008,15 @@ static int rt5647_get_topology(struct device *dev,
     data = topology->data;
     /* fill dai object */
     for (i = 0; i < info->num_dais; i++) {
+        ret = get_data_cport(CODEC_BUNDLE, i, &data_cport);
+        if (ret) {
+            return ret;
+        }
+
+        info->dais[i].dai.data_cport = data_cport,
+
         memcpy(data, &info->dais[i].dai, dsize);
+
         data += dsize;
     }
 
