@@ -45,9 +45,9 @@
 #include "gen_pcm.h"
 #include "gb_mirror.h"
 
-#define FOR_AUDIO_DEMO                      1
+#define MIN_SPEKAER_SUPPORT                 1
 
-#ifdef FOR_AUDIO_DEMO
+#ifdef MIN_SPEKAER_SUPPORT
 #define RT5647_CTL_PLAYBACK_MUTE            31
 #define RT5647_CTL_PLAYBACK_VOL             32
 #define RT5647_CTL_SPKAMP_SWITCH            33
@@ -109,7 +109,7 @@ static int stream_i2s_to_codec(struct i2s_test_info *info,
                                struct device *codec_dev)
 {
     int ret = OK;
-#ifdef FOR_AUDIO_DEMO
+#ifdef MIN_SPEKAER_SUPPORT
     struct timespec timeout;
 #endif
 
@@ -122,7 +122,7 @@ static int stream_i2s_to_codec(struct i2s_test_info *info,
     if (ret)
         goto err_i2s;
 
-#ifndef FOR_AUDIO_DEMO
+#ifndef MIN_SPEKAER_SUPPORT
     /*
      * Wait forever.  Can't just exit because callback is still being
      * called by driver to keep filling/draining the ring buffer.
@@ -297,7 +297,7 @@ static int enable_codec_speaker(struct i2s_test_info *info,
         }
     }
 
-#ifndef FOR_AUDIO_DEMO
+#ifndef MIN_SPEKAER_SUPPORT
 
     // enable audio controls
     value.value.integer_value[0] = 8;
@@ -392,7 +392,7 @@ static int disable_codec_speaker(struct i2s_test_info *info,
     if (!dev) {
         return -EINVAL;
     }
-#ifndef FOR_AUDIO_DEMO
+#ifndef MIN_SPEKAER_SUPPORT
     // disable audio controls
     value.value.integer_value[0] = 0x27;
     value.value.integer_value[1] = 0x27;

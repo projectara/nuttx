@@ -55,7 +55,7 @@
 
 //#define ENABLE_HAPTIC_TEST                1
 #undef VERBOSE_MSG
-#define FOR_AUDIO_DEMO 1
+#define MIN_SPEAKER_SUPPORT 1
 
 static int rt5647_speaker_event(struct device *dev, uint8_t widget_id,
                                 uint8_t event);
@@ -217,7 +217,7 @@ struct rt5647_reg rt5647_init_regs[] = {
     { RT5647_HAPTIC_CTRL1, 0x2888 }, // AC and 888Hz
 #endif
 
-#ifdef FOR_AUDIO_DEMO
+#ifdef MIN_SPEAKER_SUPPORT
     { RT5647_PWR_MGT_1, 0x9BC1 },
     { RT5647_DACL2_R2_DIGI_MUTE, 0x0000 },
     { RT5647_PWR_MGT_5, 0x3002 },
@@ -300,7 +300,7 @@ enum {
     RT5647_CTL_SPOR_DACR1,
     RT5647_CTL_SPOR_BST3,
     RT5647_CTL_SPOR_SPKVOLR,
-#ifdef FOR_AUDIO_DEMO
+#ifdef MIN_SPEAKER_SUPPORT
     RT5647_CTL_PLAYBACK_MUTE,
     RT5647_CTL_PLAYBACK_VOL,
     RT5647_CTL_SPKAMP_SWITCH,
@@ -341,7 +341,7 @@ enum {
     RT5647_WIDGET_SPK_AMP,
     RT5647_WIDGET_SPOL,
     RT5647_WIDGET_SPOR,
-#ifdef FOR_AUDIO_DEMO
+#ifdef MIN_SPEAKER_SUPPORT
     RT5647_WIDGET_SPK_AMP_SWITCH,
 #endif
     RT5647_WIDGET_MAX
@@ -351,7 +351,7 @@ enum {
  * audio control list
  */
 struct audio_control rt5647_controls[] = {
-#ifndef FOR_AUDIO_DEMO
+#ifndef MIN_SPEAKER_SUPPORT
     AUDCTL_BITS("SPKOUT Mute", RT5647_CTL_SPKOUT_MUTE, MIXER, RT5647_SPKOUT_VOL,
                 RT5647_L_MUTE_SFT, RT5647_R_MUTE_SFT, 1),
     AUDCTL_BITSV("SPKOUT Volume", RT5647_CTL_SPKOUT_VOL, MIXER,
@@ -464,7 +464,7 @@ struct audio_control rt5647_spo_r_mix[] = {
                RT5647_SPO_MIXER_CTRL, RT5647_SPOMIX_R_SPKVOLR_SFT, 1),
 };
 
-#ifdef FOR_AUDIO_DEMO
+#ifdef MIN_SPEAKER_SUPPORT
 struct audio_control rt5647_spk_amp_switch[] = {
     AUDCTL_DUMMY("Switch", RT5647_CTL_SPKAMP_SWITCH, MIXER,
                  0, 0, 0),
@@ -475,7 +475,7 @@ struct audio_control rt5647_spk_amp_switch[] = {
  * audio widget table
  */
 struct audio_widget rt5647_widgets[] = {
-#ifndef FOR_AUDIO_DEMO
+#ifndef MIN_SPEAKER_SUPPORT
     WIDGET_S("AIF1TX", "AIF1 Capture", RT5647_WIDGET_AIF1TX, AIF_OUT, NULL, 0,
              NOPWRCTL, 0, 0),
     WIDGET("IF1 ADC", RT5647_WIDGET_IF1_ADC, PGA, NULL, 0, NOPWRCTL, 0, 0),
@@ -553,7 +553,7 @@ struct audio_widget rt5647_widgets[] = {
  * audio route table
  */
 audio_route rt5647_routes[] = {
-#ifndef FOR_AUDIO_DEMO
+#ifndef MIN_SPEAKER_SUPPORT
     // AIF1RX
     { RT5647_WIDGET_AIF1RX, RT5647_WIDGET_IF1_DAC1, NOCONTROL, 0 },
     { RT5647_WIDGET_AIF1RX, RT5647_WIDGET_IF1_DAC2, NOCONTROL, 0 },
@@ -875,7 +875,7 @@ static int get_data_cport(unsigned int bundle_index, unsigned int dai_index, uin
     return ret;
 }
 
-#ifdef FOR_AUDIO_DEMO
+#ifdef MIN_SPEAKER_SUPPORT
 int rt5647_playback_vol_get(struct audio_control *control,
                               struct gb_audio_ctl_elem_value *value)
 {

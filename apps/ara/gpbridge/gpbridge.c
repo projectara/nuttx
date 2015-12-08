@@ -74,7 +74,7 @@ int bridge_main(int argc, char *argv[])
     gb_unipro_init();
     srvmgr_start(services);
     enable_cports();
-    sem_wait(&linkup_sem);
+    //sem_wait(&linkup_sem);
     tsb_unipro_set_init_status(INIT_STATUS_OPERATING);
     tsb_unipro_mbox_send(TSB_MAIL_READY_OTHER);
     sem_destroy(&linkup_sem);
