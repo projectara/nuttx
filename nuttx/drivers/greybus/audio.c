@@ -765,7 +765,7 @@ static int gb_audio_config_connection(struct gb_audio_dai_info *dai,
         }
     }
 
-    dai->sample_size = bytes * dai->channels;
+    dai->sample_size = bytes * channels;
     dai->sample_freq = freq;
 
     return 0;
@@ -811,11 +811,6 @@ static uint8_t gb_audio_set_pcm_handler(struct gb_operation *operation)
         dai->flags &= ~GB_AUDIO_FLAG_PCM_SET;
         return gb_errno_to_op_result(ret);
     }
-
-    dai->format = format;
-    dai->rate = rate;
-    dai->channels = channels;
-    dai->sig_bits = sig_bits;
 
     dai->format = format;
     dai->rate = rate;
