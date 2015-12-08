@@ -36,8 +36,6 @@
 #include <nuttx/i2c.h>
 #include "audcodec.h"
 
-static uint32_t dummy_register = 0;
-
 uint32_t audcodec_read(uint32_t reg, uint32_t *value)
 {
     struct device *dev = get_codec_dev();
@@ -95,7 +93,7 @@ int audcodec_dummy_get(struct audio_control *control,
     inv = ctl->inv;
     mask = ctl->mask;
 
-    data = dummy_register;
+    data = control->dummy_reg;
     data = (data >> shift) & mask;
     if (inv) {
         data = (data)? 0: 1;
@@ -125,7 +123,7 @@ int audcodec_dummy_set(struct audio_control *control,
     }
     data = (data << shift);
 
-    dummy_register = (dummy_register & ~(mask << shift)) | data;
+    control->dummy_reg = (control->dummy_reg & ~(mask << shift)) | data;
 
     return 0;
 }

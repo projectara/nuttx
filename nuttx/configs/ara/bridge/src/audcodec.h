@@ -99,6 +99,7 @@ struct audio_dai {
 
 struct audio_control {
     struct gb_audio_control control;
+    uint32_t dummy_reg;
     void *priv;
     int (*get)(struct audio_control *ctl,
                struct gb_audio_ctl_elem_value *value);
@@ -199,6 +200,7 @@ int audcodec_enum_set(struct audio_control *control,
             } \
         } \
     }, \
+    .dummy_reg = 0, \
     .get = audcodec_dummy_get, .set = audcodec_dummy_set, \
     .priv = BITCTL(xreg, xshift, xinv), \
 }
