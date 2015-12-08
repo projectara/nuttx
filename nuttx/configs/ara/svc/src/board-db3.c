@@ -399,7 +399,7 @@ static struct ara_board_info db3_board_info = {
         .gpio_irq         = (GPIO_INPUT | GPIO_FLOAT | GPIO_EXTI | \
                              GPIO_PORTC | GPIO_PIN9),
         .irq_rising_edge  = true,
-        .rev              = SWITCH_REV_ES2,
+        .rev              = SWITCH_REV_ES3,
         .bus              = SW_SPI_PORT_2,
         .spi_cs           = (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_OUTPUT_SET | \
                              GPIO_PORTB | GPIO_PIN12)
