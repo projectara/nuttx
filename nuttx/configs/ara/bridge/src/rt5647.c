@@ -369,9 +369,11 @@ struct audio_control rt5647_controls[] = {
 #else
     AUDCTL_BITS("Playback Mute", RT5647_CTL_PLAYBACK_MUTE, MIXER,
                 RT5647_SPKOUT_VOL, RT5647_L_MUTE_SFT, RT5647_R_MUTE_SFT, 1),
+    /* Note that actual reg max is 0xAF = 0 dB but this can burn out the speaker of ARA white module
+     * change max to 0xA1 = -5.25 db to reduce the chance of burning up the speaker*/
     AUDCTL_BITSVE("Playback Volume", RT5647_CTL_PLAYBACK_VOL, MIXER,
                  RT5647_DACL2_R2_DIGI_VOL, RT5647_L_VOL_SFT, RT5647_R_VOL_SFT,
-                 0, 8, 0xAF, 0x7F, 0, rt5647_playback_vol_get,
+                 0, 8, 0xA1, 0x7F, 0, rt5647_playback_vol_get,
                  rt5647_playback_vol_set),
 #endif
 };
