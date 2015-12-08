@@ -240,8 +240,8 @@ struct audio_control NXP9890_controls[] = {
  * audio control list
  */
 struct audio_control NXP9890_spk_amp_switch[] = {
-    AUDCTL_BITS("Switch", NXP9890_CTL_SPKAMP_SWITCH, MIXER,
-               NXP9890_SPKOUT_VOL, NXP9890_VOL_L_SFT, NXP9890_VOL_R_SFT, 1),
+           AUDCTL_DUMMY("Switch", NXP9890_CTL_SPKAMP_SWITCH, MIXER,
+                        DUMMY_REG, DUMMY_BIT_00, 0),
 };
 
 /**
@@ -794,60 +794,7 @@ static int NXP9890_get_caps(struct device *dev, unsigned int dai_idx,
     return 0;
 }
 
-/**
- * @brief calculate codec pll setting
- *
- * @param dev - pointer to structure of device data
- * @param infreq - mclk frequency
- * @param outfreq - sysclk frequency
- * @param code - pll_code structure, included m,n,k,bypass setting
- * @return 0 on success, negative errno on error
- */
-int NXP9890_pll_calc(uint32_t infreq, uint32_t outfreq, struct pll_code *code)
-{
-    int n = 0, n1, m = 0, m1, k = 0, bp = 0;
-    int min = 0, tmp = 0, in1 = 0, in2 = 0, out1 = 0;
 
-    if (!code) {
-        return -EINVAL;
-    }
-    k = (outfreq + (infreq / 2)) / infreq;
-
-    min = abs(outfreq - infreq);
-    for (n1 = 0; n1 <= NXP9890_PLL_N_CODE_MAX; n1++) {
-        in1 = infreq / (k + 2);
-        out1 = outfreq / (n1 + 2);
-
-        tmp = abs(out1 - in1);
-        if (tmp <= min) {
-            bp = 1;
-            n = n1;
-            if (!tmp) {
-                goto findout;
-            }
-            min = tmp;
-        }
-        for (m1 = 0; m1 <= NXP9890_PLL_M_CODE_MAX; m1++) {
-            in2 = in1 / (m1 + 2);
-            tmp = abs(out1 - in2);
-            if (tmp <= min) {
-                bp = 0;
-                n = n1;
-                m = m1;
-                if (!tmp) {
-                    goto findout;
-                }
-                min = tmp;
-            }
-        }
-    }
-findout:
-    code->m = m;
-    code->n = n;
-    code->k = k;
-    code->bp = bp;
-    return 0;
-}
 
 /**
  * @brief set audio dai setting
@@ -903,98 +850,8 @@ static int NXP9890_set_config(struct device *dev, unsigned int dai_idx,
         return -EINVAL;
     }
 
-    sysclk = 256 * ratefreq; /* 256*FS */
-    ret = NXP9890_pll_calc(dai->mclk_freq, sysclk, &code);
-    if (ret) {
-        return -EINVAL;
-    }
+    /* verify settings work and apply settings */
 
-    /* setup codec hw */
-    if (clk_role & DEVICE_CODEC_ROLE_SLAVE) {
-        format |= NXP9890_I2S_MODE_SLAVE;
-    }
-
-    switch (dai->protocol) {
-    case DEVICE_CODEC_PROTOCOL_PCM:
-        format |= NXP9890_I2S_FORMAT_PCM_A;
-        break;
-    case DEVICE_CODEC_PROTOCOL_I2S:
-        format |= NXP9890_I2S_FORMAT_I2S;
-        if (info->tdm_en) {
-            /* enable TDM mode */
-            tdm1 = NXP9890_TDM_MODE_TDM |
-                  (NXP9890_TDM_SWAP_LR << NXP9890_TDM_RXCH2_SWAP);
-        }
-        break;
-    case DEVICE_CODEC_PROTOCOL_LR_STEREO:
-        format |= NXP9890_I2S_FORMAT_LEFT_J;
-        break;
-    default:
-        return -EINVAL;
-    }
-
-    switch (numbits) {
-    case 8:
-        format |= NXP9890_I2S_LEN_8;
-        if (info->tdm_en) {
-            /* use 16 bits */
-            tdm1 |= NXP9890_TDM_CH_LEN_16;
-        }
-        break;
-    case 16:
-        format |= NXP9890_I2S_LEN_16;
-        if (info->tdm_en) {
-            tdm1 |= NXP9890_TDM_CH_LEN_16;
-        }
-        break;
-    case 20:
-        format |= NXP9890_I2S_LEN_20;
-        if (info->tdm_en) {
-            tdm1 |= NXP9890_TDM_CH_LEN_20;
-        }
-        break;
-    case 24:
-        format |= NXP9890_I2S_LEN_24;
-        if (info->tdm_en) {
-            tdm1 |= NXP9890_TDM_CH_LEN_24;
-        }
-        break;
-    default:
-        return -EINVAL;
-    }
-
-    if (info->tdm_en) {
-        if (dai->wclk_polarity == DEVICE_CODEC_POLARITY_REVERSED) {
-            tdm2 |= 1 << NXP9890_TDM_LRCK_POL;
-        }
-
-        tdm3 = NXP9890_TDM_SLOT2 << NXP9890_TDM_TXL_CH2 |
-               NXP9890_TDM_SLOT3 << NXP9890_TDM_TXR_CH2 |
-               NXP9890_TDM_SLOT0 << NXP9890_TDM_TXL_CH4 |
-               NXP9890_TDM_SLOT1 << NXP9890_TDM_TXR_CH4;
-    }
-    // write clock setting
-    value = NXP9890_SYSCLK_S_PLL | NXP9890_PLL_S_MCLK; /* MCLK->PLL->SYSCLK */
-    mask = NXP9890_SYSCLK_S_MASK | NXP9890_PLL_S_MASK;
-    audcodec_update(NXP9890_GLOBAL_CLOCK, value, mask);
-
-    /* set n & k code */
-    value = (code.n << NXP9890_PLL_N_CODE_SFT) |
-            (code.k << NXP9890_PLL_K_CODE_SFT);
-    audcodec_write(NXP9890_PLL1, value);
-    /* set m & m_bypass code */
-    value = (code.m << NXP9890_PLL_M_CODE_SFT) |
-            (code.bp << NXP9890_PLL_M_BYPASS_SFT);
-    audcodec_write(NXP9890_PLL2, value);
-
-    if (dai_idx == 0) { /* i2s1 */
-        if (info->tdm_en) {
-            audcodec_write(NXP9890_TDM1, tdm1);
-            audcodec_write(NXP9890_TDM2, tdm2);
-            audcodec_write(NXP9890_TDM3, tdm3);
-        }
-        audcodec_write(NXP9890_I2S1_CTRL, format);
-    }
 
     /* save config to dai[dai_idx] structure */
     info->dais[dai_idx].clk_role = clk_role;
@@ -1318,10 +1175,13 @@ static int NXP9890_start_rx(struct device *dev, uint32_t dai_idx)
     if (dai_idx >= info->num_dais) {
         return -EINVAL;
     }
-    if (dai_idx == 0) { /* i2s1 */
-        audcodec_update(NXP9890_PWR_MGT_1, 1 << NXP9890_PWR1_I2S1_EN,
-                        1 << NXP9890_PWR1_I2S1_EN);
+
+    /* ToDo if needed,
+     * add code here that enables codec to recive data
+     * the code should not interfere with any controls
+     */
     }
+
     info->state |= CODEC_DEVICE_FLAG_RX_START;
 
 #ifdef VERBOSE_MSG
@@ -1354,10 +1214,12 @@ static int NXP9890_stop_rx(struct device *dev, uint32_t dai_idx)
     if (dai_idx >= info->num_dais) {
         return -EINVAL;
     }
-    if (dai_idx == 0) { /* i2s1 */
-        audcodec_update(NXP9890_PWR_MGT_1, 0 << NXP9890_PWR1_I2S1_EN,
-                        1 << NXP9890_PWR1_I2S1_EN);
-    }
+
+    /* ToDo if needed,
+     * add code here that disables codec to receive data
+     * the code should not interfere with any controls
+     */
+
     info->state &= ~CODEC_DEVICE_FLAG_RX_START;
     return 0;
 }
@@ -1386,51 +1248,13 @@ static int NXP9890_register_rx_callback(struct device *dev,
 }
 
 /**
- * @brief register jack callback event
+ * @brief register speaker amp callback event
  *
  * @param dev - pointer to structure of device data
  * @param callback - callback function for notify jack event
  * @param arg - argument for callback event
  * @return 0 on success, negative errno on error
  */
-static int NXP9890_register_jack_event_callback(struct device *dev,
-                                    device_codec_jack_event_callback callback,
-                                    void *arg)
-{
-    struct NXP9890_info *info = NULL;
-
-    if (!dev || !device_get_private(dev) || !callback) {
-        return -EINVAL;
-    }
-    info = device_get_private(dev);
-    info->jack_event_callback = callback;
-    info->jack_event_callback_arg = arg;
-    return 0;
-}
-
-/**
- * @brief register button callback event
- *
- * @param dev - pointer to structure of device data
- * @param callback - callback function for notify button event
- * @param arg - argument for callback event
- * @return 0 on success, negative errno on error
- */
-static int NXP9890_register_button_event_callback(struct device *dev,
-                                  device_codec_button_event_callback callback,
-                                  void *arg)
-{
-    struct NXP9890_info *info = NULL;
-
-    if (!dev || !device_get_private(dev) || !callback) {
-        return -EINVAL;
-    }
-    info = device_get_private(dev);
-    info->button_event_callback = callback;
-    info->button_event_callback_arg = arg;
-    return 0;
-}
-
 static int NXP9890_speaker_event(struct device *dev, uint8_t widget_id,
                                 uint8_t event)
 {
@@ -1450,6 +1274,7 @@ static int NXP9890_speaker_event(struct device *dev, uint8_t widget_id,
     }
     return 0;
 }
+
 /**
  * @brief Open audio codec device
  *
@@ -1481,30 +1306,19 @@ static int NXP9890_audcodec_open(struct device *dev)
         return -EBUSY;
     }
 
-    /* verify codec id */
+    /* ToDo verify codec id */
     if (audcodec_read(NXP9890_VENDOR_ID, &id) || (id != NXP9890_DEFAULT_VID)) {
         /* can't read codec register or vendor id isn't correct */
         return -EIO;
     }
 
-    /* codec power on sequence */
-    audcodec_write(NXP9890_RESET, 0);    /* software reset */
+    /* ToDo add code initialize the codec hardware */
 
-    audcodec_update(NXP9890_PWR_MGT_3,
-                    BIT(NXP9890_PWR3_VREF1_EN) | BIT(NXP9890_PWR3_MBIAS_EN) |
-                    BIT(NXP9890_PWR3_BGBIAS_EN) | BIT(NXP9890_PWR3_VREF2_EN),
-                    BIT(NXP9890_PWR3_VREF1_EN) | BIT(NXP9890_PWR3_MBIAS_EN) |
-                    BIT(NXP9890_PWR3_BGBIAS_EN) | BIT(NXP9890_PWR3_VREF2_EN));
-    usleep(10000);
-    audcodec_update(NXP9890_PWR_MGT_3,
-                    BIT(NXP9890_PWR3_FASTB1_EN) | BIT(NXP9890_PWR3_FASTB2_EN),
-                    BIT(NXP9890_PWR3_FASTB1_EN) | BIT(NXP9890_PWR3_FASTB2_EN));
-
-    /* initialize audio codec */
+    /* Write out initial general codec register settings */
     for (i = 0; i < info->num_regs; i++) {
         audcodec_write(info->init_regs[i].reg , info->init_regs[i].val);
     }
-    audcodec_update(NXP9890_PWR_MGT_3, 0x02, NXP9890_PWR3_LDO1_MASK);
+
     return ret;
 }
 
@@ -1556,7 +1370,7 @@ static void NXP9890_audcodec_close(struct device *dev)
         widget++;
     }
 
-    audcodec_write(NXP9890_RESET, 0);    /* software reset */
+    /* ToDo add code put the codec hardware in a power down state*/
 
     /* clear open state */
     info->state &= ~(CODEC_DEVICE_FLAG_OPEN | CODEC_DEVICE_FLAG_CONFIG);

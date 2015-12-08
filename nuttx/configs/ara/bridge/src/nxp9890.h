@@ -37,6 +37,8 @@
 /* ADS2 = 1 ADS1 = 1 */
 /*#define NXP9890_I2C_ADDR                     0x6E*/
 
+
+/* sample registers and masks */
 #define NXP9890_DUMMY_VOL_MUTE_REG  0x10
 
 #define NXP9890_DUMMY_L_MUTE                       (0x1 << 15)
@@ -57,6 +59,10 @@
 
 #define NXP9890_DUMMY_POWER_MASK                   1
 #define NXP9890_DUMMY_POWER_SFT                    0
+
+
+#define NXP9890_VENDOR_ID_REG       0X30
+#define NXP9890_VENDOR_ID_VALUE     0XAABB
 
 /* sample supported formats and rates */
 #define NXP9890_FORMATS (GB_AUDIO_PCM_FMT_S8 | GB_AUDIO_PCM_FMT_S16_LE | \
