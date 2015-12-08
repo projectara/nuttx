@@ -36,6 +36,25 @@
 
 #define NOCONTROL 0xFF /* no control object for struct gb_audio_route */
 
+#define DUMMY_REG 0x00
+
+#define DUMMY_BIT_00 00
+#define DUMMY_BIT_01 01
+#define DUMMY_BIT_02 02
+#define DUMMY_BIT_03 03
+#define DUMMY_BIT_04 04
+#define DUMMY_BIT_05 05
+#define DUMMY_BIT_06 06
+#define DUMMY_BIT_07 07
+#define DUMMY_BIT_08 08
+#define DUMMY_BIT_09 09
+#define DUMMY_BIT_10 10
+#define DUMMY_BIT_11 11
+#define DUMMY_BIT_12 12
+#define DUMMY_BIT_13 13
+#define DUMMY_BIT_14 14
+#define DUMMY_BIT_15 15
+
 /**
  * codec register access structure
  */

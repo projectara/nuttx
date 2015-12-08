@@ -467,7 +467,7 @@ struct audio_control rt5647_spo_r_mix[] = {
 #ifdef MIN_SPEAKER_SUPPORT
 struct audio_control rt5647_spk_amp_switch[] = {
     AUDCTL_DUMMY("Switch", RT5647_CTL_SPKAMP_SWITCH, MIXER,
-                 0, 0, 0),
+            DUMMY_REG, DUMMY_BIT_00, 0),
 };
 #endif
 
