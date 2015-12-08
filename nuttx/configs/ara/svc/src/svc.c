@@ -507,7 +507,7 @@ static int svc_handle_ap(void) {
     /*
      * Now turn on E2EFC on the switch so that it can transmit FCTs.
      */
-    rc = tsb_switch_es2_fct_enable(svc->sw);
+    rc = switch_fct_enable(svc->sw);
     if (rc) {
         dbg_error("Failed to enable FCT on switch.\n");
         return rc;
