@@ -1454,7 +1454,9 @@ static int rt5647_get_control(struct device *dev, uint8_t control_id,
     list_foreach_safe(&info->control_list, iter, iter_next) {
         ctl = list_entry(iter, struct control_node, list);
         aud_ctl = ctl->control;
-        if ((aud_ctl->control.id == control_id) && (ctl->index == index)) {
+        if ((aud_ctl->control.id == control_id) &&
+            ((index == GB_AUDIO_INVALID_INDEX) ||
+             (ctl->index == index))) {
             if (aud_ctl->get) {
                 /* perform get() to get control value or codec register */
                 return aud_ctl->get(aud_ctl, value);
@@ -1490,7 +1492,9 @@ static int rt5647_set_control(struct device *dev, uint8_t control_id,
     list_foreach_safe(&info->control_list, iter, iter_next) {
         ctl = list_entry(iter, struct control_node, list);
         aud_ctl = ctl->control;
-        if ((aud_ctl->control.id == control_id) && (ctl->index == index)) {
+        if ((aud_ctl->control.id == control_id) &&
+            ((index == GB_AUDIO_INVALID_INDEX) ||
+             (ctl->index == index))) {
             if (aud_ctl->set) {
                 /* perform set() to write control value or codec register */
                 return aud_ctl->set(aud_ctl, value);
