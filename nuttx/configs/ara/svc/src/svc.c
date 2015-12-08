@@ -47,7 +47,6 @@
 #include "ara_key.h"
 #include "interface.h"
 #include "tsb_switch.h"
-#include "tsb_switch_driver_es2.h"
 #include "svc.h"
 #include "vreg.h"
 #include "gb_svc.h"

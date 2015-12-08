@@ -33,8 +33,6 @@
 #ifndef  _TSB_SWITCH_DRIVER_ES2_H_
 #define  _TSB_SWITCH_DRIVER_ES2_H_
 
-#define SW_SPI_PORT_1       (1)
-#define SW_SPI_PORT_2       (2)
 #define SWITCH_SPI_FREQUENCY 13000000
 
 // Max NULL frames to wait for a reply from the switch
@@ -85,8 +83,5 @@
     id_mask[15 - ((entry) / 8)] &= ~(1 << ((entry)) % 8)
 #define CHECK_VALID_ENTRY(entry) \
     (id_mask[15 - ((entry) / 8)] & (1 << ((entry)) % 8))
-
-int tsb_switch_es2_init(struct tsb_switch *, unsigned int spi_bus);
-void tsb_switch_es2_exit(struct tsb_switch *);
 
 #endif

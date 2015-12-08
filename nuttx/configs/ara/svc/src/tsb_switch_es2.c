@@ -148,8 +148,6 @@ static uint16_t unipro_irq_attr[ES2_IRQ_MAX] = {
     [IRQ_STATUS_MAILBOX]              = TSB_MAILBOX
 };
 
-static void es2_spi_select(struct tsb_switch *sw, int select);
-
 static inline uint8_t *cport_to_rxbuf(struct sw_es2_priv *priv, unsigned int cportid) {
     switch (cportid) {
     case CPORT_NCP:
@@ -250,6 +248,23 @@ static int es2_transfer_check_write_status(uint8_t *status_block,
         return -EAGAIN;
     }
     return 0;
+}
+
+/*
+ * Actual SPI select routine
+ */
+static inline void es2_spi_select(struct tsb_switch *sw, int select) {
+    /*
+     * SW-472: The STM32 SPI peripheral does not delay until the last
+     * falling edge of SCK, instead dropping RXNE as soon as the rising
+     * edge is clocked out.
+     * Manually add a hacked delay in these cases...
+     */
+    if ((!select) && (SWITCH_SPI_FREQUENCY < 8000000))
+        up_udelay(2);
+
+    /* Set the GPIO low to select and high to de-select */
+    stm32_gpiowrite(sw->pdata->spi_cs, !select);
 }
 
 /* 19 bytes for entire report (7+12) and max 16 bytes of delay */
@@ -1892,39 +1907,4 @@ void tsb_switch_es2_exit(struct tsb_switch *sw) {
     free(priv);
     sw->priv = NULL;
     sw->ops = NULL;
-}
-
-
-/*
- * Required callbacks for NuttX SPI. unused.
- */
-void stm32_spi1select(struct spi_dev_s *dev, enum spi_dev_e devid, bool selected) {
-}
-
-uint8_t stm32_spi1status(struct spi_dev_s *dev, enum spi_dev_e devid) {
-    return SPI_STATUS_PRESENT;
-}
-
-void stm32_spi2select(struct spi_dev_s *dev, enum spi_dev_e devid, bool selected) {
-}
-
-uint8_t stm32_spi2status(struct spi_dev_s *dev, enum spi_dev_e devid) {
-    return SPI_STATUS_PRESENT;
-}
-
-/*
- * Actual SPI select routine
- */
-static void es2_spi_select(struct tsb_switch *sw, int select) {
-    /*
-     * SW-472: The STM32 SPI peripheral does not delay until the last
-     * falling edge of SCK, instead dropping RXNE as soon as the rising
-     * edge is clocked out.
-     * Manually add a hacked delay in these cases...
-     */
-    if ((!select) && (SWITCH_SPI_FREQUENCY < 8000000))
-        up_udelay(2);
-
-    /* Set the GPIO low to select and high to de-select */
-    stm32_gpiowrite(sw->pdata->spi_cs, !select);
 }
