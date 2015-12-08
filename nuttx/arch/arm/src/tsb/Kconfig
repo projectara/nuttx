@@ -203,7 +203,6 @@ config ARCH_CHIP_DEVICE_PLL
 
 config ARCH_CHIP_TSB_PLL
 	bool "PLL Support"
-	depends on ARCH_CHIP_GPBRIDGE
 	select DEVICE_CORE
 	select ARCH_CHIP_DEVICE_PLL
 	default n
