@@ -171,6 +171,8 @@
 #define GB_AUDIO_STREAMING_EVENT_CLOCKING       0x8
 #define GB_AUDIO_STREAMING_EVENT_DATA_LEN       0x9
 
+#define GB_AUDIO_INVALID_INDEX                  0xff
+
 struct gb_audio_pcm {
     __u8    stream_name[GB_AUDIO_PCM_NAME_MAX];
     __le32  formats;    /* GB_AUDIO_PCM_FMT_* */
