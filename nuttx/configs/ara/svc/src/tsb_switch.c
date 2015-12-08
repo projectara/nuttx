@@ -136,6 +136,16 @@ static int switch_init_comm(struct tsb_switch *sw)
     return sw->ops->init_comm(sw);
 }
 
+/* Switch port enable (VDD and clocks) */
+int switch_enable_port(struct tsb_switch *sw,
+                       uint8_t portid)
+{
+    if (!sw->ops->enable_port) {
+        return -EOPNOTSUPP;
+    }
+    return sw->ops->enable_port(sw, portid);
+}
+
 /*
  * Unipro NCP commands
  */
@@ -2556,7 +2566,7 @@ uint8_t stm32_spi2status(struct spi_dev_s *dev,
 struct tsb_switch *switch_init(struct tsb_switch_data *pdata) {
     struct tsb_switch *sw ;
     unsigned int attr_value;
-    int rc;
+    int rc, i;
 
     dbg_verbose("%s: Initializing switch\n", __func__);
 
@@ -2592,6 +2602,17 @@ struct tsb_switch *switch_init(struct tsb_switch_data *pdata) {
     rc = switch_init_comm(sw);
     if (rc && (rc != -EOPNOTSUPP)) {
         goto error;
+    }
+
+    /*
+     * Enable all switch ports.
+     * Note: Should be done per-port, upon module detection.
+     */
+    for (i = 0; i < SWITCH_UNIPORT_MAX; i++) {
+        rc = switch_enable_port(sw, i);
+        if (rc && (rc != -EOPNOTSUPP)) {
+            goto error;
+        }
     }
 
     /*
