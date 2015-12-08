@@ -86,8 +86,6 @@
 #define CHECK_VALID_ENTRY(entry) \
     (id_mask[15 - ((entry) / 8)] & (1 << ((entry)) % 8))
 
-int tsb_switch_es2_fct_enable(struct tsb_switch *);
-
 int tsb_switch_es2_init(struct tsb_switch *, unsigned int spi_bus);
 void tsb_switch_es2_exit(struct tsb_switch *);
 

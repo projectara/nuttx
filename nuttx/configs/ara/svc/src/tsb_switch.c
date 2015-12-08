@@ -216,6 +216,16 @@ int switch_lut_get(struct tsb_switch *sw,
     return sw->ops->lut_get(sw, unipro_portid, addr, dst_portid);
 }
 
+int switch_set_valid_device(struct tsb_switch *sw,
+                            uint8_t port_id,
+                            uint8_t device_id,
+                            bool valid) {
+    if (!sw->ops->set_valid_device) {
+        return -EOPNOTSUPP;
+    }
+    return sw->ops->set_valid_device(sw, port_id, device_id, valid);
+}
+
 int switch_dump_routing_table(struct tsb_switch *sw) {
     if (!sw->ops->dump_routing_table) {
         return -EOPNOTSUPP;
@@ -1679,38 +1689,19 @@ int switch_setup_routing_table(struct tsb_switch *sw,
                                uint8_t port_id_1) {
 
     int rc;
-    uint8_t id_mask[16];
 
     dbg_verbose("Setup routing table [p=%u:d=%u]<->[p=%u:d=%u]\n",
                 device_id_0, port_id_0, device_id_1, port_id_1);
 
-    // Set MaskId for devices 0->1
-    rc = switch_dev_id_mask_get(sw, port_id_0, id_mask);
-    if (rc && (rc != -EOPNOTSUPP)) {
-        dbg_error("Failed to get MaskId for port %u\n", port_id_0);
+    // Set valid device bitmask 0->1
+    rc = switch_set_valid_device(sw, port_id_0, device_id_1, true);
+    if (rc) {
         return rc;
     }
 
-    SET_VALID_ENTRY(device_id_1);
-
-    rc = switch_dev_id_mask_set(sw, port_id_0, id_mask);
-    if (rc && (rc != -EOPNOTSUPP)) {
-        dbg_error("Failed to set MaskId for port %u\n", port_id_0);
-        return rc;
-    }
-
-    // Set MaskId for devices 1->0
-    rc = switch_dev_id_mask_get(sw, port_id_1, id_mask);
-    if (rc && (rc != -EOPNOTSUPP)) {
-        dbg_error("Failed to get MaskId for port %u\n", port_id_1);
-        return rc;
-    }
-
-    SET_VALID_ENTRY(device_id_0);
-
-    rc = switch_dev_id_mask_set(sw, port_id_1, id_mask);
-    if (rc && (rc != -EOPNOTSUPP)) {
-        dbg_error("Failed to set MaskId for port %u\n", port_id_1);
+    // Set valid device bitmask 1->0
+    rc = switch_set_valid_device(sw, port_id_1, device_id_0, true);
+    if (rc) {
         return rc;
     }
 
@@ -1752,38 +1743,19 @@ int switch_invalidate_routing_table(struct tsb_switch *sw,
                                     uint8_t port_id_1) {
 
     int rc;
-    uint8_t id_mask[16];
 
     dbg_verbose("Invalidate routing table [p=%u:d=%u]<->[p=%u:d=%u]\n",
                 device_id_0, port_id_0, device_id_1, port_id_1);
 
-    /* Set MaskId for devices 0->1 */
-    rc = switch_dev_id_mask_get(sw, port_id_0, id_mask);
-    if (rc && (rc != -EOPNOTSUPP)) {
-        dbg_error("Failed to get MaskId for port %u\n", port_id_0);
+    // Set invalid device bitmask 0->1
+    rc = switch_set_valid_device(sw, port_id_0, device_id_1, false);
+    if (rc) {
         return rc;
     }
 
-    SET_INVALID_ENTRY(device_id_1);
-
-    rc = switch_dev_id_mask_set(sw, port_id_0, id_mask);
-    if (rc && (rc != -EOPNOTSUPP)) {
-        dbg_error("Failed to set MaskId for port %u\n", port_id_0);
-        return rc;
-    }
-
-    /* Set MaskId for devices 1->0 */
-    rc = switch_dev_id_mask_get(sw, port_id_1, id_mask);
-    if (rc && (rc != -EOPNOTSUPP)) {
-        dbg_error("Failed to get MaskId for port %u\n", port_id_1);
-        return rc;
-    }
-
-    SET_INVALID_ENTRY(device_id_0);
-
-    rc = switch_dev_id_mask_set(sw, port_id_1, id_mask);
-    if (rc && (rc != -EOPNOTSUPP)) {
-        dbg_error("Failed to set MaskId for port %u\n", port_id_1);
+    // Set invalid device bitmask 1->0
+    rc = switch_set_valid_device(sw, port_id_1, device_id_0, false);
+    if (rc) {
         return rc;
     }
 
@@ -2474,6 +2446,14 @@ int switch_data_send(struct tsb_switch *sw, void *data, size_t len) {
         return -EOPNOTSUPP;
     }
     return sw->ops->switch_data_send(sw, data, len);
+}
+
+/* Enable data reception on CPort 4 */
+int switch_fct_enable(struct tsb_switch *sw) {
+    if (!sw->ops->fct_enable) {
+        return -EOPNOTSUPP;
+    }
+    return sw->ops->fct_enable(sw);
 }
 
 /* Post a message to the IRQ worker */

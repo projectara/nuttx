@@ -1254,6 +1254,38 @@ static int es2_lut_get(struct tsb_switch *sw,
     return cnf.rc;
 }
 
+ /**
+ * @brief Update the valid device bitmask for device_id on port_id
+ */
+static int es2_set_valid_device(struct tsb_switch *sw,
+                                uint8_t port_id,
+                                uint8_t device_id,
+                                bool valid)
+{
+    uint8_t id_mask[16];
+    int rc;
+
+    rc = switch_dev_id_mask_get(sw, port_id, id_mask);
+    if (rc) {
+        dbg_error("Failed to get valid device bitmask for port %u\n", port_id);
+        return rc;
+    }
+
+    if (valid) {
+        SET_VALID_ENTRY(device_id);
+    } else {
+        SET_INVALID_ENTRY(device_id);
+    }
+
+    rc = switch_dev_id_mask_set(sw, port_id, id_mask);
+    if (rc) {
+        dbg_error("Failed to set valid device bitmask for port %u\n", port_id);
+        return rc;
+    }
+
+    return rc;
+}
+
 /**
  * @brief Dump routing table to low level console
  */
@@ -1623,7 +1655,7 @@ done:
  * @brief Start the transmission of FCTs on CPort 4.
  *        Other CPorts not tested/unsupported.
  */
-int tsb_switch_es2_fct_enable(struct tsb_switch *sw) {
+static int es2_fct_enable(struct tsb_switch *sw) {
     uint32_t spictlb = 0xC;
     int rc;
 
@@ -1757,6 +1789,7 @@ static struct tsb_switch_ops es2_ops = {
 
     .lut_set               = es2_lut_set,
     .lut_get               = es2_lut_get,
+    .set_valid_device      = es2_set_valid_device,
     .dump_routing_table    = es2_dump_routing_table,
 
     .sys_ctrl_set          = es2_sys_ctrl_set,
@@ -1773,6 +1806,8 @@ static struct tsb_switch_ops es2_ops = {
 
     .qos_attr_set          = es2_qos_attr_set,
     .qos_attr_get          = es2_qos_attr_get,
+
+    .fct_enable            = es2_fct_enable,
 
     .switch_irq_enable     = es2_switch_irq_enable,
     .switch_irq_handler    = es2_switch_irq_handler,

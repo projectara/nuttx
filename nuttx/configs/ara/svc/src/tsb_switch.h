@@ -302,6 +302,10 @@ struct tsb_switch_ops {
                    uint8_t unipro_portid,
                    uint8_t addr,
                    uint8_t *dst_portid);
+    int (*set_valid_device)(struct tsb_switch *sw,
+                            uint8_t port_id,
+                            uint8_t device_id,
+                            bool valid);
     int (*dump_routing_table)(struct tsb_switch*);
     int (*switch_attr_get)(struct tsb_switch *,
                            uint16_t attrid,
@@ -334,6 +338,7 @@ struct tsb_switch_ops {
     int (*dev_id_mask_set)(struct tsb_switch *,
                            uint8_t unipro_portid,
                            uint8_t *mask);
+    int (*fct_enable)(struct tsb_switch *);
     int (*switch_irq_enable)(struct tsb_switch *sw,
                              bool enable);
     int (*switch_irq_handler)(struct tsb_switch *sw);
@@ -490,6 +495,11 @@ int switch_setup_routing_table(struct tsb_switch *sw,
                                uint8_t port_id_0,
                                uint8_t device_id_1,
                                uint8_t port_id_1);
+
+int switch_set_valid_device(struct tsb_switch *sw,
+                            uint8_t port_id,
+                            uint8_t device_id,
+                            bool valid);
 
 int switch_invalidate_routing_table(struct tsb_switch *sw,
                                     uint8_t device_id_0,
@@ -674,6 +684,7 @@ int switch_irq_enable(struct tsb_switch *sw,
                       bool enable);
 int switch_post_irq(struct tsb_switch *sw);
 
+int switch_fct_enable(struct tsb_switch *);
 int switch_data_send(struct tsb_switch *sw, void *data, size_t len);
 
 #endif
