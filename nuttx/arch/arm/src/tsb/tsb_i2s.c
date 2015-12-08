@@ -359,6 +359,7 @@ static int tsb_i2s_test_mclk(struct device *pll_dev,
     int ret;
     uint32_t bclk_freq;
     uint32_t mclk_freq;
+    bool close_pll = false;
 
     //rem chris make one function
 
@@ -372,9 +373,14 @@ static int tsb_i2s_test_mclk(struct device *pll_dev,
     }
     bclk_freq = (uint32_t)ret;
 
-    pll_dev = device_open(DEVICE_TYPE_PLL_HW, TSB_I2S_PLLA_ID);
-    if (!pll_dev)
-        return -EIO;
+    if (!pll_dev) {
+        pll_dev = device_open(DEVICE_TYPE_PLL_HW, TSB_I2S_PLLA_ID);
+        if (!pll_dev) {
+            return -EIO;
+        }
+
+        close_pll = true;
+    }
     /*
      * The I2S controller always divides MCLK by four and optionally
      * by two again to get the BCLK.  So try to set the PLL/MCLK
@@ -388,8 +394,11 @@ static int tsb_i2s_test_mclk(struct device *pll_dev,
             ret = device_pll_query_frequency(pll_dev, mclk_freq);
         }
     }
-    device_close(pll_dev);
-    pll_dev = NULL;
+
+    if (close_pll) {
+        device_close(pll_dev);
+        pll_dev = NULL;
+    }
 
     if(ret)
         return ret;
