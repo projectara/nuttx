@@ -47,7 +47,6 @@
 #include <ara_debug.h>
 #include "tsb_switch.h"
 #include "vreg.h"
-#include "tsb_switch_driver_es2.h"
 
 #define IRQ_WORKER_DEFPRIO          50
 #define IRQ_WORKER_STACKSIZE        2048
@@ -2525,6 +2524,28 @@ static int destroy_switch_irq_worker(struct tsb_switch *sw)
         dbg_warn("%s: waitpid failed with ret=%d\n", __func__, ret);
 
     return ret;
+}
+
+/*
+ * Required callbacks for NuttX SPI. unused.
+ */
+void stm32_spi1select(struct spi_dev_s *dev, enum spi_dev_e devid,
+                      bool selected) {
+}
+
+uint8_t stm32_spi1status(struct spi_dev_s *dev,
+                         enum spi_dev_e devid) {
+    return SPI_STATUS_PRESENT;
+}
+
+void stm32_spi2select(struct spi_dev_s *dev,
+                      enum spi_dev_e devid,
+                      bool selected) {
+}
+
+uint8_t stm32_spi2status(struct spi_dev_s *dev,
+                         enum spi_dev_e devid) {
+    return SPI_STATUS_PRESENT;
 }
 
 /**

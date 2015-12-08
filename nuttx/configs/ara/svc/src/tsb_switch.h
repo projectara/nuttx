@@ -37,10 +37,15 @@
 #include <sched.h>
 
 #include <nuttx/list.h>
+#include <nuttx/spi/spi.h>
 #include <nuttx/unipro/unipro.h>
 #include <nuttx/greybus/tsb_unipro.h>
 
 #include "interface.h"
+
+/* SPI port to the Switch */
+#define SW_SPI_PORT_1               (1)
+#define SW_SPI_PORT_2               (2)
 
 /* Switch internal attributes */
 #define SWVER                       (0x0000)
@@ -686,5 +691,12 @@ int switch_post_irq(struct tsb_switch *sw);
 
 int switch_fct_enable(struct tsb_switch *);
 int switch_data_send(struct tsb_switch *sw, void *data, size_t len);
+
+/*
+ * Switch specific init/exit routines, called to init the
+ * communication and register the Switch ops
+ */
+int tsb_switch_es2_init(struct tsb_switch *, unsigned int spi_bus);
+void tsb_switch_es2_exit(struct tsb_switch *);
 
 #endif
