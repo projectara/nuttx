@@ -99,6 +99,8 @@ int audcodec_dummy_get(struct audio_control *control,
         data = (data)? 0: 1;
     }
 
+    value->value.integer_value[0] = data;
+
     return 0;
 }
 int audcodec_dummy_set(struct audio_control *control,
