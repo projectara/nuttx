@@ -66,9 +66,13 @@
 #define NCP_LUTGETREQ               (0x12)
 #define NCP_LUTGETCNF               (0x13)
 #define NCP_SETDEVICEIDMASKREQ      (0x14)
+#define NCP_DESTVALIDSETREQ         (0x14)
 #define NCP_SETDEVICEIDMASKCNF      (0x15)
+#define NCP_DESTVALIDSETCNF         (0x15)
 #define NCP_GETDEVICEIDMASKREQ      (0x16)
+#define NCP_DESTVALIDGETREQ         (0x16)
 #define NCP_GETDEVICEIDMASKCNF      (0x17)
+#define NCP_DESTVALIDGETCNF         (0x17)
 #define NCP_SWITCHATTRSETREQ        (0x20)
 #define NCP_SWITCHATTRSETCNF        (0x21)
 #define NCP_SWITCHATTRGETREQ        (0x22)
@@ -106,6 +110,12 @@
 #define SC_CHIPID0                  (0x0880)
 #define SC_CHIPID1                  (0x0884)
 #define SC_CHIPID2                  (0x0888)
+
+/* System registers values */
+#define SC_RESET_CLK_UNIPROPORT(i)  (1 << i)
+#define SC_RESET_CLK_NCP            (1 << 14)
+#define SC_RESET_CLK_MPORT(i)       (1 << (i + 16))
+#define SC_RESET_CLK_RT10B          (1 << 30)
 
 /* NCP field values */
 #define NCP_RESERVED                (0x00)
@@ -587,7 +597,8 @@ struct tsb_switch_data {
 
 enum {
     SWITCH_REV_ES1 = 1,
-    SWITCH_REV_ES2 = 2
+    SWITCH_REV_ES2 = 2,
+    SWITCH_REV_ES3 = 3
 };
 
 struct tsb_switch *switch_init(struct tsb_switch_data *pdata);
@@ -703,5 +714,7 @@ int switch_data_send(struct tsb_switch *sw, void *data, size_t len);
  */
 int tsb_switch_es2_init(struct tsb_switch *, unsigned int spi_bus);
 void tsb_switch_es2_exit(struct tsb_switch *);
+int tsb_switch_es3_init(struct tsb_switch *, unsigned int spi_bus);
+void tsb_switch_es3_exit(struct tsb_switch *);
 
 #endif
