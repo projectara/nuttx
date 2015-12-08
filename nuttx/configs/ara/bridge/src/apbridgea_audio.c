@@ -527,7 +527,8 @@ static int apbridgea_audio_start_tx(struct apbridgea_audio_info *info,
         return -EINVAL;
     }
 
-    if (info->flags & APBRIDGEA_AUDIO_FLAG_TX_STARTED) {
+    if (!AUDIO_IS_CONFIGURED(info, TX) ||
+        (info->flags & APBRIDGEA_AUDIO_FLAG_TX_STARTED)) {
         return -EPROTO;
     }
 
