@@ -48,8 +48,9 @@
 #define FOR_AUDIO_DEMO                      1
 
 #ifdef FOR_AUDIO_DEMO
-#define RT5647_CTL_PLAYBACK_VOL             32
 #define RT5647_CTL_PLAYBACK_MUTE            31
+#define RT5647_CTL_PLAYBACK_VOL             32
+#define RT5647_CTL_SPKAMP_SWITCH            33
 #define RT5647_WIDGET_SPK_AMP_SWITCH        29
 #endif
 
@@ -281,7 +282,7 @@ static int enable_codec_speaker(struct i2s_test_info *info,
         printf("Route: %s[%d] -> %s[%d] [%x-%u]\n", src->name,
                routes[i].source_id, dst->name, routes[i].destination_id,
                routes[i].control_id, routes[i].index);
-        /* enable widgets of srouce and destination */
+        /* enable widgets of source and destination */
         device_codec_enable_widget(dev, src->id);
         device_codec_enable_widget(dev, dst->id);
 

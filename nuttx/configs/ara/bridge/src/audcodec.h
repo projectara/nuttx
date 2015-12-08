@@ -112,6 +112,10 @@ uint32_t audcodec_write(uint32_t reg, uint32_t value);
 uint32_t audcodec_update(uint32_t reg, uint32_t value, uint32_t mask);
 
 /* audcodec_xxx_get()/audcodec_xxx_set() for audio control */
+int audcodec_dummy_get(struct audio_control *control,
+                             struct gb_audio_ctl_elem_value *value);
+int audcodec_dummy_set(struct audio_control *control,
+                             struct gb_audio_ctl_elem_value *value);
 int audcodec_bit_get(struct audio_control *control,
                              struct gb_audio_ctl_elem_value *value);
 int audcodec_bit_set(struct audio_control *control,
@@ -160,6 +164,25 @@ int audcodec_enum_set(struct audio_control *control,
         .mask = (0x1 << xmask) - 1, .max = xmax, .texts = xtexts, \
         .values = xvalues, \
     })
+
+#define AUDCTL_DUMMY(xname, xid, xiface, xreg, xshift, xinv) \
+{ \
+    .control = { \
+        .name = xname, .id = xid, .count = 1, .count_values = 1, \
+        .iface = GB_AUDIO_CTL_ELEM_IFACE_##xiface, \
+        .info = { \
+            .type = GB_AUDIO_CTL_ELEM_TYPE_INTEGER, \
+            .dimen = {0,0,0,0}, \
+            .value = { \
+                .integer = { \
+                    .min = 0, .max = 1, .step = 1 \
+                } \
+            } \
+        } \
+    }, \
+    .get = audcodec_dummy_get, .set = audcodec_dummy_set, \
+    .priv = BITCTL(xreg, xshift, xinv), \
+}
 
 #define AUDCTL_BIT(xname, xid, xiface, xreg, xshift, xinv) \
     { \

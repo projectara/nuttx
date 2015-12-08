@@ -78,6 +78,17 @@ uint32_t audcodec_update(uint32_t reg, uint32_t value, uint32_t mask)
     return 0;
 }
 
+int audcodec_dummy_get(struct audio_control *control,
+                     struct gb_audio_ctl_elem_value *value)
+{
+    return 0;
+}
+int audcodec_dummy_set(struct audio_control *control,
+                     struct gb_audio_ctl_elem_value *value)
+{
+    return 0;
+}
+
 int audcodec_bit_get(struct audio_control *control,
                              struct gb_audio_ctl_elem_value *value)
 {
