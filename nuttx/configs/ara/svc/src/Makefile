@@ -71,6 +71,7 @@ CSRCS		= up_boot.c svc.c interface.c vreg.c
 CSRCS		+= tsb_switch.c
 CSRCS		+= tsb_switch_es2.c
 CSRCS		+= tsb_es2_mphy_fixups.c
+CSRCS		+= tsb_switch_es3.c
 CSRCS		+= unipro_svc.c
 CSRCS		+= gb_svc.c
 CSRCS		+= ara_key.c

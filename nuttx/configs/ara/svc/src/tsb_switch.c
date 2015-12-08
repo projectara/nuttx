@@ -2503,10 +2503,15 @@ struct tsb_switch *switch_init(struct tsb_switch_data *pdata) {
 
     switch_power_on_reset(sw);
 
+    // Initialize the Switch SPI port, register the Switch ops
     switch (sw->pdata->rev) {
     case SWITCH_REV_ES2:
-        // Initialize the SPI port
         if (tsb_switch_es2_init(sw, sw->pdata->bus)) {
+            goto error;
+        }
+        break;
+    case SWITCH_REV_ES3:
+        if (tsb_switch_es3_init(sw, sw->pdata->bus)) {
             goto error;
         }
         break;
@@ -2515,6 +2520,7 @@ struct tsb_switch *switch_init(struct tsb_switch_data *pdata) {
         goto error;
     };
 
+    /* Initialize communication with the Switch */
     rc = switch_init_comm(sw);
     if (rc && (rc != -EOPNOTSUPP)) {
         goto error;
@@ -2545,6 +2551,7 @@ struct tsb_switch *switch_init(struct tsb_switch_data *pdata) {
      */
     switch (sw->pdata->rev) {
     case SWITCH_REV_ES2:
+    case SWITCH_REV_ES3:
         /* Wait 360ms as per Toshiba recomandation */
         usleep(360 * 1000);
         break;
@@ -2607,6 +2614,9 @@ void switch_exit(struct tsb_switch *sw) {
         break;
     case SWITCH_REV_ES2:
         tsb_switch_es2_exit(sw);
+        break;
+    case SWITCH_REV_ES3:
+        tsb_switch_es3_exit(sw);
         break;
     default:
         dbg_error("Unsupported switch revision: %u\n", sw->pdata->rev);
