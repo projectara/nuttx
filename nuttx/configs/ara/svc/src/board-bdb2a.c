@@ -45,7 +45,6 @@
 #include <ara_debug.h>
 #include "ara_board.h"
 #include "interface.h"
-#include "tsb_switch_driver_es2.h"
 #include "stm32.h"
 #include <up_adc.h>
 #include "pwr_mon.h"
