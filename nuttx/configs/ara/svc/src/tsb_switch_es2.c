@@ -63,6 +63,9 @@
 #define ES2_CPORT_RX_MAX_SIZE        (16 + 5 + 272 + 2)
 #define ES2_CPORT_NCP_MAX_PAYLOAD    (256)
 #define ES2_CPORT_DATA_MAX_PAYLOAD   (272)
+/* CPorts maximum FIFO data size */
+#define ES2_CPORT_NCP_FIFO_SIZE      (256)
+#define ES2_CPORT_DATA_FIFO_SIZE     (576)
 
 struct es2_cport {
     pthread_mutex_t lock;
@@ -219,7 +222,8 @@ static int es2_transfer_check_write_status(uint8_t *status_block,
     tx_ent_remain =
         (((w_status->status[0] & WSTATUS0_TXENTFIFOREMAIN_MASK) << 8) |
          (w_status->status[1] & WSTATUS1_TXENTFIFOREMAIN_MASK));
-    tx_data_remain = w_status->status[2] & WSTATUS2_TXDATAFIFOREMAIN_MASK;
+    tx_data_remain = (w_status->status[2] & WSTATUS2_TXDATAFIFOREMAIN_MASK) *
+                     8;
     len_err = !!(w_status->status[3] & WSTATUS3_LENERR_MASK);
     tx_ent_full = !!(w_status->status[3] & WSTATUS3_TXENTFIFOFULL_MASK);
     tx_data_full = !!(w_status->status[3] & WSTATUS3_TXDATAFIFOFULL_MASK);
@@ -297,7 +301,7 @@ static int es2_read_status(struct tsb_switch *sw,
     SPI_EXCHANGE(spi_dev, NULL, rxbuf, SRPT_SIZE);
     es2_spi_select(sw, false);
 
-    /* find the header */
+    /* Find the header */
     for (offset = 0; offset < (SRPT_SIZE - SRPT_REPORT_SIZE); offset++) {
         if (!memcmp(srpt_report_header,
                     &rxbuf[offset],
@@ -313,12 +317,26 @@ static int es2_read_status(struct tsb_switch *sw,
         return -ENOMSG;
     }
 
-    /* fill in the report and parse useful fields */
+    /* Fill in the report and parse useful fields */
     if (status) {
+        size_t fifo_max_size;
+
         memcpy(status, rpt, SRPT_REPORT_SIZE);
 
-        status->tx_fifo_size = ((rpt->raw[8] << 8) | rpt->raw[9]);
-        status->rx_fifo_size = 576 - ((rpt->raw[10] << 8) | rpt->raw[11]);
+        switch (cport) {
+        case CPORT_NCP:
+            fifo_max_size = ES2_CPORT_NCP_FIFO_SIZE;
+            break;
+        case CPORT_DATA4:
+        case CPORT_DATA5:
+        default:
+            fifo_max_size = ES2_CPORT_DATA_FIFO_SIZE;
+            break;
+        }
+
+        status->tx_fifo_size = rpt->raw[7] * 8;
+        status->rx_fifo_size = fifo_max_size -
+                               ((rpt->raw[10] << 8) | rpt->raw[11]);
     }
 
     return 0;
