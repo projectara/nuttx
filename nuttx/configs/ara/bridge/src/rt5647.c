@@ -899,7 +899,7 @@ int rt5647_playback_vol_get(struct audio_control *control,
     value->value.integer_value[0] = voll * ctlmax / regmax;
     value->value.integer_value[1] = volr * ctlmax / regmax;
 
-lldbg("vol_get l=%d vol_set r=%d", value->value.integer_value[0], value->value.integer_value[1]);
+lldbg("vol_get l=%d vol_set r=%d\n", value->value.integer_value[0], value->value.integer_value[1]);
     return 0;
 }
 
@@ -928,7 +928,7 @@ int rt5647_playback_vol_set(struct audio_control *control,
     value->value.integer_value[0] = voll * regmax / ctlmax;
     value->value.integer_value[1] = volr * regmax / ctlmax;
 
-    lldbg("vol_set l=%d vol_set r=%d", value->value.integer_value[0], value->value.integer_value[1]);
+    lldbg("vol_set l=%d vol_set r=%d\n", value->value.integer_value[0], value->value.integer_value[1]);
 
     return audcodec_value_set(control, value);
 }
