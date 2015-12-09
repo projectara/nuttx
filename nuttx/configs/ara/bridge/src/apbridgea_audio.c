@@ -678,7 +678,6 @@ static void *apbridge_audio_demux_thread_start(void *p_data)
     struct list_head *iter;
     struct apbridgea_audio_audio_dmux *dmux_entry;
     struct audio_apbridgea_hdr *hdr;
-    int ret;
     uint16_t i2s_port;
     void *buf;
     uint16_t len;
@@ -689,11 +688,11 @@ static void *apbridge_audio_demux_thread_start(void *p_data)
         sem_wait(&info->demux_sem);
 
         /* empty the list */
-        /* lock out interrupts when manipulating list */
         flags = irqsave();
         list_foreach(&apbridgea_audio_info_list, iter) {
             dmux_entry = list_entry(iter, struct apbridgea_audio_audio_dmux, list);
             irqrestore(flags);
+            flags = 0;
 
             buf = dmux_entry->buff;
             len = dmux_entry->len;
@@ -717,46 +716,45 @@ static void *apbridge_audio_demux_thread_start(void *p_data)
             flags = irqsave();
             list_del(iter);
             irqrestore(flags);
+            flags = 0;
 
             switch (hdr->type) {
             case AUDIO_APBRIDGEA_TYPE_SET_CONFIG:
-                ret = apbridgea_audio_set_config(info, buf, len);
+                apbridgea_audio_set_config(info, buf, len);
                 break;
             case AUDIO_APBRIDGEA_TYPE_REGISTER_CPORT:
-                ret = apbridgea_audio_register_cport(info, buf, len);
+                apbridgea_audio_register_cport(info, buf, len);
                 break;
             case AUDIO_APBRIDGEA_TYPE_UNREGISTER_CPORT:
-                ret = apbridgea_audio_unregister_cport(info, buf, len);
+                apbridgea_audio_unregister_cport(info, buf, len);
                 break;
             case AUDIO_APBRIDGEA_TYPE_SET_TX_DATA_SIZE:
-                ret = apbridgea_audio_set_tx_data_size(info, buf, len);
+                apbridgea_audio_set_tx_data_size(info, buf, len);
                 break;
             case AUDIO_APBRIDGEA_TYPE_START_TX:
-                ret = apbridgea_audio_start_tx(info, buf, len);
+                apbridgea_audio_start_tx(info, buf, len);
                 break;
             case AUDIO_APBRIDGEA_TYPE_STOP_TX:
-                ret = apbridgea_audio_stop_tx(info);
+                apbridgea_audio_stop_tx(info);
                 break;
             case AUDIO_APBRIDGEA_TYPE_SET_RX_DATA_SIZE:
-                ret = apbridgea_audio_set_rx_data_size(info, buf, len);
+                apbridgea_audio_set_rx_data_size(info, buf, len);
                 break;
             case AUDIO_APBRIDGEA_TYPE_START_RX:
-                ret = apbridgea_audio_start_rx(info);
+                apbridgea_audio_start_rx(info);
                 break;
             case AUDIO_APBRIDGEA_TYPE_STOP_RX:
-                ret = apbridgea_audio_stop_rx(info);
+                apbridgea_audio_stop_rx(info);
                 break;
-            default:
-                ret = -EINVAL;
             }
-
-            /* There is nothing to be done with 'ret' values because the interrupt has long since past
-             * just keep it around for debugging purposes
-             */
 
             free(dmux_entry);
         }
 
+        if (flags) {
+            /* for some reason we did not go into the for loop */
+            irqrestore(flags);
+        }
     }
 
     return 0;
