@@ -234,6 +234,9 @@ int audcodec_bits_get(struct audio_control *control,
         }
         value->value.integer_value[1] = data2;
     }
+
+lldbg("\n get Mute l=%s r=%s\n", ((data1)?"on":"off"), ((data2)?"on":"off") );
+
     return ret;
 }
 
@@ -263,6 +266,8 @@ int audcodec_bits_set(struct audio_control *control,
     if (inv) {
         data1 = (data1)? 0: 1;
     }
+lldbg("\n set Mute l=%s\n", ((data1)?"on":"off"));
+
     data1 = (data1 << shift1);
 
     if (((reg1 == reg2) && (shift1 != shift2)) || (reg1 != reg2)) {
@@ -271,6 +276,7 @@ int audcodec_bits_set(struct audio_control *control,
         if (inv) {
             data2 = (data2)? 0: 1;
         }
+lldbg("\n set Mute r=%s\n", ((data2)?"on":"off"));
         data2 = (data2 << shift2);
     }
 
