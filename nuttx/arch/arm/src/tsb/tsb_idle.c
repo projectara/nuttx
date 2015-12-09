@@ -69,6 +69,7 @@
 
 #include <nuttx/arch.h>
 #include "up_internal.h"
+#include "tsb_pm.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -108,6 +109,9 @@ void up_idle(void)
 
   sched_process_timer();
 #else
+
+  up_idlepm();
+
   /* SW-425 */
 #ifdef CONFIG_DEBUG
   /* We theorize that instruction fetch on the bridge silicon may stall an
