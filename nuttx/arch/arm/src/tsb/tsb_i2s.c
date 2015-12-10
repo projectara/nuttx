@@ -397,7 +397,6 @@ static int tsb_i2s_test_mclk(struct device *pll_dev,
 
     if (close_pll) {
         device_close(pll_dev);
-        pll_dev = NULL;
     }
 
     if(ret)
