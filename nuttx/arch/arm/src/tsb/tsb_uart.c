@@ -34,6 +34,7 @@
 #include <nuttx/wqueue.h>
 #include <nuttx/device.h>
 #include <nuttx/device_uart.h>
+#include <nuttx/power/pm.h>
 
 #include "up_arch.h"
 #include "tsb_scm.h"
@@ -1161,6 +1162,20 @@ err_irqrestore:
     irqrestore(flags);
 }
 
+#ifdef CONFIG_PM
+static void tsb_uart_pm_notify(struct pm_callback_s *cb,
+                               enum pm_state_e pmstate)
+{
+
+}
+
+static int tsb_uart_pm_prepare(struct pm_callback_s *cb,
+                               enum pm_state_e pmstate)
+{
+    return OK;
+}
+#endif
+
 /**
 * @brief The device probe function.
 *
@@ -1174,6 +1189,9 @@ err_irqrestore:
 */
 static int tsb_uart_dev_probe(struct device *dev)
 {
+#ifdef CONFIG_PM
+    struct pm_callback_s *pmctx;
+#endif
     struct tsb_uart_info *uart_info;
     irqstate_t flags;
     int ret;
@@ -1208,6 +1226,7 @@ static int tsb_uart_dev_probe(struct device *dev)
 
     ret = irq_attach(uart_info->uart_irq, ua_irq_handler);
     if (ret) {
+        irqrestore(flags);
         goto err_destroy_rx_sem;
     }
 
@@ -1224,10 +1243,30 @@ static int tsb_uart_dev_probe(struct device *dev)
 
     irqrestore(flags);
 
+#ifdef CONFIG_PM
+    pmctx = malloc(sizeof(struct pm_callback_s));
+    if (!pmctx) {
+        ret = -ENOMEM;
+        goto err_destroy_rx_sem;
+    }
+
+    pmctx->notify = tsb_uart_pm_notify;
+    pmctx->prepare = tsb_uart_pm_prepare;
+    pmctx->priv = dev;
+
+    ret = pm_register(pmctx);
+    if (ret != OK) {
+        goto err_destroy_pmctx;
+    }
+#endif
+
     return ret;
 
+#ifdef CONFIG_PM
+err_destroy_pmctx:
+    free(pmctx);
+#endif
 err_destroy_rx_sem:
-    irqrestore(flags);
     sem_destroy(&uart_info->rx_sem);
 err_destroy_tx_sem:
     sem_destroy(&uart_info->tx_sem);
