@@ -720,12 +720,14 @@ lldbg("demux_entry: 0x%p, demux_entry->buf: 0x%x, demux_entry->len: %d\n",
 
         if (!demux_entry->buf || (len < sizeof(*pkt_hdr))) {
 lldbg("fail 2\n");
+            free(demux_entry);
             continue;
         }
 
         info = apbridgea_audio_find_info(pkt_hdr->i2s_port);
         if (!info) {
 lldbg("fail 3\n");
+            free(demux_entry);
             continue;
         }
 
