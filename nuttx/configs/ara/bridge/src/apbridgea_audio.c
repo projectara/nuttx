@@ -332,9 +332,9 @@ static int apbridgea_audio_set_config(struct apbridgea_audio_info *info,
     dai.mclk_freq = le32_to_cpu(req->mclk_freq);
     dai.protocol = DEVICE_I2S_PROTOCOL_I2S;
     dai.wclk_polarity = DEVICE_I2S_POLARITY_NORMAL;
-    dai.wclk_change_edge = DEVICE_I2S_EDGE_FALLING;
-    dai.data_tx_edge = DEVICE_I2S_EDGE_FALLING;
-    dai.data_rx_edge = DEVICE_I2S_EDGE_RISING;
+    dai.wclk_change_edge = DEVICE_I2S_EDGE_RISING;
+    dai.data_tx_edge = DEVICE_I2S_EDGE_RISING;
+    dai.data_rx_edge = DEVICE_I2S_EDGE_FALLING;
 
     ret = device_i2s_set_config(info->i2s_dev, DEVICE_I2S_ROLE_SLAVE, &pcm,
                                 &dai);
