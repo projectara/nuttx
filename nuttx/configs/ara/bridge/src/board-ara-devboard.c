@@ -289,7 +289,9 @@ static void board_camera_init(void)
 static void board_apbridgea_audio_init(void)
 {
 #ifdef CONFIG_APBRIDGEA_AUDIO
+    /*
     apbridgea_audio_init();
+    */
 #endif
 }
 

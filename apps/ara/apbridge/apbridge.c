@@ -236,6 +236,8 @@ static int usb_init(void)
     return ret;
 }
 
+extern int apbridgea_audio_init(void);
+
 int bridge_main(int argc, char *argv[])
 {
     int ret;
@@ -254,6 +256,8 @@ int bridge_main(int argc, char *argv[])
         printf("Cannot init local reciever support: %d\n", -ret);
     }
 #endif
+
+    apbridgea_audio_init();
 
 #ifdef CONFIG_EXAMPLES_NSH
     printf("Calling NSH\n");
