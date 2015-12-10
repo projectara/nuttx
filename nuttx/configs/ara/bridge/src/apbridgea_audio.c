@@ -514,6 +514,8 @@ static int apbridgea_audio_rb_alloc(struct ring_buf *rb, void *arg)
         return -ENOMEM;
     }
 
+    hdr = op;
+
     ring_buf_init(rb, op, hdr_size, info->tx_data_size);
 
     hdr->size = cpu_to_le16(total_size);
