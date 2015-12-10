@@ -1541,11 +1541,11 @@ static int es3_sys_ctrl_set(struct tsb_switch *sw,
         break;
     }
 
-    dbg_verbose("%s(): sc_addr=0x%x, val=0x%x (%d)",
+    dbg_verbose("%s(): sc_addr=0x%x, val=0x%x (%d)\n",
                 __func__, sc_addr, val, val);
     rc = es3_ncp_transfer(sw, req, sizeof(req), cnf_buf, sizeof(struct cnf));
     if (rc) {
-        dbg_error("%s(): sc_addr=0x%x, val=0x%x (%d) failed: %d",
+        dbg_error("%s(): sc_addr=0x%x, val=0x%x (%d) failed: %d\n",
                   __func__, sc_addr, val, val, rc);
         return rc;
     }
@@ -1554,7 +1554,7 @@ static int es3_sys_ctrl_set(struct tsb_switch *sw,
         return -EPROTO;
     }
 
-    dbg_verbose("%s(): fid=0x%02x, rc=%u", __func__, cnf.function_id, cnf.rc);
+    dbg_verbose("%s(): fid=0x%02x, rc=%u\n", __func__, cnf.function_id, cnf.rc);
     return cnf.rc;
 }
 
@@ -1593,7 +1593,7 @@ static int es3_sys_ctrl_get(struct tsb_switch *sw,
     if (cnf.rc == 0) {
         *val = be32_to_cpu(cnf.val);
     }
-    dbg_verbose("%s(): fid=0x%02x, rc=%u", __func__, cnf.function_id, cnf.rc);
+    dbg_verbose("%s(): fid=0x%02x, rc=%u\n", __func__, cnf.function_id, cnf.rc);
 
     return cnf.rc;
 }
