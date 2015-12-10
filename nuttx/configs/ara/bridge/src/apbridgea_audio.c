@@ -139,7 +139,7 @@ static struct apbridgea_audio_cport *apbridgea_audio_find_cport(
     return NULL;
 }
 
-static int apbridgea_audio_get_tx_delay(uint8_t *buf, uint16_t len)
+static int apbridgea_audio_get_tx_delay(void *buf, uint16_t len)
 {
 #if 0 /* FIXME: Need implementation change to support request/response */
     struct apbridgea_audio_get_tx_delay_response *resp = buf;
@@ -158,7 +158,7 @@ XXX check that not AUDIO_IS_CONFIGURED(_info, _type)
 #endif
 }
 
-static int apbridgea_audio_get_rx_delay(uint8_t *buf, uint16_t len)
+static int apbridgea_audio_get_rx_delay(void *buf, uint16_t len)
 {
 #if 0 /* FIXME: Need implementation change to support request/response */
     struct apbridgea_audio_get_rx_delay_response *resp = buf;
@@ -180,19 +180,19 @@ XXX check that not AUDIO_IS_CONFIGURED(_info, _type)
 int apbridgea_audio_in_demux(uint16_t data_cportid, uint16_t i2s_port,
                                    uint8_t *buf, uint16_t len)
 {
-    struct audio_apbridgea_hdr *hdr = (struct audio_apbridgea_hdr *)buf;
+    struct audio_apbridgea_hdr *pkt_hdr = (struct audio_apbridgea_hdr *)buf;
     int ret;
 
-    if (!hdr || (len < sizeof(*hdr))) {
+    if (!pkt_hdr || (len < sizeof(*pkt_hdr))) {
         return -EINVAL;
     }
 
-    switch (hdr->type) {
+    switch (pkt_hdr->type) {
     case AUDIO_APBRIDGEA_TYPE_GET_TX_DELAY:
-        ret = apbridgea_audio_get_tx_delay(buf, len);
+        ret = apbridgea_audio_get_tx_delay(pkt_hdr, len);
         break;
     case AUDIO_APBRIDGEA_TYPE_GET_RX_DELAY:
-        ret = apbridgea_audio_get_rx_delay(buf, len);
+        ret = apbridgea_audio_get_rx_delay(pkt_hdr, len);
         break;
     default:
         ret = -EINVAL;
@@ -461,22 +461,23 @@ static int apbridgea_audio_send_data(struct apbridgea_audio_info *info,
                                      struct ring_buf *rb)
 {
     struct apbridgea_audio_cport *cport;
-    struct gb_operation_hdr *hdr;
+    struct gb_operation_hdr *gb_hdr;
     struct list_head *iter;
     int ret;
 
 mag_msg_count++;
 
-    hdr = ring_buf_get_priv(rb);
+    gb_hdr = ring_buf_get_priv(rb);
 
-    hdr->id = cpu_to_le16(atomic_inc(&request_id));
-    if (hdr->id == 0) /* ID 0 is for request with no response */
-        hdr->id = cpu_to_le16(atomic_inc(&request_id));
+    gb_hdr->id = cpu_to_le16(atomic_inc(&request_id));
+    if (gb_hdr->id == 0) /* ID 0 is for request with no response */
+        gb_hdr->id = cpu_to_le16(atomic_inc(&request_id));
 
     list_foreach(&info->cport_list, iter) {
         cport = list_entry(iter, struct apbridgea_audio_cport, list);
 
-        ret = unipro_send(cport->data_cportid, hdr, le16_to_cpu(hdr->size));
+        ret = unipro_send(cport->data_cportid, gb_hdr,
+                          le16_to_cpu(gb_hdr->size));
         if (ret) {
 lldbg("unipro_send failed: %d\n", ret);
         }
@@ -508,27 +509,27 @@ static int apbridgea_audio_rb_alloc(struct ring_buf *rb, void *arg)
 {
     struct apbridgea_audio_info *info = arg;
     struct gb_audio_send_data_request *request;
-    struct gb_operation_hdr *hdr;
-    size_t hdr_size, total_size;
+    struct gb_operation_hdr *gb_hdr;
+    size_t gb_hdr_size, total_size;
 
-    hdr_size = sizeof(*hdr) + sizeof(*request);
-    total_size = hdr_size + info->tx_data_size;
+    gb_hdr_size = sizeof(*gb_hdr) + sizeof(*request);
+    total_size = gb_hdr_size + info->tx_data_size;
 
-    hdr = malloc(total_size);
-    if (!hdr) {
+    gb_hdr = malloc(total_size);
+    if (!gb_hdr) {
         return -ENOMEM;
     }
 
-    ring_buf_init(rb, hdr, hdr_size, info->tx_data_size);
+    ring_buf_init(rb, gb_hdr, gb_hdr_size, info->tx_data_size);
 
-    hdr->size = cpu_to_le16(total_size);
-    hdr->type = GB_AUDIO_TYPE_SEND_DATA;
+    gb_hdr->size = cpu_to_le16(total_size);
+    gb_hdr->type = GB_AUDIO_TYPE_SEND_DATA;
 
     request = (struct gb_audio_send_data_request *)
-                  ((unsigned char *)hdr + sizeof(*hdr));
+                  ((unsigned char *)gb_hdr + sizeof(*gb_hdr));
     request->timestamp = 0; /* TODO: Implement timestamp support */
 
-    ring_buf_set_priv(rb, hdr);
+    ring_buf_set_priv(rb, gb_hdr);
 
     return 0;
 }
@@ -655,15 +656,17 @@ static int apbridgea_audio_stop_rx(struct apbridgea_audio_info *info)
 int apbridgea_audio_out_demux(void *buf, uint16_t len)
 {
     struct apbridgea_audio_info *info;
-    struct audio_apbridgea_hdr *hdr = (struct audio_apbridgea_hdr *)buf;
+    struct audio_apbridgea_hdr *pkt_hdr = (struct audio_apbridgea_hdr *)buf;
     struct apbridgea_audio_audio_demux *demux_entry;
 
-    if (!hdr || (len < sizeof(*hdr))) {
+    if (!pkt_hdr || (len < sizeof(*pkt_hdr))) {
+lldbg("fail 1\n");
         return -EINVAL;
     }
 
-    info = apbridgea_audio_find_info(le16_to_cpu(hdr->i2s_port));
+    info = apbridgea_audio_find_info(le16_to_cpu(pkt_hdr->i2s_port));
     if (!info) {
+lldbg("fail 2: type: 0x%x, i2s_port: %u\n", pkt_hdr->type, pkt_hdr->i2s_port);
         return -EINVAL;
     }
 
@@ -674,6 +677,7 @@ int apbridgea_audio_out_demux(void *buf, uint16_t len)
      */
     demux_entry = malloc(sizeof(*demux_entry) + len);
     if (!demux_entry) {
+lldbg("fail 3\n");
         return -ENOMEM;
     }
 
@@ -682,7 +686,12 @@ int apbridgea_audio_out_demux(void *buf, uint16_t len)
     demux_entry->len = len;
     list_init(&demux_entry->list);
 
-    memcpy(demux_entry->buf, buf, len);
+    memcpy(demux_entry->buf, pkt_hdr, len);
+
+#if 0
+lldbg("type: 0x%x, demux_entry: 0x%p, demux_entry->buf: 0x%x, demux_entry->len: %d\n",
+        pkt_hdr->type, demux_entry, demux_entry->buf, demux_entry->len);
+#endif
 
     list_add(&apbridgea_audio_demux_list, &demux_entry->list);
     sem_post(&apbridgea_audio_demux_sem);
@@ -694,7 +703,7 @@ static void *apbridgea_audio_demux_thread_start(void *ignored)
 {
     struct apbridgea_audio_info *info;
     struct apbridgea_audio_audio_demux *demux_entry;
-    struct audio_apbridgea_hdr *hdr;
+    struct audio_apbridgea_hdr *pkt_hdr;
     struct list_head *head;
     uint16_t len;
     irqstate_t flags;
@@ -713,38 +722,65 @@ static void *apbridgea_audio_demux_thread_start(void *ignored)
 
         demux_entry = list_entry(head, struct apbridgea_audio_audio_demux,
                                  list);
+
+#if 0
+lldbg("demux_entry: 0x%p, demux_entry->buf: 0x%x, demux_entry->len: %d\n",
+        demux_entry, demux_entry->buf, demux_entry->len);
+#endif
+
         info = demux_entry->info;
-        hdr = (struct audio_apbridgea_hdr *)demux_entry->buf;
+        pkt_hdr = (struct audio_apbridgea_hdr *)demux_entry->buf;
         len = demux_entry->len;
 
-        switch (hdr->type) {
+        switch (pkt_hdr->type) {
         case AUDIO_APBRIDGEA_TYPE_SET_CONFIG:
-            apbridgea_audio_set_config(info, hdr, len);
+lldbg("apbridgea_audio_set_config - call\n");
+            ret = apbridgea_audio_set_config(info, pkt_hdr, len);
+lldbg("apbridgea_audio_set_config - exit %d\n", ret);
             break;
         case AUDIO_APBRIDGEA_TYPE_REGISTER_CPORT:
-            apbridgea_audio_register_cport(info, hdr, len);
+lldbg("apbridgea_audio_register_cport - call\n");
+            ret = apbridgea_audio_register_cport(info, pkt_hdr, len);
+lldbg("apbridgea_audio_register_cport - exit %d\n", ret);
             break;
         case AUDIO_APBRIDGEA_TYPE_UNREGISTER_CPORT:
-            apbridgea_audio_unregister_cport(info, hdr, len);
+lldbg("apbridgea_audio_unregister_cport - call\n");
+            ret = apbridgea_audio_unregister_cport(info, pkt_hdr, len);
+lldbg("apbridgea_audio_unregister_cport - exit %d\n", ret);
             break;
         case AUDIO_APBRIDGEA_TYPE_SET_TX_DATA_SIZE:
-            apbridgea_audio_set_tx_data_size(info, hdr, len);
+lldbg("apbridgea_audio_set_tx_data_size - call\n");
+            ret = apbridgea_audio_set_tx_data_size(info, pkt_hdr, len);
+lldbg("apbridgea_audio_set_tx_data_size - exit %d\n", ret);
             break;
         case AUDIO_APBRIDGEA_TYPE_START_TX:
-            apbridgea_audio_start_tx(info, hdr, len);
+lldbg("apbridgea_audio_start_tx - call\n");
+            ret = apbridgea_audio_start_tx(info, pkt_hdr, len);
+lldbg("apbridgea_audio_start_tx - exit %d\n", ret);
             break;
         case AUDIO_APBRIDGEA_TYPE_STOP_TX:
-            apbridgea_audio_stop_tx(info);
+lldbg("apbridgea_audio_stop_tx - call\n");
+            ret = apbridgea_audio_stop_tx(info);
+lldbg("apbridgea_audio_stop_tx - exit %d\n", ret);
             break;
         case AUDIO_APBRIDGEA_TYPE_SET_RX_DATA_SIZE:
-            apbridgea_audio_set_rx_data_size(info, hdr, len);
+lldbg("apbridgea_audio_set_rx_data_size - call\n");
+            ret = apbridgea_audio_set_rx_data_size(info, pkt_hdr, len);
+lldbg("apbridgea_audio_set_rx_data_size - exit %d\n", ret);
             break;
         case AUDIO_APBRIDGEA_TYPE_START_RX:
-            apbridgea_audio_start_rx(info);
+lldbg("apbridgea_audio_start_rx - call\n");
+            ret = apbridgea_audio_start_rx(info);
+lldbg("apbridgea_audio_start_rx - exit %d\n", ret);
             break;
         case AUDIO_APBRIDGEA_TYPE_STOP_RX:
-            apbridgea_audio_stop_rx(info);
+lldbg("apbridgea_audio_stop_rx - call\n");
+            ret = apbridgea_audio_stop_rx(info);
+lldbg("apbridgea_audio_stop_rx - exit %d\n", ret);
             break;
+        default:
+            lldbg("AAAAHHHHHHHHHHH - type: %d/0x%x\n", pkt_hdr->type,
+                  pkt_hdr->type);
         }
 
         free(demux_entry);
@@ -786,6 +822,8 @@ int apbridgea_audio_init(void)
 
     list_init(&info->cport_list);
     list_init(&info->list);
+
+    list_add(&apbridgea_audio_info_list, &info->list);
 
     atomic_init(&request_id, 0);
 
