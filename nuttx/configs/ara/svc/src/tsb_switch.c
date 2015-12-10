@@ -2527,11 +2527,19 @@ static int destroy_switch_irq_worker(struct tsb_switch *sw)
     int ret = 0, status;
 
     sw->sw_irq_worker_exit = true;
+
+    if (!sw->worker_id) {
+        return ret;
+    }
+
     sem_post(&sw->sw_irq_lock);
 
     ret = waitpid(sw->worker_id, &status, 0);
-    if (ret < 0)
+    if (ret < 0) {
         dbg_warn("%s: waitpid failed with ret=%d\n", __func__, ret);
+    } else {
+        sw->worker_id = 0;
+    }
 
     return ret;
 }
@@ -2581,6 +2589,7 @@ struct tsb_switch *switch_init(struct tsb_switch_data *pdata) {
 
     sw->pdata = pdata;
     sem_init(&sw->sw_irq_lock, 0, 0);
+    sw->worker_id = 0;
     sw->sw_irq_worker_exit = false;
 
     list_init(&sw->listeners);
