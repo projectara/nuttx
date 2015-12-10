@@ -357,6 +357,7 @@ void pwrmon_init_i2c_sel(void)
 
 int pwrmon_do_i2c_sel(uint8_t dev)
 {
+    return -ENOSYS;
 }
 
 struct ara_board_info *board_init(void) {
