@@ -337,6 +337,7 @@ static int apbridgea_audio_set_config(struct apbridgea_audio_info *info,
     dai.mclk_freq = le32_to_cpu(req->mclk_freq);
     dai.protocol = DEVICE_I2S_PROTOCOL_I2S;
     dai.wclk_polarity = DEVICE_I2S_POLARITY_NORMAL;
+
 #ifdef APBRIDGEA_AUDIO_I2S_MASTER
     dai.wclk_change_edge = DEVICE_I2S_EDGE_FALLING;
     dai.data_tx_edge = DEVICE_I2S_EDGE_FALLING;
@@ -344,6 +345,9 @@ static int apbridgea_audio_set_config(struct apbridgea_audio_info *info,
 
     ret = device_i2s_set_config(info->i2s_dev, DEVICE_I2S_ROLE_MASTER, &pcm,
                                 &dai);
+    if (ret) {
+        return ret;
+    }
 #else
     dai.wclk_change_edge = DEVICE_I2S_EDGE_RISING;
     dai.data_tx_edge = DEVICE_I2S_EDGE_RISING;
@@ -351,10 +355,10 @@ static int apbridgea_audio_set_config(struct apbridgea_audio_info *info,
 
     ret = device_i2s_set_config(info->i2s_dev, DEVICE_I2S_ROLE_SLAVE, &pcm,
                                 &dai);
-#endif
     if (ret) {
         return ret;
     }
+#endif
 
     info->sample_size = bytes * 2; /* two channels */
     info->sample_frequency = freq;
