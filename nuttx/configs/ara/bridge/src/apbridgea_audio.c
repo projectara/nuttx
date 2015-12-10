@@ -459,6 +459,7 @@ static int apbridgea_audio_send_data(struct apbridgea_audio_info *info,
     struct apbridgea_audio_cport *cport;
     struct gb_operation_hdr *hdr;
     struct list_head *iter;
+    int ret;
 
     hdr = ring_buf_get_priv(rb);
 
@@ -469,7 +470,10 @@ static int apbridgea_audio_send_data(struct apbridgea_audio_info *info,
     list_foreach(&info->cport_list, iter) {
         cport = list_entry(iter, struct apbridgea_audio_cport, list);
 
-        unipro_send(cport->data_cportid, hdr, le16_to_cpu(hdr->size));
+        ret = unipro_send(cport->data_cportid, hdr, le16_to_cpu(hdr->size));
+        if (ret) {
+lldbg("unipro_send failed: %d\n", ret);
+        }
     }
 
     ring_buf_reset(rb);
