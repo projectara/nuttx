@@ -27,6 +27,7 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
 #include <errno.h>
 #include <nuttx/irq.h>
 #include <nuttx/device.h>
@@ -68,15 +69,12 @@ struct apbridgea_audio_info {
 #endif
     struct list_head    cport_list;
     struct list_head    list;
-
-    pthread_t g_audio_demux_thread;
-    sem_t demux_sem;
-    struct list_head dmux_list;
 };
 
-struct apbridgea_audio_audio_dmux {
+struct apbridgea_audio_audio_demux {
     struct list_head            list;
-    void                       *buff;
+    struct apbridgea_audio_info *info;
+    void                        *buf;
     uint16_t                    len;
 };
 
@@ -90,7 +88,11 @@ static unsigned int mag_msg_count = 0;
 
 static atomic_t request_id;
 
+static pthread_t apbridgea_audio_demux_thread;
+static sem_t apbridgea_audio_demux_sem;
+
 static LIST_DECLARE(apbridgea_audio_info_list);
+static LIST_DECLARE(apbridgea_audio_demux_list);
 
 static struct apbridgea_audio_info *apbridgea_audio_find_info(uint16_t i2s_port)
 {
@@ -654,124 +656,103 @@ int apbridgea_audio_out_demux(void *buf, uint16_t len)
 {
     struct apbridgea_audio_info *info;
     struct audio_apbridgea_hdr *hdr = (struct audio_apbridgea_hdr *)buf;
-    uint16_t i2s_port;
-    struct apbridgea_audio_audio_dmux *dmux_entry;
+    struct apbridgea_audio_audio_demux *demux_entry;
 
     if (!hdr || (len < sizeof(*hdr))) {
         return -EINVAL;
     }
 
-    i2s_port = le16_to_cpu(hdr->i2s_port);
-
-    info = apbridgea_audio_find_info(i2s_port);
+    info = apbridgea_audio_find_info(le16_to_cpu(hdr->i2s_port));
     if (!info) {
         return -EINVAL;
     }
 
     /* In interrupt context now,
      * nuttx is non-preemptive so its safe to manipulate the list here
-     * so long as all non-interrupt context code dealing with the list is guarded by sched_lock
+     * so long as all non-interrupt context code dealing with the list
+     * is guarded by sched_lock
      */
-    dmux_entry = zalloc(len + sizeof(struct apbridgea_audio_audio_dmux));
-    if (!dmux_entry) {
+    demux_entry = malloc(sizeof(*demux_entry) + len);
+    if (!demux_entry) {
         return -ENOMEM;
     }
-    list_add(&info->dmux_list, &dmux_entry->list);
-    sem_post(&info->demux_sem);
+
+    demux_entry->info = info;
+    demux_entry->buf = (void *)demux_entry + sizeof(*demux_entry);
+    demux_entry->len = len;
+    list_init(&demux_entry->list);
+
+    memcpy(demux_entry->buf, buf, len);
+
+    list_add(&apbridgea_audio_demux_list, &demux_entry->list);
+    sem_post(&apbridgea_audio_demux_sem);
 
     return 0;
 }
 
-
-static void *apbridge_audio_demux_thread_start(void *p_data)
+static void *apbridgea_audio_demux_thread_start(void *ignored)
 {
-    struct apbridgea_audio_info *info = p_data;
-    struct apbridgea_audio_info *interrupt_info;
-    struct list_head *iter;
-    struct apbridgea_audio_audio_dmux *dmux_entry;
+    struct apbridgea_audio_info *info;
+    struct apbridgea_audio_audio_demux *demux_entry;
     struct audio_apbridgea_hdr *hdr;
-    uint16_t i2s_port;
-    void *buf;
+    struct list_head *head;
     uint16_t len;
     irqstate_t flags;
-
+    int ret;
 
     while(1) {
-        sem_wait(&info->demux_sem);
+        ret = sem_wait(&apbridgea_audio_demux_sem);
+        if (ret != OK) {
+            continue;
+        }
 
-        /* empty the list */
         flags = irqsave();
-        list_foreach(&apbridgea_audio_info_list, iter) {
-            dmux_entry = list_entry(iter, struct apbridgea_audio_audio_dmux, list);
-            irqrestore(flags);
-            flags = 0;
+        head = apbridgea_audio_demux_list.next;
+        list_del(head);
+        irqrestore(flags);
 
-            buf = dmux_entry->buff;
-            len = dmux_entry->len;
+        demux_entry = list_entry(head, struct apbridgea_audio_audio_demux,
+                                 list);
+        info = demux_entry->info;
+        hdr = (struct audio_apbridgea_hdr *)demux_entry->buf;
+        len = demux_entry->len;
 
-            hdr = (struct audio_apbridgea_hdr *)dmux_entry->buff;
-
-            i2s_port = le16_to_cpu(hdr->i2s_port);
-
-            interrupt_info = apbridgea_audio_find_info(i2s_port);
-            if (!interrupt_info) {
-                /* error here but not much we can do but try next list entry */
-                continue;
-            }
-
-            if(interrupt_info != info)
-            {
-                /* error, there is a separate semaphore and list per instance these should always match */
-                continue;
-            }
-
-            flags = irqsave();
-            list_del(iter);
-            irqrestore(flags);
-            flags = 0;
-
-            switch (hdr->type) {
-            case AUDIO_APBRIDGEA_TYPE_SET_CONFIG:
-                apbridgea_audio_set_config(info, buf, len);
-                break;
-            case AUDIO_APBRIDGEA_TYPE_REGISTER_CPORT:
-                apbridgea_audio_register_cport(info, buf, len);
-                break;
-            case AUDIO_APBRIDGEA_TYPE_UNREGISTER_CPORT:
-                apbridgea_audio_unregister_cport(info, buf, len);
-                break;
-            case AUDIO_APBRIDGEA_TYPE_SET_TX_DATA_SIZE:
-                apbridgea_audio_set_tx_data_size(info, buf, len);
-                break;
-            case AUDIO_APBRIDGEA_TYPE_START_TX:
-                apbridgea_audio_start_tx(info, buf, len);
-                break;
-            case AUDIO_APBRIDGEA_TYPE_STOP_TX:
-                apbridgea_audio_stop_tx(info);
-                break;
-            case AUDIO_APBRIDGEA_TYPE_SET_RX_DATA_SIZE:
-                apbridgea_audio_set_rx_data_size(info, buf, len);
-                break;
-            case AUDIO_APBRIDGEA_TYPE_START_RX:
-                apbridgea_audio_start_rx(info);
-                break;
-            case AUDIO_APBRIDGEA_TYPE_STOP_RX:
-                apbridgea_audio_stop_rx(info);
-                break;
-            }
-
-            free(dmux_entry);
+        switch (hdr->type) {
+        case AUDIO_APBRIDGEA_TYPE_SET_CONFIG:
+            apbridgea_audio_set_config(info, hdr, len);
+            break;
+        case AUDIO_APBRIDGEA_TYPE_REGISTER_CPORT:
+            apbridgea_audio_register_cport(info, hdr, len);
+            break;
+        case AUDIO_APBRIDGEA_TYPE_UNREGISTER_CPORT:
+            apbridgea_audio_unregister_cport(info, hdr, len);
+            break;
+        case AUDIO_APBRIDGEA_TYPE_SET_TX_DATA_SIZE:
+            apbridgea_audio_set_tx_data_size(info, hdr, len);
+            break;
+        case AUDIO_APBRIDGEA_TYPE_START_TX:
+            apbridgea_audio_start_tx(info, hdr, len);
+            break;
+        case AUDIO_APBRIDGEA_TYPE_STOP_TX:
+            apbridgea_audio_stop_tx(info);
+            break;
+        case AUDIO_APBRIDGEA_TYPE_SET_RX_DATA_SIZE:
+            apbridgea_audio_set_rx_data_size(info, hdr, len);
+            break;
+        case AUDIO_APBRIDGEA_TYPE_START_RX:
+            apbridgea_audio_start_rx(info);
+            break;
+        case AUDIO_APBRIDGEA_TYPE_STOP_RX:
+            apbridgea_audio_stop_rx(info);
+            break;
         }
 
-        if (flags) {
-            /* for some reason we did not go into the for loop */
-            irqrestore(flags);
-        }
+        free(demux_entry);
     }
 
-    return 0;
+    /* NOTREACHED */
+    return NULL;
 }
-
 
 /* Only support one I2S port right now (but multiple tx cports) */
 int apbridgea_audio_init(void)
@@ -792,14 +773,13 @@ int apbridgea_audio_init(void)
         goto err_free_info;
     }
 
-    list_init(&info->dmux_list);
-    ret = sem_init(&info->demux_sem, 0, 0);
+    ret = sem_init(&apbridgea_audio_demux_sem, 0, 0);
     if (ret) {
-        goto err_free_info;
+        goto err_close_i2s;
     }
 
-    ret = pthread_create(&info->g_audio_demux_thread, NULL, apbridge_audio_demux_thread_start,
-                         (pthread_addr_t)info);
+    ret = pthread_create(&apbridgea_audio_demux_thread, NULL,
+                         apbridgea_audio_demux_thread_start, NULL);
     if (ret) {
         goto err_destroy_sem;
     }
@@ -807,15 +787,14 @@ int apbridgea_audio_init(void)
     list_init(&info->cport_list);
     list_init(&info->list);
 
-    list_add(&apbridgea_audio_info_list, &info->list);
-
     atomic_init(&request_id, 0);
 
     return 0;
 
 err_destroy_sem:
-    sem_destroy(&info->demux_sem);
-
+    sem_destroy(&apbridgea_audio_demux_sem);
+err_close_i2s:
+    device_close(info->i2s_dev);
 err_free_info:
     free(info);
 
