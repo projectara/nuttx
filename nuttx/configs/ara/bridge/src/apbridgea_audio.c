@@ -733,16 +733,16 @@ lldbg("demux_entry: 0x%p, demux_entry->buf: 0x%x, demux_entry->len: %d\n",
         pkt_hdr = demux_entry->buf;
         len = demux_entry->len;
 
-        if (!demux_entry->buf || (len < sizeof(*pkt_hdr))) {
+        free(demux_entry);
+
+        if (!pkt_hdr || (len < sizeof(*pkt_hdr))) {
 lldbg("fail 2\n");
-            free(demux_entry);
             continue;
         }
 
         info = apbridgea_audio_find_info(pkt_hdr->i2s_port);
         if (!info) {
 lldbg("fail 3\n");
-            free(demux_entry);
             continue;
         }
 
@@ -794,8 +794,6 @@ lldbg("apbridgea_audio_stop_rx - exit %d\n", ret);
             lldbg("AAAAHHHHHHHHHHH - type: %d/0x%x\n", pkt_hdr->type,
                   pkt_hdr->type);
         }
-
-        free(demux_entry);
     }
 
     /* NOTREACHED */
