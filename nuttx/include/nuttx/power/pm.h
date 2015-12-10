@@ -313,6 +313,8 @@ struct pm_callback_s
    **************************************************************************/
 
   void (*notify)(FAR struct pm_callback_s *cb, enum pm_state_e pmstate);
+
+  void *priv; /* Private data. */
 };
 
 /****************************************************************************
