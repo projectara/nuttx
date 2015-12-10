@@ -551,7 +551,7 @@ static int apbridgea_audio_start_tx(struct apbridgea_audio_info *info,
         return -EPROTO;
     }
 
-    info->rx_rb = ring_buf_alloc_ring(2, 0, 0, 0, apbridgea_audio_rb_alloc,
+    info->rx_rb = ring_buf_alloc_ring(8, 0, 0, 0, apbridgea_audio_rb_alloc,
                                       apbridgea_audio_rb_free, info);
     if (!info->rx_rb) {
         return -ENOMEM;
