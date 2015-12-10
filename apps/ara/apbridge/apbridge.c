@@ -75,8 +75,15 @@ int apbridgea_local_rx_enable(unsigned int cportid,
     }
 
     flags = irqsave();
+
+    if (apbridgea_local_rx_tbl[cportid].enabled) {
+        irqrestore(flags);
+        return -EBUSY;
+    }
+
     apbridgea_local_rx_tbl[cportid].enabled = true;
     apbridgea_local_rx_tbl[cportid].handler = handler;
+
     irqrestore(flags);
 
     return 0;
@@ -91,8 +98,10 @@ int apbridgea_local_rx_disable(unsigned int cportid)
     }
 
     flags = irqsave();
+
     apbridgea_local_rx_tbl[cportid].enabled = false;
     apbridgea_local_rx_tbl[cportid].handler = NULL;
+
     irqrestore(flags);
 
     return 0;
