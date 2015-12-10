@@ -73,7 +73,6 @@ struct apbridgea_audio_info {
 
 struct apbridgea_audio_audio_demux {
     struct list_head            list;
-    struct apbridgea_audio_info *info;
     void                        *buf;
     uint16_t                    len;
 };
@@ -655,18 +654,10 @@ static int apbridgea_audio_stop_rx(struct apbridgea_audio_info *info)
 
 int apbridgea_audio_out_demux(void *buf, uint16_t len)
 {
-    struct apbridgea_audio_info *info;
-    struct audio_apbridgea_hdr *pkt_hdr = (struct audio_apbridgea_hdr *)buf;
     struct apbridgea_audio_audio_demux *demux_entry;
 
-    if (!pkt_hdr || (len < sizeof(*pkt_hdr))) {
-lldbg("fail 1\n");
-        return -EINVAL;
-    }
-
-    info = apbridgea_audio_find_info(le16_to_cpu(pkt_hdr->i2s_port));
-    if (!info) {
-lldbg("fail 2: type: 0x%x, i2s_port: %u\n", pkt_hdr->type, pkt_hdr->i2s_port);
+    if (!buf || !len) {
+lldbg("fail 1 - buf: 0x%p, len: %u\n", buf, len);
         return -EINVAL;
     }
 
@@ -677,23 +668,18 @@ lldbg("fail 2: type: 0x%x, i2s_port: %u\n", pkt_hdr->type, pkt_hdr->i2s_port);
      */
     demux_entry = malloc(sizeof(*demux_entry) + len);
     if (!demux_entry) {
-lldbg("fail 3\n");
+lldbg("fail 2\n");
         return -ENOMEM;
     }
 
-    demux_entry->info = info;
     demux_entry->buf = (void *)demux_entry + sizeof(*demux_entry);
     demux_entry->len = len;
+
+    memcpy(demux_entry->buf, buf, len);
+
     list_init(&demux_entry->list);
-
-    memcpy(demux_entry->buf, pkt_hdr, len);
-
-#if 0
-lldbg("type: 0x%x, demux_entry: 0x%p, demux_entry->buf: 0x%x, demux_entry->len: %d\n",
-        pkt_hdr->type, demux_entry, demux_entry->buf, demux_entry->len);
-#endif
-
     list_add(&apbridgea_audio_demux_list, &demux_entry->list);
+
     sem_post(&apbridgea_audio_demux_sem);
 
     return 0;
@@ -712,6 +698,7 @@ static void *apbridgea_audio_demux_thread_start(void *ignored)
     while(1) {
         ret = sem_wait(&apbridgea_audio_demux_sem);
         if (ret != OK) {
+lldbg("fail 1\n");
             continue;
         }
 
@@ -728,9 +715,19 @@ lldbg("demux_entry: 0x%p, demux_entry->buf: 0x%x, demux_entry->len: %d\n",
         demux_entry, demux_entry->buf, demux_entry->len);
 #endif
 
-        info = demux_entry->info;
-        pkt_hdr = (struct audio_apbridgea_hdr *)demux_entry->buf;
+        pkt_hdr = demux_entry->buf;
         len = demux_entry->len;
+
+        if (!demux_entry->buf || (len < sizeof(*pkt_hdr))) {
+lldbg("fail 2\n");
+            continue;
+        }
+
+        info = apbridgea_audio_find_info(pkt_hdr->i2s_port);
+        if (!info) {
+lldbg("fail 3\n");
+            continue;
+        }
 
         switch (pkt_hdr->type) {
         case AUDIO_APBRIDGEA_TYPE_SET_CONFIG:
@@ -756,10 +753,8 @@ lldbg("apbridgea_audio_set_tx_data_size - exit %d\n", ret);
         case AUDIO_APBRIDGEA_TYPE_START_TX:
 lldbg("apbridgea_audio_start_tx - call\n");
             ret = apbridgea_audio_start_tx(info, pkt_hdr, len);
-lldbg("apbridgea_audio_start_tx - exit %d\n", ret);
             break;
         case AUDIO_APBRIDGEA_TYPE_STOP_TX:
-lldbg("apbridgea_audio_stop_tx - call\n");
             ret = apbridgea_audio_stop_tx(info);
 lldbg("apbridgea_audio_stop_tx - exit %d\n", ret);
             break;
