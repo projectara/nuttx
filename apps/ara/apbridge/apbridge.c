@@ -130,8 +130,18 @@ static int usb_to_unipro(struct apbridge_dev_s *dev, unsigned cportid,
     if (len < sizeof(struct gb_operation_hdr))
         return -EPROTO;
 
+#ifdef CONFIG_APBRIDGEA_LOCAL_RX
+    if (apbridgea_local_rx_tbl[cportid].enabled) {
+lldbg("Message from AP\n");
+        return apbridgea_local_rx_tbl[cportid].handler(cportid, buf, len);
+    } else {
+        return apbridge_backend.usb_to_unipro(cportid, buf, len,
+                                              release_buffer, dev);
+    }
+#else
     return apbridge_backend.usb_to_unipro(cportid, buf, len,
                                           release_buffer, dev);
+#endif
 }
 
 int recv_from_unipro(unsigned int cportid, void *buf, size_t len)
