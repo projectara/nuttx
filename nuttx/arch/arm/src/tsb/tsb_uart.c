@@ -1170,7 +1170,39 @@ err_irqrestore:
 static void tsb_uart_pm_notify(struct pm_callback_s *cb,
                                enum pm_state_e pmstate)
 {
+    struct tsb_uart_info *uart_info;
+    struct device *dev;
+    irqstate_t flags;
 
+    dev = cb->priv;
+    uart_info = device_get_private(dev);
+
+    flags = irqsave();
+
+    switch (pmstate) {
+    case PM_NORMAL:
+        tsb_clk_enable(TSB_CLK_UARTP);
+        tsb_clk_enable(TSB_CLK_UARTS);
+        break;
+    case PM_IDLE:
+    case PM_STANDBY:
+        /* Nothing to do in idle or standby. */
+        break;
+    case PM_SLEEP:
+        if (uart_info->flags & TSB_UART_FLAG_XMIT) {
+            tsb_uart_stop_transmitter(dev);
+            tsb_uart_stop_receiver(dev);
+        }
+
+        tsb_clk_disable(TSB_CLK_UARTP);
+        tsb_clk_disable(TSB_CLK_UARTS);
+        break;
+    default:
+        /* Can never happen. */
+        PANIC();
+    }
+
+    irqrestore(flags);
 }
 
 static int tsb_uart_pm_prepare(struct pm_callback_s *cb,
