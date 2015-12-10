@@ -201,6 +201,11 @@ static int es3_ncp_write(struct tsb_switch *sw,
     SPI_SNDBLOCK(spi_dev, write_trailer, sizeof write_trailer);
     *out_size = sizeof write_header + tx_size + sizeof write_trailer;
 
+    dbg_insane("TX Data (%d):\n", *out_size);
+    dbg_print_buf(ARADBG_INSANE, write_header, sizeof write_header);
+    dbg_print_buf(ARADBG_INSANE, tx_buf, tx_size);
+    dbg_print_buf(ARADBG_INSANE, write_trailer, sizeof write_trailer);
+
     _switch_spi_select(sw, false);
 
     return OK;
