@@ -178,6 +178,8 @@
 #define TSB_UART_FLAG_XMIT          BIT(1)
 #define TSB_UART_FLAG_RECV          BIT(2)
 
+#define TSB_UART_ACTIVITY           9
+
 /* buffer structure */
 struct uart_buffer
 {
@@ -464,6 +466,8 @@ static int ua_irq_handler(int irq, void *context)
     struct tsb_uart_info *uart_info = device_get_private(saved_dev);
     uint8_t interrupt_id = 0;
     uint8_t status = 0;
+
+    pm_activity(TSB_UART_ACTIVITY);
 
     while (1) {
         interrupt_id = ua_get_interrupt_id(uart_info->reg_base);
