@@ -475,8 +475,8 @@ mag_msg_count++;
     list_foreach(&info->cport_list, iter) {
         cport = list_entry(iter, struct apbridgea_audio_cport, list);
 
-        ret = unipro_send(cport->data_cportid, gb_hdr,
-                          le16_to_cpu(gb_hdr->size));
+        ret = unipro_send_async(cport->data_cportid, gb_hdr,
+                                le16_to_cpu(gb_hdr->size), NULL, NULL);
         if (ret) {
 lldbg("unipro_send failed: %d\n", ret);
         }
