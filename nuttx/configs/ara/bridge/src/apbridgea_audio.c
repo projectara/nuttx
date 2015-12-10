@@ -493,6 +493,8 @@ static void apbridgea_audio_i2s_rx_cb(struct ring_buf *rb,
 
     if (event == DEVICE_I2S_EVENT_RX_COMPLETE) {
         apbridgea_audio_send_data(info, rb);
+    } else {
+lldbg("RX callback event: 0x%x\n", event);
     }
 }
 
