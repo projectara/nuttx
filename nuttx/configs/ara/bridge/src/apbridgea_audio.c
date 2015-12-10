@@ -467,7 +467,7 @@ static int apbridgea_audio_send_data(struct apbridgea_audio_info *info,
         hdr->id = cpu_to_le16(atomic_inc(&request_id));
 
     list_foreach(&info->cport_list, iter) {
-        cport = list_entry(iter, struct apbridgea_audio_info, list);
+        cport = list_entry(iter, struct apbridgea_audio_cport, list);
 
         unipro_send(cport->data_cportid, hdr, le16_to_cpu(hdr->size));
     }
