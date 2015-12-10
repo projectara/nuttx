@@ -86,6 +86,8 @@ struct apbridgea_audio_cport {
     struct list_head            list;
 };
 
+static unsigned int mag_msg_count = 0;
+
 static atomic_t request_id;
 
 static LIST_DECLARE(apbridgea_audio_info_list);
@@ -461,6 +463,8 @@ static int apbridgea_audio_send_data(struct apbridgea_audio_info *info,
     struct list_head *iter;
     int ret;
 
+mag_msg_count++;
+
     hdr = ring_buf_get_priv(rb);
 
     hdr->id = cpu_to_le16(atomic_inc(&request_id));
@@ -504,27 +508,25 @@ static int apbridgea_audio_rb_alloc(struct ring_buf *rb, void *arg)
     struct gb_audio_send_data_request *request;
     struct gb_operation_hdr *hdr;
     size_t hdr_size, total_size;
-    void *op;
 
     hdr_size = sizeof(*hdr) + sizeof(*request);
     total_size = hdr_size + info->tx_data_size;
 
-    op = malloc(total_size);
-    if (!op) {
+    hdr = malloc(total_size);
+    if (!hdr) {
         return -ENOMEM;
     }
 
-    hdr = op;
-
-    ring_buf_init(rb, op, hdr_size, info->tx_data_size);
+    ring_buf_init(rb, hdr, hdr_size, info->tx_data_size);
 
     hdr->size = cpu_to_le16(total_size);
     hdr->type = GB_AUDIO_TYPE_SEND_DATA;
 
-    request = (struct gb_audio_send_data_request *)(op + sizeof(*hdr));
+    request = (struct gb_audio_send_data_request *)
+                  ((unsigned char *)hdr + sizeof(*hdr));
     request->timestamp = 0; /* TODO: Implement timestamp support */
 
-    ring_buf_set_priv(rb, op);
+    ring_buf_set_priv(rb, hdr);
 
     return 0;
 }
@@ -604,6 +606,8 @@ static int apbridgea_audio_stop_tx(struct apbridgea_audio_info *info)
     info->flags &= ~APBRIDGEA_AUDIO_FLAG_TX_STARTED;
 
     irqrestore(flags);
+
+lldbg("****** mag_msg_count: %u\n", mag_msg_count);
 
     return 0;
 }
