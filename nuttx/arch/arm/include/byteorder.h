@@ -44,6 +44,8 @@
 #define cpu_to_be16(v) __swap16(v)
 #define le32_to_cpu(v) (v)
 #define cpu_to_le32(v) (v)
+#define le64_to_cpu(v) (v)
+#define cpu_to_le64(v) (v)
 #define le16_to_cpu(v) (uint16_t)(v)
 #define cpu_to_le16(v) (uint16_t)(v)
 

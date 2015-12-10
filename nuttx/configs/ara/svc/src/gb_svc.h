@@ -94,6 +94,7 @@ struct gb_svc_intf_hotplug_request {
         __le32 ddbl1_prod_id;
         __le32 ara_vend_id;
         __le32 ara_prod_id;
+	__le64 serial_number;
     } data;
 } __packed;
 /* hotplug response has no payload */
@@ -150,7 +151,7 @@ struct gb_svc_dme_peer_set_response {
 
 int gb_svc_protocol_version(void);
 int gb_svc_hello(uint8_t ap_intf_id);
-int gb_svc_intf_hotplug(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
+int gb_svc_intf_hotplug(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint64_t);
 int gb_svc_intf_hot_unplug(uint32_t);
 void gb_svc_register(int cport);
 

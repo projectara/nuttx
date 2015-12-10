@@ -510,6 +510,7 @@ static int svc_handle_hot_unplug(uint8_t portid) {
 static int svc_handle_module_ready(uint8_t portid) {
     int rc, intf_id;
     uint32_t ddbl1_mfr_id, ddbl1_prod_id, ara_vend_id, ara_prod_id;
+    uint64_t serial_number;
 
     dbg_info("Hotplug event received for port %u\n", portid);
     intf_id = interface_get_id_by_portid(portid);
@@ -532,14 +533,15 @@ static int svc_handle_module_ready(uint8_t portid) {
     }
 
     /*
-     * Ara vendor id and product ID attributes don't exist on ES2 silicon.
-     * These are unused for now.
+     * Module serial number, Ara vendor id and product ID attributes don't exist
+     * on ES2 silicon. These are unused for now.
      */
     ara_vend_id = 0x0000;
     ara_prod_id = 0x0000;
+    serial_number = 0x0000000000000000;
 
     return gb_svc_intf_hotplug(intf_id, ddbl1_mfr_id, ddbl1_prod_id,
-                               ara_vend_id, ara_prod_id);
+                               ara_vend_id, ara_prod_id, serial_number);
 }
 
 /**

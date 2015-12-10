@@ -112,7 +112,7 @@ int gb_svc_hello(uint8_t ap_intf_id) {
 
 int gb_svc_intf_hotplug(uint32_t intf_id, uint32_t ddbl1_mfr_id,
                         uint32_t ddbl1_prod_id, uint32_t ara_vend_id,
-                        uint32_t ara_prod_id) {
+                        uint32_t ara_prod_id, uint64_t serial_number) {
     struct gb_operation *op_req;
     struct gb_svc_intf_hotplug_request *req;
 
@@ -128,6 +128,7 @@ int gb_svc_intf_hotplug(uint32_t intf_id, uint32_t ddbl1_mfr_id,
     req->data.ddbl1_prod_id = cpu_to_le32(ddbl1_prod_id);
     req->data.ara_vend_id = cpu_to_le32(ara_vend_id);
     req->data.ara_prod_id = cpu_to_le32(ara_prod_id);
+    req->data.serial_number = cpu_to_le64(serial_number);
 
     gb_operation_send_request_sync(op_req);
     gb_operation_destroy(op_req);
