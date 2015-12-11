@@ -451,9 +451,26 @@ int switch_enable_test_traffic(struct tsb_switch *sw,
          .a = T_TSTCPORTID,
          .s = cfg->tf_dst,
          .v = dst_cportid},
+        {.p = dst_portid,
+         .a = T_TSTDSTERRORDETECTIONENABLE,
+         .s = cfg->tf_dst,
+         .v = cfg->tf_dst_error_detection_enable},
+        {.p = dst_portid,
+         .a = T_TSTDSTINCREMENT,
+         .s = cfg->tf_dst,
+         .v = cfg->tf_src_inc},
+        {.p = dst_portid,
+         .a = T_TSTDSTMESSAGESIZE,
+         .s = cfg->tf_dst,
+         .v = cfg->tf_src_size},
+        {.p = dst_portid,
+         .a = T_TSTDSTMESSAGECOUNT,
+         .s = cfg->tf_dst,
+         .v = 0 /* Reset message count when starting the test */ },
 
         /*
-         * Finally, connect the CPorts again, and turn on the source.
+         * Finally, connect the CPorts again, and turn on the source
+         * and the destination.
          */
         {.p = src_portid,
          .a = T_CONNECTIONSTATE,
@@ -467,6 +484,10 @@ int switch_enable_test_traffic(struct tsb_switch *sw,
          .a = T_TSTSRCON,
          .s = cfg->tf_src,
          .v = 1},
+        {.p = dst_portid,
+         .a = T_TSTDSTON,
+         .s = cfg->tf_dst,
+         .v = 1},
     };
 
     if (!sw ||
@@ -479,8 +500,14 @@ int switch_enable_test_traffic(struct tsb_switch *sw,
     dbg_info("Test source: cport=%u, inc=%u, size=%u, count=%u, gap=%u\n",
              src_cportid, cfg->tf_src_inc, cfg->tf_src_size, cfg->tf_src_count,
              cfg->tf_src_gap_us);
-    dbg_info("Test destination: cport=%u, traffic analyzer not enabled.\n",
-             dst_cportid);
+    if (cfg->tf_dst_error_detection_enable) {
+        dbg_info("Test destination: cport=%u, inc=%u, size=%u, count=%u\n. Error checking enabled.\n",
+                 dst_cportid, cfg->tf_src_inc, cfg->tf_src_size,
+                 cfg->tf_src_count);
+    } else {
+        dbg_info("Test destination: cport=%u. Error checking not enabled.\n",
+                 dst_cportid);
+    }
 
     for (i = 0; i < ARRAY_SIZE(test_src_enable); i++) {
         struct pasv *s = &test_src_enable[i];
@@ -511,6 +538,10 @@ int switch_disable_test_traffic(struct tsb_switch *sw,
         {.p = src_portid,
          .a = T_TSTSRCON,
          .s = cfg->tf_src,
+         .v = 0},
+        {.p = dst_portid,
+         .a = T_TSTDSTON,
+         .s = cfg->tf_dst,
          .v = 0},
 
         /*

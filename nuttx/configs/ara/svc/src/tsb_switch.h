@@ -719,6 +719,8 @@ struct unipro_test_feature_cfg {
     uint16_t tf_dst;
     /** Which CPort to associate to the destination Test Feature */
     uint16_t tf_dst_cportid;
+    /** If error checking is enabled on the destination */
+    bool tf_dst_error_detection_enable;
 };
 
 int switch_enable_test_traffic(struct tsb_switch *sw,
