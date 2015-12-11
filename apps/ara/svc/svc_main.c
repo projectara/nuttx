@@ -1051,7 +1051,7 @@ static int dme_io(int argc, char *argv[]) {
 }
 
 static void test_feature_usage(int exit_status) {
-    printf("    svc %s <i|e> [-s <src_iface>] [-f <from_cport>] [-d <dst_iface>] [-t <to_cport>] [-m <size>]\n",
+    printf("    svc %s <i|e> [-s <src_iface>] [-f <from_cport>] [-d <dst_iface>] [-t <to_cport>] [-m <size>] [-c 0/1]\n",
            commands[TESTFEATURE].longc);
     printf("\n");
     printf("    <i|e>: Initialize (start) or Exit (stop) the UniPro test-traffic feature\n");
@@ -1061,16 +1061,18 @@ static void test_feature_usage(int exit_status) {
     printf("    -d <dst_iface>: Dest UniPro interface for test traffic. Default is \"apb2\"\n");
     printf("    -t <to_cport>: Dest CPort for test traffic on dst_iface. Default is 0.\n");
     printf("    -m <size>: message size. Default is 272.\n");
+    printf("    -c 0/1: Enable error checking at destination. Default is 0.\n");
     exit(exit_status);
 }
 
 static int test_feature(int argc, char* argv[]) {
     const char *longc = commands[TESTFEATURE].longc;
-    const char opts[] = "hs:f:d:t:m:";
+    const char opts[] = "hs:f:d:t:m:c:";
     const char *src_iface_name = "apb1";   /* -s */
     const char *dst_iface_name = "apb2";   /* -d */
     uint16_t src_cport = 0, dst_cport = 0; /* -f, -t */
     uint32_t msgsize = 272;                /* -m */
+    bool dst_error_detection_enable = false;    /* -c */
     bool init = false;
     struct tsb_switch *sw = svc->sw;
     struct interface *src_iface, *dst_iface;
@@ -1122,6 +1124,9 @@ static int test_feature(int argc, char* argv[]) {
             break;
         case 'm':
             msgsize = strtol(optarg, NULL, 10);
+            break;
+        case 'c':
+            dst_error_detection_enable = !!strtoul(optarg, NULL, 10);
             break;
         case '?':
         default:
@@ -1189,6 +1194,7 @@ static int test_feature(int argc, char* argv[]) {
     cfg.tf_src_gap_us = 0;
     cfg.tf_dst = 0;
     cfg.tf_dst_cportid = dst_cport;
+    cfg.tf_dst_error_detection_enable = dst_error_detection_enable;
 
     if (init) {
         /* Create a route and connection between the two endpoints. */
