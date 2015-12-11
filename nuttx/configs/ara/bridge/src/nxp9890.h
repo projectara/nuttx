@@ -57,12 +57,15 @@
 
 #define NXP9890_DUMMY_POWER_REG     0x20
 
-#define NXP9890_DUMMY_POWER_MASK                   1
-#define NXP9890_DUMMY_POWER_SFT                    0
+#define NXP9890_DUMMY_PWR_EN                        0
+#define NXP9890_DUMMY_SPKR_AMP_L_EN                 6
+#define NXP9890_DUMMY_SPKR_AMP_R_EN                 7
+#define NXP9890_DUMMY_DAC_L_EN                      10
+#define NXP9890_DUMMY_DAC_R_EN                      11
 
 
-#define NXP9890_VENDOR_ID_REG       0X30
-#define NXP9890_VENDOR_ID_VALUE     0XAABB
+#define NXP9890_DUMMY_VENDOR_ID_REG 0X30
+#define NXP9890_DUMMY_VENDOR_ID_VALUE     0XAABB
 
 /* sample supported formats and rates */
 #define NXP9890_FORMATS (GB_AUDIO_PCM_FMT_S8 | GB_AUDIO_PCM_FMT_S16_LE | \

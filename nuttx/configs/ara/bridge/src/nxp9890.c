@@ -38,7 +38,7 @@
 #include <nuttx/list.h>
 #include <nuttx/device_audio_board.h>
 #include "audcodec.h"
-#include "NXP9890.h"
+#include "nxp9890.h"
 
 // ignore unused warning message for current stage
 #pragma GCC diagnostic ignored "-Wunused-function"
@@ -55,11 +55,11 @@
 
 #undef VERBOSE_MSG
 
-static int NXP9890_speaker_event(struct device *dev, uint8_t widget_id,
+static int nxp9890_speaker_event(struct device *dev, uint8_t widget_id,
                                 uint8_t event);
-int NXP9890_playback_vol_set(struct audio_control *control,
+int nxp9890_playback_vol_set(struct audio_control *control,
                               struct gb_audio_ctl_elem_value *value);
-int NXP9890_playback_vol_get(struct audio_control *control,
+int nxp9890_playback_vol_get(struct audio_control *control,
                               struct gb_audio_ctl_elem_value *value);
 
 static struct device *codec_dev = NULL;
@@ -79,9 +79,9 @@ struct control_node {
 };
 
 /**
- * NXP9890 codec register structure
+ * nxp9890 codec register structure
  */
-struct NXP9890_reg {
+struct nxp9890_reg {
     /** register address */
     uint8_t reg;
     /** register value */
@@ -90,9 +90,9 @@ struct NXP9890_reg {
 
 
 /**
- * NXP9890 private information
+ * nxp9890 private information
  */
-struct NXP9890_info {
+struct nxp9890_info {
     /** Driver model representation of the device */
     struct device *dev;
     /** i2c device handle */
@@ -105,8 +105,8 @@ struct NXP9890_info {
     /** enable TDM mode */
     int tdm_en;
 
-    /** NXP9890 codec initialization array */
-    struct NXP9890_reg *init_regs;
+    /** nxp9890 codec initialization array */
+    struct nxp9890_reg *init_regs;
     /** number of codec initialization array */
     int num_regs;
 
@@ -159,7 +159,7 @@ struct NXP9890_info {
 /**
  * codec register initialization table
  */
-struct NXP9890_reg NXP9890_init_regs[] = {
+struct nxp9890_reg nxp9890_init_regs[] = {
     { NXP9890_DUMMY_VOL_MUTE_REG, 0x88 },
     { NXP9890_DUMMY_POWER_REG, 0x00 }
 };
@@ -167,10 +167,10 @@ struct NXP9890_reg NXP9890_init_regs[] = {
 /**
  * DAI device table
  */
-struct audio_dai NXP9890_dais[] = {
+struct audio_dai nxp9890_dais[] = {
     {
         .dai = {
-            .name = "NXP9890-aif1",
+            .name = "nxp9890-aif1",
             .data_cport = 0,
             .capture = {
                 .stream_name = "AIF1 Capture",
@@ -227,19 +227,19 @@ enum {
 /**
  * audio control list
  */
-struct audio_control NXP9890_controls[] = {
-    AUDCTL_BITS("Playback Mute", RT5647_CTL_PLAYBACK_MUTE, MIXER,
-            NXP9890_DUMMY_VOL_MUTE_REG, NXP9890_L_MUTE_SFT, NXP9890_R_MUTE_SFT, 1),
-    AUDCTL_BITSVE("Playback Volume", RT5647_CTL_PLAYBACK_VOL, MIXER,
-            NXP9890_DUMMY_VOL_MUTE_REG, NXP9890_L_VOL_SFT, NXP9890_R_VOL_SFT,
-                 0, 8, 0xAF, 0x7F, 0, NXP9890_playback_vol_get,
-                 NXP9890_playback_vol_set)
+struct audio_control nxp9890_controls[] = {
+    AUDCTL_BITS("Playback Mute", NXP9890_CTL_PLAYBACK_MUTE, MIXER,
+            NXP9890_DUMMY_VOL_MUTE_REG, NXP9890_DUMMY_L_MUTE_SFT, NXP9890_DUMMY_R_MUTE_SFT, 1),
+    AUDCTL_BITSVE("Playback Volume", NXP9890_CTL_PLAYBACK_VOL, MIXER,
+            NXP9890_DUMMY_VOL_MUTE_REG, NXP9890_DUMMY_L_VOL_SFT, NXP9890_DUMMY_R_VOL_SFT,
+                 0, 8, 0xAF, 0x7F, 0, nxp9890_playback_vol_get,
+                 nxp9890_playback_vol_set)
 };
 
 /**
  * audio control list
  */
-struct audio_control NXP9890_spk_amp_switch[] = {
+struct audio_control nxp9890_spk_amp_switch[] = {
            AUDCTL_DUMMY("Switch", NXP9890_CTL_SPKAMP_SWITCH, MIXER,
                         DUMMY_REG, DUMMY_BIT_00, 0),
 };
@@ -247,16 +247,16 @@ struct audio_control NXP9890_spk_amp_switch[] = {
 /**
  * audio widget table
  */
-struct audio_widget NXP9890_widgets[] = {
+struct audio_widget nxp9890_widgets[] = {
     WIDGET_E("SPK Amp", NXP9890_WIDGET_SPK_AMP_SWITCH, SWITCH,
-             NXP9890_spk_amp_switch, ARRAY_SIZE(NXP9890_spk_amp_switch),
-             NOPWRCTL, 0, 0, NXP9890_speaker_event),
+             nxp9890_spk_amp_switch, ARRAY_SIZE(nxp9890_spk_amp_switch),
+             NOPWRCTL, 0, 0, nxp9890_speaker_event),
 };
 
 /**
  * audio route table
  */
-audio_route NXP9890_routes[] = {
+audio_route nxp9890_routes[] = {
 
 };
 
@@ -278,7 +278,7 @@ struct device* get_codec_dev()
  */
 void* get_codec_read_func(struct device *dev)
 {
-    struct NXP9890_info *info = NULL;
+    struct nxp9890_info *info = NULL;
 
     if (!dev || !device_get_private(dev)) {
         return NULL;
@@ -295,7 +295,7 @@ void* get_codec_read_func(struct device *dev)
  */
 void* get_codec_write_func(struct device *dev)
 {
-    struct NXP9890_info *info = NULL;
+    struct nxp9890_info *info = NULL;
 
     if (!dev || !device_get_private(dev)) {
         return NULL;
@@ -311,14 +311,14 @@ void* get_codec_write_func(struct device *dev)
  * @param value - data buffer of read
  * @return 0 on success, negative errno on error
  */
-static uint32_t NXP9890_audcodec_hw_read(uint32_t reg, uint32_t *value)
+static uint32_t nxp9890_audcodec_hw_read(uint32_t reg, uint32_t *value)
 {
     struct device *dev = get_codec_dev();
-    struct NXP9890_info *info = NULL;
+    struct nxp9890_info *info = NULL;
     uint8_t cmd = 0;
     uint16_t data = 0;
 
-    /* NXP9890 i2c read format :
+    /* nxp9890 i2c read format :
      * [SA + W] + [DA] + [SA + R] + [DATA_HIGH] + [DATA_LOW]
      */
     struct i2c_msg_s msg[] = {
@@ -364,13 +364,13 @@ static uint32_t NXP9890_audcodec_hw_read(uint32_t reg, uint32_t *value)
  * @param value - register value that we want to write
  * @return 0 on success, negative errno on error
  */
-static uint32_t NXP9890_audcodec_hw_write(uint32_t reg, uint32_t value)
+static uint32_t nxp9890_audcodec_hw_write(uint32_t reg, uint32_t value)
 {
     struct device *dev = get_codec_dev();
-    struct NXP9890_info *info = NULL;
+    struct nxp9890_info *info = NULL;
     uint8_t cmd[3] = {0x00, 0x00, 0x00};
 
-    /* NXP9890 i2c write format :
+    /* nxp9890 i2c write format :
      * [SA + W] + [DA] + [DATA_HIGH] + [DATA_LOW]
      */
 
@@ -406,23 +406,23 @@ static uint32_t NXP9890_audcodec_hw_write(uint32_t reg, uint32_t value)
 
 
 #ifdef VERBOSE_MSG
-/* NXP9890 register map */
-const uint8_t NXP9890_reg_map[] = {
+/* nxp9890 register map */
+const uint8_t nxp9890_reg_map[] = {
     0x10,0x20
 };
 
 /**
- * @brief dump all NXP9890 register
+ * @brief dump all nxp9890 register
  */
-static void NXP9890_dump_register(void)
+static void nxp9890_dump_register(void)
 {
     int i = 0, j = 0, k = 0;
     uint32_t value = 0;
     uint8_t bstr[20];
 
-    printf("\nDump NXP9890 register:\n");
-    for (i = 0; i < ARRAY_SIZE(NXP9890_reg_map); i++) {
-        if (NXP9890_audcodec_hw_read(NXP9890_reg_map[i], &value)) {
+    printf("\nDump nxp9890 register:\n");
+    for (i = 0; i < ARRAY_SIZE(nxp9890_reg_map); i++) {
+        if (nxp9890_audcodec_hw_read(nxp9890_reg_map[i], &value)) {
             continue;
         }
         bstr[19] = 0;
@@ -432,7 +432,7 @@ static void NXP9890_dump_register(void)
                 bstr[k++] = 0x20;
             }
         }
-        printf("REG[%02X] = %04X, %s\n", NXP9890_reg_map[i], value, bstr);
+        printf("REG[%02X] = %04X, %s\n", nxp9890_reg_map[i], value, bstr);
     }
 }
 #endif
@@ -455,7 +455,7 @@ static int get_data_cport(unsigned int bundle_index, unsigned int dai_index, uin
 }
 
 
-int NXP9890_playback_vol_get(struct audio_control *control,
+int nxp9890_playback_vol_get(struct audio_control *control,
                               struct gb_audio_ctl_elem_value *value)
 {
     int ret = 0, volr = 0, voll = 0, regmax = 0, ctlmax = 0;
@@ -480,7 +480,7 @@ int NXP9890_playback_vol_get(struct audio_control *control,
     return 0;
 }
 
-int NXP9890_playback_vol_set(struct audio_control *control,
+int nxp9890_playback_vol_set(struct audio_control *control,
                               struct gb_audio_ctl_elem_value *value)
 {
     int volr = 0, voll = 0, regmax = 0, ctlmax = 0;
@@ -515,9 +515,9 @@ int NXP9890_playback_vol_set(struct audio_control *control,
  * @param size - size of audio topology data
  * @return 0 on success, negative errno on error
  */
-static int NXP9890_get_topology_size(struct device *dev, uint16_t *size)
+static int nxp9890_get_topology_size(struct device *dev, uint16_t *size)
 {
-    struct NXP9890_info *info = NULL;
+    struct nxp9890_info *info = NULL;
     struct audio_widget *widgets = NULL;
     int tpg_size = 0, i = 0;
 
@@ -550,10 +550,10 @@ static int NXP9890_get_topology_size(struct device *dev, uint16_t *size)
  * @param topology - audio topology data
  * @return 0 on success, negative errno on error
  */
-static int NXP9890_get_topology(struct device *dev,
+static int nxp9890_get_topology(struct device *dev,
                                struct gb_audio_topology *topology)
 {
-    struct NXP9890_info *info = NULL;
+    struct nxp9890_info *info = NULL;
     struct audio_widget *widgets = NULL;
     struct audio_control *controls = NULL;
     int i = 0, j = 0;
@@ -638,7 +638,7 @@ static int NXP9890_get_topology(struct device *dev,
  * @param rate - pcm rate
  * @return frequency on success, negative errno on error
  */
-static int NXP9890_rate_to_freq(uint32_t rate)
+static int nxp9890_rate_to_freq(uint32_t rate)
 {
     uint32_t freq = 0;
 
@@ -698,7 +698,7 @@ static int NXP9890_rate_to_freq(uint32_t rate)
  * @param fmtbit - pcm format
  * @return bit number on success, negative errno on error
  */
-static int NXP9890_fmtbit_to_bitnum(uint32_t fmtbit)
+static int nxp9890_fmtbit_to_bitnum(uint32_t fmtbit)
 {
     uint32_t bits = 0;
 
@@ -745,11 +745,11 @@ static int NXP9890_fmtbit_to_bitnum(uint32_t fmtbit)
  * @param dai - audio dai setting
  * @return 0 on success, negative errno on error
  */
-static int NXP9890_get_caps(struct device *dev, unsigned int dai_idx,
+static int nxp9890_get_caps(struct device *dev, unsigned int dai_idx,
                            uint8_t clk_role, struct device_codec_pcm *pcm,
                            struct device_codec_dai *dai)
 {
-    struct NXP9890_info *info = NULL;
+    struct nxp9890_info *info = NULL;
     struct gb_audio_pcm *pbpcm = NULL;
 
     if (!dev || !device_get_private(dev) || !pcm || !dai) {
@@ -806,16 +806,14 @@ static int NXP9890_get_caps(struct device *dev, unsigned int dai_idx,
  * @param dai - audio dai setting
  * @return 0 on success, negative errno on error
  */
-static int NXP9890_set_config(struct device *dev, unsigned int dai_idx,
+static int nxp9890_set_config(struct device *dev, unsigned int dai_idx,
                              uint8_t clk_role, struct device_codec_pcm *pcm,
                              struct device_codec_dai *dai)
 {
-    struct NXP9890_info *info = NULL;
+    struct nxp9890_info *info = NULL;
     struct gb_audio_pcm *pbpcm = NULL;
-    struct pll_code code;
     int sysclk = 0, ratefreq = 0, numbits = 0, ret = 0;
     uint32_t value = 0, mask = 0, format = 0;
-    uint32_t tdm1 = 0, tdm2 = 0, tdm3 = 0;
 
     if (!dev || !device_get_private(dev) || !pcm || !dai) {
         return -EINVAL;
@@ -843,8 +841,8 @@ static int NXP9890_set_config(struct device *dev, unsigned int dai_idx,
         return -EINVAL;
     }
     // check clock setting
-    ratefreq = NXP9890_rate_to_freq(pcm->rate);
-    numbits = NXP9890_fmtbit_to_bitnum(pcm->format);
+    ratefreq = nxp9890_rate_to_freq(pcm->rate);
+    numbits = nxp9890_fmtbit_to_bitnum(pcm->format);
 
     if (ratefreq <= 0 || numbits <= 0 || numbits < pcm->sig_bits) {
         return -EINVAL;
@@ -875,10 +873,10 @@ static int NXP9890_set_config(struct device *dev, unsigned int dai_idx,
  * @param value - audio control return value
  * @return 0 on success, negative errno on error
  */
-static int NXP9890_get_control(struct device *dev, uint8_t control_id,
+static int nxp9890_get_control(struct device *dev, uint8_t control_id,
                           uint8_t index, struct gb_audio_ctl_elem_value *value)
 {
-    struct NXP9890_info *info = NULL;
+    struct nxp9890_info *info = NULL;
     struct list_head *iter, *iter_next;
     struct control_node *ctl = NULL;
     struct audio_control *aud_ctl = NULL;
@@ -911,10 +909,10 @@ static int NXP9890_get_control(struct device *dev, uint8_t control_id,
  * @param value - audio control value
  * @return 0 on success, negative errno on error
  */
-static int NXP9890_set_control(struct device *dev, uint8_t control_id,
+static int nxp9890_set_control(struct device *dev, uint8_t control_id,
                           uint8_t index, struct gb_audio_ctl_elem_value *value)
 {
-    struct NXP9890_info *info = NULL;
+    struct nxp9890_info *info = NULL;
     struct list_head *iter, *iter_next;
     struct control_node *ctl = NULL;
     struct audio_control *aud_ctl = NULL;
@@ -945,9 +943,9 @@ static int NXP9890_set_control(struct device *dev, uint8_t control_id,
  * @param widget_id - widget id
  * @return 0 on success, negative errno on error
  */
-static int NXP9890_enable_widget(struct device *dev, uint8_t widget_id)
+static int nxp9890_enable_widget(struct device *dev, uint8_t widget_id)
 {
-    struct NXP9890_info *info = NULL;
+    struct nxp9890_info *info = NULL;
     struct audio_widget *widget = NULL;
     int i = 0;
     uint32_t data = 0, mask = 0;
@@ -996,9 +994,9 @@ static int NXP9890_enable_widget(struct device *dev, uint8_t widget_id)
  * @param widget_id - widget id
  * @return 0 on success, negative errno on error
  */
-static int NXP9890_disable_widget(struct device *dev, uint8_t widget_id)
+static int nxp9890_disable_widget(struct device *dev, uint8_t widget_id)
 {
-    struct NXP9890_info *info = NULL;
+    struct nxp9890_info *info = NULL;
     struct audio_widget *widget = NULL;
     int i = 0;
     uint32_t data = 0, mask = 0;
@@ -1047,9 +1045,9 @@ static int NXP9890_disable_widget(struct device *dev, uint8_t widget_id)
  * @param delay - buffer for get delay count
  * @return 0 on success, negative errno on error
  */
-static int NXP9890_get_tx_delay(struct device *dev, uint32_t *delay)
+static int nxp9890_get_tx_delay(struct device *dev, uint32_t *delay)
 {
-    struct NXP9890_info *info = NULL;
+    struct nxp9890_info *info = NULL;
 
     if (!dev || !device_get_private(dev) || !delay) {
         return -EINVAL;
@@ -1067,9 +1065,9 @@ static int NXP9890_get_tx_delay(struct device *dev, uint32_t *delay)
  * @param dai_idx - DAI index
  * @return 0 on success, negative errno on error
  */
-static int NXP9890_start_tx(struct device *dev, uint32_t dai_idx)
+static int nxp9890_start_tx(struct device *dev, uint32_t dai_idx)
 {
-    struct NXP9890_info *info = NULL;
+    struct nxp9890_info *info = NULL;
 
     if (!dev || !device_get_private(dev)) {
         return -EINVAL;
@@ -1091,9 +1089,9 @@ static int NXP9890_start_tx(struct device *dev, uint32_t dai_idx)
  * @param dai_idx - DAI index
  * @return 0 on success, negative errno on error
  */
-static int NXP9890_stop_tx(struct device *dev, uint32_t dai_idx)
+static int nxp9890_stop_tx(struct device *dev, uint32_t dai_idx)
 {
-    struct NXP9890_info *info = NULL;
+    struct nxp9890_info *info = NULL;
 
     if (!dev || !device_get_private(dev)) {
         return -EINVAL;
@@ -1116,11 +1114,11 @@ static int NXP9890_stop_tx(struct device *dev, uint32_t dai_idx)
  * @param arg - argument for callback event
  * @return 0 on success, negative errno on error
  */
-static int NXP9890_register_tx_callback(struct device *dev,
+static int nxp9890_register_tx_callback(struct device *dev,
                                        device_codec_event_callback callback,
                                        void *arg)
 {
-    struct NXP9890_info *info = NULL;
+    struct nxp9890_info *info = NULL;
 
     if (!dev || !device_get_private(dev) || !callback) {
         return -EINVAL;
@@ -1138,9 +1136,9 @@ static int NXP9890_register_tx_callback(struct device *dev,
  * @param delay - buffer for get delay count
  * @return 0 on success, negative errno on error
  */
-static int NXP9890_get_rx_delay(struct device *dev, uint32_t *delay)
+static int nxp9890_get_rx_delay(struct device *dev, uint32_t *delay)
 {
-    struct NXP9890_info *info = NULL;
+    struct nxp9890_info *info = NULL;
 
     if (!dev || !device_get_private(dev) || !delay) {
         return -EINVAL;
@@ -1158,9 +1156,9 @@ static int NXP9890_get_rx_delay(struct device *dev, uint32_t *delay)
  * @param dai_idx - DAI index
  * @return 0 on success, negative errno on error
  */
-static int NXP9890_start_rx(struct device *dev, uint32_t dai_idx)
+static int nxp9890_start_rx(struct device *dev, uint32_t dai_idx)
 {
-    struct NXP9890_info *info = NULL;
+    struct nxp9890_info *info = NULL;
 
     if (!dev || !device_get_private(dev)) {
         return -EINVAL;
@@ -1180,12 +1178,11 @@ static int NXP9890_start_rx(struct device *dev, uint32_t dai_idx)
      * add code here that enables codec to recive data
      * the code should not interfere with any controls
      */
-    }
 
     info->state |= CODEC_DEVICE_FLAG_RX_START;
 
 #ifdef VERBOSE_MSG
-    NXP9890_dump_register();
+    nxp9890_dump_register();
 #endif
     return 0;
 }
@@ -1197,9 +1194,9 @@ static int NXP9890_start_rx(struct device *dev, uint32_t dai_idx)
  * @param dai_idx - DAI index
  * @return 0 on success, negative errno on error
  */
-static int NXP9890_stop_rx(struct device *dev, uint32_t dai_idx)
+static int nxp9890_stop_rx(struct device *dev, uint32_t dai_idx)
 {
-    struct NXP9890_info *info = NULL;
+    struct nxp9890_info *info = NULL;
 
     if (!dev || !device_get_private(dev)) {
         return -EINVAL;
@@ -1232,11 +1229,11 @@ static int NXP9890_stop_rx(struct device *dev, uint32_t dai_idx)
  * @param arg - argument for callback event
  * @return 0 on success, negative errno on error
  */
-static int NXP9890_register_rx_callback(struct device *dev,
+static int nxp9890_register_rx_callback(struct device *dev,
                                        device_codec_event_callback callback,
                                        void *arg)
 {
-    struct NXP9890_info *info = NULL;
+    struct nxp9890_info *info = NULL;
 
     if (!dev || !device_get_private(dev) || !callback) {
         return -EINVAL;
@@ -1248,6 +1245,56 @@ static int NXP9890_register_rx_callback(struct device *dev,
 }
 
 /**
+ * @brief register jack callback event
+ *
+ * @param dev - pointer to structure of device data
+ * @param callback - callback function for notify jack event
+ * @param arg - argument for callback event
+ * @return 0 on success, negative errno on error
+ */
+static int nxp9890_register_jack_event_callback(struct device *dev,
+                                    device_codec_jack_event_callback callback,
+                                    void *arg)
+{
+    struct nxp9890_info *info = NULL;
+
+    /*FYI, For Speaker only module this callback will not be used */
+
+    if (!dev || !device_get_private(dev) || !callback) {
+        return -EINVAL;
+    }
+    info = device_get_private(dev);
+    info->jack_event_callback = callback;
+    info->jack_event_callback_arg = arg;
+    return 0;
+}
+
+/**
+ * @brief register button callback event
+ *
+ * @param dev - pointer to structure of device data
+ * @param callback - callback function for notify button event
+ * @param arg - argument for callback event
+ * @return 0 on success, negative errno on error
+ */
+static int nxp9890_register_button_event_callback(struct device *dev,
+                                  device_codec_button_event_callback callback,
+                                  void *arg)
+{
+    struct nxp9890_info *info = NULL;
+
+    /*FYI, For Speaker only module this callback will not be used */
+
+    if (!dev || !device_get_private(dev) || !callback) {
+        return -EINVAL;
+    }
+    info = device_get_private(dev);
+    info->button_event_callback = callback;
+    info->button_event_callback_arg = arg;
+    return 0;
+}
+
+/**
  * @brief register speaker amp callback event
  *
  * @param dev - pointer to structure of device data
@@ -1255,21 +1302,23 @@ static int NXP9890_register_rx_callback(struct device *dev,
  * @param arg - argument for callback event
  * @return 0 on success, negative errno on error
  */
-static int NXP9890_speaker_event(struct device *dev, uint8_t widget_id,
+static int nxp9890_speaker_event(struct device *dev, uint8_t widget_id,
                                 uint8_t event)
 {
     uint32_t mask = 0;
     switch (event) {
     case WIDGET_EVENT_POST_PWRUP:
-        /* turn on Class-D power */
-        mask = 1 << NXP9890_PWR1_CLSD_R_EN | 1 << NXP9890_PWR1_CLSD_L_EN | \
-               1 << NXP9890_PWR1_CLSD_EN;
-        audcodec_update(NXP9890_PWR_MGT_1, mask, mask);
+        /* ToDo use function to get device ready to play speaker audio */
+        mask = 1 << NXP9890_DUMMY_PWR_EN | \
+               1 << NXP9890_DUMMY_SPKR_AMP_L_EN | 1 << NXP9890_DUMMY_SPKR_AMP_R_EN | \
+               1 << NXP9890_DUMMY_DAC_L_EN | 1 << NXP9890_DUMMY_DAC_R_EN;
+
+        audcodec_update(NXP9890_DUMMY_POWER_REG, mask, mask);
 
         break;
     case WIDGET_EVENT_PRE_PWRDOWN:
         /* turn off Class-D power */
-        audcodec_update(NXP9890_PWR_MGT_1, 0, mask);
+        audcodec_update(NXP9890_DUMMY_POWER_REG, 0, mask);
         break;
     }
     return 0;
@@ -1286,9 +1335,9 @@ static int NXP9890_speaker_event(struct device *dev, uint8_t widget_id,
  * @param dev - pointer to structure of device data
  * @return 0 on success, negative errno on error
  */
-static int NXP9890_audcodec_open(struct device *dev)
+static int nxp9890_audcodec_open(struct device *dev)
 {
-    struct NXP9890_info *info = NULL;
+    struct nxp9890_info *info = NULL;
     int ret = 0, i = 0;
     uint32_t id = 0;
 
@@ -1307,7 +1356,7 @@ static int NXP9890_audcodec_open(struct device *dev)
     }
 
     /* ToDo verify codec id */
-    if (audcodec_read(NXP9890_VENDOR_ID, &id) || (id != NXP9890_DEFAULT_VID)) {
+    if (audcodec_read(NXP9890_DUMMY_VENDOR_ID_REG, &id) || (id != NXP9890_DUMMY_VENDOR_ID_VALUE)) {
         /* can't read codec register or vendor id isn't correct */
         return -EIO;
     }
@@ -1332,9 +1381,9 @@ static int NXP9890_audcodec_open(struct device *dev)
  *
  * @param dev - pointer to structure of device data
  */
-static void NXP9890_audcodec_close(struct device *dev)
+static void nxp9890_audcodec_close(struct device *dev)
 {
-    struct NXP9890_info *info = NULL;
+    struct nxp9890_info *info = NULL;
     struct audio_widget *widget = NULL;
     int i = 0;
 
@@ -1352,12 +1401,12 @@ static void NXP9890_audcodec_close(struct device *dev)
     if (info->state & CODEC_DEVICE_FLAG_CONFIG) {
         if (info->state & CODEC_DEVICE_FLAG_TX_START) {
             for (i = 0; i < info->num_dais; i++) {
-                NXP9890_stop_tx(dev, i);
+                nxp9890_stop_tx(dev, i);
             }
         }
         if (info->state & CODEC_DEVICE_FLAG_RX_START) {
             for (i = 0; i < info->num_dais; i++) {
-                NXP9890_stop_rx(dev, i);
+                nxp9890_stop_rx(dev, i);
             }
         }
     }
@@ -1366,7 +1415,7 @@ static void NXP9890_audcodec_close(struct device *dev)
     widget = info->widgets;
 
     for (i = 0; i < info->num_widgets; i++) {
-        NXP9890_disable_widget(dev,widget->widget.id);
+        nxp9890_disable_widget(dev,widget->widget.id);
         widget++;
     }
 
@@ -1387,9 +1436,9 @@ static void NXP9890_audcodec_close(struct device *dev)
  * @param dev - pointer to structure of device data
  * @return 0 on success, negative errno on error
  */
-static int NXP9890_audcodec_probe(struct device *dev)
+static int nxp9890_audcodec_probe(struct device *dev)
 {
-    struct NXP9890_info *info = NULL;
+    struct nxp9890_info *info = NULL;
     struct control_node *node = NULL;
     struct audio_control *controls = NULL;
     struct audio_widget *widgets = NULL;
@@ -1409,16 +1458,16 @@ static int NXP9890_audcodec_probe(struct device *dev)
     strcpy((char*)info->name, NXP9890_CODEC_NAME);
 
     /* link pre-defined setting */
-    info->init_regs = NXP9890_init_regs;
-    info->num_regs = ARRAY_SIZE(NXP9890_init_regs);
-    info->dais = NXP9890_dais;
-    info->num_dais = ARRAY_SIZE(NXP9890_dais);
-    info->controls = NXP9890_controls;
-    info->num_controls = ARRAY_SIZE(NXP9890_controls);
-    info->widgets = NXP9890_widgets;
-    info->num_widgets = ARRAY_SIZE(NXP9890_widgets);
-    info->routes = NXP9890_routes;
-    info->num_routes = ARRAY_SIZE(NXP9890_routes);
+    info->init_regs = nxp9890_init_regs;
+    info->num_regs = ARRAY_SIZE(nxp9890_init_regs);
+    info->dais = nxp9890_dais;
+    info->num_dais = ARRAY_SIZE(nxp9890_dais);
+    info->controls = nxp9890_controls;
+    info->num_controls = ARRAY_SIZE(nxp9890_controls);
+    info->widgets = nxp9890_widgets;
+    info->num_widgets = ARRAY_SIZE(nxp9890_widgets);
+    info->routes = nxp9890_routes;
+    info->num_routes = ARRAY_SIZE(nxp9890_routes);
     info->rx_delay = 0;
     info->tx_delay = 0;
 
@@ -1435,8 +1484,8 @@ static int NXP9890_audcodec_probe(struct device *dev)
     /* assign codec register access function,
      * common codec function will use two function acces codec hardware
      */
-    info->codec_read = NXP9890_audcodec_hw_read;
-    info->codec_write = NXP9890_audcodec_hw_write;
+    info->codec_read = nxp9890_audcodec_hw_read;
+    info->codec_write = nxp9890_audcodec_hw_write;
 
     device_set_private(dev, info);
     codec_dev = dev;
@@ -1487,9 +1536,9 @@ static int NXP9890_audcodec_probe(struct device *dev)
  *
  * @param dev - pointer to structure of device data
  */
-static void NXP9890_audcodec_remove(struct device *dev)
+static void nxp9890_audcodec_remove(struct device *dev)
 {
-    struct NXP9890_info *info = NULL;
+    struct nxp9890_info *info = NULL;
     struct list_head *iter, *iter_next;
     struct control_node *ctlnode = NULL;
 
@@ -1499,7 +1548,7 @@ static void NXP9890_audcodec_remove(struct device *dev)
     info = device_get_private(dev);
 
     if (info->state & CODEC_DEVICE_FLAG_OPEN) {
-        NXP9890_audcodec_close(dev);
+        nxp9890_audcodec_close(dev);
     }
     if (info->i2c) {
         up_i2cuninitialize(info->i2c);
@@ -1519,38 +1568,38 @@ static void NXP9890_audcodec_remove(struct device *dev)
     free(info);
 }
 
-static struct device_codec_type_ops NXP9890_audcodec_type_ops = {
-    .get_topology_size = NXP9890_get_topology_size,
-    .get_topology = NXP9890_get_topology,
-    .get_control = NXP9890_get_control,
-    .set_control = NXP9890_set_control,
-    .enable_widget = NXP9890_enable_widget,
-    .disable_widget = NXP9890_disable_widget,
-    .get_caps = NXP9890_get_caps,
-    .set_config = NXP9890_set_config,
-    .get_tx_delay = NXP9890_get_tx_delay,
-    .start_tx = NXP9890_start_tx,
-    .stop_tx = NXP9890_stop_tx,
-    .register_tx_callback = NXP9890_register_tx_callback,
-    .get_rx_delay = NXP9890_get_rx_delay,
-    .start_rx = NXP9890_start_rx,
-    .stop_rx = NXP9890_stop_rx,
-    .register_rx_callback = NXP9890_register_rx_callback,
-    .register_jack_event_callback = NXP9890_register_jack_event_callback,
-    .register_button_event_callback = NXP9890_register_button_event_callback,
+static struct device_codec_type_ops nxp9890_audcodec_type_ops = {
+    .get_topology_size = nxp9890_get_topology_size,
+    .get_topology = nxp9890_get_topology,
+    .get_control = nxp9890_get_control,
+    .set_control = nxp9890_set_control,
+    .enable_widget = nxp9890_enable_widget,
+    .disable_widget = nxp9890_disable_widget,
+    .get_caps = nxp9890_get_caps,
+    .set_config = nxp9890_set_config,
+    .get_tx_delay = nxp9890_get_tx_delay,
+    .start_tx = nxp9890_start_tx,
+    .stop_tx = nxp9890_stop_tx,
+    .register_tx_callback = nxp9890_register_tx_callback,
+    .get_rx_delay = nxp9890_get_rx_delay,
+    .start_rx = nxp9890_start_rx,
+    .stop_rx = nxp9890_stop_rx,
+    .register_rx_callback = nxp9890_register_rx_callback,
+    .register_jack_event_callback = nxp9890_register_jack_event_callback,
+    .register_button_event_callback = nxp9890_register_button_event_callback,
 };
 
-static struct device_driver_ops NXP9890_audcodec_ops = {
-    .probe          = NXP9890_audcodec_probe,
-    .remove         = NXP9890_audcodec_remove,
-    .open           = NXP9890_audcodec_open,
-    .close          = NXP9890_audcodec_close,
-    .type_ops       = &NXP9890_audcodec_type_ops,
+static struct device_driver_ops nxp9890_audcodec_ops = {
+    .probe          = nxp9890_audcodec_probe,
+    .remove         = nxp9890_audcodec_remove,
+    .open           = nxp9890_audcodec_open,
+    .close          = nxp9890_audcodec_close,
+    .type_ops       = &nxp9890_audcodec_type_ops,
 };
 
-struct device_driver NXP9890_audcodec = {
+struct device_driver nxp9890_audcodec = {
     .type       = DEVICE_TYPE_CODEC_HW,
-    .name       = "NXP9890",
+    .name       = "nxp9890",
     .desc       = "TFA9890A Audio Codec driver",
-    .ops        = &NXP9890_audcodec_ops,
+    .ops        = &nxp9890_audcodec_ops,
 };
