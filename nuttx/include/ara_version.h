@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Google Inc.
+ * Copyright (c) 2014, 2015 Google Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,52 +26,10 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __CONTROL_GB_H__
-#define __CONTROL_GB_H__
+#ifndef __INCLUDE_ARA_VERSION_H
+#define __INCLUDE_ARA_VERSION_H
 
-#include <nuttx/greybus/types.h>
+#define GB_INTERFACE_VERSION_MAJOR               0
+#define GB_INTERFACE_VERSION_MINOR               1
 
-/* Version of the Greybus control protocol we support */
-#define GB_CONTROL_VERSION_MAJOR                0x00
-#define GB_CONTROL_VERSION_MINOR                0x01
-
-/* Greybus control request types */
-#define GB_CONTROL_TYPE_INVALID                 0x00
-#define GB_CONTROL_TYPE_PROTOCOL_VERSION        0x01
-/* RESERVED					0x02 */
-#define GB_CONTROL_TYPE_GET_MANIFEST_SIZE       0x03
-#define GB_CONTROL_TYPE_GET_MANIFEST            0x04
-#define GB_CONTROL_TYPE_CONNECTED               0x05
-#define GB_CONTROL_TYPE_DISCONNECTED            0x06
-#define GB_CONTROL_TYPE_INTERFACE_VERSION	0x0a
-
-/* version request has no payload */
-struct gb_control_proto_version_response {
-    __u8      major;
-    __u8      minor;
-};
-
-/* Control protocol get manifest size request has no payload*/
-struct gb_control_get_manifest_size_response {
-    __le16    size;
-};
-
-/* Control protocol get manifest request has no payload */
-struct gb_control_get_manifest_response {
-    __u8      data[0];
-};
-
-/* Control protocol [dis]connected request */
-struct gb_control_connected_request {
-    __le16    cport_id;
-};
-/* Control protocol [dis]connected response has no payload */
-
-/* Control protocol interface (firmware) version request has no payload */
-struct gb_control_interface_version_response {
-    __le16    major;
-    __le16    minor;
-};
-
-#endif /* __CONTROL_GB_H__ */
-
+#endif /* __INCLUDE_ARA_VERSION_H */

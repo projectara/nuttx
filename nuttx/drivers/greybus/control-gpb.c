@@ -28,6 +28,7 @@
  * Author: Viresh Kumar <viresh.kumar@linaro.org>
  */
 
+#include <ara_version.h>
 #include <string.h>
 #include <arch/byteorder.h>
 #include <nuttx/greybus/debug.h>
@@ -146,12 +147,27 @@ static uint8_t gb_control_disconnected(struct gb_operation *operation)
     return GB_OP_SUCCESS;
 }
 
+static uint8_t gb_control_interface_version(struct gb_operation *operation)
+{
+    struct gb_control_interface_version_response *response;
+
+    response = gb_operation_alloc_response(operation, sizeof(*response));
+    if (!response)
+        return GB_OP_NO_MEMORY;
+
+    response->major = le16_to_cpu(GB_INTERFACE_VERSION_MAJOR);
+    response->minor = le16_to_cpu(GB_INTERFACE_VERSION_MINOR);
+
+    return GB_OP_SUCCESS;
+}
+
 static struct gb_operation_handler gb_control_handlers[] = {
     GB_HANDLER(GB_CONTROL_TYPE_PROTOCOL_VERSION, gb_control_protocol_version),
     GB_HANDLER(GB_CONTROL_TYPE_GET_MANIFEST_SIZE, gb_control_get_manifest_size),
     GB_HANDLER(GB_CONTROL_TYPE_GET_MANIFEST, gb_control_get_manifest),
     GB_HANDLER(GB_CONTROL_TYPE_CONNECTED, gb_control_connected),
     GB_HANDLER(GB_CONTROL_TYPE_DISCONNECTED, gb_control_disconnected),
+    GB_HANDLER(GB_CONTROL_TYPE_INTERFACE_VERSION, gb_control_interface_version),
 };
 
 struct gb_driver control_driver = {
