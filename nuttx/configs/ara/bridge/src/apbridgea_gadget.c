@@ -206,6 +206,11 @@ struct apbridge_dev_s {
     struct gadget_descriptor *g_desc;
 
     struct apbridge_usb_driver *driver;
+
+    /* Number of request per bulk out endpoints */
+    uint8_t req_count[APBRIDGE_NBULKS];
+    /* Number of request to reach */
+    uint8_t req_new_count[APBRIDGE_NBULKS];
 };
 
 typedef uint16_t __le16;
@@ -566,6 +571,77 @@ void usb_wait(struct apbridge_dev_s *priv)
     sem_wait(&priv->config_sem);
 }
 
+/*
+ * Return the number of request to remove ( < 0) or
+ * the number of reuest to add ( > 0) to the endpoint.
+ */
+static int request_count_changed(struct apbridge_dev_s *priv,
+                                 struct usbdev_ep_s *ep)
+{
+    int epn = BULKEP_TO_N(ep);
+    return priv->req_new_count[epn] - priv->req_count[epn];
+}
+
+static void ep_delete_request(struct apbridge_dev_s *priv,
+                             struct usbdev_ep_s *ep, struct usbdev_req_s *req)
+{
+    int ret;
+
+    ret = EP_CANCEL(ep, req);
+    if (!ret) {
+        put_request(req);
+        priv->req_count[BULKEP_TO_N(ep)]--;
+    }
+}
+
+static int ep_add_requests(struct apbridge_dev_s *priv,
+                           struct usbdev_ep_s *ep)
+{
+    int i;
+    int n;
+    int ret;
+    struct usbdev_req_s *req;
+
+    n = request_count_changed(priv, ep);
+
+    /* Queue read requests in the bulk OUT endpoint */
+    for (i = 0; i < n; i++) {
+        req = get_request(ep, usbclass_rdcomplete,
+                          APBRIDGE_REQ_SIZE, NULL);
+        request_set_priv(req, req->buf);
+        ret = EP_SUBMIT(ep, req);
+
+        if (ret != OK) {
+            goto errout;
+        }
+
+        priv->req_count[BULKEP_TO_N(ep)]++;
+    }
+    return 0;
+
+errout:
+    put_request(req);
+    return ret;
+}
+
+static int ep_set_requests_count(struct apbridge_dev_s *priv,
+                                 struct usbdev_ep_s *ep, int n)
+{
+    priv->req_new_count[BULKEP_TO_N(ep)] = n;
+
+    /*
+     * Only add new request. Deletion is performed latter by
+     * usb_release_buffer, when have a chance to cancel it with success.
+     * The deletion can fail but because we are retrying after each
+     * completed transfer, assume it successed and return 0.
+     */
+    if (request_count_changed(priv, ep) > 0) {
+        return ep_add_requests(priv, ep);
+    }
+
+    return 0;
+}
+
 static int apbridge_queue(struct apbridge_dev_s *priv, struct usbdev_ep_s *ep,
                           const void *payload, size_t len, void *data)
 {
@@ -719,6 +795,16 @@ int usb_release_buffer(struct apbridge_dev_s *priv, const void *buf)
         usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_RDSUBMIT),
                  (uint16_t) -ret);
     }
+
+    /*
+     * Little trick to remove the request from ring descriptors.
+     * There no way to remove a request from ring descriptors from gadget.
+     * We need to submit and then cancel the request to let know to the
+     * USB driver we are not going to use this request anymore.
+     */
+    if (!ret && request_count_changed(priv, ep) < 0) {
+        ep_delete_request(priv, ep, req);
+    }
     return ret;
 }
 
@@ -803,10 +889,9 @@ static void usbclass_resetconfig(struct apbridge_dev_s *priv)
 
 static int usbclass_setconfig(struct apbridge_dev_s *priv, uint8_t config)
 {
-    struct usbdev_req_s *req;
     struct usb_epdesc_s epdesc;
     uint16_t mxpacket;
-    int i, j;
+    int i;
     int ret = 0;
 
 #if CONFIG_DEBUG
@@ -857,19 +942,12 @@ static int usbclass_setconfig(struct apbridge_dev_s *priv, uint8_t config)
 
     /* Queue read requests in the bulk OUT endpoint */
     for (i = 0; i < APBRIDGE_NBULKS; i++) {
-        for (j = 0; j < APBRIDGE_NREQS; j++) {
-            struct usbdev_ep_s *ep;
+        struct usbdev_ep_s *ep;
 
-            ep = priv->ep[CONFIG_APBRIDGE_EPBULKOUT + i * 2];
-            req = get_request(ep, usbclass_rdcomplete,
-                              APBRIDGE_REQ_SIZE, NULL);
-            request_set_priv(req, req->buf);
-            ret = EP_SUBMIT(ep, req);
-
-            if (ret != OK) {
-                usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_RDSUBMIT), (uint16_t) - ret);
-                goto errout;
-            }
+        ep = priv->ep[CONFIG_APBRIDGE_EPBULKOUT + i * 2];
+        ret = ep_set_requests_count(priv, ep, APBRIDGE_NREQS);
+        if (ret) {
+            goto errout;
         }
     }
 
