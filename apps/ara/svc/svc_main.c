@@ -179,8 +179,8 @@ static int link_test_port_v(uint8_t port,
         /* Default user data */
         cfg.upro_user.flags                           = UPRO_PWRF_FC0;
         cfg.upro_user.upro_pwr_fc0_protection_timeout = 0x1FFF;
-        /* TX termination only. */
-        cfg.flags = UPRO_LINKF_TX_TERMINATION;
+        /* No termination in PWM */
+        cfg.flags = 0;
     }
     return switch_configure_link(sw, port, &cfg, NULL);
 }
