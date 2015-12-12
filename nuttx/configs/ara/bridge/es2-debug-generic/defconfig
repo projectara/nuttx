@@ -490,18 +490,6 @@ CONFIG_GREYBUS_FEATURE_HAVE_TIMESTAMPS=y
 CONFIG_GREYBUS_LIGHTS=y
 
 #
-# Networking Support
-#
-# CONFIG_ARCH_HAVE_NET is not set
-# CONFIG_ARCH_HAVE_PHY is not set
-# CONFIG_NET is not set
-
-#
-# Crypto API
-#
-# CONFIG_CRYPTO is not set
-
-#
 # File Systems
 #
 
@@ -523,11 +511,6 @@ CONFIG_DISABLE_PSEUDOFS_OPERATIONS=y
 # CONFIG_SYSLOG is not set
 
 #
-# Graphics Support
-#
-# CONFIG_NX is not set
-
-#
 # Memory Management
 #
 # CONFIG_MM_SMALL is not set
@@ -537,11 +520,6 @@ CONFIG_MM_REGIONS=1
 CONFIG_MM_BUFRAM_ALLOCATOR=y
 CONFIG_MM_BUFRAM_CANARY=y
 # CONFIG_MM_BUFRAM_DEBUG is not set
-
-#
-# Audio Support
-#
-# CONFIG_AUDIO is not set
 
 #
 # Binary Formats

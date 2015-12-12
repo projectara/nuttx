@@ -729,29 +729,29 @@ menu "Device Drivers"
 source drivers/Kconfig
 endmenu
 
-menu "Networking Support"
-source net/Kconfig
-endmenu
+#menu "Networking Support"
+#source net/Kconfig
+#endmenu
 
-menu "Crypto API"
-source crypto/Kconfig
-endmenu
+#menu "Crypto API"
+#source crypto/Kconfig
+#endmenu
 
 menu "File Systems"
 source fs/Kconfig
 endmenu
 
-menu "Graphics Support"
-source graphics/Kconfig
-endmenu
+#menu "Graphics Support"
+#source graphics/Kconfig
+#endmenu
 
 menu "Memory Management"
 source mm/Kconfig
 endmenu
 
-menu "Audio Support"
-source audio/Kconfig
-endmenu
+#menu "Audio Support"
+#source audio/Kconfig
+#endmenu
 
 menu "Binary Formats"
 source binfmt/Kconfig
