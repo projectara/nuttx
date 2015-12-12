@@ -194,17 +194,57 @@ static int svc_gb_init(void) {
  * notification.
  */
 static int svc_mailbox_poke(uint8_t intf_id, uint8_t cport) {
-    uint32_t val, retries = 2048;
+    uint32_t mid, pid, val, retries = 2048;
+    uint16_t mbox_ack_attr;
     int rc;
     uint32_t portid = interface_get_portid_by_id(intf_id);
 
-    rc = switch_dme_peer_set(svc->sw, portid, MBOX_ACK_ATTR, 0, TSB_MAIL_RESET);
+    /*
+     * We got interrupted by the bridge via the mailbox.
+     * First get the bridge revision and decide which mailbox Ack attribute
+     * to use
+     */
+    rc = switch_dme_peer_get(svc->sw, portid, DME_DDBL1_MANUFACTURERID, 0,
+                             &mid);
     if (rc) {
-        dbg_error("Failed to re-ack mbox of intf %u: %d\n", intf_id, rc);
-        dbg_error("mbox ack attr was 0x%x\n", MBOX_ACK_ATTR);
+        dbg_error("Failed to read DME_DDBL1_MANUFACTURERID from port %u: %d\n",
+                  intf_id, rc);
+        return rc;
+    }
+    rc = switch_dme_peer_get(svc->sw, portid, DME_DDBL1_PRODUCTID, 0,
+                             &pid);
+    if (rc) {
+        dbg_error("Failed to read DME_DDBL1_PRODUCTID from port %u: %d\n",
+                  intf_id, rc);
         return rc;
     }
 
+    if ((mid == MANUFACTURER_TOSHIBA) &&
+        (pid == PRODUCT_ES2_TSB_BRIDGE)) {
+        mbox_ack_attr = ES2_MBOX_ACK_ATTR;
+    } else if ((mid == MANUFACTURER_TOSHIBA) &&
+               (pid == PRODUCT_ES3_TSB_APBRIDGE ||
+                pid == PRODUCT_ES3_TSB_GPBRIDGE)) {
+        mbox_ack_attr = ES3_MBOX_ACK_ATTR;
+    } else {
+        dbg_error("Unknonw manufacturer (0x%x) and product (0x%x) IDs\n",
+                  mid, pid);
+        return ERROR;
+    }
+
+    /* Ack (= reset to 0) the reception to the bridge */
+    rc = switch_dme_peer_set(svc->sw, portid, mbox_ack_attr, 0,
+                             TSB_MAIL_RESET);
+    if (rc) {
+        dbg_error("Failed to re-ack mbox of intf %u: %d (attr=0x%x)\n",
+                  intf_id, rc, mbox_ack_attr);
+        return rc;
+    }
+
+    /*
+     * Notify the bridge via the mailbox. This generates an IRQ on the bridge
+     * side
+     */
     rc = switch_dme_peer_set(svc->sw, portid,
                              TSB_MAILBOX, 0, cport + 1);
     if (rc) {
@@ -212,18 +252,19 @@ static int svc_mailbox_poke(uint8_t intf_id, uint8_t cport) {
         return rc;
     }
 
+    /* Wait the Ack from the bridge */
     do {
-        rc = switch_dme_peer_get(svc->sw, portid, MBOX_ACK_ATTR, 0, &val);
+        rc = switch_dme_peer_get(svc->sw, portid, mbox_ack_attr, 0, &val);
         if (rc) {
             dbg_error("Failed to poll MBOX_ACK_ATTR (0x%x) on intf %u: %d\n",
-                      MBOX_ACK_ATTR, intf_id, rc);
+                      mbox_ack_attr, intf_id, rc);
             return rc;
         }
     } while ((uint16_t)val != (uint16_t)(cport + 1) && --retries > 0);
 
     if (!retries) {
         dbg_error("MBOX_ACK_ATTR (0x%x) poll on intf %u timeout: 0x%x != 0x%x\n",
-                  MBOX_ACK_ATTR, intf_id, (uint16_t)(cport + 1),
+                  mbox_ack_attr, intf_id, (uint16_t)(cport + 1),
                   (uint16_t)val);
         return -ETIMEDOUT;
     }
