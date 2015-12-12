@@ -190,8 +190,8 @@ static int link_test_port_v(uint8_t port,
         cfg.upro_rx_cfg.upro_nlanes = nlanes;
         /* Default user data */
         cfg.upro_user.flags         = UPRO_PWRF_NONE;
-        /* TX termination only. */
-        cfg.flags = UPRO_LINKF_TX_TERMINATION;
+        /* No termination in PWM */
+        cfg.flags = 0;
     }
     return switch_configure_link(sw, port, &cfg, NULL);
 }
