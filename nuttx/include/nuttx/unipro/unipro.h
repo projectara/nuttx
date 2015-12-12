@@ -384,6 +384,27 @@ void unipro_rxbuf_free(unsigned int cportid, void *ptr);
 #define PRODUCT_ES3_TSB_GPBRIDGE    0x1002
 
 /*
+ * Mailbox ACK attribute, ES specific.
+ * Used to handshake the SVC and the bridges.
+ *
+ * The Switch is using both ES2 and ES3 attributes for compatibility
+ * with modules.
+ *
+ * For ES2 an unused attribute is repurposed.
+ * Warning: this attribute is used by the Unipro traffic generation on the
+ * switch, cf. 'svc t' command
+ */
+#define ES2_MBOX_ACK_ATTR           T_TSTSRCINTERMESSAGEGAP
+#define ES3_SYSTEM_STATUS_15        0x610f
+#define ES3_MBOX_ACK_ATTR           ES3_SYSTEM_STATUS_15
+/* The bridges define only one value depending on the ES revision */
+#if defined(CONFIG_TSB_CHIP_REV_ES2)
+    #define MBOX_ACK_ATTR           ES2_MBOX_ACK_ATTR
+#elif defined(CONFIG_TSB_CHIP_REV_ES3)
+    #define MBOX_ACK_ATTR           ES3_MBOX_ACK_ATTR
+#endif
+
+/*
  * Lower level attribute read/write.
  *
  * Please use one of the unipro_{local,peer}_attr_{read,write}()
