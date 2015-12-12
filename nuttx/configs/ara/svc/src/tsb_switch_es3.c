@@ -730,61 +730,113 @@ fill_done:
 /*
  * Enable port VDD and Clock, release reset lines
  */
-static int es3_enable_port(struct tsb_switch *sw, uint8_t port)
+static int es3_enable_port(struct tsb_switch *sw, uint8_t port, bool enable)
 {
     uint32_t value = 0;
 
-    /* Enable VDDVnPower */
-    if (switch_sys_ctrl_set(sw, SC_VDDVNPOWERON, SC_VDDVN_PORT(port))) {
-        dbg_error("VDDVnPowerOn register write failed\n");
-        return -EIO;
-    }
-
-    /* Wait for VDDVnPSWAck */
-    while (!(value & SC_VDDVN_PORT(port))) {
-        if (switch_sys_ctrl_get(sw, SC_VDDVNPSWACK, &value)) {
-            dbg_error("VDDVnPSWAck register read failed, aborting\n");
+    if (enable) {
+        /* Enable VDDVnPower */
+        if (switch_sys_ctrl_set(sw, SC_VDDVNPOWERON, SC_VDDVN_PORT(port))) {
+            dbg_error("VDDVnPowerOn register write failed\n");
             return -EIO;
         }
-    }
 
-    /* Enable VDDVnCPowered */
-    if (switch_sys_ctrl_set(sw, SC_VDDNCPOWEREDSET, SC_VDDVN_PORT(port))) {
-        dbg_error("VDDVnCPoweredSet register write failed\n");
-        return -EIO;
-    }
+        /* Wait for VDDVnPSWAck */
+        while (!(value & SC_VDDVN_PORT(port))) {
+            if (switch_sys_ctrl_get(sw, SC_VDDVNPSWACK, &value)) {
+                dbg_error("VDDVnPSWAck register read failed, aborting\n");
+                return -EIO;
+            }
+        }
 
-    /* Turn off isolation between VDDVn domain and VDDV domain (VDDVnIsoClr) */
-    if (switch_sys_ctrl_set(sw, SC_VDDVNISOCLR, SC_VDDVN_PORT(port))) {
-        dbg_error("VDDVnIsoClr register write failed\n");
-        return -EIO;
-    }
+        /* Enable VDDVnCPowered */
+        if (switch_sys_ctrl_set(sw, SC_VDDNCPOWEREDSET, SC_VDDVN_PORT(port))) {
+            dbg_error("VDDVnCPoweredSet register write failed\n");
+            return -EIO;
+        }
 
-    /* Enable Hibern8 Clock */
-    if (switch_sys_ctrl_set(sw, SC_VDDVNHB8CLKEN, SC_VDDVN_PORT(port))) {
-        dbg_error("VDDVnHB8ClkEnable register write failed\n");
-        return -EIO;
-    }
+        /*
+         * Turn off isolation between VDDVn domain and VDDV domain
+         * (VDDVnIsoClr)
+         */
+        if (switch_sys_ctrl_set(sw, SC_VDDVNISOCLR, SC_VDDVN_PORT(port))) {
+            dbg_error("VDDVnIsoClr register write failed\n");
+            return -EIO;
+        }
 
-    /* Enable Clock */
-    if (switch_sys_ctrl_set(sw, SC_SYSCLOCKENABLE,
-                            SC_SYSCLOCKENABLE_PORT(port))) {
-        dbg_error("SysClkEnable register write failed\n");
-        return -EIO;
-    }
+        /* Enable Hibern8 Clock */
+        if (switch_sys_ctrl_set(sw, SC_VDDVNHB8CLKEN, SC_VDDVN_PORT(port))) {
+            dbg_error("VDDVnHB8ClkEnable register write failed\n");
+            return -EIO;
+        }
 
-    /* Release reset for M-Port */
-    if (switch_sys_ctrl_set(sw, SC_SOFTRESETRELEASE,
-                            SC_RESET_CLK_MPORT(port))) {
-        dbg_error("SoftResetRelease register write failed\n");
-        return -EIO;
-    }
+        /* Enable Clock */
+        if (switch_sys_ctrl_set(sw, SC_SYSCLOCKENABLE,
+                                SC_SYSCLOCKENABLE_PORT(port))) {
+            dbg_error("SysClkEnable register write failed\n");
+            return -EIO;
+        }
 
-    /* Release reset for Unipro port */
-    if (switch_sys_ctrl_set(sw, SC_SOFTRESETRELEASE,
-                            SC_RESET_CLK_UNIPROPORT(port))) {
-        dbg_error("SoftResetRelease register write failed\n");
-        return -EIO;
+        /* Release reset for M-Port */
+        if (switch_sys_ctrl_set(sw, SC_SOFTRESETRELEASE,
+                                SC_RESET_CLK_MPORT(port))) {
+            dbg_error("SoftResetRelease register write failed\n");
+            return -EIO;
+        }
+
+        /* Release reset for Unipro port */
+        if (switch_sys_ctrl_set(sw, SC_SOFTRESETRELEASE,
+                                SC_RESET_CLK_UNIPROPORT(port))) {
+            dbg_error("SoftResetRelease register write failed\n");
+            return -EIO;
+        }
+    } else {
+        /* Hold reset for Unipro port */
+        if (switch_sys_ctrl_set(sw, SC_SOFTRESET,
+                                SC_RESET_CLK_UNIPROPORT(port))) {
+            dbg_error("SoftReset register write failed\n");
+            return -EIO;
+        }
+
+        /* Hold reset for M-Port */
+        if (switch_sys_ctrl_set(sw, SC_SOFTRESET,
+                                SC_RESET_CLK_MPORT(port))) {
+            dbg_error("SoftReset register write failed\n");
+            return -EIO;
+        }
+
+        /* Gate Clock */
+        if (switch_sys_ctrl_set(sw, SC_SYSCLOCKGATE,
+                                SC_SYSCLOCKENABLE_PORT(port))) {
+            dbg_error("SysClkGate register write failed\n");
+            return -EIO;
+        }
+
+        /* Gate Hibern8 Clock */
+        if (switch_sys_ctrl_set(sw, SC_VDDVNHB8CLKGATE, SC_VDDVN_PORT(port))) {
+            dbg_error("VDDVnHB8ClkGate register write failed\n");
+            return -EIO;
+        }
+
+        /*
+         * Turn on isolation between VDDVn domain and VDDV domain (VDDVnIsoClr)
+         */
+        if (switch_sys_ctrl_set(sw, SC_VDDVNISOSET, SC_VDDVN_PORT(port))) {
+            dbg_error("VDDVnIsoSet register write failed\n");
+            return -EIO;
+        }
+
+        /* Disable VDDVnCPowered */
+        if (switch_sys_ctrl_set(sw, SC_VDDNCPOWEREDCLR, SC_VDDVN_PORT(port))) {
+            dbg_error("VDDVnCPoweredClr register write failed\n");
+            return -EIO;
+        }
+
+        /* Disable VDDVnPower */
+        if (switch_sys_ctrl_set(sw, SC_VDDVNPOWEROFF, SC_VDDVN_PORT(port))) {
+            dbg_error("VDDVnPowerOff register write failed\n");
+            return -EIO;
+        }
     }
 
     return 0;

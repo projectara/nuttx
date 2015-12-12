@@ -85,6 +85,7 @@
 #define TSB_INTERRUPT_SWINTERNAL    (1 << 31)
 
 /* System registers, accessible via switch_sys_ctrl_set, switch_sys_ctrl_get */
+#define SC_SYSCLOCKGATE             (0x0200)
 #define SC_SYSCLOCKENABLE           (0x0300)
 #define SC_SYSCLOCKDIV0             (0x0410)
 #define SC_SYSCLOCKDIV1             (0x0414)
