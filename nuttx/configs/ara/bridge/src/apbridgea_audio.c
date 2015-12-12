@@ -476,8 +476,10 @@ static int apbridgea_audio_send_data_completion(int status, const void *buf,
 {
     struct ring_buf *rb = priv;
 
-    ring_buf_reset(rb);
-    ring_buf_pass(rb);
+    if (rb) {
+        ring_buf_reset(rb);
+        ring_buf_pass(rb);
+    }
 
     return 0;
 }
@@ -487,6 +489,7 @@ static int apbridgea_audio_send_data(struct apbridgea_audio_info *info,
 {
     struct apbridgea_audio_cport *cport;
     struct gb_operation_hdr *gb_hdr;
+    struct ring_buf *arg;
     struct list_head *iter;
     int ret;
 
@@ -501,9 +504,11 @@ mag_msg_count++;
     list_foreach(&info->cport_list, iter) {
         cport = list_entry(iter, struct apbridgea_audio_cport, list);
 
+        arg = list_node_is_last(&info->cport_list, iter) ? rb : NULL;
+
         ret = unipro_send_async(cport->data_cportid, gb_hdr,
                                 le16_to_cpu(gb_hdr->size),
-                                apbridgea_audio_send_data_completion, rb);
+                                apbridgea_audio_send_data_completion, arg);
         if (ret) {
 lldbg("unipro_send failed: %d\n", ret);
         }
