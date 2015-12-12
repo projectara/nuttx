@@ -1051,7 +1051,7 @@ static int dme_io(int argc, char *argv[]) {
 }
 
 static void test_feature_usage(int exit_status) {
-    printf("    svc %s <i|e> [-s <src_iface>] [-f <from_cport>] [-d <dst_iface>] [-t <to_cport>] [-m <size>] [-c 0/1]\n",
+    printf("    svc %s <i|e> [-s <src_iface>] [-f <from_cport>] [-d <dst_iface>] [-t <to_cport>] [-m <size>] [-c 0/1] [-n <number>] [-g <gap>]\n",
            commands[TESTFEATURE].longc);
     printf("\n");
     printf("    <i|e>: Initialize (start) or Exit (stop) the UniPro test-traffic feature\n");
@@ -1060,19 +1060,23 @@ static void test_feature_usage(int exit_status) {
     printf("    -f <from_cport>: Source CPort for test traffic on src_iface. Default is 0.\n");
     printf("    -d <dst_iface>: Dest UniPro interface for test traffic. Default is \"apb2\"\n");
     printf("    -t <to_cport>: Dest CPort for test traffic on dst_iface. Default is 0.\n");
-    printf("    -m <size>: message size. Default is 272.\n");
+    printf("    -m <size>: Message size. Default is 272.\n");
+    printf("    -n <number>: Messages count. Default is 0 for infinite.\n");
+    printf("    -g <gap>: Gap time between two messages, in us. Default is 0.\n");
     printf("    -c 0/1: Enable error checking at destination. Default is 0.\n");
     exit(exit_status);
 }
 
 static int test_feature(int argc, char* argv[]) {
     const char *longc = commands[TESTFEATURE].longc;
-    const char opts[] = "hs:f:d:t:m:c:";
+    const char opts[] = "hs:f:d:t:m:c:n:g:";
     const char *src_iface_name = "apb1";   /* -s */
     const char *dst_iface_name = "apb2";   /* -d */
     uint16_t src_cport = 0, dst_cport = 0; /* -f, -t */
     uint32_t msgsize = 272;                /* -m */
     bool dst_error_detection_enable = false;    /* -c */
+    uint16_t src_message_count = 0;         /* -n */
+    uint16_t src_gap = 0;                   /* -g */
     bool init = false;
     struct tsb_switch *sw = svc->sw;
     struct interface *src_iface, *dst_iface;
@@ -1124,6 +1128,12 @@ static int test_feature(int argc, char* argv[]) {
             break;
         case 'm':
             msgsize = strtol(optarg, NULL, 10);
+            break;
+        case 'n':
+            src_message_count = strtol(optarg, NULL, 10);
+            break;
+        case 'g':
+            src_gap = strtol(optarg, NULL, 10);
             break;
         case 'c':
             dst_error_detection_enable = !!strtoul(optarg, NULL, 10);
@@ -1190,8 +1200,8 @@ static int test_feature(int argc, char* argv[]) {
     cfg.tf_src_cportid = src_cport;
     cfg.tf_src_inc = 1;
     cfg.tf_src_size = msgsize;
-    cfg.tf_src_count = 0;
-    cfg.tf_src_gap_us = 0;
+    cfg.tf_src_count = src_message_count;
+    cfg.tf_src_gap_us = src_gap;
     cfg.tf_dst = 0;
     cfg.tf_dst_cportid = dst_cport;
     cfg.tf_dst_error_detection_enable = dst_error_detection_enable;
