@@ -1283,12 +1283,12 @@ static int gb_audio_rb_alloc_gb_op(struct ring_buf *rb, void *arg)
         return -ENOMEM;
     }
 
-    ring_buf_init(rb, operation->request_buffer,
+    request = gb_operation_get_request_payload(operation);
+    request->timestamp = 0; /* TODO: Implement timestamp support */
+
+    ring_buf_init(rb, request,
                   sizeof(struct gb_operation_hdr) + sizeof(*request),
                   dai->rx_data_size);
-
-    request = gb_operation_get_response_payload(operation);
-    request->timestamp = 0; /* TODO: Implement timestamp support */
 
     ring_buf_set_priv(rb, operation);
 
