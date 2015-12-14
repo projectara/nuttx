@@ -44,7 +44,7 @@
 #include "../../../../drivers/greybus/audio-gb.h"
 #include "../../../../../apps/ara/apbridge/apbridge_backend.h"
 
-#define APBRIDGEA_AUDIO_I2S_MASTER
+#undef APBRIDGEA_AUDIO_I2S_MASTER
 
 #define APBRIDGEA_AUDIO_FLAG_SET_CONFIG            BIT(0)
 #define APBRIDGEA_AUDIO_FLAG_TX_DATA_SIZE_SET      BIT(1)
