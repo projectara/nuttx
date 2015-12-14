@@ -90,6 +90,8 @@ struct gb_audio_dai_info {
     unsigned int            sample_size;
     unsigned int            sample_freq;
 
+    unsigned int            tx_rb_count;
+
     struct ring_buf         *tx_rb;
     unsigned int            tx_data_size;
     unsigned int            tx_samples_per_msg;
@@ -104,6 +106,10 @@ struct gb_audio_dai_info {
 };
 
 static LIST_DECLARE(gb_audio_info_list);
+
+static unsigned int mag_rx_count = 0;
+static unsigned int mag_queued_count = 0;
+static unsigned int mag_sent_count = 0;
 
 static struct gb_audio_info *gb_audio_find_info(uint16_t mgmt_cport)
 {
@@ -922,10 +928,14 @@ static void gb_audio_i2s_tx(struct gb_audio_dai_info *dai, uint8_t *data)
      */
     memcpy(ring_buf_get_tail(dai->tx_rb), data, dai->tx_data_size);
 
+mag_queued_count++;
+
     ring_buf_put(dai->tx_rb, dai->tx_data_size);
     ring_buf_pass(dai->tx_rb);
 
     dai->tx_rb = ring_buf_get_next(dai->tx_rb);
+
+    dai->tx_rb_count++;
 }
 
 /* Callback for low-level i2s transmit operations */
@@ -937,11 +947,19 @@ static void gb_audio_i2s_tx_cb(struct ring_buf *rb,
 
     switch (event) {
     case DEVICE_I2S_EVENT_TX_COMPLETE:
+mag_sent_count++;
         /* TODO: Replace with smarter underrun prevention */
-        if (ring_buf_is_empty(rb)) {
+#if 0 /* XXX */
+        if (ring_buf_is_producers(ring_buf_get_next(rb))) {
             gb_audio_i2s_tx(dai, dai->tx_dummy_data);
         }
+#else
+        dai->tx_rb_count--;
 
+        if (dai->tx_rb_count < 2) {
+            gb_audio_i2s_tx(dai, dai->tx_dummy_data);
+        }
+#endif
         break;
     case DEVICE_I2S_EVENT_UNDERRUN:
         gb_event = GB_AUDIO_STREAMING_EVENT_UNDERRUN;
@@ -966,6 +984,10 @@ static void gb_audio_i2s_tx_cb(struct ring_buf *rb,
         gb_audio_report_event(dai, gb_event);
         /* All driver error events halt streaming right now */
         gb_audio_report_event(dai, GB_AUDIO_STREAMING_EVENT_HALT);
+
+lldbg("mag_rx_count: %u\n", mag_rx_count);
+lldbg("mag_queued_count: %u\n", mag_queued_count);
+lldbg("mag_sent_count: %u\n", mag_sent_count);
     }
 }
 
@@ -1001,6 +1023,12 @@ static uint8_t gb_audio_activate_tx_handler(struct gb_operation *operation)
     /* (rate / samples_per_msg) * (buffer_amount_us / 1,000,000) */
     entries = ((dai->sample_freq * GB_AUDIO_SAMPLE_BUFFER_MIN_US) /
                (dai->tx_samples_per_msg * 1000000)) + GB_AUDIO_TX_RING_BUF_PAD;
+
+lldbg("entries: %u\n", entries);
+
+    entries = 128;
+
+lldbg("entries: %u\n", entries);
 
     dai->tx_rb = ring_buf_alloc_ring(entries, 0, dai->tx_data_size, 0, NULL,
                                       NULL, NULL);
@@ -1072,6 +1100,8 @@ static uint8_t gb_audio_deactivate_tx_handler(struct gb_operation *operation)
     dai->tx_rb = NULL;
     free(dai->tx_dummy_data);
     dai->tx_dummy_data = NULL;
+
+    dai->tx_rb_count = 0;
 
     dai->flags &= ~GB_AUDIO_FLAG_TX_ACTIVE;
 
@@ -1303,6 +1333,8 @@ static uint8_t gb_audio_activate_rx_handler(struct gb_operation *operation)
     /* (sample_freq / samples_per_msg) * (buffer_amount_us / 1,000,000) */
     entries = ((dai->sample_freq * GB_AUDIO_SAMPLE_BUFFER_MIN_US) /
                (dai->rx_samples_per_msg * 1000000)) + GB_AUDIO_RX_RING_BUF_PAD;
+
+lldbg("entries: %u\n", entries);
 
     dai->rx_rb = ring_buf_alloc_ring(entries, 0, 0, 0,
                                      gb_audio_rb_alloc_gb_op,
@@ -1712,6 +1744,8 @@ static uint8_t gb_audio_send_data_handler(struct gb_operation *operation)
     irqstate_t flags;
     int ret;
 
+mag_rx_count++;
+
     if (gb_operation_get_request_payload_size(operation) < sizeof(*request)) {
         gb_error("dropping short message\n");
         return GB_OP_INVALID;
@@ -1731,6 +1765,9 @@ static uint8_t gb_audio_send_data_handler(struct gb_operation *operation)
     if (!ring_buf_is_producers(dai->tx_rb)) {
         irqrestore(flags);
         gb_audio_report_event(dai, GB_AUDIO_STREAMING_EVENT_OVERRUN);
+lldbg("mag_rx_count: %u\n", mag_rx_count);
+lldbg("mag_queued_count: %u\n", mag_queued_count);
+lldbg("mag_sent_count: %u\n", mag_sent_count);
         return GB_OP_SUCCESS;
     }
 
