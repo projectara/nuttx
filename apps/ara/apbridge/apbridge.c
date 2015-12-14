@@ -32,6 +32,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <pthread.h>
 #include <nuttx/device.h>
 #include <nuttx/usb_device.h>
@@ -156,6 +157,7 @@ static int usb_init(void)
 int bridge_main(int argc, char *argv[])
 {
     int ret;
+    struct sched_param param;
 
     apbridge_backend_register(&apbridge_backend);
     srvmgr_start(services);
@@ -167,6 +169,12 @@ int bridge_main(int argc, char *argv[])
 
 #ifdef CONFIG_EXAMPLES_NSH
     printf("Calling NSH\n");
+    /* Avoid nsh lockup by increasing main task priority */
+    param.sched_priority = SCHED_PRIORITY_DEFAULT + 1;
+    ret = sched_setparam(0, &param);
+    if (ret != OK) {
+        printf("Fail to change thread priority: nsh might hang!\n");
+    }
     return nsh_main(argc, argv);
 #else
     return 0;
