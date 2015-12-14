@@ -35,6 +35,7 @@
                                                    * struct gb_audio_route */
 
 #define NOCONTROL 0xFF /* no control object for struct gb_audio_route */
+#define NOINDEX	0xFF /* no control object for struct gb_audio_route */
 
 #define DUMMY_REG 0x00
 
