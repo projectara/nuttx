@@ -709,6 +709,9 @@ lldbg("fail 2\n");
     list_init(&demux_entry->list);
     list_add(&apbridgea_audio_demux_list, &demux_entry->list);
 
+lldbg("+++ demux: 0x%p, buf: 0x%p, len: %u\n", demux_entry, demux_entry->buf,
+        len);
+
     sem_post(&apbridgea_audio_demux_sem);
 
     return 0;
@@ -747,16 +750,19 @@ lldbg("demux_entry: 0x%p, demux_entry->buf: 0x%x, demux_entry->len: %d\n",
         pkt_hdr = demux_entry->buf;
         len = demux_entry->len;
 
-        free(demux_entry);
-
         if (!pkt_hdr || (len < sizeof(*pkt_hdr))) {
-lldbg("fail 2\n");
+lldbg("fail 2 - pkt_hdr: 0x%p, len: %u\n", pkt_hdr, len);
+            free(demux_entry);
             continue;
         }
 
         info = apbridgea_audio_find_info(pkt_hdr->i2s_port);
         if (!info) {
-lldbg("fail 3\n");
+
+lldbg("fail 3 - demux: 0x%p, pkt_hdr: 0x%p, len: %u, i2s_port: %u\n",
+        demux_entry, pkt_hdr, demux_entry->len, pkt_hdr->i2s_port);
+
+            free(demux_entry);
             continue;
         }
 
@@ -808,6 +814,8 @@ lldbg("apbridgea_audio_stop_rx - exit %d\n", ret);
             lldbg("AAAAHHHHHHHHHHH - type: %d/0x%x\n", pkt_hdr->type,
                   pkt_hdr->type);
         }
+
+        free(demux_entry);
     }
 
     /* NOTREACHED */
