@@ -1096,6 +1096,10 @@ static uint8_t gb_audio_deactivate_tx_handler(struct gb_operation *operation)
 
     device_i2s_shutdown_transmitter(dai->i2s_dev);
 
+lldbg("mag_rx_count: %u\n", mag_rx_count);
+lldbg("mag_queued_count: %u\n", mag_queued_count);
+lldbg("mag_sent_count: %u\n", mag_sent_count);
+
     ring_buf_free_ring(dai->tx_rb, NULL, NULL);
     dai->tx_rb = NULL;
     free(dai->tx_dummy_data);
@@ -1748,15 +1752,18 @@ mag_rx_count++;
 
     if (gb_operation_get_request_payload_size(operation) < sizeof(*request)) {
         gb_error("dropping short message\n");
+lldbg("fail 1\n");
         return GB_OP_INVALID;
     }
 
     dai = gb_audio_find_dai(operation->cport);
     if (!dai) {
+lldbg("fail 2\n");
         return GB_OP_INVALID;
     }
 
     if (!(dai->flags & GB_AUDIO_FLAG_TX_ACTIVE)) {
+lldbg("fail 3\n");
         return GB_OP_PROTOCOL_BAD;
     }
 
@@ -1764,6 +1771,7 @@ mag_rx_count++;
 
     if (!ring_buf_is_producers(dai->tx_rb)) {
         irqrestore(flags);
+lldbg("fail 4\n");
         gb_audio_report_event(dai, GB_AUDIO_STREAMING_EVENT_OVERRUN);
 lldbg("mag_rx_count: %u\n", mag_rx_count);
 lldbg("mag_queued_count: %u\n", mag_queued_count);
@@ -1783,6 +1791,7 @@ lldbg("mag_sent_count: %u\n", mag_sent_count);
 
     ret = device_i2s_start_transmitter(dai->i2s_dev);
     if (ret) {
+lldbg("fail 5\n");
         gb_audio_report_event(dai, GB_AUDIO_STREAMING_EVENT_FAILURE);
         gb_audio_report_event(dai, GB_AUDIO_STREAMING_EVENT_HALT);
         return GB_OP_SUCCESS;
