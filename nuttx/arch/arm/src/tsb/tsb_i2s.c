@@ -682,12 +682,7 @@ static int tsb_i2s_start_clocks(struct tsb_i2s_info *info)
 
     bclk_freq = tsb_i2s_calc_bclk(&info->pcm);
 
-#if 0 /* XXX Generate MCLK even though its slave mode since AP doesn't */
     if (info->mclk_role == DEVICE_I2S_ROLE_MASTER) {
-#else
-    if ((info->mclk_role == DEVICE_I2S_ROLE_MASTER) ||
-        (info->mclk_role == DEVICE_I2S_ROLE_SLAVE)) {
-#endif
         info->pll_dev = device_open(DEVICE_TYPE_PLL_HW, TSB_I2S_PLLA_ID);
         if (!info->pll_dev)
             return -EIO;
