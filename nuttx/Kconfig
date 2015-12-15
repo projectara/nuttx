@@ -416,6 +416,7 @@ comment "Subsystem Debug Options"
 config DEBUG_AUDIO
 	bool "Audio Device Debug Output"
 	default n
+	depends on AUDIO
 	---help---
 		Enable low level debug SYSLOG output from the audio subsystem and
 		device drivers. (disabled by default).  Support for this debug option
@@ -443,6 +444,7 @@ config DEBUG_FS
 config DEBUG_GRAPHICS
 	bool "Graphics Debug Output"
 	default n
+	depends on NX
 	---help---
 		Enable NX graphics debug SYSLOG output (disabled by default)
 
@@ -580,6 +582,7 @@ config DEBUG_CAN
 config DEBUG_GPIO
 	bool "GPIO Debug Output"
 	default n
+	depends on GPIO
 	---help---
 		Enable GPIO-releated debug SYSLOG output (disabled by default).
 		Support for this debug option is architecture-specific and may not

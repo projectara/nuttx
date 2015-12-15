@@ -49,10 +49,8 @@ CONFIG_ARCH_HAVE_STACKCHECK=y
 #
 # Subsystem Debug Options
 #
-# CONFIG_DEBUG_AUDIO is not set
 # CONFIG_DEBUG_BINFMT is not set
 # CONFIG_DEBUG_FS is not set
-# CONFIG_DEBUG_GRAPHICS is not set
 # CONFIG_DEBUG_LIB is not set
 # CONFIG_DEBUG_MM is not set
 # CONFIG_DEBUG_SCHED is not set
