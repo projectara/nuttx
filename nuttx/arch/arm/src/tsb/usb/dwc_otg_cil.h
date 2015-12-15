@@ -202,6 +202,14 @@ typedef struct dwc_ep {
 #define MAX_DMA_DESC_CNT 256
 	/** Allocated DMA Desc count */
 	uint32_t desc_cnt;
+	/** Allocated DMA Desc count */
+	uint32_t desc_cnt_save;
+	/** Next descriptor to complete */
+	uint32_t next_desc;
+	/** Next descriptor to free to avoid or solve a BNA */
+	uint32_t busy_desc;
+	/** Do we resize the descriptors chain */
+	unsigned resize_desc:1;
 	
 	/** First ISO Desc in use in the first chain*/
 	uint32_t iso_desc_first;
@@ -1170,6 +1178,8 @@ extern int dwc_otg_check_haps_status(dwc_otg_core_if_t * core_if);
 extern
 dwc_otg_dev_dma_desc_t *get_ring_dma_desc_chain(dwc_ep_t * ep, uint32_t i);
 void init_ring_dma_desc(dwc_ep_t * ep, dwc_otg_dev_dma_desc_t *dma_desc,
+			uint32_t buf, uint32_t length);
+void init_fifo_dma_desc(dwc_ep_t * ep, dwc_otg_dev_dma_desc_t *dma_desc,
 			uint32_t buf, uint32_t length);
 
 /* Macro used to clear one channel interrupt */

@@ -3729,7 +3729,26 @@ static void init_dma_desc_chain(dwc_otg_core_if_t * core_if, dwc_ep_t * ep)
 
 dwc_otg_dev_dma_desc_t *get_ring_dma_desc_chain(dwc_ep_t * ep, uint32_t i)
 {
-	return ep->desc_addr + i;
+	dwc_otg_dev_dma_desc_t * dma_desc;
+
+	if (i != -1) {
+		return ep->desc_addr + i;
+	} else {
+		for (i = 0; i < ep->desc_cnt; i++, ep->busy_desc++) {
+			if (ep->busy_desc >= ep->desc_cnt) {
+				ep->busy_desc = 0;
+			}
+
+			dma_desc = &ep->desc_addr[ep->busy_desc];
+			if (dma_desc->status.b.bs == BS_HOST_BUSY) {
+				if (!ep->resize_desc)
+					ep->busy_desc++;
+				return dma_desc;
+			}
+		}
+	}
+
+	return NULL;
 }
 
 void init_ring_dma_desc(dwc_ep_t * ep, dwc_otg_dev_dma_desc_t *dma_desc,
@@ -3750,6 +3769,25 @@ void init_ring_dma_desc(dwc_ep_t * ep, dwc_otg_dev_dma_desc_t *dma_desc,
 	dma_desc->status.b.mtrf = 1;
 	dma_desc->status.b.bs = BS_HOST_READY;
 }
+
+void init_fifo_dma_desc(dwc_ep_t * ep, dwc_otg_dev_dma_desc_t *dma_desc,
+			uint32_t buf, uint32_t length)
+{
+	int i = dma_desc - ep->desc_addr;
+
+	dma_desc->status.b.bs = BS_HOST_BUSY;
+	dma_desc->status.b.l = 0;
+	dma_desc->status.b.ioc = 1;
+	dma_desc->status.b.sp = 1;
+	dma_desc->status.b.bytes = length;
+	dma_desc->buf = buf;
+	dma_desc->status.b.sts = 0;
+	if (i == ep->desc_cnt - 1) {
+		dma_desc->status.b.l = 1;
+	}
+	dma_desc->status.b.bs = BS_HOST_READY;
+}
+
 
 /**
  * This function is called when to write ISOC data into appropriate dedicated 
@@ -3891,7 +3929,8 @@ void dwc_otg_ep_start_transfer(dwc_otg_core_if_t * core_if, dwc_ep_t * ep)
 							ep->descs_dma_addr);
 				} else {
 #endif
-					init_dma_desc_chain(core_if, ep);
+					if (!ep->desc_cnt)
+						init_dma_desc_chain(core_if, ep);
 				/** DIEPDMAn Register write */
 					DWC_WRITE_REG32(&in_regs->diepdma,
 							ep->dma_desc_addr);

@@ -162,6 +162,7 @@ typedef struct dwc_otg_pcd_ep {
 	/** queue of dwc_otg_pcd_requests. */
 	struct req_list queue;
 	struct req_list sg_dma_queue;
+	uint32_t sg_dma_queue_count;
 	dwc_spinlock_t *sg_dma_queue_lock;
 
 	unsigned stopped:1;
@@ -270,5 +271,9 @@ extern void dwc_otg_pcd_start_iso_ddma(dwc_otg_core_if_t * core_if,
 				dwc_otg_pcd_ep_t * ep);
 
 extern void do_test_mode(void *data);
+extern void update_ring_dma_desc_chain(dwc_otg_core_if_t * core_if,
+				       dwc_otg_pcd_ep_t *ep);
+extern void init_fifo_dma_desc_chain(dwc_otg_core_if_t * core_if,
+				     dwc_otg_pcd_ep_t *ep);
 #endif
 #endif /* DWC_HOST_ONLY */

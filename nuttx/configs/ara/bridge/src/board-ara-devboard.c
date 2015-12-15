@@ -55,8 +55,8 @@
 #include <arch/board/csi.h>
 #endif
 
-#ifdef CONFIG_ARA_BRIDGE_HAVE_BATTERY
-#include <nuttx/device_battery.h>
+#ifdef CONFIG_ARA_BRIDGE_HAVE_POWER_SUPPLY
+#include <nuttx/device_power_supply.h>
 #endif
 
 #ifdef CONFIG_ARCH_CHIP_DEVICE_SDIO
@@ -177,11 +177,11 @@ static struct device devices[] = {
         .id             = 1,
     },
 #endif
-#ifdef CONFIG_ARA_BRIDGE_HAVE_BATTERY
+#ifdef CONFIG_ARA_BRIDGE_HAVE_POWER_SUPPLY
     {
-        .type           = DEVICE_TYPE_BATTERY_DEVICE,
-        .name           = "ara_bridge_battery",
-        .desc           = "Ara Bridge Battery Controller",
+        .type           = DEVICE_TYPE_POWER_SUPPLY_DEVICE,
+        .name           = "power_supply",
+        .desc           = "Power Supply Controller",
         .id             = 0,
     },
 #endif
@@ -245,9 +245,9 @@ static void bdb_driver_register(void)
     extern struct device_driver usb3813_driver;
     device_register_driver(&usb3813_driver);
 #endif
-#ifdef CONFIG_ARA_BRIDGE_HAVE_BATTERY
-    extern struct device_driver batt_driver;
-    device_register_driver(&batt_driver);
+#ifdef CONFIG_ARA_BRIDGE_HAVE_POWER_SUPPLY
+    extern struct device_driver power_supply_driver;
+    device_register_driver(&power_supply_driver);
 #endif
 #ifdef CONFIG_ARA_BRIDGE_HAVE_HID_TOUCH
     extern struct device_driver hid_touch_driver;

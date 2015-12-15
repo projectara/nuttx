@@ -31,6 +31,7 @@
 #include <string.h>
 #include <nuttx/util.h>
 #include <nuttx/bufram.h>
+#include <nuttx/list.h>
 #include <arch/board/common_gadget.h>
 
 #define REQ_SIZE_MUL (BUFRAM_PAGE_SIZE)
@@ -352,3 +353,469 @@ void request_pool_freeall(void)
     }
 }
 
+/* Enumeration common part */
+
+/**
+ * Allocate a gadget descriptor and fill it with device descriptors
+ * \param dev    pointer to the device descriptor
+ * \param qual   pointer to the device qualifier descriptor
+ * \return a pointer to gadget_descriptor or NULL in case of error
+ */
+struct gadget_descriptor *gadget_descriptor_alloc(const struct usb_devdesc_s *dev,
+                                                  const struct usb_qualdesc_s *qual)
+{
+    int i;
+    int nconfigs = dev->nconfigs;
+    struct gadget_descriptor *g_desc;
+
+    g_desc = kmm_malloc(sizeof(*g_desc));
+    if (!g_desc) {
+        return NULL;
+    }
+
+    g_desc->cfg = kmm_malloc(sizeof(*g_desc->cfg) * nconfigs);
+    if (!g_desc->cfg) {
+        kmm_free(g_desc);
+        return NULL;
+    }
+
+    g_desc->dev = dev;
+    g_desc->qual = qual;
+    for (i = 0; i < nconfigs; i++) {
+        g_desc->cfg[i].cfg = NULL;
+    }
+
+    return g_desc;
+}
+
+/**
+ * Free the gadget descriptor
+ * \param g_desc pointer to the gadget descriptor to free
+ */
+void gadget_descriptor_free(struct gadget_descriptor *g_desc)
+{
+    if (g_desc) {
+        kmm_free(g_desc->cfg);
+    }
+    kmm_free(g_desc);
+}
+
+/**
+ * Add one config descriptor and configs
+ * \param g_desc   pointer to the gadget descriptor
+ * \param desc     pointer to the config descriptor to add
+ * \param usb_desc pointer to an array of config
+ */
+void gadget_add_cfgdesc(struct gadget_descriptor *g_desc,
+                        const struct usb_cfgdesc_s *desc,
+                        const struct usb_desc_s *usb_desc[])
+{
+    int i;
+    int nconfigs = g_desc->dev->nconfigs;
+
+    for (i = 0; i < nconfigs; i++) {
+        if (!g_desc->cfg[i].cfg) {
+            g_desc->cfg[i].cfg = desc;
+            g_desc->cfg[i].desc = usb_desc;
+            break;
+        }
+    }
+}
+
+/**
+ * Set the list of string for the gadget
+ * \param g_desc pointer to the gadget descriptor
+ * \param str    pointer to the string array
+ */
+void gadget_set_strings(struct gadget_descriptor *g_desc,
+                        const struct gadget_strings *str)
+{
+    g_desc->str = str;
+}
+
+static int16_t gadget_config_desc(struct gadget_descriptor *g_desc,
+                                  uint8_t * buf, uint8_t speed,
+                                  uint16_t id, uint8_t type)
+{
+    int i;
+    int neps = 0;
+    int ninterfaces;
+    struct usb_cfgdesc_s *cfgdesc = (struct usb_cfgdesc_s *)buf;
+    struct gadget_config_descriptor *g_cfgdesc;
+    const struct usb_desc_s **usb_desc;
+    bool hispeed = (speed == USB_SPEED_HIGH);
+    uint16_t mxpacket;
+    uint16_t totallen;
+
+    g_cfgdesc = &g_desc->cfg[id];
+    ninterfaces = g_cfgdesc->cfg->ninterfaces;
+    /* Get the total number of endpoints */
+    for (i = 0; i < ninterfaces; i++) {
+        neps += ((struct usb_ifdesc_s *)g_cfgdesc->desc[i])->neps;
+    }
+
+    /* This is the total length of the configuration */
+    totallen =
+        USB_SIZEOF_CFGDESC +
+        USB_SIZEOF_IFDESC * ninterfaces +
+        USB_SIZEOF_EPDESC * neps;
+
+    /*
+     * Configuration descriptor -- Copy the canned descriptor and fill in the
+     * type (we'll also need to update the size below
+     */
+    memcpy(cfgdesc, g_cfgdesc->cfg, USB_SIZEOF_CFGDESC);
+    buf += USB_SIZEOF_CFGDESC;
+
+    /*  Copy the canned interface descriptor */
+    usb_desc = g_cfgdesc->desc;
+    for (i = 0; i < ninterfaces; i++) {
+        memcpy(buf, *usb_desc, USB_SIZEOF_IFDESC);
+        buf += USB_SIZEOF_IFDESC;
+        usb_desc++;
+    }
+
+    /*  Check for switches between high and full speed */
+    if (type == USB_DESC_TYPE_OTHERSPEEDCONFIG) {
+        hispeed = !hispeed;
+    }
+
+    /* Make endpoints configurations */
+    for (i = 0; i < neps; i++) {
+        struct usb_epdesc_s *epdesc = (struct usb_epdesc_s *)*usb_desc;
+        struct usb_epdesc_s *epdesc_buf = (struct usb_epdesc_s *)buf;
+        if (hispeed) {
+            mxpacket = GETUINT16(epdesc->mxpacketsize);
+        } else {
+            mxpacket = 64;
+        }
+        memcpy(epdesc_buf, epdesc, USB_SIZEOF_EPDESC);
+
+        epdesc_buf->mxpacketsize[0] = LSBYTE(mxpacket);
+        epdesc_buf->mxpacketsize[1] = MSBYTE(mxpacket);
+        buf += USB_SIZEOF_EPDESC;
+        usb_desc++;
+    }
+
+    /* Finally, fill in the total size of the configuration descriptor */
+    cfgdesc->totallen[0] = LSBYTE(totallen);
+    cfgdesc->totallen[1] = MSBYTE(totallen);
+    return totallen;
+}
+
+static int usb_ascii_to_utf16(uint8_t *utf16, const uint8_t *ascii, size_t len)
+{
+    int i, ndata;
+    for (i = 0, ndata = 0; i < len; i++, ndata += 2) {
+        utf16[ndata] = ascii[i];
+        utf16[ndata + 1] = 0;
+    }
+
+    return ndata + 2;
+}
+
+static int gadget_get_langs(struct gadget_descriptor *g_desc,
+                            struct usb_strdesc_s *strdesc)
+{
+    int i = 0;
+    uint16_t id = 0;
+
+    strdesc->len = 0;
+    strdesc->type = USB_DESC_TYPE_STRING;
+
+    do {
+        id = g_desc->str[i].lang;
+        if (id) {
+            strdesc->data[i * 2] = LSBYTE(id);
+            strdesc->data[i * 2 + 1] = MSBYTE(id);
+            strdesc->len += 4;
+        }
+        i++;
+    } while (id != 0);
+
+    return strdesc->len;
+}
+
+static int gadget_get_string(struct gadget_descriptor *g_desc,
+                             int id, struct usb_strdesc_s *strdesc)
+{
+    int i;
+    const struct gadget_string *strs;
+
+    if (id == 0) {
+        return gadget_get_langs(g_desc, strdesc);
+    }
+
+    strs = g_desc->str->strs;
+    for (i = 0; &strs[i] && strs[i].str; i++) {
+        if (strs[i].id == id) {
+            strdesc->len = usb_ascii_to_utf16(strdesc->data,
+                                             (uint8_t *)strs[i].str,
+                                             strlen(strs[i].str));
+            strdesc->type = USB_DESC_TYPE_STRING;
+            return strdesc->len;
+        }
+    }
+
+    return -EINVAL;
+}
+
+/**
+ * Handle some generic control request
+ * \param g_desc pointer to the gadget descriptor
+ * \param dev pointer to the usb device
+ * \param req pointer to the request to handle (used for data stage)
+ * \param ctrl pointer to the control request to handle
+ * \return the length of data to send for a data stage or < 0 in case of error
+ */
+int gadget_control_handler(struct gadget_descriptor *g_desc,
+                           struct usbdev_s *dev,
+                           struct usbdev_req_s *req,
+                           const struct usb_ctrlreq_s *ctrl)
+{
+    uint16_t len;
+    int ret = -EOPNOTSUPP;
+
+    len = GETUINT16(ctrl->len);
+
+    if ((ctrl->type & USB_REQ_TYPE_MASK) == USB_REQ_TYPE_STANDARD) {
+        if (ctrl->req == USB_REQ_GETDESCRIPTOR) {
+            switch (ctrl->value[1]) {
+            case USB_DESC_TYPE_DEVICE:
+                ret = USB_SIZEOF_DEVDESC;
+                memcpy(req->buf, g_desc->dev, ret);
+                break;
+
+            case USB_DESC_TYPE_DEVICEQUALIFIER:
+                ret = USB_SIZEOF_QUALDESC;
+                memcpy(req->buf, g_desc->qual, ret);
+                break;
+
+            case USB_DESC_TYPE_OTHERSPEEDCONFIG:
+            case USB_DESC_TYPE_CONFIG:
+                ret = gadget_config_desc(g_desc, req->buf, dev->speed,
+                                         ctrl->value[0], ctrl->req);
+                break;
+
+            case USB_DESC_TYPE_STRING:
+                /* index == language code. */
+                ret = gadget_get_string(g_desc, ctrl->value[0],
+                                        (struct usb_strdesc_s *) req->buf);
+                break;
+            }
+        }
+    }
+
+    /* Respond to the setup command if data was returned. On an error return
+     * let the gadget handle it.
+     */
+    if (ret >= 0) {
+        req->len = MIN(len, ret);
+        req->flags = USBDEV_REQFLAGS_NULLPKT;
+        ret = EP_SUBMIT(dev->ep0, req);
+    }
+
+    return ret;
+}
+
+/* Vendor request API */
+
+struct vendor_request {
+    uint8_t req;
+    uint8_t flags;
+    control_request_callback cb;
+    struct list_head list;
+};
+
+static LIST_DECLARE(vendor_requests);
+static struct vendor_request *g_vendor_request = NULL;
+static struct usb_ctrlreq_s g_ctrl;
+static struct usbdev_s *g_dev;
+static struct usbdev_req_s *g_req;
+
+/**
+ * \brief Handle the control request data stage
+ * The host first send the control request and after send the data.
+ * In this case, the vendor request callback is called only after
+ * we receive data.
+ * \param req pointer to the request to execute (used for data stage)
+ */
+void vendor_data_handler(struct usbdev_req_s *req)
+{
+    if (!g_vendor_request)
+        return;
+
+    uint16_t value;
+    uint16_t index;
+
+    value = GETUINT16(g_ctrl.value);
+    index = GETUINT16(g_ctrl.index);
+
+    g_vendor_request->cb(g_dev, g_ctrl.req, value, index, req->buf, req->xfrd);
+    g_vendor_request = NULL;
+}
+
+static int vendor_request_submit(struct usbdev_s *dev,
+                                 struct usbdev_req_s *req, int result)
+{
+    if (result >= 0) {
+        result = EP_SUBMIT(dev->ep0, req);
+    }
+
+    if (result < 0) {
+        req->result = result;
+        req->callback(dev->ep0, req);
+    }
+
+    return result;
+}
+
+/**
+ * \brief Submit a vendor request
+ * Sometime, we may want to submit a request outside the
+ * vendor request callback.
+ * To use deferred request, you must set the VENDOR_REQUEST_DEFER flag.
+ * \param dev pointer to the usb device
+ */
+void vendor_request_deferred_submit(struct usbdev_s *dev, int result)
+{
+    struct usbdev_req_s *req = g_req;
+
+    if (!req) {
+        return;
+    } else {
+        g_req = NULL;
+    }
+
+    vendor_request_submit(dev, req, result);
+}
+
+/**
+ * \brief Handle vendor request
+ * Find a request handler and execute it.
+ * In case of out data stage (host to device), the callback is not called.
+ * We are waiting to receive the data to call it (vendor_data_handler()).
+ * If there are a data stage, the method will submit itself  the request.
+ * This method is expected to work with only one control endpoint.
+ * \param dev pointer to the usb device
+ * \param req pointer to the request to execute (used for data stage)
+ * \param ctrl pointer to the control request to execute
+ * \return the size of data to send or < 0 in case of error
+ */
+int vendor_request_handler(struct usbdev_s *dev,
+                           struct usbdev_req_s *req,
+                           const struct usb_ctrlreq_s *ctrl)
+{
+    int in;
+    uint16_t value;
+    uint16_t index;
+    uint16_t len;
+    int ret = -EOPNOTSUPP;
+    struct list_head *iter;
+    struct vendor_request *vendor_request;
+
+    value = GETUINT16(ctrl->value);
+    index = GETUINT16(ctrl->index);
+    len = GETUINT16(ctrl->len);
+
+    in = (ctrl->type & USB_DIR_IN) != 0;
+
+    if ((ctrl->type & USB_REQ_TYPE_MASK) == USB_REQ_TYPE_VENDOR) {
+        list_foreach(&vendor_requests, iter) {
+            vendor_request = list_entry(iter, struct vendor_request, list);
+            if (vendor_request->req == ctrl->req) {
+                /* in transfer: nothing special to do */
+                if (in && (vendor_request->flags & VENDOR_REQ_IN)) {
+                    ret = vendor_request->cb(dev, ctrl->req, index, value,
+                                             req->buf, len);
+                } else if (!(in && vendor_request->flags & VENDOR_REQ_IN)) {
+                    /* we don't expect data from host */
+                    if (!(vendor_request->flags & VENDOR_REQ_DATA)) {
+                        ret = vendor_request->cb(dev, ctrl->req, index, value,
+                                                 req->buf, len);
+                    /* wait to receive data before to call handler */
+                    } else {
+                        ret = len;
+                        g_vendor_request = vendor_request;
+                        memcpy(&g_ctrl, ctrl, sizeof(g_ctrl));
+                    }
+                }
+            }
+        }
+    }
+
+    if (ret >= 0) {
+        req->len = MIN(len, ret);
+        req->flags = USBDEV_REQFLAGS_NULLPKT;
+        if (vendor_request->flags && VENDOR_REQ_DEFER) {
+            g_req = req;
+        } else {
+            ret = vendor_request_submit(dev, req, ret);
+        }
+    }
+
+    return ret;
+}
+
+/**
+ * Register a new vendor request
+ * \param req the vendor request number
+ * \param flags configure how the request is handled
+ * \param cb the callback to call if this request is handled
+ * return 0 in sucess or < 0 in case of error
+ */
+int register_vendor_request(uint8_t req, uint8_t flags,
+                             control_request_callback cb)
+{
+    irqstate_t irq_flags;
+    struct vendor_request *vendor_request;
+
+    vendor_request = kmm_malloc(sizeof(*vendor_request));
+    if (!vendor_request)
+        return -ENOMEM;
+
+    irq_flags = irqsave();
+    vendor_request->req = req;
+    vendor_request->cb = cb;
+    vendor_request->flags = flags;
+    list_add(&vendor_requests, &vendor_request->list);
+    irqrestore(irq_flags);
+
+    return 0;
+}
+
+/**
+ * remove a vendor request from vendor request manager
+ * \param req the vendor request number of request to remove
+ */
+void unregister_vendor_request(uint8_t req)
+{
+    irqstate_t flags;
+    struct list_head *iter, *next;
+    struct vendor_request *vendor_request;
+
+    flags = irqsave();
+    list_foreach_safe(&vendor_requests, iter, next) {
+        vendor_request = list_entry(iter, struct vendor_request, list);
+        if (vendor_request->req == req) {
+            list_del(iter);
+            kmm_free(&vendor_request->list);
+        }
+    }
+    irqrestore(flags);
+}
+
+/**
+ * remove all vendor requests from vendor request manager
+ */
+void unregister_all_vendor_request(void)
+{
+    struct list_head *iter, *next;
+    struct vendor_request *vendor_request;
+
+    list_foreach_safe(&vendor_requests, iter, next) {
+        vendor_request = list_entry(iter, struct vendor_request, list);
+        list_del(iter);
+        kmm_free(&vendor_request->list);
+    }
+}

@@ -144,26 +144,12 @@
 
 #define APBRIDGE_MANUFACTURERSTRID   (1)
 #define APBRIDGE_PRODUCTSTRID        (2)
-#define APBRIDGE_SERIALSTRID         (3)
-#define APBRIDGE_CONFIGSTRID         (4)
+#define APBRIDGE_SERIALSTRID         (0)
+#define APBRIDGE_CONFIGSTRID         (0)
 
 /* Buffer big enough for any of our descriptors */
 
 #define APBRIDGE_MXDESCLEN           (64)
-
-/* Vender specific control requests *******************************************/
-
-#define APBRIDGE_RWREQUEST_LOG                  (0x02)
-#define APBRIDGE_RWREQUEST_EP_MAPPING           (0x03)
-#define APBRIDGE_ROREQUEST_CPORT_COUNT          (0x04)
-#define APBRIDGE_WOREQUEST_CPORT_RESET          (0x05)
-#define APBRIDGE_ROREQUEST_LATENCY_TAG_EN       (0x06)
-#define APBRIDGE_ROREQUEST_LATENCY_TAG_DIS      (0x07)
-#define APBRIDGE_RWREQUEST_AUDIO_APBRIDGEA      (0x08)
-
-#define TIMEOUT_IN_MS           300
-#define ONE_SEC_IN_MSEC         1000
-#define RESET_TIMEOUT_DELAY (TIMEOUT_IN_MS * CLOCKS_PER_SEC) / ONE_SEC_IN_MSEC
 
 /* Misc Macros ****************************************************************/
 
@@ -209,6 +195,8 @@ struct apbridge_dev_s {
     struct gb_timestamp *ts;
     int epout_to_cport_n[APBRIDGE_NBULKS];
 
+    struct gadget_descriptor *g_desc;
+
     struct apbridge_usb_driver *driver;
 };
 
@@ -234,10 +222,8 @@ enum ctrlreq_state {
 
 /* Configuration ***********************************************************/
 
-static int usbclass_mkstrdesc(uint8_t id, struct usb_strdesc_s *strdesc);
 static void usbclass_mkepdesc(const struct usb_epdesc_s *indesc,
                               uint16_t mxpacket, struct usb_epdesc_s *outdesc);
-static int16_t usbclass_mkcfgdesc(uint8_t * buf, uint8_t speed, uint8_t type);
 static void usbclass_resetconfig(struct apbridge_dev_s *priv);
 static int usbclass_setconfig(struct apbridge_dev_s *priv, uint8_t config);
 
@@ -343,10 +329,9 @@ static const struct usb_epdesc_s g_epbulkindesc = {
     0                           /* interval */
 };
 
-static const struct usb_epdesc_s *g_usbdesc[APBRIDGE_MAX_ENDPOINTS] = {
-    NULL,               /* No descriptor for ep0 */
-    &g_epbulkindesc,
-    &g_epbulkoutdesc,
+static const struct usb_desc_s *g_usb_desc[APBRIDGE_MAX_ENDPOINTS + 2] = {
+    (struct usb_desc_s *) &g_ifdesc,
+    NULL,
 };
 
 static const struct usb_qualdesc_s g_qualdesc = {
@@ -359,6 +344,20 @@ static const struct usb_qualdesc_s g_qualdesc = {
     CONFIG_APBRIDGE_EP0MAXPACKET,       /* mxpacketsize */
     APBRIDGE_NCONFIGS,          /* nconfigs */
     0,                          /* reserved */
+};
+
+static const struct gadget_string g_strings[] = {
+    {APBRIDGE_MANUFACTURERSTRID, "Toshiba"},
+    {APBRIDGE_PRODUCTSTRID, "APBridgeA"},
+    { },
+};
+
+static const struct gadget_strings g_strings_table[] = {
+    {
+        .lang = 0x0409, /* en-us */
+        .strs = g_strings,
+    },
+    { }
 };
 
 static inline
@@ -547,68 +546,6 @@ void map_cport_to_ep(struct apbridge_dev_s *priv,
  ****************************************************************************/
 
 /****************************************************************************
- * Name: usbclass_mkstrdesc
- *
- * Description:
- *   Construct a string descriptor
- *
- ****************************************************************************/
-
-static int usbclass_mkstrdesc(uint8_t id, struct usb_strdesc_s *strdesc)
-{
-    const char *str;
-    int len;
-    int ndata;
-    int i;
-
-    switch (id) {
-    case 0:
-        {
-            /* Descriptor 0 is the language id */
-
-            strdesc->len = 4;
-            strdesc->type = USB_DESC_TYPE_STRING;
-            strdesc->data[0] = LSBYTE(APBRIDGE_STR_LANGUAGE);
-            strdesc->data[1] = MSBYTE(APBRIDGE_STR_LANGUAGE);
-            return 4;
-        }
-
-    case APBRIDGE_MANUFACTURERSTRID:
-        str = CONFIG_APBRIDGE_VENDORSTR;
-        break;
-
-    case APBRIDGE_PRODUCTSTRID:
-        str = CONFIG_APBRIDGE_PRODUCTSTR;
-        break;
-
-    case APBRIDGE_SERIALSTRID:
-        str = CONFIG_APBRIDGE_SERIALSTR;
-        break;
-
-    case APBRIDGE_CONFIGSTRID:
-        str = CONFIG_APBRIDGE_CONFIGSTR;
-        break;
-
-    default:
-        return -EINVAL;
-    }
-
-    /* The string is utf16-le.  The poor man's utf-8 to utf16-le
-     * conversion below will only handle 7-bit en-us ascii
-     */
-
-    len = strlen(str);
-    for (i = 0, ndata = 0; i < len; i++, ndata += 2) {
-        strdesc->data[ndata] = str[i];
-        strdesc->data[ndata + 1] = 0;
-    }
-
-    strdesc->len = ndata + 2;
-    strdesc->type = USB_DESC_TYPE_STRING;
-    return strdesc->len;
-}
-
-/****************************************************************************
  * Name: usbclass_mkepdesc
  *
  * Description:
@@ -628,68 +565,6 @@ static inline void usbclass_mkepdesc(const struct usb_epdesc_s *indesc,
 
     outdesc->mxpacketsize[0] = LSBYTE(mxpacket);
     outdesc->mxpacketsize[1] = MSBYTE(mxpacket);
-}
-
-/****************************************************************************
- * Name: usbclass_mkcfgdesc
- *
- * Description:
- *   Construct the configuration descriptor
- *
- ****************************************************************************/
-
-static int16_t usbclass_mkcfgdesc(uint8_t * buf, uint8_t speed, uint8_t type)
-{
-    int i;
-    struct usb_cfgdesc_s *cfgdesc = (struct usb_cfgdesc_s *)buf;
-    bool hispeed = (speed == USB_SPEED_HIGH);
-    uint16_t mxpacket;
-    uint16_t totallen;
-
-    /* This is the total length of the configuration (not necessarily the
-     * size that we will be sending now.
-     */
-
-    totallen =
-        USB_SIZEOF_CFGDESC + USB_SIZEOF_IFDESC +
-        APBRIDGE_NENDPOINTS * USB_SIZEOF_EPDESC;
-
-    /* Configuration descriptor -- Copy the canned descriptor and fill in the
-     * type (we'll also need to update the size below
-     */
-
-    memcpy(cfgdesc, &g_cfgdesc, USB_SIZEOF_CFGDESC);
-    buf += USB_SIZEOF_CFGDESC;
-
-    /*  Copy the canned interface descriptor */
-
-    memcpy(buf, &g_ifdesc, USB_SIZEOF_IFDESC);
-    buf += USB_SIZEOF_IFDESC;
-
-    /* Make the three endpoint configurations.  First, check for switches
-     * between high and full speed
-     */
-
-    if (type == USB_DESC_TYPE_OTHERSPEEDCONFIG) {
-        hispeed = !hispeed;
-    }
-
-    for (i = 1; i < APBRIDGE_MAX_ENDPOINTS; i++) {
-        if (hispeed) {
-            mxpacket = GETUINT16(g_usbdesc[i]->mxpacketsize);
-        } else {
-            mxpacket = 64;
-        }
-        usbclass_mkepdesc(g_usbdesc[i],
-                          mxpacket, (struct usb_epdesc_s *)buf);
-        buf += USB_SIZEOF_EPDESC;
-    }
-
-    /* Finally, fill in the total size of the configuration descriptor */
-
-    cfgdesc->totallen[0] = LSBYTE(totallen);
-    cfgdesc->totallen[1] = MSBYTE(totallen);
-    return totallen;
 }
 
 /****************************************************************************
@@ -769,14 +644,14 @@ static int usbclass_setconfig(struct apbridge_dev_s *priv, uint8_t config)
         return -EINVAL;
     }
 
-    for (i = 1; i < APBRIDGE_MAX_ENDPOINTS; i++) {
+    for (i = 0; i < APBRIDGE_NENDPOINTS; i++) {
         if (priv->usbdev->speed == USB_SPEED_HIGH) {
-            mxpacket = GETUINT16(g_usbdesc[i]->mxpacketsize);
+            mxpacket = GETUINT16(((struct usb_epdesc_s *)g_usb_desc[i + 1])->mxpacketsize);
         } else {
             mxpacket = 64;
         }
-        usbclass_mkepdesc(g_usbdesc[i], mxpacket, &epdesc);
-        ret = EP_CONFIGURE(priv->ep[i], &epdesc, false);
+        usbclass_mkepdesc((struct usb_epdesc_s *)g_usb_desc[i + 1], mxpacket, &epdesc);
+        ret = EP_CONFIGURE(priv->ep[i + 1], &epdesc, false);
         if (ret < 0) {
             usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_EPINTINCONFIGFAIL), 0);
             goto errout;
@@ -824,26 +699,12 @@ static int usbclass_setconfig(struct apbridge_dev_s *priv, uint8_t config)
 static void usbclass_ep0incomplete(struct usbdev_ep_s *ep,
                                    struct usbdev_req_s *req)
 {
-    struct apbridge_dev_s *priv;
-    int *req_priv;
-
-    priv = ep_to_apbridge(ep);
-
     if (req->result || req->xfrd != req->len) {
         usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_REQRESULT),
                  (uint16_t) - req->result);
     }
 
-    req_priv = (int *)request_get_priv(req);
-    if (req_priv) {
-        if (*req_priv == GREYBUS_EP_MAPPING) {
-            map_cport_to_ep(priv, (struct cport_to_ep *)req->buf);
-        } else if (*req_priv == AUDIO_SPECIAL_PROTO) {
-            apbridgea_audio_out_demux(req->buf, req->len);
-        }
-
-        kmm_free(req_priv);
-    }
+    vendor_data_handler(req);
     put_request(req);
 }
 
@@ -1008,16 +869,18 @@ static void g_usbdesc_init(void) {
     int i;
     struct usb_epdesc_s *usbdesc;
 
+    memset(&g_usb_desc[1], 0,
+           sizeof(struct usb_epdesc_s *) * APBRIDGE_MAX_ENDPOINTS);
     for (i = 0; i < APBRIDGE_NBULKS; i++) {
         usbdesc = malloc(sizeof(struct usb_epdesc_s));
         memcpy(usbdesc, &g_epbulkoutdesc, sizeof(struct usb_epdesc_s));
         usbdesc->addr += i * 2;
-        g_usbdesc[i * 2 + CONFIG_APBRIDGE_EPBULKOUT] = usbdesc;
+        g_usb_desc[i * 2 + CONFIG_APBRIDGE_EPBULKOUT] = (struct usb_desc_s *)usbdesc;
 
         usbdesc = malloc(sizeof(struct usb_epdesc_s));
         memcpy(usbdesc, &g_epbulkindesc, sizeof(struct usb_epdesc_s));
         usbdesc->addr += i * 2;
-        g_usbdesc[i * 2 + CONFIG_APBRIDGE_EPBULKIN] = usbdesc;
+        g_usb_desc[i * 2 + CONFIG_APBRIDGE_EPBULKIN] = (struct usb_desc_s *)usbdesc;
     }
 }
 
@@ -1044,10 +907,15 @@ static int usbclass_bind(struct usbdevclass_driver_s *driver,
 
      g_usbdesc_init();
 
+    priv->g_desc = gadget_descriptor_alloc(&g_devdesc, &g_qualdesc);
+    if (!priv->g_desc)
+        goto error;
+    gadget_add_cfgdesc(priv->g_desc, &g_cfgdesc, g_usb_desc);
+    gadget_set_strings(priv->g_desc, g_strings_table);
     /* Allocate endpoints */
 
     for (i = 0; i < APBRIDGE_MAX_ENDPOINTS; i++) {
-        ret = allocep(priv, g_usbdesc[i]);
+        ret = allocep(priv, (struct usb_epdesc_s *)g_usb_desc[i + 1]);
         if (ret < 0)
             goto error;
     }
@@ -1137,6 +1005,7 @@ static void usbclass_unbind(struct usbdevclass_driver_s *driver,
             freeep(priv, i);
         }
 
+        gadget_descriptor_free(priv->g_desc);
     }
 }
 
@@ -1179,67 +1048,57 @@ int usb_get_log(void *buf, int len)
 }
 #endif
 
-struct cport_reset_priv {
-    struct usbdev_req_s *req;
-    struct usbdev_ep_s *ep0;
-    struct wdog_s timeout_wd;
-    atomic_t refcount;
-};
-
-static void cport_reset_cb(unsigned int cportid, void *data)
+static int greybus_log_vendor_request_in(struct usbdev_s *dev, uint8_t req,
+                                         uint16_t index, uint16_t value,
+                                         void *buf, uint16_t len)
 {
-    struct cport_reset_priv *priv = data;
     int ret;
 
-    if (atomic_dec(&priv->refcount)) {
-        priv->req->len = 0;
-        priv->req->flags = USBDEV_REQFLAGS_NULLPKT;
+#if defined(CONFIG_APB_USB_LOG)
+    ret = usb_get_log(buf, len);
+#else
+    ret = 0;
+#endif
 
-        ret = EP_SUBMIT(priv->ep0, priv->req);
-        if (ret < 0) {
-            usbclass_ep0incomplete(priv->ep0, priv->req);
-        }
-    } else {
-        wd_delete(&priv->timeout_wd);
-        free(priv);
-    }
+    return ret;
 }
 
-static void cport_reset_timeout(int argc, uint32_t data, ...)
+static int ep_mapping_vendor_request_out(struct usbdev_s *dev, uint8_t req,
+                                         uint16_t index, uint16_t value,
+                                         void *buf, uint16_t len)
 {
-    struct cport_reset_priv *priv = (struct cport_reset_priv*) data;
-
-    if (argc != 1)
-        return;
-
-    if (atomic_dec(&priv->refcount)) {
-        usbclass_ep0incomplete(priv->ep0, priv->req);
-    } else {
-        wd_delete(&priv->timeout_wd);
-        free(priv);
-    }
+    map_cport_to_ep(usbdev_to_apbridge(dev), (struct cport_to_ep *)buf);
+    return len;
 }
 
-static int reset_cport(unsigned int cportid, struct usbdev_req_s *req,
-                       struct usbdev_ep_s *ep0)
+static int latency_tag_en_vendor_request_out(struct usbdev_s *dev, uint8_t req,
+                                             uint16_t index, uint16_t value,
+                                             void *buf, uint16_t len)
 {
-    struct cport_reset_priv *priv;
+    int ret = -EINVAL;
+    struct apbridge_dev_s *priv = usbdev_to_apbridge(dev);
 
-    priv = zalloc(sizeof(*priv));
-    if (!priv) {
-        return -ENOMEM;
+    if (value < unipro_cport_count()) {
+        priv->ts[value].tag = true;
+        ret = 0;
+        lldbg("enable tagging for cportid %d\n", value);
     }
+    return ret;
+}
 
-    wd_static(&priv->timeout_wd);
-    priv->req = req;
-    priv->ep0 = ep0;
+static int latency_tag_dis_vendor_request_out(struct usbdev_s *dev, uint8_t req,
+                                              uint16_t index, uint16_t value,
+                                              void *buf, uint16_t len)
+{
+    int ret = -EINVAL;
+    struct apbridge_dev_s *priv = usbdev_to_apbridge(dev);
 
-    /* a ref for the watchdog and one for the unipro stack */
-    atomic_init(&priv->refcount, 2);
-
-    wd_start(&priv->timeout_wd, RESET_TIMEOUT_DELAY, cport_reset_timeout, 1,
-             priv);
-    return unipro_reset_cport(cportid, cport_reset_cb, priv);
+    if (value < unipro_cport_count()) {
+        priv->ts[value].tag = false;
+        ret = 0;
+        lldbg("disable tagging for cportid %d\n", value);
+    }
+    return ret;
 }
 
 /****************************************************************************
@@ -1264,7 +1123,6 @@ static int usbclass_setup(struct usbdevclass_driver_s *driver,
     uint16_t index;
     uint16_t len;
     int ret = -EOPNOTSUPP;
-    bool do_not_send_response = false;
 
 #ifdef CONFIG_DEBUG
     if (!driver || !dev || !dev->ep0 || !ctrl) {
@@ -1297,6 +1155,12 @@ static int usbclass_setup(struct usbdevclass_driver_s *driver,
 
     *req_priv = USB_REQ;
 
+    /* Manage enumeration and other common requests */
+    ret = gadget_control_handler(priv->g_desc, dev, req, ctrl);
+    if (ret != -EOPNOTSUPP) {
+        return ret;
+    }
+
     /* Extract the little-endian 16-bit values to host order */
 
     value = GETUINT16(ctrl->value);
@@ -1314,57 +1178,6 @@ static int usbclass_setup(struct usbdevclass_driver_s *driver,
     case USB_REQ_TYPE_STANDARD:
         {
             switch (ctrl->req) {
-            case USB_REQ_GETDESCRIPTOR:
-                {
-                    /* The value field specifies the descriptor type in the MS byte and the
-                     * descriptor index in the LS byte (order is little endian)
-                     */
-
-                    switch (ctrl->value[1]) {
-                    case USB_DESC_TYPE_DEVICE:
-                        {
-                            ret = USB_SIZEOF_DEVDESC;
-                            memcpy(req->buf, &g_devdesc, ret);
-                        }
-                        break;
-
-                    case USB_DESC_TYPE_DEVICEQUALIFIER:
-                        {
-                            ret = USB_SIZEOF_QUALDESC;
-                            memcpy(req->buf, &g_qualdesc, ret);
-                        }
-                        break;
-
-                    case USB_DESC_TYPE_OTHERSPEEDCONFIG:
-                    case USB_DESC_TYPE_CONFIG:
-                        {
-                            ret =
-                                usbclass_mkcfgdesc(req->buf, dev->speed,
-                                                   ctrl->req);
-                        }
-                        break;
-
-                    case USB_DESC_TYPE_STRING:
-                        {
-                            /* index == language code. */
-
-                            ret =
-                                usbclass_mkstrdesc(ctrl->value[0],
-                                                   (struct usb_strdesc_s *)
-                                                   req->buf);
-                        }
-                        break;
-
-                    default:
-                        {
-                            usbtrace(TRACE_CLSERROR
-                                     (USBSER_TRACEERR_GETUNKNOWNDESC), value);
-                        }
-                        break;
-                    }
-                }
-                break;
-
             case USB_REQ_SETCONFIGURATION:
                 {
                     if (ctrl->type == 0) {
@@ -1423,81 +1236,7 @@ static int usbclass_setup(struct usbdevclass_driver_s *driver,
         /* Put here vendor request */
     case USB_REQ_TYPE_VENDOR:
         {
-            if ((ctrl->type & USB_REQ_RECIPIENT_MASK) ==
-                USB_REQ_RECIPIENT_INTERFACE) {
-                if (ctrl->req == APBRIDGE_RWREQUEST_LOG) {
-                    if ((ctrl->type & USB_DIR_IN) == 0) {
-                    } else {
-#if defined(CONFIG_APB_USB_LOG)
-                        *req_priv = GREYBUS_LOG;
-                        ret = usb_get_log(req->buf, len);
-#else
-                        ret = 0;
-#endif
-                    }
-                } else if (ctrl->req == APBRIDGE_RWREQUEST_EP_MAPPING) {
-                    if ((ctrl->type & USB_DIR_IN) != 0) {
-                        *(uint32_t *) req->buf = 0xdeadbeef;
-                        ret = 4;
-                    } else {
-                        *req_priv = GREYBUS_EP_MAPPING;
-                        ret = len;
-                    }
-                } else if (ctrl->req == APBRIDGE_ROREQUEST_CPORT_COUNT) {
-                    if ((ctrl->type & USB_DIR_IN) != 0) {
-                        *(uint16_t *) req->buf =
-                            cpu_to_le16(unipro_cport_count());
-                        ret = sizeof(uint16_t);
-                    } else {
-                        ret = -EINVAL;
-                    }
-                } else if (ctrl->req == APBRIDGE_WOREQUEST_CPORT_RESET) {
-                    if (!(ctrl->type & USB_DIR_IN)) {
-                        ret = reset_cport(value, req, dev->ep0);
-                        if (!ret)
-                            do_not_send_response = true;
-                    } else {
-                        ret = -EINVAL;
-                    }
-                } else if (ctrl->req == APBRIDGE_ROREQUEST_LATENCY_TAG_EN) {
-                    if ((ctrl->type & USB_DIR_IN) != 0) {
-                        ret = -EINVAL;
-                    } else {
-                        ret = -EINVAL;
-                        if (value < unipro_cport_count()) {
-                            priv->ts[value].tag = true;
-                            ret = 0;
-                            lldbg("enable tagging for cportid %d\n", value);
-                        }
-                    }
-                } else if (ctrl->req == APBRIDGE_ROREQUEST_LATENCY_TAG_DIS) {
-                    if ((ctrl->type & USB_DIR_IN) != 0) {
-                        ret = -EINVAL;
-                    } else {
-                        ret = -EINVAL;
-                        if (value < unipro_cport_count()) {
-                            priv->ts[value].tag = false;
-                            ret = 0;
-                            lldbg("disable tagging for cportid %d\n", value);
-                        }
-                    }
-#ifdef CONFIG_APBRIDGEA_AUDIO
-                } else if (ctrl->req == APBRIDGE_RWREQUEST_AUDIO_APBRIDGEA) {
-                    if (ctrl->type & USB_DIR_IN) {
-                        /* TODO: Finish implementing */
-                        ret = apbridgea_audio_in_demux(value, index, dataout,
-                                                       outlen);
-                    } else {
-                        *req_priv = AUDIO_SPECIAL_PROTO;
-                        ret = len;
-                    }
-#endif
-                } else {
-                    usbtrace(TRACE_CLSERROR
-                             (USBSER_TRACEERR_UNSUPPORTEDCLASSREQ),
-                             ctrl->type);
-                }
-            }
+            return vendor_request_handler(dev, req, ctrl);
         }
         break;
 
@@ -1510,7 +1249,7 @@ static int usbclass_setup(struct usbdevclass_driver_s *driver,
      * value (ret < 0), the USB driver will stall.
      */
 
-    if (ret >= 0 && !do_not_send_response) {
+    if (ret >= 0) {
         req->len = min(len, ret);
         req->flags = USBDEV_REQFLAGS_NULLPKT;
         ret = EP_SUBMIT(dev->ep0, req);
@@ -1590,9 +1329,23 @@ int usbdev_apbinitialize(struct device *dev,
 {
     struct apbridge_dev_s *priv;
     struct usbdevclass_driver_s *drvr;
-    int ret;
+    int ret = -ENOMEM;
     unsigned int i;
     unsigned int cport_count = unipro_cport_count();
+
+    /* Register USB vendor requests */
+    if (register_vendor_request(APBRIDGE_RWREQUEST_LOG, VENDOR_REQ_IN,
+                                greybus_log_vendor_request_in))
+        goto errout_vendor_req;
+    if (register_vendor_request(APBRIDGE_RWREQUEST_EP_MAPPING, VENDOR_REQ_DATA,
+                                ep_mapping_vendor_request_out))
+        goto errout_vendor_req;
+    if (register_vendor_request(APBRIDGE_ROREQUEST_LATENCY_TAG_EN, VENDOR_REQ_OUT,
+                                latency_tag_en_vendor_request_out))
+        goto errout_vendor_req;
+    if (register_vendor_request(APBRIDGE_ROREQUEST_LATENCY_TAG_DIS, VENDOR_REQ_OUT,
+                                latency_tag_dis_vendor_request_out))
+        goto errout_vendor_req;
 
     /* Allocate the structures needed */
 
@@ -1659,5 +1412,7 @@ errout_with_alloc_ts:
     kmm_free(priv->cport_to_epin_n);
  errout_with_alloc:
     kmm_free(priv);
+errout_vendor_req:
+    unregister_all_vendor_request();
     return ret;
 }
