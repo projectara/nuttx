@@ -51,7 +51,7 @@
 #include "vreg.h"
 #include "gb_svc.h"
 
-#define SVCD_PRIORITY      (60)
+#define SVCD_PRIORITY      (40)
 #define SVCD_STACK_SIZE    (2048)
 #define SVC_PROTOCOL_CPORT_ID    (4)
 
