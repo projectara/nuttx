@@ -40,6 +40,7 @@
 #define APBRIDGE_WOREQUEST_CPORT_RESET          (0x05)
 #define APBRIDGE_ROREQUEST_LATENCY_TAG_EN       (0x06)
 #define APBRIDGE_ROREQUEST_LATENCY_TAG_DIS      (0x07)
+#define APBRIDGE_RWREQUEST_AUDIO_APBRIDGEA      (0x08)
 
 struct apbridge_dev_s;
 
