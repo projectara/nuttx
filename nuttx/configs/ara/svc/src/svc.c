@@ -842,6 +842,12 @@ static int svcd_startup(void) {
     }
     svc->sw = sw;
 
+    /* Enable the switch IRQ */
+    rc = switch_irq_enable(sw, true);
+    if (rc && (rc != -EOPNOTSUPP)) {
+        goto error2;
+    }
+
     /* Power on all provided interfaces */
     if (!info->interfaces) {
         dbg_error("%s: No interface information provided\n", __func__);
@@ -869,25 +875,12 @@ static int svcd_startup(void) {
     }
 
     /*
-     * Enable the switch IRQ
-     *
-     * Note: the IRQ must be enabled after all NCP commands have been sent
-     * for the switch and Unipro devices initialization.
-     */
-    rc = switch_irq_enable(sw, true);
-    if (rc && (rc != -EOPNOTSUPP)) {
-        goto error4;
-    }
-
-    /*
      * enable the ARA key IRQ
      */
     rc = ara_key_enable(info, svc_ara_key_longpress_callback, true);
 
     return 0;
 
-error4:
-    gb_deinit();
 error3:
     interface_exit();
 error2:
