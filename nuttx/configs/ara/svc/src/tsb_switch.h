@@ -381,12 +381,17 @@ struct tsb_switch {
 
 enum tsb_switch_event_type {
     TSB_SWITCH_EVENT_MAILBOX,
+    TSB_SWITCH_EVENT_LINKUP,
 };
 
 struct tsb_switch_event {
     enum tsb_switch_event_type type;
 
     union {
+        struct tsb_switch_event_linkup {
+            uint32_t port;
+            uint32_t val;
+        } linkup;
         struct tsb_switch_event_mbox {
             uint32_t port;
             uint32_t val;
