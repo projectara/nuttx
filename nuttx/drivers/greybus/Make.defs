@@ -89,6 +89,10 @@ ifeq ($(CONFIG_GREYBUS_SDIO_PHY),y)
 CSRCS += sdio.c
 endif
 
+ifeq ($(CONFIG_GREYBUS_CAMERA),y)
+CSRCS += camera.c
+endif
+
 endif
 
 ifeq ($(CONFIG_GREYBUS_DEBUG),y)

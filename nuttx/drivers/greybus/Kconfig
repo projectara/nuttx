@@ -100,3 +100,8 @@ config GREYBUS_LIGHTS
 	bool "Lights support"
 	select DEVICE_CORE
 	default n
+
+config GREYBUS_CAMERA
+    bool "Camera support"
+    select DEVICE_CORE
+    default n
