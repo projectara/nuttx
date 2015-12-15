@@ -53,6 +53,7 @@
 #define GB_SVC_TYPE_DME_PEER_SET        0x0a
 #define GB_SVC_TYPE_ROUTE_CREATE        0x0b
 #define GB_SVC_TYPE_ROUTE_DESTROY       0x0c
+#define GB_SVC_TYPE_INTF_SET_PWRM       0x10
 
 struct gb_svc_protocol_version_request {
 	__u8	major;
@@ -148,6 +149,38 @@ struct gb_svc_dme_peer_set_request {
 struct gb_svc_dme_peer_set_response {
     __le16 result_code;
 } __packed;
+
+#define GB_SVC_UNIPRO_FAST_MODE         0x01
+#define GB_SVC_UNIPRO_SLOW_MODE         0x02
+#define GB_SVC_UNIPRO_FAST_AUTO_MODE    0x04
+#define GB_SVC_UNIPRO_SLOW_AUTO_MODE    0x05
+#define GB_SVC_UNIPRO_MODE_UNCHANGED    0x07
+#define GB_SVC_UNIPRO_HIBERNATE_MODE    0x11
+#define GB_SVC_UNIPRO_OFF_MODE          0x12
+
+#define GB_SVC_PWRM_RXTERMINATION       0x01
+#define GB_SVC_PWRM_TXTERMINATION       0x02
+#define GB_SVC_PWRM_LINE_RESET          0x04
+#define GB_SVC_PWRM_SCRAMBLING          0x20
+
+#define GB_SVC_PWRM_QUIRK_HSSER         0x00000001
+
+#define GB_SVC_UNIPRO_HS_SERIES_A       0x01
+#define GB_SVC_UNIPRO_HS_SERIES_B       0x02
+
+struct gb_svc_intf_set_pwrm_request {
+       __u8 intf_id;
+       __u8 hs_series;
+       __u8 tx_mode;
+       __u8 tx_gear;
+       __u8 tx_nlanes;
+       __u8 rx_mode;
+       __u8 rx_gear;
+       __u8 rx_nlanes;
+       __u8 flags;
+       __le32 quirks;
+} __packed;
+/* interface set power mode response has no payload */
 
 int gb_svc_protocol_version(void);
 int gb_svc_hello(uint8_t ap_intf_id);

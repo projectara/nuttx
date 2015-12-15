@@ -35,6 +35,7 @@
 #include <nuttx/config.h>
 #include <nuttx/greybus/greybus.h>
 #include <nuttx/greybus/debug.h>
+#include <nuttx/unipro/unipro.h>
 
 #include <arch/byteorder.h>
 
@@ -300,6 +301,107 @@ static uint8_t gb_svc_route_destroy(struct gb_operation *op) {
     return gb_errno_to_op_result(rc);
 }
 
+static uint8_t gb_svc_intf_set_power_mode(struct gb_operation *op) {
+    struct gb_svc_intf_set_pwrm_request *req;
+    struct unipro_link_cfg cfg;
+    uint32_t quirks;
+    int rc;
+
+    if (gb_operation_get_request_payload_size(op) < sizeof(*req)) {
+        gb_error("dropping short message\n");
+        return GB_OP_INVALID;
+    }
+
+    req = gb_operation_get_request_payload(op);
+
+    quirks = le32_to_cpu(req->quirks);
+
+    /*
+     * Validate the input parameters. The RX and TX parameters mode, gear and
+     * nlanes are (indirectly) checked by svc_intf_set_power_mode(), we don't
+     * need to duplicate the checks.
+     */
+    if (req->hs_series != GB_SVC_UNIPRO_HS_SERIES_A &&
+        req->hs_series != GB_SVC_UNIPRO_HS_SERIES_B)
+        return GB_OP_INVALID;
+
+    if (req->flags & ~(GB_SVC_PWRM_RXTERMINATION | GB_SVC_PWRM_TXTERMINATION |
+                       GB_SVC_PWRM_LINE_RESET | GB_SVC_PWRM_SCRAMBLING))
+        return GB_OP_INVALID;
+
+    if (quirks & ~GB_SVC_PWRM_QUIRK_HSSER)
+        return GB_OP_INVALID;
+
+    /* FIXME: GB_SVC_PWRM_LINE_RESET is not supported. */
+    if (req->flags & GB_SVC_PWRM_LINE_RESET)
+        return GB_OP_INVALID;
+
+    /* Set the power mode */
+    memset(&cfg, 0, sizeof(cfg));
+
+    if (req->tx_mode == GB_SVC_UNIPRO_FAST_MODE ||
+        req->tx_mode == GB_SVC_UNIPRO_FAST_AUTO_MODE ||
+        req->rx_mode == GB_SVC_UNIPRO_FAST_MODE ||
+        req->rx_mode == GB_SVC_UNIPRO_FAST_AUTO_MODE ||
+        (quirks & GB_SVC_PWRM_QUIRK_HSSER))
+        cfg.upro_hs_ser = req->hs_series;
+    else
+        cfg.upro_hs_ser = UNIPRO_HS_SERIES_UNCHANGED;
+
+    switch (req->tx_mode) {
+    case GB_SVC_UNIPRO_MODE_UNCHANGED:
+        cfg.upro_tx_cfg.upro_mode = UNIPRO_MODE_UNCHANGED;
+        break;
+    case GB_SVC_UNIPRO_HIBERNATE_MODE:
+        cfg.upro_tx_cfg.upro_mode = UNIPRO_HIBERNATE_MODE;
+        break;
+    case GB_SVC_UNIPRO_OFF_MODE:
+        cfg.upro_tx_cfg.upro_mode = UNIPRO_OFF_MODE;
+        break;
+    default:
+        /* All other values are identical. */
+        cfg.upro_tx_cfg.upro_mode = req->tx_mode;
+        break;
+    }
+
+    cfg.upro_tx_cfg.upro_gear = req->tx_gear;
+    cfg.upro_tx_cfg.upro_nlanes = req->tx_nlanes;
+
+    switch (req->rx_mode) {
+    case GB_SVC_UNIPRO_MODE_UNCHANGED:
+        cfg.upro_rx_cfg.upro_mode = UNIPRO_MODE_UNCHANGED;
+        break;
+    case GB_SVC_UNIPRO_HIBERNATE_MODE:
+        cfg.upro_rx_cfg.upro_mode = UNIPRO_HIBERNATE_MODE;
+        break;
+    case GB_SVC_UNIPRO_OFF_MODE:
+        cfg.upro_rx_cfg.upro_mode = UNIPRO_OFF_MODE;
+        break;
+    default:
+        /* All other values are identical. */
+        cfg.upro_rx_cfg.upro_mode = req->rx_mode;
+        break;
+    }
+
+    cfg.upro_rx_cfg.upro_gear = req->rx_gear;
+    cfg.upro_rx_cfg.upro_nlanes = req->rx_nlanes;
+
+    if (req->flags & GB_SVC_PWRM_RXTERMINATION)
+        cfg.flags |= UPRO_LINKF_RX_TERMINATION;
+    if (req->flags & GB_SVC_PWRM_TXTERMINATION)
+        cfg.flags |= UPRO_LINKF_TX_TERMINATION;
+    if (req->flags & GB_SVC_PWRM_SCRAMBLING)
+        cfg.flags |= UPRO_LINKF_SCRAMBLING;
+
+    /* Default user data */
+    cfg.upro_user.flags = UPRO_PWRF_FC0;
+    cfg.upro_user.upro_pwr_fc0_protection_timeout = 0x1fff;
+
+    rc = svc_intf_set_power_mode(req->intf_id, &cfg);
+
+    return gb_errno_to_op_result(rc);
+}
+
 static struct gb_operation_handler gb_svc_handlers[] = {
     GB_HANDLER(GB_SVC_TYPE_INTF_DEVICE_ID, gb_svc_intf_device_id),
     GB_HANDLER(GB_SVC_TYPE_CONN_CREATE, gb_svc_connection_create),
@@ -308,6 +410,7 @@ static struct gb_operation_handler gb_svc_handlers[] = {
     GB_HANDLER(GB_SVC_TYPE_ROUTE_DESTROY, gb_svc_route_destroy),
     GB_HANDLER(GB_SVC_TYPE_DME_PEER_GET, gb_svc_dme_peer_get),
     GB_HANDLER(GB_SVC_TYPE_DME_PEER_SET, gb_svc_dme_peer_set),
+    GB_HANDLER(GB_SVC_TYPE_INTF_SET_PWRM, gb_svc_intf_set_power_mode),
 };
 
 struct gb_driver svc_driver = {

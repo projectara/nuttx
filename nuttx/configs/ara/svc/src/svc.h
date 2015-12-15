@@ -36,6 +36,8 @@ enum svc_state {
     SVC_STATE_RUNNING,
 };
 
+struct unipro_link_cfg;
+
 struct svc {
     struct tsb_switch *sw;
     struct ara_board_info *board_info;
@@ -61,6 +63,7 @@ int svc_dme_peer_set(uint8_t, uint16_t, uint16_t, uint32_t, uint16_t*);
 int svc_connection_destroy(uint8_t, uint16_t, uint8_t, uint16_t);
 int svc_hot_plug(uint8_t);
 int svc_hot_unplug(uint8_t);
+int svc_intf_set_power_mode(uint8_t, struct unipro_link_cfg *);
 
 int svcd_start(void);
 void svcd_stop(void);

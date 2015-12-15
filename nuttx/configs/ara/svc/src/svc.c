@@ -431,6 +431,21 @@ int svc_route_destroy(uint8_t intf1_id, uint8_t intf2_id) {
 }
 
 /**
+ * @brief Configure the power mode of an interface
+ */
+int svc_intf_set_power_mode(uint8_t intf_id, struct unipro_link_cfg *cfg)
+{
+    struct tsb_switch *sw = svc->sw;
+    int port_id;
+
+    port_id = interface_get_portid_by_id(intf_id);
+    if (port_id < 0)
+        return -EINVAL;
+
+    return switch_configure_link(sw, port_id, cfg, NULL);
+}
+
+/**
  * @brief Handle AP module boot
  */
 static int svc_handle_ap(void) {
