@@ -558,18 +558,26 @@ int switch_dev_id_mask_set(struct tsb_switch *sw,
 
 enum tsb_switch_event_type {
     TSB_SWITCH_EVENT_MAILBOX,
+    TSB_SWITCH_EVENT_LINKUP,
 };
 
 struct tsb_switch_event {
     enum tsb_switch_event_type type;
 
     union {
+        struct tsb_switch_event_linkup {
+            uint32_t port;
+            uint32_t val;
+        } linkup;
         struct tsb_switch_event_mbox {
             uint32_t port;
             uint32_t val;
         } mbox;
     };
 };
+
+/* Initiate a LinkUp on a Switch port */
+#define SW_LINKUP_INITIATE      (0x00)
 
 struct tsb_switch_event_listener {
     struct list_head entry;

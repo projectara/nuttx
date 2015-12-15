@@ -342,6 +342,14 @@ int switch_irq_handler(struct tsb_switch *sw) {
                         uint32_t irq_type = j;
                         uint32_t port = i;
                         switch (irq_type) {
+                        case IRQ_STATUS_LINKSTARTUPCNF: {
+                            struct tsb_switch_event e;
+                            e.type = TSB_SWITCH_EVENT_LINKUP;
+                            e.linkup.port = port;
+                            e.linkup.val = attr_value;
+                            tsb_switch_event_notify(sw, &e);
+                            break;
+                        }
                         case IRQ_STATUS_MAILBOX: {
                             struct tsb_switch_event e;
                             e.type = TSB_SWITCH_EVENT_MAILBOX;
