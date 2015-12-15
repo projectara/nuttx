@@ -288,6 +288,8 @@ struct tsb_switch_ops {
     int (*enable_port)(struct tsb_switch *,
                        uint8_t portid,
                        bool enable);
+    int (*link_startup)(struct tsb_switch *,
+                        uint8_t portid);
     int (*set)(struct tsb_switch *,
                uint8_t portid,
                uint16_t attrid,
@@ -606,6 +608,9 @@ enum {
 
 struct tsb_switch *switch_init(struct tsb_switch_data *pdata);
 void switch_exit(struct tsb_switch*);
+
+int switch_link_startup(struct tsb_switch *,
+                        uint8_t portid);
 
 int switch_enable_port(struct tsb_switch *,
                        uint8_t portid,

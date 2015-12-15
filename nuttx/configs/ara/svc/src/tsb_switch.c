@@ -136,6 +136,16 @@ static int switch_init_comm(struct tsb_switch *sw)
     return sw->ops->init_comm(sw);
 }
 
+/* Linkstartup request */
+int switch_link_startup(struct tsb_switch *sw,
+                        uint8_t portid)
+{
+    if (!sw->ops->link_startup) {
+        return -EOPNOTSUPP;
+    }
+    return sw->ops->link_startup(sw, portid);
+}
+
 /* Switch port enable (VDD and clocks) */
 int switch_enable_port(struct tsb_switch *sw,
                        uint8_t portid,
