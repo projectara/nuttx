@@ -206,8 +206,8 @@ int switch_irq_enable(struct tsb_switch *sw, bool enable) {
     return OK;
 }
 
-static int tsb_switch_event_notify(struct tsb_switch *sw,
-                                   struct tsb_switch_event *event) {
+int tsb_switch_event_notify(struct tsb_switch *sw,
+                            struct tsb_switch_event *event) {
 
     struct list_head *node, *next;
     struct tsb_switch_event_listener *l;
@@ -248,7 +248,7 @@ static void switch_port_irq_reenable_hack(struct tsb_switch *sw, uint8_t port) {
 
 int switch_irq_handler(struct tsb_switch *sw) {
     uint32_t swint, swins, port_irq_status, attr_value;
-    int i, j;
+    int i, j, rc;
 
     if (!sw) {
         dbg_error("%s: no Switch context\n", __func__);
@@ -347,7 +347,11 @@ int switch_irq_handler(struct tsb_switch *sw) {
                             e.type = TSB_SWITCH_EVENT_LINKUP;
                             e.linkup.port = port;
                             e.linkup.val = attr_value;
-                            tsb_switch_event_notify(sw, &e);
+                            rc = tsb_switch_event_notify(sw, &e);
+                            if (rc) {
+                                dbg_error("IRQ: LinkUp event notification failed for port %d: %d\n",
+                                          port, rc);
+                            }
                             break;
                         }
                         case IRQ_STATUS_MAILBOX: {
@@ -355,7 +359,11 @@ int switch_irq_handler(struct tsb_switch *sw) {
                             e.type = TSB_SWITCH_EVENT_MAILBOX;
                             e.mbox.port = port;
                             e.mbox.val = attr_value;
-                            tsb_switch_event_notify(sw, &e);
+                            rc = tsb_switch_event_notify(sw, &e);
+                            if (rc) {
+                                dbg_error("IRQ: Mailbox event notification failed for port %d: %d\n",
+                                          port, rc);
+                            }
                             break;
                         }
                         default:

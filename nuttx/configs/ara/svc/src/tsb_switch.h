@@ -163,17 +163,6 @@
 #define SC_RESET_CLK_MPORT(i)       (1 << (i + 16))
 #define SC_RESET_CLK_RT10B          (1 << 30)
 
-/* ES3-specific system registers values */
-#define SC_RESET_CLK_SHARED         (1 << 15)
-/*  Enable Shared domain, PMU; RT10b = 0 */
-#define SC_SYSCLOCKENABLE_SH_PMU    (0x80008000)
-/*  Enable Unipro and M-port clock */
-#define SC_SYSCLOCKENABLE_PORT(i)   ((1 << (i + 16)) | (1 << i))
-/*  Enable all Unipro and M-ports clocks */
-#define SC_SYSCLOCKENABLE_ALL_PORTS (0x3FFF3FFF)
-/*  Enable VDDn for M-port */
-#define SC_VDDVN_PORT(i)            (1 << i)
-
 /* NCP field values */
 #define NCP_RESERVED                (0x00)
 

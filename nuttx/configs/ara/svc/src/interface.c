@@ -48,6 +48,7 @@
 #include "string.h"
 #include "svc.h"
 #include "tsb_switch.h"
+#include "tsb_switch_event.h"
 
 #define POWER_OFF_TIME_IN_US                        (500000)
 #define WAKEOUT_PULSE_DURATION_IN_US                (100000)
@@ -301,6 +302,14 @@ static int interface_power_off(struct interface *iface)
         return -EINVAL;
     }
 
+    /* Disable Switch port */
+    rc = switch_enable_port(svc->sw, iface->switch_portid, false);
+    if (rc && (rc != -EOPNOTSUPP)) {
+        dbg_error("Failed to disable switch port for interface %s: %d.\n",
+                  iface->name, rc);
+    }
+
+    /* Power off the interface */
     rc = interface_pwr_disable(iface);
     if (rc < 0) {
         dbg_error("Failed to disable interface %s\n", iface->name);
@@ -340,6 +349,24 @@ static int interface_power_on(struct interface *iface)
     if (rc) {
         dbg_error("Failed to generate wakeout on interface %s\n", iface->name);
         return rc;
+    }
+
+    /* Enable Switch port */
+    rc = switch_enable_port(svc->sw, iface->switch_portid, true);
+    if (rc && (rc != -EOPNOTSUPP)) {
+        dbg_error("Failed to enable switch port for interface %s: %d.\n",
+                  iface->name, rc);
+        return rc;
+    }
+
+    /* Request manual LinkUp of the Unipro port */
+    struct tsb_switch_event e;
+    e.type = TSB_SWITCH_EVENT_LINKUP;
+    e.linkup.port = iface->switch_portid;
+    e.linkup.val = SW_LINKUP_INITIATE;
+    rc = tsb_switch_event_notify(svc->sw, &e);
+    if (rc) {
+        dbg_error("Failed to request LinkUp for interface %s\n", iface->name);
     }
 
     return 0;

@@ -816,7 +816,7 @@ static inline void svcd_set_state(enum svc_state state) {
 static int svcd_startup(void) {
     struct ara_board_info *info;
     struct tsb_switch *sw;
-    int i, rc;
+    int rc;
 
     /*
      * Board-specific initialization, all boards must define this.
@@ -878,10 +878,6 @@ static int svcd_startup(void) {
     if (rc && (rc != -EOPNOTSUPP)) {
         goto error4;
     }
-
-    /* Enable interrupts for all Unipro ports */
-    for (i = 0; i < SWITCH_PORT_MAX; i++)
-        switch_port_irq_enable(sw, i, true);
 
     /*
      * enable the ARA key IRQ
