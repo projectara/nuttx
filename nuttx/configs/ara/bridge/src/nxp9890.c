@@ -812,8 +812,7 @@ static int nxp9890_set_config(struct device *dev, unsigned int dai_idx,
 {
     struct nxp9890_info *info = NULL;
     struct gb_audio_pcm *pbpcm = NULL;
-    int sysclk = 0, ratefreq = 0, numbits = 0, ret = 0;
-    uint32_t value = 0, mask = 0, format = 0;
+    int ratefreq = 0, numbits = 0;
 
     if (!dev || !device_get_private(dev) || !pcm || !dai) {
         return -EINVAL;
