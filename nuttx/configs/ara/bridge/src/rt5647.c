@@ -212,6 +212,7 @@ struct rt5647_reg rt5647_init_regs[] = {
     { RT5647_PWR_MGT_4, 0x0200 }, /* turn on PLL power */
     { RT5647_PWR_MGT_5, 0x3002 }, /* turn on LDO2 power */
     { RT5647_CLS_D_AMP, 0xA0E8 }, /* enable auto powerdown when over current */
+    { RT5647_GENERAL_CTRL_2, 0x9400 }, /* Turn off Class D AMP when No mclk */
 #ifdef ENABLE_HAPTIC_TEST
     /* turn on Haptic generator control for testing */
     { RT5647_HAPTIC_CTRL1, 0x2888 }, // AC and 888Hz

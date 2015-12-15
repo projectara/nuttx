@@ -218,6 +218,7 @@
 
 /* General Control */
 #define RT5647_GENERAL_CTRL_1               0xFA
+#define RT5647_GENERAL_CTRL_2               0xFC
 
 /* Vendor ID */
 #define RT5647_VENDOR_ID                    0xFE
