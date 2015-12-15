@@ -86,6 +86,7 @@ struct apbridgea_audio_cport {
 };
 
 static unsigned int mag_msg_count = 0;
+static unsigned int mag_msg_reset = 0;
 
 static atomic_t request_id;
 
@@ -371,6 +372,7 @@ static int apbridgea_audio_rx_handler(unsigned int cportid, void *buf,
                                       size_t len)
 {
     /* TODO: Implement receive data processing but for now, ignore it */
+    unipro_rxbuf_free(cportid, buf);
     return 0;
 }
 
@@ -479,6 +481,9 @@ static int apbridgea_audio_send_data_completion(int status, const void *buf,
     if (rb) {
         ring_buf_reset(rb);
         ring_buf_pass(rb);
+mag_msg_reset++;
+    } else {
+lldbg("rb is NULL\n");
     }
 
     return 0;
@@ -506,6 +511,10 @@ mag_msg_count++;
 
         arg = list_node_is_last(&info->cport_list, iter) ? rb : NULL;
 
+if (!arg) {
+    lldbg("list_nost_is_last() didn't return true\n");
+}
+
         ret = unipro_send_async(cport->data_cportid, gb_hdr,
                                 le16_to_cpu(gb_hdr->size),
                                 apbridgea_audio_send_data_completion, arg);
@@ -530,6 +539,8 @@ static void apbridgea_audio_i2s_rx_cb(struct ring_buf *rb,
         apbridgea_audio_send_data(info, rb);
     } else {
 lldbg("RX callback event: 0x%x\n", event);
+lldbg("****** mag_msg_count: %u\n", mag_msg_count);
+lldbg("****** mag_msg_reset: %u\n", mag_msg_reset);
     }
 }
 
@@ -584,7 +595,7 @@ static int apbridgea_audio_start_tx(struct apbridgea_audio_info *info,
         return -EPROTO;
     }
 
-    info->rx_rb = ring_buf_alloc_ring(8, 0, 0, 0, apbridgea_audio_rb_alloc,
+    info->rx_rb = ring_buf_alloc_ring(64, 0, 0, 0, apbridgea_audio_rb_alloc,
                                       apbridgea_audio_rb_free, info);
     if (!info->rx_rb) {
         return -ENOMEM;
@@ -639,6 +650,7 @@ static int apbridgea_audio_stop_tx(struct apbridgea_audio_info *info)
     irqrestore(flags);
 
 lldbg("****** mag_msg_count: %u\n", mag_msg_count);
+lldbg("****** mag_msg_reset: %u\n", mag_msg_reset);
 
     return 0;
 }
@@ -684,6 +696,7 @@ static int apbridgea_audio_stop_rx(struct apbridgea_audio_info *info)
 int apbridgea_audio_out_demux(void *buf, uint16_t len)
 {
     struct apbridgea_audio_audio_demux *demux_entry;
+    irqstate_t flags;
 
     if (!buf || !len) {
 lldbg("fail 1 - buf: 0x%p, len: %u\n", buf, len);
@@ -707,10 +720,10 @@ lldbg("fail 2\n");
     memcpy(demux_entry->buf, buf, len);
 
     list_init(&demux_entry->list);
-    list_add(&apbridgea_audio_demux_list, &demux_entry->list);
 
-lldbg("+++ demux: 0x%p, buf: 0x%p, len: %u\n", demux_entry, demux_entry->buf,
-        len);
+    flags = irqsave();
+    list_add(&apbridgea_audio_demux_list, &demux_entry->list);
+    irqrestore(flags);
 
     sem_post(&apbridgea_audio_demux_sem);
 
@@ -813,6 +826,14 @@ lldbg("apbridgea_audio_stop_rx - exit %d\n", ret);
         default:
             lldbg("AAAAHHHHHHHHHHH - type: %d/0x%x\n", pkt_hdr->type,
                   pkt_hdr->type);
+            {
+                unsigned int i;
+                unsigned char *bp = (unsigned char *)pkt_hdr;
+
+                for (i = 0; i < len; i++) {
+                    lldbg("%u: 0x%x\n", i, bp[i]);
+                }
+            }
         }
 
         free(demux_entry);

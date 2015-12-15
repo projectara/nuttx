@@ -1209,6 +1209,8 @@ static int tsb_i2s_irq_si_err_handler(int irq, void *context)
     intstat = tsb_i2s_read(info, TSB_I2S_BLOCK_SI, TSB_I2S_REG_INTSTAT);
     event = tsb_i2s_intstat2event(intstat);
 
+lldbg("intstat: 0x%x, event: %u\n", intstat, event);
+
     if (event == DEVICE_I2S_EVENT_NONE) {
         tsb_i2s_clear_irqs(info, TSB_I2S_BLOCK_SI, intstat);
         return OK;
