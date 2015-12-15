@@ -652,6 +652,9 @@ static int apbridgea_audio_stop_tx(struct apbridgea_audio_info *info)
 lldbg("****** mag_msg_count: %u\n", mag_msg_count);
 lldbg("****** mag_msg_reset: %u\n", mag_msg_reset);
 
+mag_msg_count = 0;
+mag_msg_reset = 0;
+
     return 0;
 }
 
