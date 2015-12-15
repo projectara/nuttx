@@ -945,6 +945,8 @@ static int switch_irq_handler(int irq, void *context, void *priv)
 /* Switch interrupt enable/disable */
 static int es2_switch_irq_enable(struct tsb_switch *sw, bool enable)
 {
+    int i;
+
     if (enable) {
         // Enable switch interrupt sources and install handler
         if (!sw->pdata->gpio_irq) {
@@ -995,7 +997,17 @@ static int es2_switch_irq_enable(struct tsb_switch *sw, bool enable)
             dbg_error("Switch SPI5EE register write failed\n");
             return -EIO;
         }
+
+        // Enable interrupts for all Unipro ports
+        for (i = 0; i < SWITCH_PORT_MAX; i++) {
+            switch_port_irq_enable(sw, i, true);
+        }
     } else {
+        // Disable interrupts for all Unipro ports
+        for (i = 0; i < SWITCH_PORT_MAX; i++) {
+            switch_port_irq_enable(sw, i, false);
+        }
+
         // Disable switch interrupt
         stm32_gpiosetevent_priv(sw->pdata->gpio_irq, false, false, false, NULL, NULL);
     }

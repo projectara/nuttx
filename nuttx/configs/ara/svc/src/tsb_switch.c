@@ -2532,7 +2532,7 @@ uint8_t stm32_spi2status(struct spi_dev_s *dev,
 struct tsb_switch *switch_init(struct tsb_switch_data *pdata) {
     struct tsb_switch *sw ;
     unsigned int attr_value;
-    int rc, i;
+    int rc;
 
     dbg_verbose("%s: Initializing switch\n", __func__);
 
@@ -2575,19 +2575,6 @@ struct tsb_switch *switch_init(struct tsb_switch_data *pdata) {
     rc = switch_init_comm(sw);
     if (rc && (rc != -EOPNOTSUPP)) {
         goto error;
-    }
-
-    /*
-     * Enable all switch ports.
-     * Note: Should be done per-port, upon module detection.
-     */
-    for (i = 0; i < SWITCH_UNIPORT_MAX; i++) {
-        rc = switch_enable_port(sw, i, true);
-        if (rc && (rc != -EOPNOTSUPP)) {
-            dbg_error("%s: Failed to enable Switch port %d: %d.\n",
-                      __func__, i, rc);
-            goto error;
-        }
     }
 
     /*
@@ -2658,21 +2645,8 @@ error:
  * @brief Power down and disable the switch
  */
 void switch_exit(struct tsb_switch *sw) {
-    int rc, i;
 
     dbg_verbose("%s: Disabling switch\n", __func__);
-
-    /*
-     * Disable all switch ports.
-     * Note: Should be done per-port, upon module removal.
-     */
-    for (i = 0; i < SWITCH_UNIPORT_MAX; i++) {
-        rc = switch_enable_port(sw, i, false);
-        if (rc && (rc != -EOPNOTSUPP)) {
-            dbg_error("%s: Failed to disable Switch port %d: %d.\n",
-                      __func__, i, rc);
-        }
-    }
 
     switch_irq_enable(sw, false);
     destroy_switch_irq_worker(sw);

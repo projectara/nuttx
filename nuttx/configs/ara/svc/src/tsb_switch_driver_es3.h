@@ -116,9 +116,11 @@
 #define SC_SYSCLOCKENABLE_SH_PMU    (0x80008000)
 /*  Enable Unipro and M-port clock */
 #define SC_SYSCLOCKENABLE_PORT(i)   ((1 << (i + 16)) | (1 << i))
-/*  Enable all Unipro and M-ports clocks */
-#define SC_SYSCLOCKENABLE_ALL_PORTS (0x3FFF3FFF)
+/*  Mask for all Unipro and M-ports reset and clock control */
+#define SC_SYSCLOCK_ALL_PORTS       (0x3FFF3FFF)
 /*  Enable VDDn for M-port */
 #define SC_VDDVN_PORT(i)            (1 << i)
+/*  Manul LinkStartupMode for all ports */
+#define SC_LINK_MANUAL_ALL_PORTS    (0x3FFF)
 
 #endif

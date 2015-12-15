@@ -959,6 +959,12 @@ int es3_init_seq(struct tsb_switch *sw)
         return rc;
     }
 
+    /* Hold reset for all Unipro and M ports */
+    if (switch_sys_ctrl_set(sw, SC_SOFTRESET, SC_SYSCLOCK_ALL_PORTS)) {
+        dbg_error("SoftReset register write failed\n");
+        return -EIO;
+    }
+
     /* Enable Shared domain, PMU; RT10b = 0 */
     if (switch_sys_ctrl_set(sw, SC_SYSCLOCKENABLE, SC_SYSCLOCKENABLE_SH_PMU)) {
         dbg_error("SysClkEnable register write failed\n");
@@ -980,8 +986,8 @@ int es3_init_seq(struct tsb_switch *sw)
         return -EIO;
     }
 
-    /* Setup automatic LinkStartupMode for all ports */
-    if (switch_sys_ctrl_set(sw, SC_LINKSTARTUPMODE, 0)) {
+    /* Setup manual LinkStartupMode for all ports */
+    if (switch_sys_ctrl_set(sw, SC_LINKSTARTUPMODE, SC_LINK_MANUAL_ALL_PORTS)) {
         dbg_error("LinkStartupMode register write failed\n");
         return -EIO;
     }
@@ -993,7 +999,7 @@ int es3_init_seq(struct tsb_switch *sw)
 int es3_switch_irq_handler(struct tsb_switch *sw)
 {
     uint32_t swint, swins, port_irq_status, attr_value;
-    int i, j;
+    int i, j, rc;
 
     if (!sw) {
         dbg_error("%s: no Switch context\n", __func__);
@@ -1062,31 +1068,28 @@ int es3_switch_irq_handler(struct tsb_switch *sw)
             }
             dbg_insane("IRQ: LinkStartCnf irq, SWLCS=0x%08x\n",
                        attr_value);
+
+            /*
+             * If LinkUp failed retry it manually. Only useful in the case
+             * of automatic LinkUp.
+             */
+            for (i = 0; i < SWITCH_PORT_MAX; i++) {
+                if (attr_value & (2 << (i * 2))) {
+                    struct tsb_switch_event e;
+                    e.type = TSB_SWITCH_EVENT_LINKUP;
+                    e.linkup.port = i;
+                    e.linkup.val = TSB_LINKUP_FAIL;
+                    rc = tsb_switch_event_notify(sw, &e);
+                    if (rc) {
+                        dbg_error("IRQ: LinkUp event notification failed for port %d: %d\n",
+                                  i, rc);
+                    }
+                }
+            }
         }
 
         /* Handle Unipro interrupts: read the Unipro ports interrupt status */
         for (i = 0; i < SWITCH_PORT_MAX; i++) {
-            /*
-             * We got interrupted, but something inside the switch
-             * disabled the interrupt source. This happens if e.g. a port
-             * re-links up.
-             *
-             * Check the interrupt enable attribute, if interrupts are
-             * disabled for the port, re-enable them. Since the interrupt is
-             * latched in the switch it will fire again after enablement.
-             */
-            if (switch_dme_get(sw, i, TSB_INTERRUPTENABLE, 0x0,
-                               &attr_value)) {
-                dbg_error("IRQ: Port %d TSB_INTERRUPTENABLE read failed\n",
-                          i);
-            } else {
-                if (!attr_value) {
-                    dbg_insane("IRQ: port %d TSB_INTERRUPTENABLE=%d\n",
-                               i, attr_value);
-                    switch_port_irq_enable(sw, i, true);
-                }
-            }
-
             /*
              * If Unipro interrupt pending, read the interrupt status
              * attribute
@@ -1121,7 +1124,11 @@ int es3_switch_irq_handler(struct tsb_switch *sw)
                             e.type = TSB_SWITCH_EVENT_LINKUP;
                             e.linkup.port = port;
                             e.linkup.val = attr_value;
-                            tsb_switch_event_notify(sw, &e);
+                            rc = tsb_switch_event_notify(sw, &e);
+                            if (rc) {
+                                dbg_error("IRQ: LinkUp event notification failed for port %d: %d\n",
+                                          port, rc);
+                            }
                             break;
                         }
                         case IRQ_STATUS_MAILBOX: {
@@ -1129,7 +1136,11 @@ int es3_switch_irq_handler(struct tsb_switch *sw)
                             e.type = TSB_SWITCH_EVENT_MAILBOX;
                             e.mbox.port = port;
                             e.mbox.val = attr_value;
-                            tsb_switch_event_notify(sw, &e);
+                            rc = tsb_switch_event_notify(sw, &e);
+                            if (rc) {
+                                dbg_error("IRQ: Mailbox event notification failed for port %d: %d\n",
+                                          port, rc);
+                            }
                             break;
                         }
                         default:
@@ -1212,12 +1223,6 @@ static int es3_switch_irq_enable(struct tsb_switch *sw, bool enable)
         }
         if (switch_internal_setattr(sw, SPI5EE, SPI45EE_ENABLE_ALL)) {
             dbg_error("Switch SPI5EE register write failed\n");
-            return -EIO;
-        }
-
-        /* Enable the LinkStartupCnf interrupts */
-        if (switch_internal_setattr(sw, SWLCE, SWLCE_ENABLE_ALL)) {
-            dbg_error("Switch SWLCE register write failed\n");
             return -EIO;
         }
     } else {
