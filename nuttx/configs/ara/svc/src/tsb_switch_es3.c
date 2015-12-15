@@ -625,6 +625,84 @@ static uint8_t* es3_init_rxbuf(struct tsb_switch *sw) {
     return fifo_to_rxbuf(priv, SWITCH_FIFO_NCP);
 }
 
+/*
+ * Manual link startup request sequence for a port
+ */
+static int es3_linkstartup_request(struct tsb_switch *sw, uint8_t port)
+{
+    int rc;
+    uint32_t val;
+
+    dbg_info("%s(%d)\n", __func__, port);
+
+    /*
+     * Reset the port. The reset and clock have already been handled
+     * during the port enable operation.
+     */
+    rc = switch_dme_set(sw, port, TSB_DME_RESETREQ, 0, 2);
+    if (rc) {
+        dbg_error("%s: TSB_DME_RESETREQ failed for port %d\n", __func__, port);
+        return rc;
+    }
+    rc = switch_dme_get(sw, port, TSB_DME_RESETCNF, 0, &val);
+    if (rc) {
+        dbg_error("%s: TSB_DME_RESETCNF failed for port %d\n", __func__, port);
+        return rc;
+    }
+    if (val != 1) {
+        dbg_error("%s: Could not complete warm reset for port %d (%d)\n",
+                  __func__, port, val);
+        return ERROR;
+    }
+
+    /* Enable layers */
+    rc = switch_dme_set(sw, port, TSB_DME_LAYERENABLEREQ, 0, 1);
+    if (rc) {
+        dbg_error("%s: TSB_DME_LAYERENABLEREQ failed for port %d\n",
+                  __func__, port);
+        return rc;
+    }
+    rc = switch_dme_get(sw, port, TSB_DME_LAYERENABLECNF, 0, &val);
+    if (rc) {
+        dbg_error("%s: TSB_DME_LAYERENABLECNF failed for port %d\n",
+                  __func__, port);
+        return rc;
+    }
+    if (val != 1) {
+        dbg_error("%s: Could not enable layers for port %d (%d)\n",
+                  __func__, port, val);
+        return ERROR;
+    }
+
+    /* Request LinkStartup */
+    if (switch_dme_set(sw, port, TSB_DME_LINKSTARTUPREQ, 0, 1)) {
+        dbg_error("%s: LinkUp request failed for port %d\n", __func__, port);
+    }
+
+    /* Clear LinkStartupInd */
+    rc = switch_dme_get(sw, port, TSB_DME_LINKSTARTUPIND, 0, &val);
+    if (rc) {
+        dbg_error("%s: TSB_DME_LINKSTARTUPIND read failed for port %d\n",
+                  __func__, port);
+        return rc;
+    }
+
+    /* Enable interrupts for Unipro port */
+    rc = switch_port_irq_enable(sw, port, true);
+    if (rc) {
+        dbg_error("%s: Failed to enable port IRQs for port %d\n",
+                  __func__, port);
+        return rc;
+    }
+
+    /*
+     * Wait for a LinkUpRequestCnf IRQ from the Switch. In case of
+     * failure, let's retry
+     */
+
+    return 0;
+}
+
 static int es3_enable_port(struct tsb_switch *sw, uint8_t port, bool enable)
 {
     uint32_t value = 0;
@@ -1090,6 +1168,7 @@ static struct tsb_rev_data es3_rev_data = {
 
 static struct tsb_switch_ops es3_ops = {
     .enable_port           = es3_enable_port,
+    .link_startup          = es3_linkstartup_request,
 
     .switch_id_set_req     = es3_switch_id_set_req,
 
