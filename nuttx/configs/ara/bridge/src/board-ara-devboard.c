@@ -204,6 +204,7 @@ static void bdb_driver_register(void)
     extern struct device_driver sdio_board_driver;
     device_register_driver(&sdio_board_driver);
 #endif
+
 }
 #endif
 

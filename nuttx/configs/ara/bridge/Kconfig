@@ -54,12 +54,6 @@ config ARA_BRIDGE_HAVE_LIGHTS
 	---help---
 		Lights Device Driver
 
-config ARA_BRIDGE_HAVE_CAMERA
-	bool "Camera support for Board"
-	default n
-	select GPIO
-	select I2C
-
 config BOARD_HAVE_DISPLAY
 	bool "Display support for Board"
 	default n
@@ -74,13 +68,10 @@ config ARA_BRIDGE_HAVE_POWER_SUPPLY
 
 choice
 	prompt "Select a bridge firmware configuration"
-	depends on ARA_BRIDGE_HAVE_CAMERA || BOARD_HAVE_DISPLAY
+	depends on BOARD_HAVE_DISPLAY
 config APB_AP
 	bool "APBridge for AP Module"
 	select ARCH_CHIP_DEVICE_CSI
-config APB_CAMERA
-	bool "APBridge for Camera Module"
-	depends on ARA_BRIDGE_HAVE_CAMERA
 config APB_DISPLAY
 	bool "APBridge for Display Module"
 	depends on BOARD_HAVE_DISPLAY
