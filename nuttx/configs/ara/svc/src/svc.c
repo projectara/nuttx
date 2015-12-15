@@ -101,6 +101,7 @@ static inline void svc_event_destroy(struct svc_event *event) {
 
 static int event_cb(struct tsb_switch_event *ev);
 static int event_mailbox(struct tsb_switch_event *ev);
+static int event_linkup(struct tsb_switch_event *ev);
 
 static struct tsb_switch_event_listener evl = {
     .cb = event_cb,
@@ -109,6 +110,9 @@ static struct tsb_switch_event_listener evl = {
 static int event_cb(struct tsb_switch_event *ev) {
 
     switch (ev->type) {
+    case TSB_SWITCH_EVENT_LINKUP:
+        event_linkup(ev);
+        break;
     case TSB_SWITCH_EVENT_MAILBOX:
         event_mailbox(ev);
         break;
@@ -116,11 +120,41 @@ static int event_cb(struct tsb_switch_event *ev) {
     return 0;
 }
 
+static int event_linkup(struct tsb_switch_event *ev) {
+    int rc = 0;
+
+    dbg_info("event received: type: %u (LINKUP) port: %u val: %u\n",
+             ev->type, ev->linkup.port, ev->linkup.val);
+
+    pthread_mutex_lock(&svc->lock);
+
+    switch (ev->linkup.val) {
+    case TSB_LINKUP_FAIL:
+        /* LinkUp failed, retry */
+        rc = switch_link_startup(svc->sw, ev->linkup.port);
+        break;
+    case TSB_LINKUP_SUCCESS:
+        /* LinkUp succeeded, do nothing. The mailbox handshake follows */
+        break;
+    default:
+        dbg_error("unexpected LinkUp value: %u port: %u\n",
+                  ev->linkup.val, ev->linkup.port);
+    }
+
+    pthread_mutex_unlock(&svc->lock);
+
+    return rc;
+}
+
 static int event_mailbox(struct tsb_switch_event *ev) {
     struct svc_event *svc_ev;
     int rc = 0;
-    dbg_info("event received: type: %u port: %u val: %u\n", ev->type, ev->mbox.port, ev->mbox.val);
+
+    dbg_info("event received: type: %u (MBOX) port: %u val: %u\n",
+             ev->type, ev->mbox.port, ev->mbox.val);
+
     pthread_mutex_lock(&svc->lock);
+
     switch (ev->mbox.val) {
     case TSB_MAIL_READY_AP:
         rc = interface_get_id_by_portid(ev->mbox.port);
@@ -132,7 +166,6 @@ static int event_mailbox(struct tsb_switch_event *ev) {
 
         svc->ap_intf_id = rc;
         break;
-
     case TSB_MAIL_READY_OTHER:
         svc_ev = svc_event_create(SVC_EVENT_TYPE_READY_OTHER);
         if (!svc_ev) {
@@ -144,8 +177,10 @@ static int event_mailbox(struct tsb_switch_event *ev) {
         list_add(&svc_events, &svc_ev->events);
         break;
     default:
-        dbg_error("unexpected mailbox value: %u port: %u", ev->mbox.val, ev->mbox.port);
+        dbg_error("unexpected mailbox value: %u port: %u\n",
+                  ev->mbox.val, ev->mbox.port);
     }
+
  out:
     pthread_cond_signal(&svc->cv);
     pthread_mutex_unlock(&svc->lock);
