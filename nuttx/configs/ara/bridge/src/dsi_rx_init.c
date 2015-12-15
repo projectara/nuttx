@@ -33,8 +33,8 @@
 
 #include <nuttx/gpio.h>
 #include <arch/tsb/cdsi.h>
+#include <arch/tsb/cdsi0_offs_def.h>
 #include <arch/tsb/gpio.h>
-#include <arch/board/cdsi0_offs_def.h>
 
 #define CDSIRX_CLKEN_VAL                                0x00000001
 #define CDSIRX_CLKSEL_VAL                               0x00000101

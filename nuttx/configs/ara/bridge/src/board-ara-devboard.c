@@ -51,10 +51,6 @@
 #include <arch/board/dsi.h>
 #endif
 
-#ifdef CONFIG_ARA_BRIDGE_HAVE_CAMERA
-#include <arch/board/csi.h>
-#endif
-
 #ifdef CONFIG_ARA_BRIDGE_HAVE_POWER_SUPPLY
 #include <nuttx/device_power_supply.h>
 #endif
@@ -218,13 +214,6 @@ static void board_display_init(void)
 #endif
 }
 
-static void board_camera_init(void)
-{
-#ifdef CONFIG_ARA_BRIDGE_HAVE_CAMERA
-    camera_init();
-#endif
-}
-
 static void sdb_fixups(void)
 {
     /**
@@ -289,5 +278,4 @@ void ara_module_init(void)
 #endif
 
     board_display_init();
-    board_camera_init();
 }

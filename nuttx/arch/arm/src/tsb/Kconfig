@@ -230,6 +230,14 @@ config ARCH_CHIP_DEVICE_SDIO
 	---help---
 		TSB SDIO Driver
 
+config ARCH_CHIP_DEVICE_CSI
+	bool "CSI Support"
+	depends on ARCH_CHIP_APBRIDGE
+	select DEVICE_CORE
+	default n
+	---help---
+		TSB CSI Driver
+
 config UNIPRO_ZERO_COPY
 	bool
 	default y

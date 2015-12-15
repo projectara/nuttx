@@ -140,3 +140,8 @@ endif
 ifeq ($(CONFIG_ARCH_CHIP_DEVICE_SDIO),y)
 CHIP_CSRCS += tsb_sdio.c
 endif
+
+ifeq ($(CONFIG_ARCH_CHIP_DEVICE_CSI),y)
+CHIP_CSRCS += tsb_csi_rx.c
+CHIP_CSRCS += tsb_csi_tx.c
+endif

@@ -46,10 +46,6 @@
 #include <arch/board/dsi.h>
 #endif
 
-#ifdef CONFIG_ARA_BRIDGE_HAVE_CAMERA
-#include <arch/board/csi.h>
-#endif
-
 #include "apbridge_backend.h"
 
 static struct apbridge_dev_s *g_usbdev = NULL;

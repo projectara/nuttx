@@ -29,13 +29,12 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <pthread.h>
+#include <errno.h>
 
-#include <nuttx/gpio.h>
-#include <nuttx/wqueue.h>
 #include <arch/tsb/cdsi.h>
-#include <arch/board/cdsi0_offs_def.h>
-#include <arch/board/cdsi0_reg_def.h>
+#include <arch/tsb/cdsi0_offs_def.h>
+#include <arch/tsb/cdsi0_reg_def.h>
+#include <arch/tsb/csi.h>
 
 #define AL_TX_BRG_MODE_VAL                              0x00000092
 #define AL_TX_BRG_WAIT_CYCLE_SET_VAL                    0x00100010
@@ -153,16 +152,24 @@
 #define CSI_TX_PRIORITY      (60)
 #define CSI_TX_STACK_SIZE    (2048)
 
+/* State of CSI */
+#define CSI_STATE_STOP  0
+#define CSI_STATE_START 1
+
+/* Command of CSI TX */
+#define CSI_CMD_STOP    0
+#define CSI_CMD_START   1
+
 /**
- * @brief Initialize the CSI transmitter
- * @param dev dev pointer to structure of cdsi_dev device data
- * @return void function without return value
+ * @brief Set the registers in CSI controller to start transfer.
+ * @param dev Pointer to the CDSI device
+ * @param cfg Pointer to CSI transmitter configuration structure
+ *
+ * @return 0 on success or a negative error code on failure.
  */
-static void csi_tx_init(struct cdsi_dev *dev)
+int csi_tx_start(struct cdsi_dev *dev, struct csi_tx_config *cfg)
 {
     uint32_t rdata;
-
-    printf("csi_tx_init callback function for CSI-2 tx\n");
 
     /* Set to Tx mode for CDSI */
     cdsi_write(dev, CDSI0_AL_TX_BRG_CDSITX_MODE_OFFS,
@@ -418,36 +425,55 @@ static void csi_tx_init(struct cdsi_dev *dev)
     cdsi_write(dev, CDSI0_AL_RX_BRG_CSI_INFO_OFFS,
                CDSI0_AL_RX_BRG_CSI_INFO_VAL);
     cdsi_write(dev, CDSI0_AL_RX_BRG_CSI_DT0_OFFS, CDSI0_AL_RX_BRG_CSI_DT0_VAL);
+
+    return 0;
 }
 
 /**
- * @brief thread routine of camera initialization function
- * @param p_data pointer of data that pass to thread routine
+ * @brief Set the registers in CSI controller to stop transfer.
+ * @param dev Pointer to the CDSI device
+ *
+ * @return 0 on success or a negative error code on failure.
  */
-static void camera_fn(void *p_data)
+int csi_tx_stop(struct cdsi_dev *dev)
 {
-    struct cdsi_dev *dev;
+    /* Stop the Pixel I/F of CDSITX */
 
-    dev = csi_initialize(TSB_CDSI1, TSB_CDSI_TX);
-    if (!dev)
-        return;
+    /* Wait the stop of Pixel I/F */
 
-    csi_tx_init(dev);
-}
+    /* Wait until the transmission from UniPro to CDSITX is stopped */
 
-/**
- * @brief camera initialization function
- * @return zero for success or non-zero on any faillure
- */
-int camera_init(void)
-{
-    int taskid;
+    /* Disable the Tx bridge */
 
-    taskid = task_create("csi_tx_worker", CSI_TX_PRIORITY, CSI_TX_STACK_SIZE,
-                         (main_t)camera_fn, NULL);
-    if (taskid == ERROR) {
-        return ERROR;
-    }
+    /* Assert the Tx bridge reset */
+
+    /* Stop the APF function */
+
+    /* Disable the PPI function */
+
+    /* Disable the clock distribution for LINK and APF */
+
+    /* Assert the APF reset */
+
+    /* Assert the LINK reset */
+
+    /* Initialize the PPI */
+
+    /* Enable the clock distribution to stop the clock lane of D-PHY */
+
+    /* Wait for stop the clock lane of D-PHY */
+
+    /* Disable the clock destribuiton to stop the clock lane of D-PHY */
+
+    /* Disable the voltage requlator for D-PHY */
+
+    /* Disable D-PHY functions */
+
+    /* Disable PLL for CDSI */
+
+    /* Clear the interrupt statuses */
+
+    /* Release the Initialization signal for the PPI */
 
     return 0;
 }

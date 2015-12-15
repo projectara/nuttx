@@ -77,6 +77,7 @@ choice
 	depends on ARA_BRIDGE_HAVE_CAMERA || BOARD_HAVE_DISPLAY
 config APB_AP
 	bool "APBridge for AP Module"
+	select ARCH_CHIP_DEVICE_CSI
 config APB_CAMERA
 	bool "APBridge for Camera Module"
 	depends on ARA_BRIDGE_HAVE_CAMERA
@@ -101,20 +102,6 @@ config ARA_BRIDGE_BOARD_OOT
 		With this choice, the object files in OOT_OBJS will be linked with
 		the in-tree object files.
 endchoice
-
-choice
-	prompt "Select CDSI0 or CDSI1 for rx"
-	depends on ARA_BRIDGE_HAVE_CAMERA && APB_CAMERA
-config CAMERA_RX_CDSI0
-	bool "Initialize csi-2 rx on CDSI0"
-config CAMERA_RX_CDSI1
-	bool "Initialize csi-2 rx on CDSI1"
-endchoice
-
-config FOR_GOOGLE_IO_DEMO
-	bool "Start stream for Google I/O Demo"
-	depends on ARA_BRIDGE_HAVE_CAMERA && APB_CAMERA
-	default n
 
 if APBRIDGEA
 # USBDEV_DMA is required by APBridgeA gadget
