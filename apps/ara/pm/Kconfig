@@ -1,0 +1,13 @@
+#
+# For a description of the syntax of this configuration file,
+# see misc/tools/kconfig-language.txt.
+#
+
+config ARA_PM
+	bool "GPB/APB power-management helper"
+	depends on PM
+	depends on ARCH_CHIP_TSB
+	default n
+	---help---
+		Monitor system's power management activity, change power
+		states, enable & disable power management.
