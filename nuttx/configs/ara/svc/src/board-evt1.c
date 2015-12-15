@@ -82,15 +82,15 @@
 #define ARA_KEY_GPIO      (GPIO_INPUT | GPIO_PULLDOWN | GPIO_PORTA | GPIO_PIN0)
 
 /* Wake/detect pins */
-#define WD_1_DET_IN       STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN1)
-#define WD_2_DET_IN       STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN2)
-#define WD_3A_DET_IN      STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN3)
-#define WD_3B_DET_IN      STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN4)
-#define WD_4A_DET_IN      STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN5)
-#define WD_4B_DET_IN      STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN6)
-#define WD_5_DET_IN       STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN7) /* LCD */
-#define WD_8A_DET_IN      STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN11)
-#define WD_8B_DET_IN      STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN12)
+#define WD_1_DET_IN_GPIO       (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN1)
+#define WD_2_DET_IN_GPIO       (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN2)
+#define WD_3A_DET_IN_GPIO      (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN3)
+#define WD_3B_DET_IN_GPIO      (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN4)
+#define WD_4A_DET_IN_GPIO      (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN5)
+#define WD_4B_DET_IN_GPIO      (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN6)
+#define WD_5_DET_IN_GPIO       (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN7) /* LCD */
+#define WD_8A_DET_IN_GPIO      (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN11)
+#define WD_8B_DET_IN_GPIO      (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN12)
 
 /* Module hotplug release request pins */
 #define MOD_ACT_SW_1      STM32_GPIO_PIN(GPIO_PORTC | GPIO_PIN0)
@@ -233,19 +233,19 @@ static struct vreg_data module_5_lcd_vreg_data[] = {
 };
 
 DECLARE_MODULE_PORT_INTERFACE(module_1, module_1_vreg_data, 13,
-                              WD_1_DET_IN, ARA_IFACE_WD_ACTIVE_LOW);
+                              WD_1_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW);
 DECLARE_MODULE_PORT_INTERFACE(module_2, module_2_vreg_data, 11,
-                              WD_2_DET_IN, ARA_IFACE_WD_ACTIVE_LOW);
+                              WD_2_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW);
 DECLARE_MODULE_PORT_INTERFACE(module_3A, module_3A_vreg_data, 4,
-                              WD_3A_DET_IN, ARA_IFACE_WD_ACTIVE_LOW);
+                              WD_3A_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW);
 DECLARE_MODULE_PORT_INTERFACE(module_3B, module_3B_vreg_data, 2,
-                              WD_3B_DET_IN, ARA_IFACE_WD_ACTIVE_LOW);
+                              WD_3B_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW);
 DECLARE_MODULE_PORT_INTERFACE(module_4A, module_4A_vreg_data, 6,
-                              WD_4A_DET_IN, ARA_IFACE_WD_ACTIVE_LOW);
+                              WD_4A_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW);
 DECLARE_MODULE_PORT_INTERFACE(module_4B, module_4B_vreg_data, 8,
-                              WD_4B_DET_IN, ARA_IFACE_WD_ACTIVE_LOW);
+                              WD_4B_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW);
 DECLARE_MODULE_PORT_INTERFACE(module_5_lcd, module_5_lcd_vreg_data, 10,
-                              WD_5_DET_IN, ARA_IFACE_WD_ACTIVE_LOW);
+                              WD_5_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW);
 
 static struct interface *evt1_interfaces[] = {
     &apb1_interface,
@@ -421,15 +421,15 @@ struct ara_board_info *board_init(void) {
     up_udelay(POWER_SWITCH_OFF_STAB_TIME_US);
 
     /* Configure the wake/detect lines. */
-    gpio_direction_in(WD_1_DET_IN);
-    gpio_direction_in(WD_2_DET_IN);
-    gpio_direction_in(WD_3A_DET_IN);
-    gpio_direction_in(WD_3B_DET_IN);
-    gpio_direction_in(WD_4A_DET_IN);
-    gpio_direction_in(WD_4B_DET_IN);
-    gpio_direction_in(WD_5_DET_IN);
-    gpio_direction_in(WD_8A_DET_IN);
-    gpio_direction_in(WD_8B_DET_IN);
+    stm32_configgpio(WD_1_DET_IN_GPIO);
+    stm32_configgpio(WD_2_DET_IN_GPIO);
+    stm32_configgpio(WD_3A_DET_IN_GPIO);
+    stm32_configgpio(WD_3B_DET_IN_GPIO);
+    stm32_configgpio(WD_4A_DET_IN_GPIO);
+    stm32_configgpio(WD_4B_DET_IN_GPIO);
+    stm32_configgpio(WD_5_DET_IN_GPIO);
+    stm32_configgpio(WD_8A_DET_IN_GPIO);
+    stm32_configgpio(WD_8B_DET_IN_GPIO);
 
     /* Configure the ARA key. */
     stm32_configgpio(ARA_KEY_GPIO);
