@@ -747,30 +747,6 @@ CONFIG_NSH_CONSOLE=y
 #
 
 #
-# Custom Free Memory Command
-#
-# CONFIG_SYSTEM_FREE is not set
-
-#
-# EMACS-like Command Line Editor
-#
-# CONFIG_SYSTEM_CLE is not set
-
-#
-# FLASH Program Installation
-#
-# CONFIG_SYSTEM_INSTALL is not set
-
-#
-# FLASH Erase-all Command
-#
-
-#
-# Intel HEX to binary conversion
-#
-# CONFIG_SYSTEM_HEX2BIN is not set
-
-#
 # I2C tool
 #
 CONFIG_SYSTEM_I2CTOOL=y
@@ -782,85 +758,7 @@ CONFIG_I2CTOOL_MAXREGADDR=0xff
 CONFIG_I2CTOOL_DEFFREQ=400000
 
 #
-# INI File Parser
-#
-# CONFIG_SYSTEM_INIFILE is not set
-
-#
-# NxPlayer media player library / command Line
-#
-# CONFIG_SYSTEM_NXPLAYER is not set
-
-#
-# RAM test
-#
-# CONFIG_SYSTEM_RAMTEST is not set
-
-#
 # readline()
 #
 CONFIG_SYSTEM_READLINE=y
 CONFIG_READLINE_ECHO=y
-
-#
-# P-Code Support
-#
-
-#
-# PHY Tool
-#
-
-#
-# Power Off
-#
-# CONFIG_SYSTEM_POWEROFF is not set
-
-#
-# RAMTRON
-#
-# CONFIG_SYSTEM_RAMTRON is not set
-
-#
-# SD Card
-#
-# CONFIG_SYSTEM_SDCARD is not set
-
-#
-# Sudoku
-#
-# CONFIG_SYSTEM_SUDOKU is not set
-
-#
-# Sysinfo
-#
-# CONFIG_SYSTEM_SYSINFO is not set
-
-#
-# VI Work-Alike Editor
-#
-# CONFIG_SYSTEM_VI is not set
-
-#
-# Stack Monitor
-#
-
-#
-# USB CDC/ACM Device Commands
-#
-
-#
-# USB Composite Device Commands
-#
-
-#
-# USB Mass Storage Device Commands
-#
-
-#
-# USB Monitor
-#
-
-#
-# Zmodem Commands
-#
-# CONFIG_SYSTEM_ZMODEM is not set
