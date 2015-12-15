@@ -105,16 +105,16 @@
 #define CSI_RX_STACK_SIZE    (2048)
 
 /**
- * @brief cdsi_sensor_init callback function of ov5645 camera_sensor
+ * @brief Initialize the CSI receiver
  * @param dev dev pointer to structure of cdsi_dev device data
  * @return void function without return value
  */
-void ov5645_csi_init(struct cdsi_dev *dev)
+static void csi_rx_init(struct cdsi_dev *dev)
 {
     uint32_t rdata0;
     uint32_t rdata1;
 
-    printf("ov5645_csi_init callback function for CSI-2 rx\n");
+    printf("csi_rx_init callback function for CSI-2 rx\n");
 
     /* Enable the Rx bridge and set to CSI mode */
     cdsi_write(dev, CDSI0_AL_RX_BRG_MODE_OFFS, AL_RX_BRG_MODE_VAL);
@@ -245,21 +245,23 @@ void ov5645_csi_init(struct cdsi_dev *dev)
                CDSI0_CDSIRX_ADDRESS_CONFIG_VAL);
 }
 
-struct camera_sensor ov5645_sensor = {
-    .cdsi_sensor_init = ov5645_csi_init,
-};
-
 /**
  * @brief thread routine of camera initialization function
  * @param p_data pointer of data that pass to thread routine
  */
 static void camera_fn(void *p_data)
 {
+    struct cdsi_dev *dev;
+
 #if defined(CONFIG_CAMERA_RX_CDSI0)
-    csi_initialize(&ov5645_sensor, TSB_CDSI0, TSB_CDSI_RX);
+    dev = csi_initialize(TSB_CDSI0, TSB_CDSI_RX);
 #else
-    csi_initialize(&ov5645_sensor, TSB_CDSI1, TSB_CDSI_RX);
+    dev = csi_initialize(TSB_CDSI1, TSB_CDSI_RX);
 #endif
+    if (!dev)
+        return;
+
+    csi_rx_init(dev);
 }
 
 /**

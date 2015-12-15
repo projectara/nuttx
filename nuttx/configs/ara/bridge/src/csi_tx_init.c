@@ -154,15 +154,15 @@
 #define CSI_TX_STACK_SIZE    (2048)
 
 /**
- * @brief cdsi_sensor_init callback function of ov5645 camera_sensor
+ * @brief Initialize the CSI transmitter
  * @param dev dev pointer to structure of cdsi_dev device data
  * @return void function without return value
  */
-void ov5645_csi_init(struct cdsi_dev *dev)
+static void csi_tx_init(struct cdsi_dev *dev)
 {
     uint32_t rdata;
 
-    printf("ov5645_csi_init callback function for CSI-2 tx\n");
+    printf("csi_tx_init callback function for CSI-2 tx\n");
 
     /* Set to Tx mode for CDSI */
     cdsi_write(dev, CDSI0_AL_TX_BRG_CDSITX_MODE_OFFS,
@@ -420,17 +420,19 @@ void ov5645_csi_init(struct cdsi_dev *dev)
     cdsi_write(dev, CDSI0_AL_RX_BRG_CSI_DT0_OFFS, CDSI0_AL_RX_BRG_CSI_DT0_VAL);
 }
 
-struct camera_sensor ov5645_sensor = {
-    .cdsi_sensor_init = ov5645_csi_init,
-};
-
 /**
  * @brief thread routine of camera initialization function
  * @param p_data pointer of data that pass to thread routine
  */
 static void camera_fn(void *p_data)
 {
-    csi_initialize(&ov5645_sensor, TSB_CDSI1, TSB_CDSI_TX);
+    struct cdsi_dev *dev;
+
+    dev = csi_initialize(TSB_CDSI1, TSB_CDSI_TX);
+    if (!dev)
+        return;
+
+    csi_tx_init(dev);
 }
 
 /**
