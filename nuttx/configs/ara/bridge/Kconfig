@@ -81,6 +81,11 @@ config BOARD_CODEC_RT5647
 	select BOARD_HAVE_AUDIO
 	default n
 
+config BOARD_CODEC_NXP9890
+	bool "Skeleton NXP 9890A Audio Codec Support "
+	select BOARD_HAVE_AUDIO
+	default n
+
 choice
 	prompt "Select a bridge firmware configuration"
 	depends on ARA_BRIDGE_HAVE_CAMERA || BOARD_HAVE_DISPLAY

@@ -99,10 +99,10 @@ CSRCS += rt5647.c
 endif
 
 #ToDo add to KCONFIG
-#ifeq ($(CONFIG_BOARD_CODEC_NXP9890),y)
-#CSRCS += audcodec.c
+ifeq ($(CONFIG_BOARD_CODEC_NXP9890),y)
+CSRCS += audcodec.c
 CSRCS += nxp9890.c
-#endif
+endif
 
 ifeq ($(CONFIG_APBRIDGEA_AUDIO),y)
 CSRCS += apbridgea_audio.c
