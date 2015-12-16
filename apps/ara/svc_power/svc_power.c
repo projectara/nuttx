@@ -48,6 +48,7 @@ enum {
     HELP,
     SET_POWER,
     WAKEOUT,
+    WAKEOUT_LENGTH,
     DUMPSTATE,
 
     MAX_CMD,
@@ -63,14 +64,19 @@ struct command {
 static int cmd_usage(int argc, char *argv[]);
 static int cmd_set_power(int argc, char *argv[]);
 static int cmd_wakeout(int argc, char *argv[]);
+static int cmd_wakeout_length(int argc, char *argv[]);
 static int cmd_dumpstate(int argc, char *argv[]);
 
 static const struct command commands[] = {
     [HELP] = {'h', "help", "print this usage and exit", cmd_usage},
     [SET_POWER] = {'p', "power", "get/set interface power", cmd_set_power},
     [WAKEOUT] = {'w', "wakeout", "pulse WAKEOUT", cmd_wakeout},
+    [WAKEOUT_LENGTH] = {'l', "wakeout_length", "get/set WAKEOUT pulse duration",
+                           cmd_wakeout_length},
     [DUMPSTATE] = {'d', "dumpstate", "dump system power state", cmd_dumpstate},
 };
+
+static int wakeout_length_default = -1;
 
 static void print_interface_usage(void)
 {
@@ -199,25 +205,62 @@ static int cmd_set_power(int argc, char *argv[])
 
 static void wakeout_usage(int exit_status)
 {
-    printf("%s %s <interface>: usage:\n",
+    printf("%s %s <interface> [<length>]: usage:\n",
            progname, commands[WAKEOUT].longc);
     printf("   <interface>: Interface to send WAKEOUT to.\n");
+    printf("   <length>: Pulse length in us.\n");
     print_interface_usage();
     exit(exit_status);
 }
 
 static int wakeout_func(struct interface *iface, void *context)
 {
-    (void)context;
-    return interface_generate_wakeout(iface, false);
+    int length = (int) context;
+
+    return interface_generate_wakeout(iface, false, length);
 }
 
 static int cmd_wakeout(int argc, char *argv[])
 {
-    if (argc != 3) {
+    int length = wakeout_length_default;
+
+    if ((argc != 3) && (argc != 4)) {
         wakeout_usage(EXIT_FAILURE);
     }
-    return do_to_iface(argv[2], wakeout_func, NULL);
+
+    if (argc == 4) {
+        length = strtol(argv[3], NULL, 10);
+    }
+
+    return do_to_iface(argv[2], wakeout_func, (void *) length);
+}
+
+/*
+ * Get/set Wake out pulse default duration
+ */
+
+static void wakeout_length_usage(int exit_status)
+{
+    printf("%s %s [<length>]: usage:\n",
+           progname, commands[WAKEOUT_LENGTH].longc);
+    printf("   <length>: Pulse duration in us. -1 to use the default hardcoded value\n");
+    exit(exit_status);
+}
+
+static int cmd_wakeout_length(int argc, char *argv[])
+{
+    if ((argc != 2) && (argc != 3)) {
+        wakeout_length_usage(EXIT_FAILURE);
+    }
+
+    if (argc == 3) {
+        wakeout_length_default = strtol(argv[2], NULL, 10);
+    }
+
+    printf("%s %s: WAKEOUT pulse length is set to %d\n", argv[0], argv[1],
+           wakeout_length_default);
+
+    return 0;
 }
 
 /*
