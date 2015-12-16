@@ -1352,7 +1352,7 @@ int usbdev_apbinitialize(struct device *dev,
                                 latency_tag_dis_vendor_request_out))
         goto errout_vendor_req;
     if (register_vendor_request(APBRIDGE_RWREQUEST_AUDIO_APBRIDGEA,
-                                VENDOR_REQ_OUT,
+                                VENDOR_REQ_DATA,
                                 apbridgea_audio_vendor_request_out))
         goto errout_vendor_req;
 
