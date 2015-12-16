@@ -212,8 +212,6 @@ struct cport_to_ep {
 enum ctrlreq_state {
     USB_REQ,
     GREYBUS_LOG,
-    GREYBUS_EP_MAPPING,
-    AUDIO_SPECIAL_PROTO,
 };
 
 /****************************************************************************
