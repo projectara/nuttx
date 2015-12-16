@@ -423,6 +423,20 @@ static void unipro_evt_handler(enum unipro_event evt)
     }
 }
 
+static int unipro_enable_mailbox_irq(void)
+{
+    int retval;
+    uint32_t val;
+
+    retval = unipro_attr_local_read(TSB_INTERRUPTENABLE, &val, 0);
+    if (retval) {
+        return retval;
+    }
+
+    return unipro_attr_local_write(TSB_INTERRUPTENABLE,
+                                   val | TSB_INTERRUPTSTATUS_MAILBOX, 0);
+}
+
 static int irq_unipro(int irq, void *context) {
     int rc;
     uint32_t val;
@@ -447,6 +461,16 @@ static int irq_unipro(int irq, void *context) {
     }
 
 done:
+    /**
+     * XXX: This hack is for ES3 modules where the mailbox IRQs gets disabled
+     * after the initial mailbox handshake.
+     * This issue is not affecting ES2 based modules.
+     */
+    rc = unipro_enable_mailbox_irq();
+    if (rc) {
+        lowsyslog("unipro: failed to enable mailbox irq\n");
+    }
+
     return 0;
 }
 
