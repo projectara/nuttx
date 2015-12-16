@@ -735,6 +735,7 @@ int vendor_request_handler(struct usbdev_s *dev,
                     ret = len;
                     g_vendor_request = vendor_request;
                     memcpy(&g_ctrl, ctrl, sizeof(g_ctrl));
+                    g_dev = dev;
                 }
 
                 break;
