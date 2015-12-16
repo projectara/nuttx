@@ -147,7 +147,6 @@ build_image_from_defconfig() {
   cp -r $TOPDIR/../nuttx $ARA_BUILD_TOPDIR/nuttx
   cp -r $TOPDIR/../apps $ARA_BUILD_TOPDIR/apps
   cp -r $TOPDIR/../misc $ARA_BUILD_TOPDIR/misc
-  cp -r $TOPDIR/../NxWidgets $ARA_BUILD_TOPDIR/NxWidgets
 
   pushd $ARA_BUILD_TOPDIR/nuttx > /dev/null
 
