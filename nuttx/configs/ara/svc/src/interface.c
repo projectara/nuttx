@@ -188,7 +188,8 @@ int interface_pwr_disable(struct interface *iface)
  *
  * The corresponding power supplies must already be enabled.
  */
-int interface_generate_wakeout(struct interface *iface, bool assert)
+int interface_generate_wakeout(struct interface *iface, bool assert,
+                               int length)
 {
     int rc;
 
@@ -197,8 +198,13 @@ int interface_generate_wakeout(struct interface *iface, bool assert)
         return -ENODEV;
     }
 
-    dbg_info("Generating WAKEOUT on interface %s\n",
-             iface->name ? iface->name : "unknown");
+    if (length <= 0) {
+        dbg_info("Generating WAKEOUT on interface %s\n",
+                 iface->name ? iface->name : "unknown");
+    } else {
+        dbg_info("Generating WAKEOUT on interface %s (%d us)\n",
+                 iface->name ? iface->name : "unknown", length);
+    }
 
     /* Generate a WAKEOUT pulse according to the interface type */
     switch (iface->if_type) {
@@ -216,6 +222,9 @@ int interface_generate_wakeout(struct interface *iface, bool assert)
                 (iface->detect_in.gpio & ~GPIO_MODE_MASK) |
                 GPIO_OUTPUT |
                 (polarity ? GPIO_OUTPUT_CLEAR : GPIO_OUTPUT_SET);
+            int pulse_len = (length > 0) ?
+                            length : MODULE_PORT_WAKEOUT_PULSE_DURATION_IN_US;
+
             /* First uninstall the interrupt handler on the pin */
             interface_uninstall_wd_handler(&iface->detect_in);
             /* Then configure the pin as output and assert it */
@@ -227,7 +236,7 @@ int interface_generate_wakeout(struct interface *iface, bool assert)
             }
 
             /* Keep the line asserted for the given duration */
-            up_udelay(MODULE_PORT_WAKEOUT_PULSE_DURATION_IN_US);
+            up_udelay(pulse_len);
 
             /* Finally re-install the interrupt handler on the pin */
             rc = interface_install_wd_handler(&iface->detect_in);
@@ -245,6 +254,9 @@ int interface_generate_wakeout(struct interface *iface, bool assert)
          * the PS_HOLD signal asap in order to stay powered up.
          */
         if (iface->wake_out) {
+            int pulse_len = (length > 0) ?
+                            length : WAKEOUT_PULSE_DURATION_IN_US;
+
             rc = stm32_configgpio(iface->wake_out |
                                   GPIO_OUTPUT | GPIO_OUTPUT_SET);
             if (rc < 0) {
@@ -255,7 +267,7 @@ int interface_generate_wakeout(struct interface *iface, bool assert)
 
             if (!assert) {
                 /* Wait for the bridges to react */
-                usleep(WAKEOUT_PULSE_DURATION_IN_US);
+                up_udelay(pulse_len);
 
                 /* De-assert the lines */
                 rc = stm32_configgpio(iface->wake_out | GPIO_INPUT);
@@ -345,7 +357,7 @@ static int interface_power_on(struct interface *iface)
     }
 
     /* Generate WAKE_OUT */
-    rc = interface_generate_wakeout(iface, false);
+    rc = interface_generate_wakeout(iface, false, -1);
     if (rc) {
         dbg_error("Failed to generate wakeout on interface %s\n", iface->name);
         return rc;
