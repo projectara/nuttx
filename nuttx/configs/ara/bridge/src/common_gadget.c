@@ -651,7 +651,7 @@ void vendor_data_handler(struct usbdev_req_s *req)
     value = GETUINT16(g_ctrl.value);
     index = GETUINT16(g_ctrl.index);
 
-    g_vendor_request->cb(g_dev, g_ctrl.req, value, index, req->buf, req->xfrd);
+    g_vendor_request->cb(g_dev, g_ctrl.req, index, value, req->buf, req->xfrd);
     g_vendor_request = NULL;
 }
 
