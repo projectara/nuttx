@@ -44,13 +44,10 @@
 #include "nuttx/arch.h"
 #include "irq/irq.h"
 
-#if defined(CONFIG_TSB_CHIP_REV_ES2)
-#define APBRIDGE_LINE_COUNT     23
-#define GPBRIDGE_LINE_COUNT     27
-#elif defined(CONFIG_TSB_CHIP_REV_ES3)
-#define APBRIDGE_LINE_COUNT     24
-#define GPBRIDGE_LINE_COUNT     32
-#endif
+#define ES2_APBRIDGE_LINE_COUNT     23
+#define ES2_GPBRIDGE_LINE_COUNT     27
+#define ES3_APBRIDGE_LINE_COUNT     24
+#define ES3_GPBRIDGE_LINE_COUNT     32
 
 #define GPIO_BASE           0x40003000
 #define GPIO_DATA           (GPIO_BASE)
@@ -104,7 +101,7 @@ struct gpio_pinsharing_conf {
 
 #if defined(CONFIG_ARCH_CHIP_GPBRIDGE)
 
-static struct gpio_pinsharing_conf tsb_gpio_pinsharing[GPBRIDGE_LINE_COUNT] = {
+static struct gpio_pinsharing_conf tsb_gpio_pinsharing[] = {
     /* GPIO0 */
     PIN_CLR_1(TSB_PIN_UART_CTSRTS_BIT),
     /* GPIO1, GPIO2 */
@@ -155,7 +152,7 @@ static struct gpio_pinsharing_conf tsb_gpio_pinsharing[GPBRIDGE_LINE_COUNT] = {
 
 #else
 
-static struct gpio_pinsharing_conf tsb_gpio_pinsharing[APBRIDGE_LINE_COUNT] = {
+static struct gpio_pinsharing_conf tsb_gpio_pinsharing[] = {
     /* GPIO0 */
     PIN_CLR_1(TSB_PIN_UART_RXTX_BIT),
     /* GPIO1, GPIO2 */
@@ -227,13 +224,18 @@ static void tsb_gpio_direction_out(void *driver_data, uint8_t which, uint8_t val
 
 uint8_t tsb_gpio_line_count(void *driver_data)
 {
-    static uint8_t line_count;
-    if (!line_count) {
-        line_count = tsb_get_product_id() == tsb_pid_apbridge ?
-                        APBRIDGE_LINE_COUNT : GPBRIDGE_LINE_COUNT;
-    }
+    switch (tsb_get_rev_id()) {
+    case tsb_rev_es2:
+        return tsb_get_product_id() == tsb_pid_apbridge ?
+            ES2_APBRIDGE_LINE_COUNT : ES2_GPBRIDGE_LINE_COUNT;
 
-    return line_count;
+    case tsb_rev_es3:
+        return tsb_get_product_id() == tsb_pid_apbridge ?
+            ES3_APBRIDGE_LINE_COUNT : ES3_GPBRIDGE_LINE_COUNT;
+
+    default:
+        return 0;
+    }
 }
 
 static int tsb_gpio_mask_irq(void *driver_data, uint8_t which)
