@@ -78,8 +78,8 @@ rebuild_defconfig() {
   export ARA_BUILD_NAME=$buildname
   pushd $ARA_BUILD_TOPDIR/nuttx > /dev/null
 
-#  make -j ${ARA_BUILD_PARALLEL} --always-make -r -f Makefile.unix  olddefconfig > /dev/null 2>&1
-  make -j ${ARA_BUILD_PARALLEL} -d --always-make -r -f Makefile.unix  olddefconfig
+#  make -j ${ARA_BUILD_PARALLEL} -r -f Makefile.unix  olddefconfig > /dev/null 2>&1
+  make -j ${ARA_BUILD_PARALLEL} -d -r -f Makefile.unix  olddefconfig
 
   MAKE_RESULT=${PIPESTATUS[0]}
 
@@ -128,6 +128,12 @@ buildbase="`( cd \"$TOPDIR/..\" && pwd )`/build"
 echo "buildbase='$buildbase'"
 # build list of defconfigs
 defconfig_list=$(find $TOPDIR/configs/ara  -iname defconfig)
+
+# build the kconfig tools if we haven't already.  Only need to do this once.
+echo "prebuilding kconfig tools"
+pushd "${TOPDIR}" > /dev/null
+make -f Makefile.unix buildconfig
+popd > /dev/null
 
 # process list of defconfigs
 for cfg in $defconfig_list; do

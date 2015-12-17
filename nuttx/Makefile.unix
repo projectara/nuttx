@@ -507,23 +507,34 @@ pass2dep: context tools/mkdeps$(HOSTEXEEXT)
 # location: http://ymorin.is-a-geek.org/projects/kconfig-frontends.  See
 # misc/tools/README.txt for additional information.
 
-config:
-	$(Q) APPSDIR=${CONFIG_APPS_DIR} kconfig-conf Kconfig
+KCONFIG_DIR   := ../misc/tools/kconfig/kconfig-frontends/bin
+KCONFIG_CONF  := ${KCONFIG_DIR}/kconfig-conf
+KCONFIG_MCONF := ${KCONFIG_DIR}/kconfig-mconf
+KCONFIG_QCONF := ${KCONFIG_DIR}/kconfig-qconf
+KCONFIG_GCONF := ${KCONFIG_DIR}/kconfig-gconf
 
-oldconfig:
-	$(Q) APPSDIR=${CONFIG_APPS_DIR} kconfig-conf --oldconfig Kconfig
+buildconfig: ${KCONFIG_CONF}
 
-olddefconfig:
-	$(Q) APPSDIR=${CONFIG_APPS_DIR} kconfig-conf --olddefconfig Kconfig
+config: ${KCONFIG_CONF}
+	$(Q) APPSDIR=${CONFIG_APPS_DIR} ${KCONFIG_CONF} Kconfig
 
-menuconfig:
-	$(Q) APPSDIR=${CONFIG_APPS_DIR} kconfig-mconf Kconfig
+oldconfig: ${KCONFIG_CONF}
+	$(Q) APPSDIR=${CONFIG_APPS_DIR} ${KCONFIG_CONF} --oldconfig Kconfig
 
-qconfig:
-	$(Q) APPSDIR=${CONFIG_APPS_DIR} kconfig-qconf Kconfig
+olddefconfig: ${KCONFIG_CONF}
+	$(Q) APPSDIR=${CONFIG_APPS_DIR} ${KCONFIG_CONF} --olddefconfig Kconfig
 
-gconfig:
-	$(Q) APPSDIR=${CONFIG_APPS_DIR} kconfig-gconf Kconfig
+menuconfig: ${KCONFIG_MCONF}
+	$(Q) APPSDIR=${CONFIG_APPS_DIR} ${KCONFIG_MCONF} Kconfig
+
+qconfig: ${KCONFIG_QCONF}
+	$(Q) APPSDIR=${CONFIG_APPS_DIR} ${KCONFIG_QCONF} Kconfig
+
+gconfig: ${KCONFIG_GCONF}
+	$(Q) APPSDIR=${CONFIG_APPS_DIR} ${KCONFIG_GCONF} Kconfig
+
+${KCONFIG_DIR}/kconfig-%:
+	$(MAKE) -C ../misc/tools/kconfig/ $(subst ${KCONFIG_DIR}/,,$@)
 
 # export
 #
