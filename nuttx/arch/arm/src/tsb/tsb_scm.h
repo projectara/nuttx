@@ -207,6 +207,12 @@ enum tsb_product_id {
     tsb_pid_switch = 3
 };
 
+enum tsb_rev_id {
+    tsb_rev_unknown,
+    tsb_rev_es2,
+    tsb_rev_es3,
+};
+
 #define CLK_OFFSET(clk) (((clk >> 22) & 0xfc))
 #define CLK_MASK(clk)   (1 << (clk & 0x1f))
 
@@ -241,6 +247,7 @@ uint32_t tsb_get_pinshare(void);
 void tsb_set_drivestrength(uint32_t ds_id, enum tsb_drivestrength value);
 enum tsb_drivestrength tsb_get_drivestrength(uint32_t ds_id);
 enum tsb_product_id tsb_get_product_id(void);
+enum tsb_rev_id tsb_get_rev_id(void);
 int tsb_request_pinshare(uint32_t bits);
 int tsb_release_pinshare(uint32_t bits);
 

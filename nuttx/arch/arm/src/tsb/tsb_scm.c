@@ -38,6 +38,7 @@
 #include <arch/board/board.h>
 #include <arch/irq.h>
 #include <nuttx/util.h>
+#include <nuttx/unipro/unipro.h>
 
 #include "up_arch.h"
 #include "tsb_scm.h"
@@ -198,6 +199,37 @@ enum tsb_product_id tsb_get_product_id(void)
     /* cache the value to avoid repeated efuse reads */
     static enum tsb_product_id pid;
     return pid ? pid : (pid = (enum tsb_product_id)scm_read(TSB_SCM_PID));
+}
+
+enum tsb_rev_id tsb_get_rev_id(void)
+{
+    int retval;
+    uint32_t rev;
+    static enum tsb_rev_id pid;
+
+    if (pid)
+        return pid;
+
+    retval = unipro_attr_local_read(DME_DDBL1_PRODUCTID, &rev, 0);
+    if (retval)
+        return tsb_rev_unknown;
+
+    switch (rev) {
+    case PRODUCT_ES2_TSB_BRIDGE:
+        pid = tsb_rev_es2;
+        break;
+
+    case PRODUCT_ES3_TSB_APBRIDGE:
+    case PRODUCT_ES3_TSB_GPBRIDGE:
+        pid = tsb_rev_es3;
+        break;
+
+    default:
+        pid = tsb_rev_unknown;
+        break;
+    }
+
+    return pid;
 }
 
 /* Debug code for command line tool usage */
