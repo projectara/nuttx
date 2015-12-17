@@ -37,6 +37,7 @@
 #include <nuttx/util.h>
 #include <nuttx/i2c.h>
 #include <nuttx/gpio.h>
+#include <nuttx/clock.h>
 
 #include "nuttx/gpio/stm32_gpio_chip.h"
 #include "nuttx/gpio/tca64xx.h"
@@ -79,9 +80,6 @@
 #define REFCLK_5_EN       U4570_GPIO_PIN(9)
 #define REFCLK_6_EN       U4570_GPIO_PIN(10)
 
-/* Ara Key switch */
-#define ARA_KEY         (GPIO_INPUT | GPIO_PULLDOWN | GPIO_PORTA | GPIO_PIN0)
-
 /*
  * WAKE_DETECT lines directly connected to the SVC.
  * Configured by default as input floating without pull-up.
@@ -109,6 +107,31 @@
 #define MOD_ACT_SW_5    (GPIO_INPUT | GPIO_PULLUP | GPIO_PORTC | GPIO_PIN6)
 #define MOD_ACT_SW_6    (GPIO_INPUT | GPIO_PULLUP | GPIO_PORTC | GPIO_PIN7)
 #define MOD_ACT_SW_7    (GPIO_INPUT | GPIO_PULLUP | GPIO_PORTC | GPIO_PIN8)
+
+/* Module release pins */
+#define MOD_RELEASE_1_CONFIG  (GPIO_OUTPUT | GPIO_OUTPUT_CLEAR \
+                                | GPIO_PUSHPULL | GPIO_PORTD | GPIO_PIN0)
+#define MOD_RELEASE_2_CONFIG  (GPIO_OUTPUT | GPIO_OUTPUT_CLEAR \
+                                | GPIO_PUSHPULL | GPIO_PORTD | GPIO_PIN1)
+#define MOD_RELEASE_3_CONFIG  (GPIO_OUTPUT | GPIO_OUTPUT_CLEAR \
+                                | GPIO_PUSHPULL | GPIO_PORTD | GPIO_PIN2)
+#define MOD_RELEASE_4_CONFIG  (GPIO_OUTPUT | GPIO_OUTPUT_CLEAR \
+                                | GPIO_PUSHPULL | GPIO_PORTD | GPIO_PIN4)
+#define MOD_RELEASE_5_CONFIG  (GPIO_OUTPUT | GPIO_OUTPUT_CLEAR \
+                                | GPIO_PUSHPULL | GPIO_PORTD | GPIO_PIN6)
+#define MOD_RELEASE_6_CONFIG  (GPIO_OUTPUT | GPIO_OUTPUT_CLEAR \
+                                | GPIO_PUSHPULL | GPIO_PORTD | GPIO_PIN7)
+
+#define MOD_RELEASE_1         STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN0)
+#define MOD_RELEASE_2         STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN1)
+#define MOD_RELEASE_3         STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN2)
+#define MOD_RELEASE_4         STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN4)
+#define MOD_RELEASE_5         STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN6)
+#define MOD_RELEASE_6         STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN7)
+
+#define ARA_KEY_CONFIG        (GPIO_INPUT | GPIO_PULLDOWN | GPIO_PORTA \
+                               | GPIO_PIN0)
+#define ARA_KEY               STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN0)
 
 /*
  * On-board bridges clock control
@@ -172,21 +195,27 @@ static struct vreg_data module_5_vreg_data[] = {
  * Interfaces on this board
  */
 DECLARE_MODULE_PORT_INTERFACE(apb1, apb1_vreg_data, 3,
-                              WD8A_DET_IN, ARA_IFACE_WD_ACTIVE_HIGH);
+                              WD8A_DET_IN, ARA_IFACE_WD_ACTIVE_HIGH, false, 0);
 DECLARE_MODULE_PORT_INTERFACE(apb2, apb2_vreg_data, 1,
-                              WD8B_DET_IN, ARA_IFACE_WD_ACTIVE_HIGH);
+                              WD8B_DET_IN, ARA_IFACE_WD_ACTIVE_HIGH, false, 0);
 DECLARE_MODULE_PORT_INTERFACE(module_1, module_1_vreg_data, 13,
-                              WD_1_DET_IN, ARA_IFACE_WD_ACTIVE_LOW);
+                              WD_1_DET_IN, ARA_IFACE_WD_ACTIVE_LOW,
+                              true, MOD_RELEASE_1);
 DECLARE_MODULE_PORT_INTERFACE(module_2, module_2_vreg_data, 11,
-                              WD_2_DET_IN, ARA_IFACE_WD_ACTIVE_LOW);
+                              WD_2_DET_IN, ARA_IFACE_WD_ACTIVE_LOW,
+                              true, MOD_RELEASE_2);
 DECLARE_MODULE_PORT_INTERFACE(module_3, module_3_vreg_data, 4,
-                              WD_3_DET_IN, ARA_IFACE_WD_ACTIVE_LOW);
+                              WD_3_DET_IN, ARA_IFACE_WD_ACTIVE_LOW,
+                              true, MOD_RELEASE_3);
 DECLARE_MODULE_PORT_INTERFACE(module_4a, module_4a_vreg_data, 8,
-                              WD_4A_DET_IN, ARA_IFACE_WD_ACTIVE_LOW);
+                              WD_4A_DET_IN, ARA_IFACE_WD_ACTIVE_LOW,
+                              true, MOD_RELEASE_4);
 DECLARE_MODULE_PORT_INTERFACE(module_4b, module_4b_vreg_data, 6,
-                              WD_4B_DET_IN, ARA_IFACE_WD_ACTIVE_LOW);
+                              WD_4B_DET_IN, ARA_IFACE_WD_ACTIVE_LOW,
+                              true, MOD_RELEASE_4);
 DECLARE_MODULE_PORT_INTERFACE(module_5, module_5_vreg_data, 10,
-                              WD_5_DET_IN, ARA_IFACE_WD_ACTIVE_LOW);
+                              WD_5_DET_IN, ARA_IFACE_WD_ACTIVE_LOW,
+                              true, MOD_RELEASE_5);
 
 #define I2C_SEL1_A      BIT(0)
 #define I2C_SEL1_B      BIT(1)
@@ -379,6 +408,10 @@ static struct ara_board_info db3_board_info = {
 
     .io_expanders   = db3_io_expanders,
     .nr_io_expanders = ARRAY_SIZE(db3_io_expanders),
+
+    .ara_key_gpio         = ARA_KEY,
+    .ara_key_rising_edge  = true,
+    .ara_key_configured   = true,
 };
 
 struct ara_board_info *board_init(void) {
@@ -472,6 +505,19 @@ struct ara_board_info *board_init(void) {
     stm32_configgpio(MOD_ACT_SW_5);
     stm32_configgpio(MOD_ACT_SW_6);
     stm32_configgpio(MOD_ACT_SW_7);
+
+    /*
+     * Configure the module release pins
+     */
+    stm32_configgpio(MOD_RELEASE_1_CONFIG);
+    stm32_configgpio(MOD_RELEASE_2_CONFIG);
+    stm32_configgpio(MOD_RELEASE_3_CONFIG);
+    stm32_configgpio(MOD_RELEASE_4_CONFIG);
+    stm32_configgpio(MOD_RELEASE_5_CONFIG);
+    stm32_configgpio(MOD_RELEASE_6_CONFIG);
+
+    /* Configure ARA key input pin */
+    stm32_configgpio(ARA_KEY_CONFIG);
 
     return &db3_board_info;
 
