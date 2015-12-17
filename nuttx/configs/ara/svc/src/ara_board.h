@@ -109,6 +109,11 @@ struct ara_board_info {
     /* IO Expanders data */
     struct io_expander_info *io_expanders;
     size_t nr_io_expanders;
+
+    /* ara key GPIO */
+    uint8_t ara_key_gpio;
+    bool ara_key_rising_edge;
+    bool ara_key_configured;
 };
 
 struct ara_board_info *board_init(void);
