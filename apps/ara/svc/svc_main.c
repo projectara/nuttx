@@ -59,6 +59,7 @@ enum {
     DME_IO,
     TESTFEATURE,
     QOS,
+    RELEASE,
     MAX_CMD,
 };
 
@@ -79,6 +80,7 @@ static const struct command commands[] = {
     [DME_IO]  = {'d', "dme", "get/set DME attributes"},
     [TESTFEATURE] = {'t', "testfeature", "UniPro test feature"},
     [QOS] = {'q', "qos", "Quality of Service control"},
+    [RELEASE] = {'x', "release", "Pulse module release signals"},
 };
 
 static void usage(int exit_status) {
@@ -1653,6 +1655,65 @@ static int qos(int argc, char *argv[]) {
     return 0;
 }
 
+static void release_usage(int exit_status) {
+    printf("    svc %s [-h] [-d <delay>] [-i <name>]\n",
+           commands[RELEASE].longc);
+    printf("\n");
+    printf("    -h: print this message and exit\n");
+    printf("    -d <delay>: Period of time (in ms) to hold release signal\n"
+           "                high. Default is \"%d\"\n",
+           MOD_RELEASE_PULSE_WIDTH);
+    printf("    -i <name>: Name of module to eject (module_4a for example);\n"
+           "               Will eject all modules if not set.\n");
+    exit(exit_status);
+}
+
+static int release(int argc, char *argv[]) {
+    const char opts[] = "hd:i:";
+    uint32_t delay = MOD_RELEASE_PULSE_WIDTH;
+    int c;
+    char **args = argv + 1;
+    const char *iface_name = NULL;
+
+    argc--;
+    optind = -1; /* Force NuttX's getopt() to reinitialize. */
+    while ((c = getopt(argc, args, opts)) != -1) {
+        switch (c) {
+        case 'd':
+            delay = strtol(optarg, NULL, 10);
+            break;
+
+        case 'h':
+            release_usage(EXIT_SUCCESS);
+            break;
+
+        case 'i':
+            iface_name = optarg;
+            break;
+
+        default:
+            release_usage(EXIT_FAILURE);
+            break;
+        }
+    }
+
+    printf("using delay = %d ms\n", delay);
+
+    if (iface_name) {
+        struct interface *iface = interface_get_by_name(iface_name);
+        if (iface) {
+            printf("ejecting name = %s\n", iface_name);
+            interface_forcibly_eject(iface, delay);
+        } else {
+            printf("ERROR: cannot find module named = %s\n", iface_name);
+        }
+    } else {
+        interface_forcibly_eject_all(delay);
+    }
+
+    return EXIT_SUCCESS;
+}
+
 #ifdef CONFIG_BUILD_KERNEL
 int main(int argc, FAR char *argv[])
 #else
@@ -1712,6 +1773,9 @@ int svc_main(int argc, char *argv[])
         break;
     case QOS:
         rc = qos(argc, argv);
+        break;
+    case RELEASE:
+        rc = release(argc, argv);
         break;
     default:
         usage(EXIT_FAILURE);
