@@ -78,9 +78,6 @@
 #define REFCLK_4B_EN      U4570_GPIO_PIN(9)
 #define REFCLK_5_EN       U4570_GPIO_PIN(10)
 
-/* Ara Key switch */
-#define ARA_KEY_GPIO      (GPIO_INPUT | GPIO_PULLDOWN | GPIO_PORTA | GPIO_PIN0)
-
 /* Wake/detect pins */
 #define WD_1_DET_IN       STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN1)
 #define WD_2_DET_IN       STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN2)
@@ -112,13 +109,32 @@
 #define MOD_ACT_SW_5      STM32_GPIO_PIN(GPIO_PORTC | GPIO_PIN8)
 
 /* Module release pins */
-#define MOD_RELEASE_1      STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN0)
-#define MOD_RELEASE_2      STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN1)
-#define MOD_RELEASE_3A     STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN2)
-#define MOD_RELEASE_3B     STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN4)
-#define MOD_RELEASE_4A     STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN6)
-#define MOD_RELEASE_4B     STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN7)
-#define MOD_RELEASE_5      STM32_GPIO_PIN(GPIO_PORTE | GPIO_PIN7)
+#define MOD_RELEASE_1_CONFIG  (GPIO_OUTPUT | GPIO_OUTPUT_CLEAR \
+                                | GPIO_PUSHPULL | GPIO_PORTD | GPIO_PIN0)
+#define MOD_RELEASE_2_CONFIG  (GPIO_OUTPUT | GPIO_OUTPUT_CLEAR \
+                                | GPIO_PUSHPULL | GPIO_PORTD | GPIO_PIN1)
+#define MOD_RELEASE_3A_CONFIG  (GPIO_OUTPUT | GPIO_OUTPUT_CLEAR \
+                                | GPIO_PUSHPULL | GPIO_PORTD | GPIO_PIN2)
+#define MOD_RELEASE_3B_CONFIG  (GPIO_OUTPUT | GPIO_OUTPUT_CLEAR \
+                                | GPIO_PUSHPULL | GPIO_PORTD | GPIO_PIN4)
+#define MOD_RELEASE_4A_CONFIG  (GPIO_OUTPUT | GPIO_OUTPUT_CLEAR \
+                                | GPIO_PUSHPULL | GPIO_PORTD | GPIO_PIN6)
+#define MOD_RELEASE_4B_CONFIG  (GPIO_OUTPUT | GPIO_OUTPUT_CLEAR \
+                                | GPIO_PUSHPULL | GPIO_PORTD | GPIO_PIN7)
+#define MOD_RELEASE_5_CONFIG   (GPIO_OUTPUT | GPIO_OUTPUT_CLEAR \
+                                | GPIO_PUSHPULL | GPIO_PORTE | GPIO_PIN7)
+
+#define MOD_RELEASE_1       STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN0)
+#define MOD_RELEASE_2       STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN1)
+#define MOD_RELEASE_3A      STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN2)
+#define MOD_RELEASE_3B      STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN4)
+#define MOD_RELEASE_4A      STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN6)
+#define MOD_RELEASE_4B      STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN7)
+#define MOD_RELEASE_5       STM32_GPIO_PIN(GPIO_PORTE | GPIO_PIN7)
+
+#define ARA_KEY_CONFIG        (GPIO_INPUT | GPIO_PULLDOWN | GPIO_PORTA \
+                               | GPIO_PIN0)
+#define ARA_KEY               STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN0)
 
 /* Switch control pins */
 #define SW_1P1_EN          STM32_GPIO_PIN(GPIO_PORTB | GPIO_PIN0)
@@ -192,9 +208,11 @@ static struct vreg_data apb2_vreg_data[] = {
 };
 
 DECLARE_MODULE_PORT_INTERFACE(apb1, apb1_vreg_data, 3,
-                              WD_8A_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_HIGH);
+                              WD_8A_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_HIGH,
+			      false, 0);
 DECLARE_MODULE_PORT_INTERFACE(apb2, apb2_vreg_data, 1,
-                              WD_8B_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_HIGH);
+                              WD_8B_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_HIGH,
+			      false, 0);
 
 /*
  * Modules voltage regulator list and interface declarations.
@@ -243,19 +261,26 @@ static struct vreg_data module_5_lcd_vreg_data[] = {
 };
 
 DECLARE_MODULE_PORT_INTERFACE(module_1, module_1_vreg_data, 13,
-                              WD_1_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW);
+                              WD_1_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
+                              true, MOD_RELEASE_1);
 DECLARE_MODULE_PORT_INTERFACE(module_2, module_2_vreg_data, 11,
-                              WD_2_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW);
+                              WD_2_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
+                              true, MOD_RELEASE_2);
 DECLARE_MODULE_PORT_INTERFACE(module_3A, module_3A_vreg_data, 4,
-                              WD_3A_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW);
+                              WD_3A_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
+                              true, MOD_RELEASE_3A);
 DECLARE_MODULE_PORT_INTERFACE(module_3B, module_3B_vreg_data, 2,
-                              WD_3B_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW);
+                              WD_3B_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
+                              true, MOD_RELEASE_3B);
 DECLARE_MODULE_PORT_INTERFACE(module_4A, module_4A_vreg_data, 6,
-                              WD_4A_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW);
+                              WD_4A_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
+                              true, MOD_RELEASE_4A);
 DECLARE_MODULE_PORT_INTERFACE(module_4B, module_4B_vreg_data, 8,
-                              WD_4B_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW);
+                              WD_4B_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
+                              true, MOD_RELEASE_4B);
 DECLARE_MODULE_PORT_INTERFACE(module_5_lcd, module_5_lcd_vreg_data, 10,
-                              WD_5_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW);
+                              WD_5_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
+                              true, MOD_RELEASE_5);
 
 static struct interface *evt1_interfaces[] = {
     &apb1_interface,
@@ -343,6 +368,10 @@ static struct ara_board_info evt1_board_info = {
 
     .io_expanders = evt1_io_expanders,
     .nr_io_expanders = ARRAY_SIZE(evt1_io_expanders),
+
+    .ara_key_gpio         = ARA_KEY,
+    .ara_key_rising_edge  = true,
+    .ara_key_configured   = true,
 };
 
 static struct vreg_data refclk_main_vreg_data[] = {
@@ -441,8 +470,17 @@ struct ara_board_info *board_init(void) {
     stm32_configgpio(WD_8A_DET_IN_GPIO);
     stm32_configgpio(WD_8B_DET_IN_GPIO);
 
-    /* Configure the ARA key. */
-    stm32_configgpio(ARA_KEY_GPIO);
+    /* Configure the module release pins */
+    stm32_configgpio(MOD_RELEASE_1_CONFIG);
+    stm32_configgpio(MOD_RELEASE_2_CONFIG);
+    stm32_configgpio(MOD_RELEASE_3A_CONFIG);
+    stm32_configgpio(MOD_RELEASE_3B_CONFIG);
+    stm32_configgpio(MOD_RELEASE_4A_CONFIG);
+    stm32_configgpio(MOD_RELEASE_4B_CONFIG);
+    stm32_configgpio(MOD_RELEASE_5_CONFIG);
+
+    /* Configure ARA key input pin */
+    stm32_configgpio(ARA_KEY_CONFIG);
 
     /*
      * (Module hotplug pins unconfigured. TODO, part of SW-1942.)
