@@ -146,9 +146,7 @@
 
 #define CDSI0_AL_TX_BRG_VPARAM_UPDATE_VAL               0X00000003
 #define CDSI0_AL_TX_BRG_PIC_COM_START_VAL               0X00000001
-#if defined(CONFIG_TSB_CHIP_REV_ES2)
 #define CDSI0_AL_TX_BRG_ENABLE_VAL                      0x00000001
-#endif
 
 #define CDSI0_AL_RX_BRG_CSI_INFO_VAL                    0X00000003
 #define CDSI0_AL_RX_BRG_CSI_DT0_VAL                     0X002A0001
@@ -171,7 +169,6 @@ void ov5645_csi_init(struct cdsi_dev *dev)
     cdsi_write(dev, CDSI0_AL_TX_BRG_CDSITX_MODE_OFFS,
                AL_TX_BRG_CDSITX_MODE_VAL);
 
-#if defined(CONFIG_TSB_CHIP_REV_ES2)
     cdsi_write(dev, CDSI0_AL_TX_BRG_SOFT_RESET_OFFS,
                CDSI0_AL_TX_BRG_ENABLE_VAL);
 
@@ -179,7 +176,6 @@ void ov5645_csi_init(struct cdsi_dev *dev)
                CDSI0_AL_TX_BRG_ENABLE_VAL);
 
     cdsi_write(dev, CDSI0_AL_TX_BRG_ENABLE_OFFS, CDSI0_AL_TX_BRG_ENABLE_VAL);
-#endif
 
     /* Tx bridge setting */
     cdsi_write(dev, CDSI0_AL_TX_BRG_MODE_OFFS, AL_TX_BRG_MODE_VAL);
