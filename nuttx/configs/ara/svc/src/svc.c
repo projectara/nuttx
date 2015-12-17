@@ -44,6 +44,7 @@
 #include "string.h"
 #include "ara_board.h"
 #include <ara_debug.h>
+#include "ara_key.h"
 #include "interface.h"
 #include "tsb_switch.h"
 #include "tsb_switch_driver_es2.h"
@@ -685,7 +686,7 @@ static int svc_handle_events(void) {
         event = list_entry(node, struct svc_event, events);
         switch (event->type) {
         case SVC_EVENT_TYPE_READY_OTHER:
-            svc_handle_module_ready(event->data.ready_other.port);
+	    svc_handle_module_ready(event->data.ready_other.port);
             break;
         case SVC_EVENT_TYPE_HOT_UNPLUG:
             svc_handle_hot_unplug(event->data.hot_unplug.port);
@@ -694,9 +695,20 @@ static int svc_handle_events(void) {
             dbg_error("Unknown event %d\n", event->type);
         }
 
-        svc_event_destroy(event);
+	svc_event_destroy(event);
     }
 
+    return 0;
+}
+
+/*
+ * EMERGENCY MODULE RELEASE: The svc event queue is only processed after
+ * ap_initialized is true. To allow emergency releases even ap_initialized
+ * has failed to be set, we bypass the event queue.
+ */
+static int svc_ara_key_longpress_callback(void *priv)
+{
+    interface_forcibly_eject_all(MOD_RELEASE_PULSE_WIDTH);
     return 0;
 }
 
@@ -777,6 +789,11 @@ static int svcd_startup(void) {
     for (i = 0; i < SWITCH_PORT_MAX; i++)
         switch_port_irq_enable(sw, i, true);
 
+    /*
+     * enable the ARA key IRQ
+     */
+    rc = ara_key_enable(info, svc_ara_key_longpress_callback, true);
+
     return 0;
 
 error4:
@@ -844,9 +861,9 @@ static int svcd_main(int argc, char **argv) {
             svc_consume_hotplug_events();
         }
 
-        if (svc->ap_initialized) {
-            svc_handle_events();
-        }
+	if (svc->ap_initialized) {
+	    svc_handle_events();
+	}
     };
 
     rc = svcd_cleanup();
