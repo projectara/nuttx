@@ -34,6 +34,10 @@ ifeq ($(CONFIG_DRIVERS_ARA_AUDIO_CODEC),y)
 CSRCS += codec.c
 endif
 
+ifeq ($(CONFIG_DRIVERS_ARA_AUDIO_RT5647),y)
+CSRCS += rt5647.c
+endif
+
 DEPPATH += --dep-path ara/audio
 VPATH += :ara/audio
 CFLAGS += ${shell $(INCDIR) $(INCDIROPT) "$(CC)" $(TOPDIR)$(DELIM)drivers$(DELIM)ara$(DELIM)audio}

@@ -46,3 +46,12 @@ config DRIVERS_ARA_AUDIO_BOARD
 
 config DRIVERS_ARA_AUDIO_CODEC
 	bool
+
+config DRIVERS_ARA_AUDIO_RT5647
+	bool "Realtek ALC5647 Audio Codec Support"
+	depends on DRIVERS_ARA_AUDIO_BOARD
+	select DRIVERS_ARA_AUDIO_CODEC
+	default n
+	---help---
+		Select to enable Greybus audio support using the
+		Realtek ALC5647 audio codec.
