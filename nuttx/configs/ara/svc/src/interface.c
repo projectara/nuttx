@@ -83,6 +83,12 @@ static int interface_config(struct interface *iface)
          * The pin is configured as interrupt input at handler
          * installation time
          */
+
+        /* configure the release line */
+        if (iface->ejectable) {
+            gpio_activate(iface->release_gpio);
+            gpio_direction_out(iface->release_gpio, 0);
+        }
         break;
     default:
         /*
@@ -989,6 +995,38 @@ uint32_t interface_pm_get_spin(struct interface *iface)
     }
 
     return iface->pm->spin;
+}
+
+/**
+ * @brief Toggle the MOD_RELEASE_ signal for all interfaces with such a GPIO
+ *        defined
+ * @param delay pulse width in ms (~10ms precision)
+ */
+void interface_forcibly_eject_all(uint32_t delay)
+{
+    unsigned int i;
+    struct interface *ifc;
+
+    interface_foreach(ifc, i) {
+        interface_forcibly_eject(ifc, delay);
+    }
+}
+
+int interface_forcibly_eject(struct interface *ifc, uint32_t delay)
+{
+    uint8_t gpio = ifc->release_gpio;
+
+    if (!ifc->ejectable) {
+        return -ENOTTY;
+    }
+
+    dbg_info("Module %s ejecting: using gpio 0x%02X\n", ifc->name, gpio);
+
+    gpio_set_value(gpio, 1);
+    usleep(delay * 1000);
+    gpio_set_value(gpio, 0);
+
+    return 0;
 }
 
 /**

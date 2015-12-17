@@ -124,6 +124,8 @@ struct interface {
     struct wd_data wake_in;
     struct wd_data detect_in;
     enum hotplug_state hp_state;
+    bool ejectable;
+    uint8_t release_gpio;
 };
 
 #define interface_foreach(iface, idx)                       \
@@ -145,6 +147,10 @@ int interface_set_devid_by_id(uint8_t intf_id, uint8_t dev_id);
 struct interface* interface_spring_get(uint8_t index);
 uint8_t interface_get_count(void);
 uint8_t interface_get_spring_count(void);
+
+void interface_forcibly_eject_all(uint32_t delay);
+int interface_forcibly_eject(struct interface *iface, uint32_t delay);
+#define MOD_RELEASE_PULSE_WIDTH 8000U /* ms */
 
 const char *interface_get_name(struct interface *iface);
 int interface_pwr_enable(struct interface*);
@@ -231,6 +237,8 @@ uint32_t interface_pm_get_spin(struct interface *iface);
         .pm = MAKE_BB_PM(number),                              \
         .wake_in = INIT_WD_DATA(wake_in_gpio),                 \
         .detect_in = INIT_WD_DATA(detect_in_gpio),             \
+        .ejectable = false,                                    \
+        .release_gpio = 0,                                     \
     };
 
 #define __MAKE_INTERFACE(n) n ## _interface
@@ -255,6 +263,8 @@ uint32_t interface_pm_get_spin(struct interface *iface);
         .pm = NULL,                                            \
         .wake_in = INIT_WD_DATA(wake_in_gpio),                 \
         .detect_in = INIT_WD_DATA(detect_in_gpio),             \
+        .ejectable = false,                                    \
+        .release_gpio = 0,                                     \
     };
 
 #define DECLARE_INTERFACE(_name, vreg_data, portid, _wake_out, \
@@ -276,6 +286,8 @@ uint32_t interface_pm_get_spin(struct interface *iface);
         .pm = NULL,                                            \
         .wake_in = INIT_WD_DATA(wake_in_gpio),                 \
         .detect_in = INIT_WD_DATA(detect_in_gpio),             \
+        .ejectable = false,                                    \
+        .release_gpio = 0,                                     \
     };
 
 /*
@@ -288,7 +300,9 @@ uint32_t interface_pm_get_spin(struct interface *iface);
 #define DECLARE_MODULE_PORT_INTERFACE(_name, vreg_data,        \
                                       portid,                  \
                                       wake_detect_gpio,        \
-                                      detect_in_pol)           \
+                                      detect_in_pol,           \
+                                      _ejectable,              \
+                                      _rg)                     \
     DECLARE_VREG(_name, vreg_data)                             \
     static struct interface MAKE_INTERFACE(_name) = {          \
         .name = #_name,                                        \
@@ -302,6 +316,8 @@ uint32_t interface_pm_get_spin(struct interface *iface);
         .pm = NULL,                                            \
         .wake_in = INIT_WD_DATA(0),                            \
         .detect_in = INIT_WD_DATA(wake_detect_gpio),           \
+        .ejectable = _ejectable,                               \
+        .release_gpio = _rg,                                   \
     };
 
 #endif
