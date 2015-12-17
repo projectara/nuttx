@@ -68,6 +68,7 @@
 #include <arch/board/csi_tx_service.h>
 #include <arch/board/common_gadget.h>
 #include <arch/board/apbridgea_gadget.h>
+#include <arch/board/apbridgea_audio.h>
 #include <nuttx/greybus/greybus_timestamp.h>
 
 /****************************************************************************
@@ -1322,6 +1323,15 @@ static int csi_tx_control_vendor_request_out(struct usbdev_s *dev, uint8_t req,
     return csi_tx_srv_start(ctrl->csi_id, &cfg);
 }
 
+#ifdef CONFIG_APBRIDGEA_AUDIO
+static int apbridgea_audio_vendor_request_out(struct usbdev_s *dev, uint8_t req,
+                                              uint16_t index, uint16_t value,
+                                              void *buf, uint16_t len)
+{
+    return apbridgea_audio_out_demux(buf, len);
+}
+#endif
+
 /****************************************************************************
  * Name: usbclass_setup
  *
@@ -1570,6 +1580,13 @@ int usbdev_apbinitialize(struct device *dev,
     if (register_vendor_request(APBRIDGE_RWREQUEST_CSI_TX_CONTROL, VENDOR_REQ_DATA,
                                 csi_tx_control_vendor_request_out))
         goto errout_vendor_req;
+
+#ifdef CONFIG_APBRIDGEA_AUDIO
+    if (register_vendor_request(APBRIDGE_RWREQUEST_AUDIO_APBRIDGEA,
+                                VENDOR_REQ_DATA,
+                                apbridgea_audio_vendor_request_out))
+        goto errout_vendor_req;
+#endif
 
     /* Allocate the structures needed */
 

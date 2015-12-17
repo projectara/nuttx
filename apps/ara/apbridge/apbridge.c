@@ -42,6 +42,7 @@
 #include <apps/nsh.h>
 
 #include <arch/board/apbridgea_gadget.h>
+#include <arch/board/apbridgea_audio.h>
 
 #include "apbridge_backend.h"
 
@@ -162,6 +163,8 @@ int bridge_main(int argc, char *argv[])
     if (ret) {
         printf("Can not init usb: error %d\n", ret);
     }
+
+    apbridgea_audio_init();
 
 #ifdef CONFIG_EXAMPLES_NSH
     printf("Calling NSH\n");

@@ -70,6 +70,34 @@ config ARA_BRIDGE_HAVE_POWER_SUPPLY
 	---help---
 		Power Supply Driver
 
+config APBRIDGEA_AUDIO
+	bool "Direct audio data streaming to/from APBridgeA"
+	depends on APBRIDGEA
+	select APBRIDGEA_INTERCEPT
+	select DEVICE_CORE
+	select LIB_RING_BUF
+	default n
+	---help---
+		Normally, Greybus Audio Data Messages are sent between the
+		AP and APBridgeA using the standard USB/HSIC link between
+		the AP and APBridgeA.  However, APBridgeA has its own I2S
+		port and can send and receive audio data through that port.
+		This option enables that feature.  Enabling this feature
+		does not prevent the USB/HSIC link from being used unless
+		direct audio data streaming is enabled for that CPort.
+
+		When enabled, I2S port and Greybus Audio Data message
+		configuration is done by the AP using APBridgeA's Special
+		Audio Protocol.  Messages for this protocol are sent and
+		received between the AP and APBridgeA using USB control
+		messages.
+
+		When active, I2S data received on APBridgeA's I2S port will
+		be packetized into Greybus Audio Data Messages and sent to
+		an Audio Module using the specified CPort.  Greybus Audio
+		Data Messages received from an Audio Module on the specified
+		CPort will be de-packetized and sent out APBridgeA's I2S port.
+
 choice
 	prompt "Board"
 	---help---
