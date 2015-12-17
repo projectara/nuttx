@@ -70,7 +70,6 @@ endchoice
 
 config ARCH_CHIP_DEVICE_GDMAC
 	bool "GDMAC support"
-	depends on TSB_CHIP_REV_ES2
 	select DEVICE_CORE
 	---help---
 		TSB GDMAC Driver
