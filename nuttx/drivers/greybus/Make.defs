@@ -93,6 +93,10 @@ ifeq ($(CONFIG_GREYBUS_CAMERA),y)
 CSRCS += camera.c
 endif
 
+ifeq ($(CONFIG_GREYBUS_AUDIO),y)
+CSRCS += audio.c
+endif
+
 endif
 
 ifeq ($(CONFIG_GREYBUS_DEBUG),y)

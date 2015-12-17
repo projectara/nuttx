@@ -52,6 +52,8 @@ extern void gb_hid_register(int cport);
 extern void gb_lights_register(int cport);
 extern void gb_sdio_register(int cport);
 extern void gb_camera_register(int cport);
+extern void gb_audio_mgmt_register(int cport);
+extern void gb_audio_data_register(int cport);
 
 struct greybus {
     struct list_head cports;
@@ -198,6 +200,18 @@ void enable_cports(void)
         if (protocol == GREYBUS_PROTOCOL_CAMERA) {
             gb_info("Registering Camera greybus driver. id= %d\n", id);
             gb_camera_register(id);
+        }
+#endif
+
+#ifdef CONFIG_GREYBUS_AUDIO
+        if (protocol == GREYBUS_PROTOCOL_AUDIO_MGMT) {
+            gb_info("Registering Audio MGMT greybus driver.\n");
+            gb_audio_mgmt_register(id);
+        }
+
+        if (protocol == GREYBUS_PROTOCOL_AUDIO_DATA) {
+            gb_info("Registering Audio DATA greybus driver.\n");
+            gb_audio_data_register(id);
         }
 #endif
     }

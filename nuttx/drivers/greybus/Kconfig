@@ -105,3 +105,9 @@ config GREYBUS_CAMERA
     bool "Camera support"
     select DEVICE_CORE
     default n
+
+config GREYBUS_AUDIO
+	bool "Audio support"
+	select DEVICE_CORE
+	select LIB_RING_BUF
+	default n
