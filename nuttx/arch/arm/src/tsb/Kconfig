@@ -52,22 +52,6 @@ config ARCH_CHIP_GPBRIDGE
 
 endchoice
 
-choice TSB_CHIP_REV
-	prompt "Toshiba Bridge chip silicon revision"
-	default TSB_CHIP_REV_ES2
-	depends on ARCH_CHIP_TSB
-
-config TSB_CHIP_REV_ES2
-	bool "ES2"
-	---help---
-		Silicon Revision 2
-
-config TSB_CHIP_REV_ES3
-	bool "ES3"
-	---help---
-		Silicon Revision 3
-endchoice
-
 config ARCH_CHIP_DEVICE_GDMAC
 	bool "GDMAC support"
 	select DEVICE_CORE
