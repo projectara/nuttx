@@ -119,6 +119,22 @@ void tsb_pm_enable(void)
     irqrestore(flags);
 }
 
+int tsb_pm_driver_state_change(int pmstate)
+{
+    int status;
+
+    status = pm_changestate(pmstate);
+    if (status < 0) {
+        /* Restore previous state on failure. */
+        (void)pm_changestate(tsb_pm_curr_state);
+        return status;
+    }
+
+    tsb_pm_curr_state = pmstate;
+
+    return OK;
+}
+
 void up_pminitialize(void)
 {
     pm_initialize();

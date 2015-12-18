@@ -33,6 +33,7 @@
 int tsb_pm_getstate(void);
 void tsb_pm_disable(void);
 void tsb_pm_enable(void);
+int tsb_pm_driver_state_change(int pmstate);
 #else
 static int tsb_pm_getstate(void)
 {
@@ -47,6 +48,11 @@ static void tsb_pm_disable(void)
 static void tsb_pm_enable(void)
 {
 
+}
+
+static int tsb_pm_driver_state_change(int pmstate)
+{
+    return 0;
 }
 #endif
 
