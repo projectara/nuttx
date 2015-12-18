@@ -29,8 +29,10 @@
 #include <nuttx/config.h>
 #include <nuttx/arch.h>
 #include <nuttx/power/pm.h>
+#include <nuttx/clock.h>
 
-static int tsb_pm_curr_state = PM_NORMAL;
+static volatile int tsb_pm_curr_state = PM_NORMAL;
+static volatile int tsb_pm_enabled = 1;
 
 /*
  * Called from up_idle(). Checks the power state suggested by the power
@@ -42,6 +44,10 @@ void up_idlepm(void)
 {
     int ret, newstate;
     irqstate_t flags;
+
+    if (!tsb_pm_enabled) {
+        return;
+    }
 
     newstate = pm_checkstate();
     if (newstate != tsb_pm_curr_state) {
@@ -83,6 +89,34 @@ int tsb_pm_getstate(void)
     irqrestore(flags);
 
     return state;
+}
+
+void tsb_pm_disable(void)
+{
+    irqstate_t flags;
+
+    /* Bring the system back to PM_NORMAL before disabling pm. */
+    pm_activity(10);
+    up_idlepm();
+    for (;;) {
+        flags = irqsave();
+        if (tsb_pm_curr_state == PM_NORMAL) {
+            tsb_pm_enabled = 0;
+            irqrestore(flags);
+            return;
+        }
+        irqrestore(flags);
+        usleep(TICK2USEC(1));
+    }
+}
+
+void tsb_pm_enable(void)
+{
+    irqstate_t flags;
+
+    flags = irqsave();
+    tsb_pm_enabled = 1;
+    irqrestore(flags);
 }
 
 void up_pminitialize(void)

@@ -29,6 +29,25 @@
 #ifndef __ARCH_ARM_INCLUDE_TSB_PM_H
 #define __ARCH_ARM_INCLUDE_TSB_PM_H
 
+#ifdef CONFIG_PM
 int tsb_pm_getstate(void);
+void tsb_pm_disable(void);
+void tsb_pm_enable(void);
+#else
+static int tsb_pm_getstate(void)
+{
+    return 0;
+}
+
+static void tsb_pm_disable(void)
+{
+
+}
+
+static void tsb_pm_enable(void)
+{
+
+}
+#endif
 
 #endif /* __ARCH_ARM_INCLUDE_TSB_PM_H */
