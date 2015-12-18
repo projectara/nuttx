@@ -79,6 +79,7 @@ static unipro_event_handler_t evt_handler;
 #define APBRIDGE_CPORT_MAX 40 // number of CPorts available on the APBridges
 #define GPBRIDGE_CPORT_MAX 16 // number of CPorts available on the GPBridges
 #endif
+#define ES2_INIT_STATUS(x) (x >> 24)
 
 /*
  * During unipro_unit(), we'll compute and cache the number of CPorts that this
@@ -1010,4 +1011,58 @@ static int tsb_unipro_mbox_ack(uint16_t val) {
     return 0;
 }
 
+static int es2_tsb_unipro_set_init_status(uint32_t val)
+{
+    int rc;
 
+    rc = unipro_attr_local_write(T_TSTSRCINCREMENT, ES2_INIT_STATUS(val),
+                                 UNIPRO_SELINDEX_NULL);
+    if (rc) {
+        lldbg("init-status write failed: rc=%d\n", rc);
+        return rc;
+    }
+
+    return 0;
+}
+
+static int es3_tsb_unipro_set_init_status(uint32_t val)
+{
+    int retval;
+    uint32_t status;
+
+    /*
+     * See SW-1228
+     *  -> https://projectara.atlassian.net/browse/SW-1228?focusedCommentId=28889&page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-28889
+     */
+    if (val & INIT_STATUS_ERROR_CODE_MASK) {
+        lowsyslog("%s() cannot override the init status error code (init status: %u).\n",
+                  __func__, val);
+        return -EINVAL;
+    }
+
+    retval = unipro_attr_local_read(TSB_DME_ES3_INIT_STATUS, &status,
+                                    UNIPRO_SELINDEX_NULL);
+    if (retval) {
+        lowsyslog("init-status read failed: retval = %d\n", retval);
+        return retval;
+    }
+
+    /* preserve error code: see SW-1228 */
+    val |= status & INIT_STATUS_ERROR_CODE_MASK;
+
+    retval = unipro_attr_local_write(TSB_DME_ES3_INIT_STATUS, val,
+                                     UNIPRO_SELINDEX_NULL);
+    if (retval) {
+        lowsyslog("init-status write failed: retval = %d\n", retval);
+        return retval;
+    }
+
+    return 0;
+}
+
+int tsb_unipro_set_init_status(uint32_t val)
+{
+    if (tsb_get_rev_id() == tsb_rev_es2)
+        return es2_tsb_unipro_set_init_status(val);
+    return es3_tsb_unipro_set_init_status(val);
+}
