@@ -72,13 +72,8 @@
 static struct cport *cporttable;
 static unipro_event_handler_t evt_handler;
 
-#if defined(CONFIG_TSB_CHIP_REV_ES2)
-#define APBRIDGE_CPORT_MAX 44 // number of CPorts available on the APBridges
-#define GPBRIDGE_CPORT_MAX 16 // number of CPorts available on the GPBridges
-#else
-#define APBRIDGE_CPORT_MAX 40 // number of CPorts available on the APBridges
-#define GPBRIDGE_CPORT_MAX 16 // number of CPorts available on the GPBridges
-#endif
+#define ES2_APBRIDGE_CPORT_MAX 44 // number of CPorts available on the APBridges
+#define ES2_GPBRIDGE_CPORT_MAX 16 // number of CPorts available on the GPBridges
 #define ES2_INIT_STATUS(x) (x >> 24)
 
 /*
@@ -88,13 +83,26 @@ static unipro_event_handler_t evt_handler;
 static unsigned int cport_count = 0;
 
 unsigned int unipro_cport_count(void) {
-    /*
-     * Reduce the run-time CPort count to what's available on the
-     * GPBridges, unless we can determine that we're running on an
-     * APBridge.
-     */
-    return ((tsb_get_product_id() == tsb_pid_apbridge) ?
-            APBRIDGE_CPORT_MAX : GPBRIDGE_CPORT_MAX);
+    uint32_t num_cports;
+    int retval;
+
+    if (tsb_get_rev_id() == tsb_rev_es2) { /* T_NUMCPORTS is incorrect on es2 */
+        /*
+         * Reduce the run-time CPort count to what's available on the
+         * GPBridges, unless we can determine that we're running on an
+         * APBridge.
+         */
+        return ((tsb_get_product_id() == tsb_pid_apbridge) ?
+                ES2_APBRIDGE_CPORT_MAX : ES2_GPBRIDGE_CPORT_MAX);
+    }
+
+    retval = unipro_attr_local_read(T_NUMCPORTS, &num_cports, 0);
+    if (retval) {
+        lowsyslog("unipro: cannot determine number of cports\n");
+        return 0;
+    }
+
+    return num_cports;
 }
 
 struct cport *cport_handle(unsigned int cportid) {
@@ -385,7 +393,7 @@ static int mailbox_evt(void)
             e2efc = unipro_read(CPB_RX_E2EFC_EN_0);
             e2efc |= (1 << cportid);
             unipro_write(CPB_RX_E2EFC_EN_0, e2efc);
-        } else if (cportid < APBRIDGE_CPORT_MAX) {
+        } else if (cportid < 64) {
             e2efc = unipro_read(CPB_RX_E2EFC_EN_1);
             e2efc |= (1 << (cportid - 32));
             unipro_write(CPB_RX_E2EFC_EN_1, e2efc);
