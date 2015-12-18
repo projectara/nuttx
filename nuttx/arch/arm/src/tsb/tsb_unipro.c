@@ -1008,8 +1008,10 @@ int tsb_unipro_mbox_send(uint32_t val) {
  */
 static int tsb_unipro_mbox_ack(uint16_t val) {
     int rc;
+    uint32_t mbox_ack_attr = tsb_get_rev_id() == tsb_rev_es2 ?
+                             ES2_MBOX_ACK_ATTR : ES3_MBOX_ACK_ATTR;
 
-    rc = unipro_attr_local_write(MBOX_ACK_ATTR, val, 0);
+    rc = unipro_attr_local_write(mbox_ack_attr, val, 0);
     if (rc) {
         lldbg("MBOX_ACK_ATTR complement write of 0x%x failed: %d\n", val, rc);
         return rc;

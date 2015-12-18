@@ -109,12 +109,6 @@
 #define ES3_SYSTEM_STATUS_15    0x610f
 #define ES3_MBOX_ACK_ATTR       ES3_SYSTEM_STATUS_15
 
-#if defined(CONFIG_TSB_CHIP_REV_ES2)
-    #define MBOX_ACK_ATTR   ES2_MBOX_ACK_ATTR
-#elif defined(CONFIG_TSB_CHIP_REV_ES3)
-    #define MBOX_ACK_ATTR   ES3_MBOX_ACK_ATTR
-#endif
-
 /* Special-purpose usage of existing atttributes */
 #define TSB_ARA_VID                TSB_DME_DDBL2_A
 #define TSB_ARA_PID                TSB_DME_DDBL2_B
