@@ -182,18 +182,16 @@ enum tsb_drivestrength {
 #define DRIVESTRENGTH_SHIFT(driver)  (driver & 0x1f)
 #define DRIVESTRENGTH_MASK(driver)  (0x3 << DRIVESTRENGTH_SHIFT(driver))
 
-#ifdef CONFIG_TSB_CHIP_REV_ES2
-#define TSB_TRACE_DRIVESTRENGTH   (TSB_SCM_REG1 | 24)
-#define TSB_SPI_DRIVESTRENGTH     (TSB_SCM_REG1 | 22)
-#define TSB_PWM_DRIVESTRENGTH     (TSB_SCM_REG1 | 20)
-#define TSB_I2S_DRIVESTRENGTH     (TSB_SCM_REG1 | 18)
-#else
+#define ES2_TSB_TRACE_DRIVESTRENGTH   (TSB_SCM_REG1 | 24)
+#define ES2_TSB_SPI_DRIVESTRENGTH     (TSB_SCM_REG1 | 22)
+#define ES2_TSB_PWM_DRIVESTRENGTH     (TSB_SCM_REG1 | 20)
+#define ES2_TSB_I2S_DRIVESTRENGTH     (TSB_SCM_REG1 | 18)
+
 #define TSB_TRACE_DRIVESTRENGTH   (TSB_SCM_REG2 | 10)
 #define TSB_SPI_DRIVESTRENGTH     (TSB_SCM_REG2 | 8)
 #define TSB_PWM1_DRIVESTRENGTH    (TSB_SCM_REG2 | 6)
 #define TSB_PWM0_DRIVESTRENGTH    (TSB_SCM_REG2 | 4)
 #define TSB_I2S_DRIVESTRENGTH     (TSB_SCM_REG2 | 0)
-#endif
 
 /*
  * SCM PID Register values from efuse data (very early silicon reads 0)

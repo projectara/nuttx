@@ -102,12 +102,16 @@ void tsb_start(void) {
     } else {
         tsb_set_pinshare(TSB_PIN_ETM);
 
+        uint32_t trace_drive_strength = TSB_TRACE_DRIVESTRENGTH;
+        if (tsb_get_rev_id() == tsb_rev_es2)
+            trace_drive_strength = ES2_TSB_TRACE_DRIVESTRENGTH;
+
 #ifdef CONFIG_TSB_TRACE_DRIVESTRENGTH_MIN
-        tsb_set_drivestrength(TSB_TRACE_DRIVESTRENGTH, tsb_ds_min);
+        tsb_set_drivestrength(trace_drive_strength, tsb_ds_min);
 #elif CONFIG_TSB_TRACE_DRIVESTRENGTH_DEFAULT
-        tsb_set_drivestrength(TSB_TRACE_DRIVESTRENGTH, tsb_ds_default);
+        tsb_set_drivestrength(trace_drive_strength, tsb_ds_default);
 #elif CONFIG_TSB_TRACE_DRIVESTRENGTH_MAX
-        tsb_set_drivestrength(TSB_TRACE_DRIVESTRENGTH, tsb_ds_max);
+        tsb_set_drivestrength(trace_drive_strength, tsb_ds_max);
 #endif
     }
 
