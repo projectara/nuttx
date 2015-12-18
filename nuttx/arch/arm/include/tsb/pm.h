@@ -26,66 +26,9 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <nuttx/config.h>
-#include <nuttx/arch.h>
-#include <nuttx/power/pm.h>
+#ifndef __ARCH_ARM_INCLUDE_TSB_PM_H
+#define __ARCH_ARM_INCLUDE_TSB_PM_H
 
-static int tsb_pm_curr_state = PM_NORMAL;
+int tsb_pm_getstate(void);
 
-/*
- * Called from up_idle(). Checks the power state suggested by the power
- * management algorithm, then tries to change the power state of all
- * power-managed drivers. If that succeeds - the bridge-specific power
- * management code is executed.
- */
-void up_idlepm(void)
-{
-    int ret, newstate;
-    irqstate_t flags;
-
-    newstate = pm_checkstate();
-    if (newstate != tsb_pm_curr_state) {
-        flags = irqsave();
-
-        ret = pm_changestate(newstate);
-        if (ret < 0) {
-            /* Restore previous state on failure. */
-            (void)pm_changestate(tsb_pm_curr_state);
-        } else {
-            tsb_pm_curr_state = newstate;
-
-            /* This is where bridge-specific pm should be done. */
-            switch (newstate) {
-            case PM_NORMAL:
-                break;
-            case PM_IDLE:
-                break;
-            case PM_STANDBY:
-                break;
-            case PM_SLEEP:
-                break;
-            default:
-                break;
-            }
-        }
-
-        irqrestore(flags);
-    }
-}
-
-int tsb_pm_getstate(void)
-{
-    irqstate_t flags;
-    int state;
-
-    flags = irqsave();
-    state = tsb_pm_curr_state;
-    irqrestore(flags);
-
-    return state;
-}
-
-void up_pminitialize(void)
-{
-    pm_initialize();
-}
+#endif /* __ARCH_ARM_INCLUDE_TSB_PM_H */
