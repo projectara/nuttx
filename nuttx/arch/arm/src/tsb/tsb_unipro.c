@@ -413,9 +413,8 @@ static void unipro_evt_handler(enum unipro_event evt)
         break;
 
     case UNIPRO_EVT_LUP_DONE:
-#if defined(CONFIG_TSB_CHIP_REV_ES2)
-        es2_apply_mphy_fixup();
-#endif
+        if (tsb_get_rev_id() == tsb_rev_es2)
+            es2_apply_mphy_fixup();
         break;
     }
 
