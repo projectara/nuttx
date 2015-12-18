@@ -724,21 +724,17 @@ int vendor_request_handler(struct usbdev_s *dev,
         list_foreach(&vendor_requests, iter) {
             vendor_request = list_entry(iter, struct vendor_request, list);
             if (vendor_request->req == ctrl->req) {
-                /* in transfer: nothing special to do */
-                if (in && (vendor_request->flags & VENDOR_REQ_IN)) {
+                /* in or out transfer: nothing special to do */
+                if ((in && (vendor_request->flags & VENDOR_REQ_IN)) ||
+                    (!in && !(vendor_request->flags & (VENDOR_REQ_IN |
+                                                       VENDOR_REQ_DATA)))) {
                     ret = vendor_request->cb(dev, ctrl->req, index, value,
                                              req->buf, len);
-                } else if (!(in && vendor_request->flags & VENDOR_REQ_IN)) {
-                    /* we don't expect data from host */
-                    if (!(vendor_request->flags & VENDOR_REQ_DATA)) {
-                        ret = vendor_request->cb(dev, ctrl->req, index, value,
-                                                 req->buf, len);
-                    /* wait to receive data before to call handler */
-                    } else {
-                        ret = len;
-                        g_vendor_request = vendor_request;
-                        memcpy(&g_ctrl, ctrl, sizeof(g_ctrl));
-                    }
+                } else if (vendor_request->flags & VENDOR_REQ_DATA) {
+                    /* wait to receive data before calling handler */
+                    ret = len;
+                    g_vendor_request = vendor_request;
+                    memcpy(&g_ctrl, ctrl, sizeof(g_ctrl));
                 }
             }
         }
