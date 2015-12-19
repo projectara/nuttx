@@ -44,8 +44,8 @@
 #define AL_TX_BRG_TYPE_MASK1_SET_VAL                    0x08FB00FC
 #define AL_TX_BRG_TYPE_MASK2_SET_VAL                    0xFF00C0E0
 #define AL_TX_BRG_PIC_COM_SET_VAL                       0x0000000F
-#define AL_TX_BRG_PIC_COM_VDELAYSTRCOUNT_VAL            0x00000423
-#define AL_TX_BRG_PIC_COM_VDELAYENDCOUNT_VAL            0x00000423
+#define AL_TX_BRG_PIC_COM_VDELAYSTRCOUNT_VAL            0x000006A6
+#define AL_TX_BRG_PIC_COM_VDELAYENDCOUNT_VAL            0x000006A6
 #define AL_TX_BRG_PIC_COM_MAXFCNT_VAL                   0x00000000
 #define AL_TX_BRG_PIC_COM_3DCM_PLDT_VAL                 0x00000000
 #define AL_TX_BRG_PIC_COM_3DCM_LINE_VAL                 0x00000000
@@ -64,17 +64,17 @@
 
 #define CDSITX_DPHY_RESET_VAL                           0x00000001
 
-#define CDSITX_PLL_CONFIG_00_VAL                        0x00211033
+#define CDSITX_PLL_CONFIG_00_VAL                        0x0220107C
 #define CDSITX_PLL_CONFIG_02_VAL                        0x00001680
 #define CDSITX_PLL_CONTROL_00_VAL                       0x00000001
 #define CDSITX_PLL_CONTROL_01_VAL                       0x00000001
 
-#define CDSITX_LANE_ENABLE_00_VAL                       0x00000013
-#define CDSITX_LANE_ENABLE_01_VAL                       0x00000013
-#define CDSITX_LANE_ENABLE_02_VAL                       0x00000013
+#define CDSITX_LANE_ENABLE_00_VAL                       0x0000001F
+#define CDSITX_LANE_ENABLE_01_VAL                       0x0000001F
+#define CDSITX_LANE_ENABLE_02_VAL                       0x0000001F
 
 #define CDSITX_VREG_CONFIG_VAL                          0x00000013
-#define CDSITX_VREG_CONTROL_VAL                         0x00000013
+#define CDSITX_VREG_CONTROL_VAL                         0x0000001F
 
 #define CDSI0_CDSITX_LPRX_CALIB_CONFIG_VAL              0x0000000A
 #define CDSI0_CDSITX_LPRX_CALIB_CONTROL_VAL             0x00000001
@@ -83,15 +83,15 @@
 
 #define CDSITX_GLOBAL_TIMING_PARAM_00_VAL               0x00000000
 #define CDSITX_GLOBAL_TIMING_PARAM_01_VAL               0x00022222
-#define CDSITX_GLOBAL_TIMING_PARAM_02_VAL               0x00000000
-#define CDSITX_GLOBAL_TIMING_PARAM_03_VAL               0x00000003
-#define CDSITX_GLOBAL_TIMING_PARAM_04_VAL               0x00120004
-#define CDSITX_GLOBAL_TIMING_PARAM_05_VAL               0x00080002
-#define CDSITX_GLOBAL_TIMING_PARAM_06_VAL               0x00040005
-#define CDSITX_GLOBAL_TIMING_PARAM_07_VAL               0x00090005
-#define CDSITX_GLOBAL_TIMING_PARAM_08_VAL               0x00001F13
-#define CDSITX_GLOBAL_TIMING_PARAM_09_VAL               0x00000002
-#define CDSITX_GLOBAL_TIMING_PARAM_10_VAL               0x00030009
+#define CDSITX_GLOBAL_TIMING_PARAM_02_VAL               0x00000006
+#define CDSITX_GLOBAL_TIMING_PARAM_03_VAL               0x00000006
+#define CDSITX_GLOBAL_TIMING_PARAM_04_VAL               0x001D0007
+#define CDSITX_GLOBAL_TIMING_PARAM_05_VAL               0x000E0004
+#define CDSITX_GLOBAL_TIMING_PARAM_06_VAL               0x000A0008
+#define CDSITX_GLOBAL_TIMING_PARAM_07_VAL               0x000F0007
+#define CDSITX_GLOBAL_TIMING_PARAM_08_VAL               0x00001F1F
+#define CDSITX_GLOBAL_TIMING_PARAM_09_VAL               0x00000010
+#define CDSITX_GLOBAL_TIMING_PARAM_10_VAL               0x0006000D
 
 #define CDSITX_SIDEBAND_COUNT_CONFIG_00_VAL             0x00000794
 #define CDSITX_SIDEBAND_COUNT_CONFIG_01_VAL             0xFFFFFFFF
@@ -116,9 +116,9 @@
 /* Sideband Configulation */
 #define CDSITX_SIDEBAND_CONFIG_05_VAL                   0x0000000F
 #define CDSITX_SIDEBAND_CONFIG_06_VAL                   0x00000000
-#define CDSITX_SIDEBAND_CONFIG_07_VAL                   0x00000080
+#define CDSITX_SIDEBAND_CONFIG_07_VAL                   0x00000000
 #define CDSITX_SIDEBAND_CONFIG_08_VAL                   0x00000004
-#define CDSITX_SIDEBAND_CONFIG_09_VAL                   0x00002001
+#define CDSITX_SIDEBAND_CONFIG_09_VAL                   0x00000001
 #define CDSITX_SIDEBAND_CONFIG_10_VAL                   0x00000000
 #define CDSITX_SIDEBAND_CONFIG_11_VAL                   0x00000000
 #define CDSITX_SIDEBAND_CONFIG_12_VAL                   0x00000000
