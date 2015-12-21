@@ -554,7 +554,8 @@ int tsb_uart_lowsetup(int baud)
         return -EINVAL;
     }
 
-    retval = tsb_request_pinshare(TSB_PIN_UART_RXTX | TSB_PIN_UART_CTSRTS);
+    retval = tsb_request_pinshare(TSB_PIN_UART_RXTX | TSB_PIN_UART_CTSRTS |
+            TSB_PIN_GPIO9);
     if (retval) {
         lowsyslog("UART: cannot get ownership of UART pin.\n");
         return retval;
