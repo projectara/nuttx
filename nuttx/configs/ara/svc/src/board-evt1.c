@@ -82,6 +82,16 @@
 #define ARA_KEY_GPIO      (GPIO_INPUT | GPIO_PULLDOWN | GPIO_PORTA | GPIO_PIN0)
 
 /* Wake/detect pins */
+#define WD_1_DET_IN       STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN1)
+#define WD_2_DET_IN       STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN2)
+#define WD_3A_DET_IN      STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN3)
+#define WD_3B_DET_IN      STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN4)
+#define WD_4A_DET_IN      STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN5)
+#define WD_4B_DET_IN      STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN6)
+#define WD_5_DET_IN       STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN7) /* LCD */
+#define WD_8A_DET_IN      STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN11)
+#define WD_8B_DET_IN      STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN12
+
 #define WD_1_DET_IN_GPIO       (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN1)
 #define WD_2_DET_IN_GPIO       (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN2)
 #define WD_3A_DET_IN_GPIO      (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN3)
@@ -182,9 +192,9 @@ static struct vreg_data apb2_vreg_data[] = {
 };
 
 DECLARE_MODULE_PORT_INTERFACE(apb1, apb1_vreg_data, 3,
-                              WD_8A_DET_IN, ARA_IFACE_WD_ACTIVE_HIGH);
+                              WD_8A_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_HIGH);
 DECLARE_MODULE_PORT_INTERFACE(apb2, apb2_vreg_data, 1,
-                              WD_8B_DET_IN, ARA_IFACE_WD_ACTIVE_HIGH);
+                              WD_8B_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_HIGH);
 
 /*
  * Modules voltage regulator list and interface declarations.
