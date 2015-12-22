@@ -74,6 +74,125 @@ static xcpt_t *tsb_gpio_irq_vector;
 static uint8_t *tsb_gpio_irq_gpio_base;
 static volatile uint32_t refcount;
 
+/* Internal pinsharing info */
+static uint8_t pinshare_bit_count[32];
+static uint32_t currently_owned;
+
+/* Pinsharing configuration (ES2/ES3, Apbridge, Gpbridge) */
+struct gpio_pinsharing_conf {
+    uint8_t count:4;
+    struct {
+        uint8_t num:5;
+        uint8_t sts:1;
+    } pin[2];
+} __attribute__ ((packed));
+
+#define PIN_CLR_ST  0
+#define PIN_SET_ST  1
+
+#define PIN_NONE                {0}
+#define PIN_CLR_1(pin)          {1, {{pin,   PIN_CLR_ST},}}
+#define PIN_CLR_1(pin)          {1, {{pin,   PIN_CLR_ST},}}
+#define PIN_SET_1(pin)          {1, {{pin,   PIN_SET_ST},}}
+#define PIN_CLR_2(pin1, pin2)   {2, {{pin1,  PIN_CLR_ST}, {pin2,   PIN_CLR_ST}}}
+#define PIN_CLR_SET(pin1, pin2) {2, {{pin1,  PIN_CLR_ST}, {pin2,   PIN_SET_ST}}}
+
+#if defined(CONFIG_ARCH_CHIP_GPBRIDGE)
+
+static struct gpio_pinsharing_conf tsb_gpio_pinsharing[GPBRIDGE_LINE_COUNT] = {
+    /* GPIO0 */
+    PIN_CLR_1(TSB_PIN_UART_CTSRTS_BIT),
+    /* GPIO1, GPIO2 */
+    PIN_CLR_1(TSB_PIN_UART_RXTX_BIT), PIN_CLR_1(TSB_PIN_UART_RXTX_BIT),
+    /* GPIO3, GPIO4, GPIO5 */
+    PIN_CLR_1(TSB_PIN_SDIO_BIT), PIN_CLR_1(TSB_PIN_SDIO_BIT), PIN_CLR_1(TSB_PIN_SDIO_BIT),
+    /* GPIO6 */
+# if defined(CONFIG_TSB_CHIP_REV_ES3)
+    PIN_CLR_2(TSB_PIN_SDIO_BIT, TSB_PIN_SPIM_CS1_BIT),
+# else
+    PIN_CLR_1(TSB_PIN_SDIO_BIT),
+# endif
+    /* GPIO7, GPIO8 */
+    PIN_CLR_1(TSB_PIN_SDIO_BIT), PIN_CLR_1(TSB_PIN_SDIO_BIT),
+    /* GPIO9 */
+    PIN_SET_1(TSB_PIN_GPIO9_BIT),
+    /* GPIO10, GPIO11, GPIO12 */
+    PIN_SET_1(TSB_PIN_GPIO10_BIT), PIN_SET_1(TSB_PIN_GPIO10_BIT), PIN_SET_1(TSB_PIN_GPIO10_BIT),
+    /* GPIO13, GPIO14 */
+    PIN_SET_1(TSB_PIN_GPIO13_BIT), PIN_SET_1(TSB_PIN_GPIO13_BIT),
+    /* GPIO15 */
+    PIN_SET_1(TSB_PIN_GPIO15_BIT),
+    /* GPIO16, GPIO17 */
+    PIN_CLR_SET(TSB_PIN_ETM_BIT, TSB_PIN_GPIO16_BIT), PIN_CLR_SET(TSB_PIN_ETM_BIT, TSB_PIN_GPIO16_BIT),
+    /* GPIO18 */
+    PIN_CLR_SET(TSB_PIN_ETM_BIT, TSB_PIN_GPIO18_BIT),
+    /* GPIO19 */
+    PIN_CLR_SET(TSB_PIN_ETM_BIT, TSB_PIN_GPIO19_BIT),
+    /* GPIO20 */
+    PIN_CLR_SET(TSB_PIN_ETM_BIT, TSB_PIN_GPIO20_BIT),
+    /* GPIO21 */
+    PIN_CLR_SET(TSB_PIN_I2C_BIT, TSB_PIN_GPIO21_BIT),
+    /* GPIO22 */
+    PIN_CLR_SET(TSB_PIN_I2C_BIT, TSB_PIN_GPIO22_BIT),
+    /* GPIO23, GPIO24, GPIO25, GPIO26 */
+    PIN_NONE, PIN_NONE, PIN_NONE, PIN_NONE,
+#if defined(CONFIG_TSB_CHIP_REV_ES3)
+    /* GPIO27, GPIO28 */
+    PIN_SET_1(TSB_PIN_GPIO27_BIT), PIN_SET_1(TSB_PIN_GPIO27_BIT),
+    /* GPIO29 */
+    PIN_SET_1(TSB_PIN_GPIO29_BIT),
+    /* GPIO30 */
+    PIN_NONE,
+    /* GPIO31 */
+    PIN_SET_1(TSB_PIN_GPIO31_BIT),
+#endif
+};
+
+#else
+
+static struct gpio_pinsharing_conf tsb_gpio_pinsharing[APBRIDGE_LINE_COUNT] = {
+    /* GPIO0 */
+    PIN_CLR_1(TSB_PIN_UART_RXTX_BIT),
+    /* GPIO1, GPIO2 */
+    PIN_CLR_1(TSB_PIN_UART_CTSRTS_BIT), PIN_CLR_1(TSB_PIN_UART_CTSRTS_BIT),
+    /* GPIO3, GPIO4, GPIO5 */
+    PIN_NONE, PIN_NONE, PIN_NONE,
+    /* GPIO6 */
+# if defined(CONFIG_TSB_CHIP_REV_ES3)
+    PIN_CLR_1(TSB_PIN_SPIM_CS1_BIT),
+# else
+    PIN_NONE,
+# endif
+    /* GPIO7, GPIO8 */
+    PIN_NONE, PIN_NONE,
+    /* GPIO9 */
+    PIN_SET_1(TSB_PIN_GPIO9_BIT),
+    /* GPIO10, GPIO11, GPIO12 */
+    PIN_SET_1(TSB_PIN_GPIO10_BIT), PIN_SET_1(TSB_PIN_GPIO10_BIT), PIN_SET_1(TSB_PIN_GPIO10_BIT),
+    /* GPIO13, GPIO14 */
+    PIN_SET_1(TSB_PIN_GPIO13_BIT), PIN_SET_1(TSB_PIN_GPIO13_BIT),
+    /* GPIO15 */
+    PIN_SET_1(TSB_PIN_GPIO15_BIT),
+    /* GPIO16, GPIO17 */
+    PIN_CLR_SET(TSB_PIN_ETM_BIT, TSB_PIN_GPIO16_BIT), PIN_CLR_SET(TSB_PIN_ETM_BIT, TSB_PIN_GPIO16_BIT),
+    /* GPIO18 */
+    PIN_CLR_SET(TSB_PIN_ETM_BIT, TSB_PIN_GPIO18_BIT),
+    /* GPIO19 */
+    PIN_CLR_SET(TSB_PIN_ETM_BIT, TSB_PIN_GPIO19_BIT),
+    /* GPIO20 */
+    PIN_CLR_SET(TSB_PIN_ETM_BIT, TSB_PIN_GPIO20_BIT),
+    /* GPIO21 */
+    PIN_SET_1(TSB_PIN_GPIO21_BIT),
+    /* GPIO22 */
+    PIN_SET_1(TSB_PIN_GPIO22_BIT),
+#if defined(CONFIG_TSB_CHIP_REV_ES3)
+    /* GPIO23 */
+    PIN_NONE,
+#endif
+};
+
+#endif
+
 int tsb_gpio_get_direction(void *driver_data, uint8_t which)
 {
     uint32_t dir = getreg32(GPIO_DIR);
@@ -93,7 +212,47 @@ void tsb_gpio_direction_out(void *driver_data, uint8_t which, uint8_t value)
 
 void tsb_gpio_activate(void *driver_data, uint8_t which)
 {
+    struct gpio_pinsharing_conf *conf;
+    uint32_t mask = 0;
+    uint8_t i;
+
     tsb_gpio_initialize();
+
+    conf = &tsb_gpio_pinsharing[which];
+
+    /* build the mask of requested bits */
+    for (i = 0; i < conf->count; i++) {
+        uint8_t bit = conf->pin[i].num;
+        mask |= BIT(bit);
+        pinshare_bit_count[bit]++;
+    }
+
+    /* compare it to what we already have */
+    mask = mask ^ (currently_owned & mask);
+
+    /* request the missing bits */
+    if (mask) {
+        if (tsb_request_pinshare(mask))
+            goto err;
+
+        /* we own these bits now */
+        currently_owned |= mask;
+
+        /* clr or set them accordingly */
+        for (i = 0; i < conf->count; i++) {
+            uint8_t bit = conf->pin[i].num;
+            if (conf->pin[i].sts == PIN_CLR_ST)
+                tsb_clr_pinshare(BIT(bit));
+            else
+                tsb_set_pinshare(BIT(bit));
+        }
+    }
+
+    return;
+
+err:
+    for (i = 0; i < conf->count; i++)
+        pinshare_bit_count[conf->pin[i].num]--;
 }
 
 uint8_t tsb_gpio_get_value(void *driver_data, uint8_t which)
@@ -108,7 +267,26 @@ void tsb_gpio_set_value(void *driver_data, uint8_t which, uint8_t value)
 
 void tsb_gpio_deactivate(void *driver_data, uint8_t which)
 {
+    struct gpio_pinsharing_conf *conf;
+    uint32_t mask = 0;
+    uint8_t i;
+
     tsb_gpio_uninitialize();
+
+    conf = &tsb_gpio_pinsharing[which];
+
+    /* build the mask of bits we can release */
+    for (i = 0; i < conf->count; i++) {
+        uint8_t bit = conf->pin[i].num;
+        if (--pinshare_bit_count[bit] == 0)
+            mask |= BIT(bit);
+    }
+
+    /* release these bits and stop owning them */
+    if (mask) {
+        tsb_release_pinshare(mask);
+        currently_owned &= ~mask;
+    }
 }
 
 uint8_t tsb_gpio_line_count(void *driver_data)
