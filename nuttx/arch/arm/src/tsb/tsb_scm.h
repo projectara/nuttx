@@ -143,6 +143,10 @@
 #define TSB_PIN_GPIO20          BIT(13)
 #define TSB_PIN_GPIO21          BIT(14)
 #define TSB_PIN_GPIO22          BIT(15)
+#define TSB_PIN_GPIO27          BIT(16)
+#define TSB_PIN_GPIO29          BIT(17)
+#define TSB_PIN_GPIO31          BIT(19)
+#define TSB_PIN_SPIM_CS1        BIT(20)
 
 
 /* IO_DRIVE_STRENGTH: 2 Bits per Output */
