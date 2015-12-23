@@ -745,7 +745,7 @@ int vendor_request_handler(struct usbdev_s *dev,
     if (ret >= 0) {
         req->len = MIN(len, ret);
         req->flags = USBDEV_REQFLAGS_NULLPKT;
-        if (vendor_request->flags && VENDOR_REQ_DEFER) {
+        if (vendor_request->flags & VENDOR_REQ_DEFER) {
             g_req = req;
         } else {
             ret = vendor_request_submit(dev, req, ret);
