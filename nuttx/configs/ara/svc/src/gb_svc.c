@@ -110,8 +110,8 @@ int gb_svc_hello(uint8_t ap_intf_id) {
     return 0;
 }
 
-int gb_svc_intf_hotplug(uint32_t intf_id, uint32_t unipro_mfg_id,
-                        uint32_t unipro_prod_id, uint32_t ara_vend_id,
+int gb_svc_intf_hotplug(uint32_t intf_id, uint32_t ddbl1_mfr_id,
+                        uint32_t ddbl1_prod_id, uint32_t ara_vend_id,
                         uint32_t ara_prod_id) {
     struct gb_operation *op_req;
     struct gb_svc_intf_hotplug_request *req;
@@ -124,8 +124,8 @@ int gb_svc_intf_hotplug(uint32_t intf_id, uint32_t unipro_mfg_id,
 
     req = gb_operation_get_request_payload(op_req);
     req->intf_id = intf_id;
-    req->data.unipro_mfg_id = cpu_to_le32(unipro_mfg_id);
-    req->data.unipro_prod_id = cpu_to_le32(unipro_prod_id);
+    req->data.ddbl1_mfr_id = cpu_to_le32(ddbl1_mfr_id);
+    req->data.ddbl1_prod_id = cpu_to_le32(ddbl1_prod_id);
     req->data.ara_vend_id = cpu_to_le32(ara_vend_id);
     req->data.ara_prod_id = cpu_to_le32(ara_prod_id);
 

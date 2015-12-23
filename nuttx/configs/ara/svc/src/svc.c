@@ -509,7 +509,7 @@ static int svc_handle_hot_unplug(uint8_t portid) {
 
 static int svc_handle_module_ready(uint8_t portid) {
     int rc, intf_id;
-    uint32_t unipro_mfg_id, unipro_prod_id, ara_vend_id, ara_prod_id;
+    uint32_t ddbl1_mfr_id, ddbl1_prod_id, ara_vend_id, ara_prod_id;
 
     dbg_info("Hotplug event received for port %u\n", portid);
     intf_id = interface_get_id_by_portid(portid);
@@ -518,14 +518,14 @@ static int svc_handle_module_ready(uint8_t portid) {
     }
 
     rc = switch_dme_peer_get(svc->sw, portid, DME_DDBL1_MANUFACTURERID, 0,
-                             &unipro_mfg_id);
+                             &ddbl1_mfr_id);
     if (rc) {
         dbg_error("Failed to read manufacturer id: %d\n", rc);
         return rc;
     }
 
     rc = switch_dme_peer_get(svc->sw, portid, DME_DDBL1_PRODUCTID, 0,
-                             &unipro_prod_id);
+                             &ddbl1_prod_id);
     if (rc) {
         dbg_error("Failed to read product id: %d\n", rc);
         return rc;
@@ -538,7 +538,7 @@ static int svc_handle_module_ready(uint8_t portid) {
     ara_vend_id = 0x0000;
     ara_prod_id = 0x0000;
 
-    return gb_svc_intf_hotplug(intf_id, unipro_mfg_id, unipro_prod_id,
+    return gb_svc_intf_hotplug(intf_id, ddbl1_mfr_id, ddbl1_prod_id,
                                ara_vend_id, ara_prod_id);
 }
 
