@@ -736,6 +736,8 @@ int vendor_request_handler(struct usbdev_s *dev,
                     g_vendor_request = vendor_request;
                     memcpy(&g_ctrl, ctrl, sizeof(g_ctrl));
                 }
+
+                break;
             }
         }
     }
