@@ -72,6 +72,11 @@
 
 #include <queue.h>
 
+/* Typedef helpers for power-management callbacks. */
+struct pm_callback_s;
+typedef int (*pm_prepare_cb)(FAR struct pm_callback_s *cb, enum pm_state_e pmstate);
+typedef void (*pm_notify_cb)(FAR struct pm_callback_s *cb, enum pm_state_e pmstate);
+
 #ifdef CONFIG_PM
 
 /****************************************************************************
@@ -288,7 +293,7 @@ struct pm_callback_s
    *
    **************************************************************************/
 
-  int (*prepare)(FAR struct pm_callback_s *cb, enum pm_state_e pmstate);
+  pm_prepare_cb prepare;
 
   /**************************************************************************
    * Name: notify
@@ -312,7 +317,7 @@ struct pm_callback_s
    *
    **************************************************************************/
 
-  void (*notify)(FAR struct pm_callback_s *cb, enum pm_state_e pmstate);
+  pm_notify_cb notify;
 
   void *priv; /* Private data. */
 };
