@@ -87,6 +87,7 @@ SUBDIRS += svc_power
 SUBDIRS += time
 SUBDIRS += unipro
 SUBDIRS += usb-host
+SUBDIRS += version
 
 # Sub-directories that might need context setup.  Directories may need
 # context setup for a variety of reasons, but the most common is because
@@ -115,6 +116,7 @@ CNTXTDIRS += svc_power
 CNTXTDIRS += time
 CNTXTDIRS += unipro
 CNTXTDIRS += usb-host
+CNTXTDIRS += version
 endif
 
 all: nothing

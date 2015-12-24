@@ -29,15 +29,15 @@
 # For a description of the syntax of this configuration file,
 # see misc/tools/kconfig-language.txt.
 
-config EXAMPLES_VERSION
+config ARA_VERSION
 	bool "Version Utility"
 	default y
 	---help---
 		Enable the version utility
 
-if EXAMPLES_VERSION
+if ARA_VERSION
 
-config EXAMPLES_VERSION_PROGNAME
+config ARA_VERSION_PROGNAME
 	string "Program name"
 	default "version"
 	depends on BUILD_KERNEL
