@@ -26,6 +26,9 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <stdlib.h>
+#include <errno.h>
+
 #include <nuttx/config.h>
 #include <nuttx/arch.h>
 #include <nuttx/power/pm.h>
@@ -131,6 +134,29 @@ int tsb_pm_driver_state_change(int pmstate)
     }
 
     tsb_pm_curr_state = pmstate;
+
+    return OK;
+}
+
+int tsb_pm_register(pm_prepare_cb prepare, pm_notify_cb notify, void *priv)
+{
+    struct pm_callback_s *pmctx;
+    int ret;
+
+    pmctx = malloc(sizeof(struct pm_callback_s));
+    if (!pmctx) {
+        return -ENOMEM;
+    }
+
+    pmctx->prepare = prepare;
+    pmctx->notify = notify;
+    pmctx->priv = priv;
+
+    ret = pm_register(pmctx);
+    if (ret < 0) {
+        free(pmctx);
+        return ret;
+    }
 
     return OK;
 }
