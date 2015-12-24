@@ -609,11 +609,6 @@ CONFIG_EXAMPLES_NSH=y
 CONFIG_EXAMPLES_VERSION=y
 
 #
-# Graphics Support
-#
-# CONFIG_TIFF is not set
-
-#
 # Interpreters
 #
 # CONFIG_INTERPRETERS_FICL is not set
