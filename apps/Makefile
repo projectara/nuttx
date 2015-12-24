@@ -75,7 +75,7 @@ TOPDIR ?= $(APPDIR)/import
 #   only for cleaning. builtin must always be the first in the list.
 
 CONFIGURED_APPS =
-SUBDIRS  = ara examples interpreters builtin import nshlib
+SUBDIRS  = ara examples builtin import nshlib
 SUBDIRS += platform system greybus-utils
 
 # The list of configured directories is derived from NuttX configuration
@@ -93,7 +93,6 @@ SUBDIRS += platform system greybus-utils
 include builtin/Make.defs
 include ara/Make.defs
 include examples/Make.defs
-include interpreters/Make.defs
 include nshlib/Make.defs
 include platform/Make.defs
 include system/Make.defs
@@ -201,4 +200,5 @@ else
 endif
 	$(call DELFILE, .depend)
 	$(call DELDIR, $(BIN_DIR))
+
 
