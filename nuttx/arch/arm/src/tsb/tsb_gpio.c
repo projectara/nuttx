@@ -74,6 +74,10 @@ static xcpt_t *tsb_gpio_irq_vector;
 static uint8_t *tsb_gpio_irq_gpio_base;
 static volatile uint32_t refcount;
 
+/* GPIO state */
+#define TSB_GPIO_FLAG_OPEN BIT(0)
+static uint8_t gpio_state[32];
+
 /* Internal pinsharing info */
 static uint8_t pinshare_bit_count[32];
 static uint32_t currently_owned;
@@ -216,6 +220,9 @@ void tsb_gpio_activate(void *driver_data, uint8_t which)
     uint32_t mask = 0;
     uint8_t i;
 
+    if (gpio_state[which] == TSB_GPIO_FLAG_OPEN)
+        return;
+
     tsb_gpio_initialize();
 
     conf = &tsb_gpio_pinsharing[which];
@@ -248,6 +255,8 @@ void tsb_gpio_activate(void *driver_data, uint8_t which)
         }
     }
 
+    gpio_state[which] = TSB_GPIO_FLAG_OPEN;
+
     return;
 
 err:
@@ -271,6 +280,9 @@ void tsb_gpio_deactivate(void *driver_data, uint8_t which)
     uint32_t mask = 0;
     uint8_t i;
 
+    if (gpio_state[which] != TSB_GPIO_FLAG_OPEN)
+        return;
+
     tsb_gpio_uninitialize();
 
     conf = &tsb_gpio_pinsharing[which];
@@ -287,6 +299,8 @@ void tsb_gpio_deactivate(void *driver_data, uint8_t which)
         tsb_release_pinshare(mask);
         currently_owned &= ~mask;
     }
+
+    gpio_state[which] = 0;
 }
 
 uint8_t tsb_gpio_line_count(void *driver_data)
