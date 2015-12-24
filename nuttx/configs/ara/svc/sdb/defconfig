@@ -693,7 +693,6 @@ CONFIG_GREYBUS=y
 # CONFIG_FS_READABLE is not set
 # CONFIG_FS_WRITABLE is not set
 # CONFIG_FS_RAMMAP is not set
-# CONFIG_FS_FAT is not set
 # CONFIG_FS_NXFFS is not set
 # CONFIG_FS_ROMFS is not set
 # CONFIG_FS_SMARTFS is not set

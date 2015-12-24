@@ -137,7 +137,6 @@ ifeq ($(CONFIG_FS_AUTOMOUNTER),y)
 CSRCS += fs_automount.c
 endif
 
-include fat/Make.defs
 include romfs/Make.defs
 include nxffs/Make.defs
 include nfs/Make.defs
@@ -155,7 +154,7 @@ OBJS = $(AOBJS) $(COBJS)
 
 BIN = libfs$(LIBEXT)
 
-SUBDIRS = mmap fat romfs nxffs nfs binfs procfs
+SUBDIRS = mmap romfs nxffs nfs binfs procfs
 
 all: $(BIN)
 
