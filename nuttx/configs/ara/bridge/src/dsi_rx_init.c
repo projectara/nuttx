@@ -33,7 +33,6 @@
 
 #include <nuttx/gpio.h>
 #include <arch/tsb/cdsi.h>
-#include <arch/tsb/gpio.h>
 #include <arch/board/cdsi0_offs_def.h>
 
 #define CDSIRX_CLKEN_VAL                                0x00000001
@@ -73,20 +72,20 @@ static pthread_t g_display_thread;
 
 void press_powerkey(void)
 {
-    tsb_gpio_initialize();
-    tsb_gpio_direction_out(NULL, POWERKEY_GPIO, 1);
+    gpio_activate(POWERKEY_GPIO);
+    gpio_direction_out(POWERKEY_GPIO, 1);
 }
 
 void depress_powerkey(void)
 {
-    tsb_gpio_direction_out(NULL, POWERKEY_GPIO, 0);
-    tsb_gpio_uninitialize();
+    gpio_set_value(POWERKEY_GPIO, 0);
+    gpio_deactivate(POWERKEY_GPIO);
 }
 
 static void ps_hold(void)
 {
-    tsb_gpio_initialize();
-    tsb_gpio_direction_out(NULL, PS_HOLD_GPIO, 1);
+    gpio_activate(PS_HOLD_GPIO);
+    gpio_direction_out(PS_HOLD_GPIO, 1);
 }
 
 void lg4892_dsi_init(struct cdsi_dev *dev)
