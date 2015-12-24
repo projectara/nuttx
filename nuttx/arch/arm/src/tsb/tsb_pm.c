@@ -82,6 +82,10 @@ void up_idlepm(void)
     }
 }
 
+/**
+ * @brief Return current global power-management state.
+ * @return Current power state as integer value.
+ */
 int tsb_pm_getstate(void)
 {
     irqstate_t flags;
@@ -94,6 +98,12 @@ int tsb_pm_getstate(void)
     return state;
 }
 
+/**
+ * @brief Disable tsb power management.
+ *
+ * Bring the system back to PM_NORMAL, then disable any further
+ * power-management state changes.
+ */
 void tsb_pm_disable(void)
 {
     irqstate_t flags;
@@ -113,6 +123,9 @@ void tsb_pm_disable(void)
     }
 }
 
+/**
+ * @brief Re-enable tsb power-management.
+ */
 void tsb_pm_enable(void)
 {
     irqstate_t flags;
@@ -122,6 +135,15 @@ void tsb_pm_enable(void)
     irqrestore(flags);
 }
 
+/**
+ * @brief Force pm state change for drivers.
+ * @param pmstate New power state.
+ * @return OK (0) on success, negative error number on failure.
+ *
+ * This routine makes the pm framework execute the prepare and notify callbacks
+ * for all drivers, but doesn't actually run the global pm code (as not to
+ * actually enter a deeper power state). It's mostly useful for debugging.
+ */
 int tsb_pm_driver_state_change(int pmstate)
 {
     int status;
@@ -138,6 +160,13 @@ int tsb_pm_driver_state_change(int pmstate)
     return OK;
 }
 
+/**
+ * @brief Register callbacks with the pm framework.
+ * @param prepare Prepare callback.
+ * @param notify Notify callback.
+ * @param priv Pointer to private data to be passed as argument to pm callbacks.
+ * @return OK (0) on success, negative error number on failure.
+ */
 int tsb_pm_register(pm_prepare_cb prepare, pm_notify_cb notify, void *priv)
 {
     struct pm_callback_s *pmctx;
