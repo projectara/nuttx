@@ -1234,7 +1234,8 @@ err_destroy_tx_sem:
 err_free_info:
     free(uart_info);
 err_malloc_info:
-    tsb_release_pinshare(TSB_PIN_UART_RXTX | TSB_PIN_UART_CTSRTS);
+    tsb_release_pinshare(TSB_PIN_UART_RXTX | TSB_PIN_UART_CTSRTS |
+            TSB_PIN_GPIO9);
 
     return ret;
 }
@@ -1267,7 +1268,8 @@ static void tsb_uart_dev_remove(struct device *dev)
 
     irqrestore(flags);
 
-    tsb_release_pinshare(TSB_PIN_UART_RXTX | TSB_PIN_UART_CTSRTS);
+    tsb_release_pinshare(TSB_PIN_UART_RXTX | TSB_PIN_UART_CTSRTS |
+            TSB_PIN_GPIO9);
 
     free(uart_info);
 }
