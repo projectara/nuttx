@@ -136,6 +136,7 @@
 #define TSB_PIN_GPIO10          BIT(5)
 #define TSB_PIN_GPIO13          BIT(6)
 #define TSB_PIN_GPIO15          BIT(7)
+#define TSB_PIN_I2C             BIT(8)
 #define TSB_PIN_GPIO16          BIT(10)
 #define TSB_PIN_GPIO18          BIT(11)
 #define TSB_PIN_GPIO19          BIT(12)
