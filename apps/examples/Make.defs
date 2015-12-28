@@ -165,10 +165,6 @@ ifeq ($(CONFIG_EXAMPLES_NXFLAT),y)
 CONFIGURED_APPS += examples/nxflat
 endif
 
-ifeq ($(CONFIG_EXAMPLES_NXTEXT),y)
-CONFIGURED_APPS += examples/nxtext
-endif
-
 ifeq ($(CONFIG_EXAMPLES_OSTEST),y)
 CONFIGURED_APPS += examples/ostest
 endif
