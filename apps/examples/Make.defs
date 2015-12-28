@@ -173,10 +173,6 @@ ifeq ($(CONFIG_EXAMPLES_NXIMAGE),y)
 CONFIGURED_APPS += examples/nximage
 endif
 
-ifeq ($(CONFIG_EXAMPLES_NXLINES),y)
-CONFIGURED_APPS += examples/nxlines
-endif
-
 ifeq ($(CONFIG_EXAMPLES_NXTEXT),y)
 CONFIGURED_APPS += examples/nxtext
 endif
