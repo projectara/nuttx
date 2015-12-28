@@ -46,12 +46,6 @@ libc$(DELIM)libkc$(LIBEXT): context
 lib$(DELIM)libkc$(LIBEXT): libc$(DELIM)libkc$(LIBEXT)
 	$(Q) install libc$(DELIM)libkc$(LIBEXT) lib$(DELIM)libkc$(LIBEXT)
 
-libnx$(DELIM)libknx$(LIBEXT): context
-	$(Q) $(MAKE) -C libnx TOPDIR="$(TOPDIR)" libknx$(LIBEXT) KERNEL=y EXTRADEFINES=$(KDEFINE)
-
-lib$(DELIM)libknx$(LIBEXT): libnx$(DELIM)libknx$(LIBEXT)
-	$(Q) install libnx$(DELIM)libknx$(LIBEXT) lib$(DELIM)libknx$(LIBEXT)
-
 mm$(DELIM)libkmm$(LIBEXT): context
 	$(Q) $(MAKE) -C mm TOPDIR="$(TOPDIR)" libkmm$(LIBEXT) KERNEL=y EXTRADEFINES=$(KDEFINE)
 
@@ -101,12 +95,6 @@ binfmt$(DELIM)libbinfmt$(LIBEXT): context
 lib$(DELIM)libbinfmt$(LIBEXT): binfmt$(DELIM)libbinfmt$(LIBEXT)
 	$(Q) install binfmt$(DELIM)libbinfmt$(LIBEXT) lib$(DELIM)libbinfmt$(LIBEXT)
 
-graphics$(DELIM)libgraphics$(LIBEXT): context
-	$(Q) $(MAKE) -C graphics TOPDIR="$(TOPDIR)" libgraphics$(LIBEXT) KERNEL=y EXTRADEFINES=$(KDEFINE)
-
-lib$(DELIM)libgraphics$(LIBEXT): graphics$(DELIM)libgraphics$(LIBEXT)
-	$(Q) install graphics$(DELIM)libgraphics$(LIBEXT) lib$(DELIM)libgraphics$(LIBEXT)
-
 audio$(DELIM)libaudio$(LIBEXT): context
 	$(Q) $(MAKE) -C audio TOPDIR="$(TOPDIR)" libaudio$(LIBEXT) KERNEL=y EXTRADEFINES=$(KDEFINE)
 
@@ -128,12 +116,6 @@ libc$(DELIM)libuc$(LIBEXT): context
 
 lib$(DELIM)libuc$(LIBEXT): libc$(DELIM)libuc$(LIBEXT)
 	$(Q) install libc$(DELIM)libuc$(LIBEXT) lib$(DELIM)libuc$(LIBEXT)
-
-libnx$(DELIM)libunx$(LIBEXT): context
-	$(Q) $(MAKE) -C libnx TOPDIR="$(TOPDIR)" libunx$(LIBEXT) KERNEL=n
-
-lib$(DELIM)libunx$(LIBEXT): libnx$(DELIM)libunx$(LIBEXT)
-	$(Q) install libnx$(DELIM)libunx$(LIBEXT) lib$(DELIM)libunx$(LIBEXT)
 
 mm$(DELIM)libumm$(LIBEXT): context
 	$(Q) $(MAKE) -C mm TOPDIR="$(TOPDIR)" libumm$(LIBEXT) KERNEL=n
@@ -172,12 +154,6 @@ libc$(DELIM)libc$(LIBEXT): context
 
 lib$(DELIM)libc$(LIBEXT): libc$(DELIM)libc$(LIBEXT)
 	$(Q) install libc$(DELIM)libc$(LIBEXT) lib$(DELIM)libc$(LIBEXT)
-
-libnx$(DELIM)libnx$(LIBEXT): context
-	$(Q) $(MAKE) -C libnx TOPDIR="$(TOPDIR)" libnx$(LIBEXT)
-
-lib$(DELIM)libnx$(LIBEXT): libnx$(DELIM)libnx$(LIBEXT)
-	$(Q) install libnx$(DELIM)libnx$(LIBEXT) lib$(DELIM)libnx$(LIBEXT)
 
 mm$(DELIM)libmm$(LIBEXT): context
 	$(Q) $(MAKE) -C mm TOPDIR="$(TOPDIR)" libmm$(LIBEXT)

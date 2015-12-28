@@ -111,13 +111,6 @@ else
 OTHERDIRS += syscall
 endif
 
-ifeq ($(CONFIG_NX),y)
-NONFSDIRS += graphics libnx
-CONTEXTDIRS += graphics libnx
-else
-OTHERDIRS += graphics libnx
-endif
-
 ifeq ($(CONFIG_AUDIO),y)
 NONFSDIRS += audio
 else

@@ -92,18 +92,6 @@ else
 NUTTXLIBS += lib$(DELIM)libfs$(LIBEXT) lib$(DELIM)libdrivers$(LIBEXT) lib$(DELIM)libbinfmt$(LIBEXT)
 endif
 
-# Add libraries for the NX graphics sub-system
-
-ifeq ($(CONFIG_NX),y)
-NUTTXLIBS += lib$(DELIM)libgraphics$(LIBEXT)
-ifeq ($(CONFIG_BUILD_PROTECTED),y)
-NUTTXLIBS += lib$(DELIM)libknx$(LIBEXT)
-USERLIBS  += lib$(DELIM)libunx$(LIBEXT)
-else
-NUTTXLIBS += lib$(DELIM)libnx$(LIBEXT)
-endif
-endif
-
 # Add libraries for the Audio sub-system
 
 ifeq ($(CONFIG_AUDIO),y)

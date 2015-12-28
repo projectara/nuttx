@@ -441,13 +441,6 @@ config DEBUG_FS
 	---help---
 		Enable file system debug SYSLOG output (disabled by default)
 
-config DEBUG_GRAPHICS
-	bool "Graphics Debug Output"
-	default n
-	depends on NX
-	---help---
-		Enable NX graphics debug SYSLOG output (disabled by default)
-
 config DEBUG_LIB
 	bool "C Library Debug Output"
 	default n
@@ -743,10 +736,6 @@ endmenu
 menu "File Systems"
 source fs/Kconfig
 endmenu
-
-#menu "Graphics Support"
-#source graphics/Kconfig
-#endmenu
 
 menu "Memory Management"
 source mm/Kconfig
