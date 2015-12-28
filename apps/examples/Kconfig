@@ -29,7 +29,6 @@
 # see misc/tools/kconfig-language.txt.
 #
 
-source "$APPSDIR/examples/configdata/Kconfig"
 source "$APPSDIR/examples/cpuhog/Kconfig"
 source "$APPSDIR/examples/cxxtest/Kconfig"
 source "$APPSDIR/examples/dhcpd/Kconfig"

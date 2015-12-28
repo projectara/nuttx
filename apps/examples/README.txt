@@ -24,11 +24,6 @@ examples
       "named" applications that can be executed from the NSH
       command line (see apps/README.txt for more information).
 
-examples/configdata
-^^^^^^^^^^^^^^^^^^^
-
-  This is a Unit Test for the MTD configuration data driver
-
 examples/cpuhog
 ^^^^^^^^^^^^^^^
 
