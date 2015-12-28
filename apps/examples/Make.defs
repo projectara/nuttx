@@ -157,10 +157,6 @@ ifeq ($(CONFIG_EXAMPLES_NULL),y)
 CONFIGURED_APPS += examples/null
 endif
 
-ifeq ($(CONFIG_EXAMPLES_NXTERM),y)
-CONFIGURED_APPS += examples/nxterm
-endif
-
 ifeq ($(CONFIG_EXAMPLES_NXFFS),y)
 CONFIGURED_APPS += examples/nxffs
 endif

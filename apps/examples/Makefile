@@ -67,7 +67,7 @@
 SUBDIRS  = cpuhog cxxtest dhcpd discover elf
 SUBDIRS += flash_test ftpc ftpd hello helloxx hidkbd igmp i2schar json
 SUBDIRS += keypadtest lcdrw mm mount mtdpart mtdrwb netpkt nettest
-SUBDIRS += nrf24l01_term nsh null nxterm nxffs nxflat
+SUBDIRS += nrf24l01_term nsh null nxffs nxflat
 SUBDIRS += nxtext ostest pashello pipe poll posix_spawn pwm qencoder
 SUBDIRS += random relays rgmp romfs sendmail serialblaster serloop serialrx
 SUBDIRS += slcd smart smart_test tcpecho telnetd thttpd tiff touchscreen udp
