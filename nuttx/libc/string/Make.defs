@@ -44,11 +44,7 @@ CSRCS += lib_strncpy.c lib_strndup.c lib_strcasestr.c lib_strpbrk.c
 CSRCS += lib_strrchr.c lib_strspn.c lib_strstr.c lib_strtok.c lib_strtokr.c
 
 ifneq ($(CONFIG_ARCH_MEMCPY),y)
-ifeq ($(CONFIG_MEMCPY_VIK),y)
-CSRCS += lib_vikmemcpy.c
-else
 CSRCS += lib_memcpy.c
-endif
 endif
 
 # Add the string directory to the build

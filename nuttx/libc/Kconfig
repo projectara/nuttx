@@ -296,39 +296,6 @@ config ARCH_MEMCPY
 		Select this option if the architecture provides an optimized version
 		of memcpy().
 
-config MEMCPY_VIK
-	bool "Vik memcpy()"
-	default n
-	depends on !ARCH_MEMCPY
-	---help---
-		Select this option to use the optimized memcpy() function by Daniel Vik.
-		Select this option for improved performance at the expense of increased
-		size. See licensing information in the top-level COPYING file.
-
-if MEMCPY_VIK
-
-config MEMCPY_PRE_INC_PTRS
-	bool "Pre-increment pointers"
-	default n
-	---help---
-		Use pre-increment of pointers. Default is post increment of pointers.
-
-config MEMCPY_INDEXED_COPY
-	bool "Array indexing"
-	default y
-	---help---
-		Copying data using array indexing. Using this option, disables the
-		MEMCPY_PRE_INC_PTRS option.
-
-config MEMCPY_64BIT
-	bool "64-bit memcpy()"
-	default n
-	---help---
-		Compiles memcpy() for architectures that suppport 64-bit operations
-		efficiently.
-
-endif # MEMCPY_VIK
-
 config ARCH_MEMCMP
 	bool "memcmp()"
 	default n
