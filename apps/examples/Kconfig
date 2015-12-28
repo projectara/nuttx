@@ -29,7 +29,6 @@
 # see misc/tools/kconfig-language.txt.
 #
 
-source "$APPSDIR/examples/adc/Kconfig"
 source "$APPSDIR/examples/buttons/Kconfig"
 source "$APPSDIR/examples/can/Kconfig"
 source "$APPSDIR/examples/cc3000/Kconfig"

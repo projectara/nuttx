@@ -24,30 +24,6 @@ examples
       "named" applications that can be executed from the NSH
       command line (see apps/README.txt for more information).
 
-examples/adc
-^^^^^^^^^^^^
-
-  A mindlessly simple test of an ADC devices.  It simply reads from the
-  ADC device and dumps the data to the console forever.
-
-  This test depends on these specific ADC/NSH configurations settings (your
-  specific ADC settings might require additional settings).
-
-    CONFIG_ADC - Enabled ADC support
-    CONFIG_NSH_BUILTIN_APPS - Build the ADC test as an NSH built-in function.
-      Default: Built as a standalone problem
-
-  Specific configuration options for this example include:
-
-    CONFIG_EXAMPLES_ADC_DEVPATH - The default path to the ADC device. Default: /dev/adc0
-    CONFIG_EXAMPLES_ADC_NSAMPLES - If CONFIG_NSH_BUILTIN_APPS
-      is defined, then the number of samples is provided on the command line
-      and this value is ignored.  Otherwise, this number of samples is
-      collected and the program terminates.  Default:  Samples are collected
-      indefinitely.
-    CONFIG_EXAMPLES_ADC_GROUPSIZE - The number of samples to read at once.
-      Default: 4
-
 examples/buttons
 ^^^^^^^^^^^^^^^^
 
@@ -494,7 +470,7 @@ examples/igmp
   * CONFIG_EXAMPLES_NETLIB
       The networking library is needed
 
-examples/adc
+examples/i2c
 ^^^^^^^^^^^^
 
   A mindlessly simple test of an I2C driver.  It reads an write garbage data to the
