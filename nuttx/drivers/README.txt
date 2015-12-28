@@ -73,10 +73,6 @@ input/
   This includes such things as touchscreen and keypad drivers.
   See include/nuttx/input/*.h for registration information.
 
-lcd/
-  Drivers for parallel and serial LCD and OLED type devices.  These
-  drivers support interfaces as defined in include/nuttx/lcd/lcd.h
-
 mmcsd/
   Support for MMC/SD block drivers.  MMC/SD block drivers based on
   SPI and SDIO/MCI interfaces are supported.  See include/nuttx/mmcsd.h

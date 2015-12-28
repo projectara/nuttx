@@ -348,7 +348,6 @@ CONFIG_I2C_TRANSFER=y
 # CONFIG_AUDIO_DEVICES is not set
 # CONFIG_BCH is not set
 # CONFIG_INPUT is not set
-# CONFIG_LCD is not set
 # CONFIG_MMCSD is not set
 # CONFIG_MTD is not set
 # CONFIG_PIPES is not set
