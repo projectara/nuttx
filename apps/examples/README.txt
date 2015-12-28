@@ -760,55 +760,6 @@ examples/nxflat
   the NXFLAT format and installed in a ROMFS file system.  At run time,
   each program in the ROMFS file system is executed.  Requires CONFIG_NXFLAT.
 
-examples/nximage
-^^^^^^^^^^^^^^^^
-
-  This is a simple example that just puts the NuttX logo image in the center
-  of the display.  This only works for RGB23 (888), RGB16 (656), RGB8 (332),
-  and 8-bit greyscale for now.
-
-    CONFIG_NSH_BUILTIN_APPS -- Build the NXIMAGE example as a "built-in"
-      that can be executed from the NSH command line
-    CONFIG_EXAMPLES_NXIMAGE_VPLANE -- The plane to select from the frame-
-      buffer driver for use in the test.  Default: 0
-    CONFIG_EXAMPLES_NXIMAGE_DEVNO - The LCD device to select from the LCD
-      driver for use in the test: Default: 0
-    CONFIG_EXAMPLES_NXIMAGE_BPP -- Pixels per pixel to use.  Valid options
-      include 8, 16, and 24.  Default is 16.
-    CONFIG_EXAMPLES_NXIMAGE_XSCALEp5, CONFIG_EXAMPLES_NXIMAGE_XSCALE1p5,
-    CONFIG_EXAMPLES_NXIMAGE_XSCALE2p0 -- The logo image width is 160 columns.
-      One of these may be defined to rescale the image horizontally by .5, 1.5,
-      or 2.0.
-    CONFIG_EXAMPLES_NXIMAGE_YSCALEp5, CONFIG_EXAMPLES_NXIMAGE_YSCALE1p5,
-    CONFIG_EXAMPLES_NXIMAGE_YSCALE2p0 -- The logo image height is 160 rows.
-      One of these may be defined to rescale the image vertically by .5, 1.5,
-      or 2.0.
-    CONFIG_EXAMPLES_NXIMAGE_GREYSCALE -- Grey scale image.  Default: RGB.
-    CONFIG_EXAMPLES_NXIMAGE_EXTERNINIT - The driver for the graphics device on
-      this platform requires some unusual initialization.  This is the
-      for, for example, SPI LCD/OLED devices.  If this configuration is
-      selected, then the platform code must provide an LCD initialization
-      function with a prototype like:
-
-      #ifdef CONFIG_NX_LCDDRIVER
-      FAR struct lcd_dev_s *up_nxdrvinit(unsigned int devno);
-      #else
-      FAR struct fb_vtable_s *up_nxdrvinit(unsigned int devno);
-      #endif
-
-    How was that run-length encoded image produced?
-
-    a. I used GIMP output the image as a .c file.
-    b. I added som C logic to palette-ize the RGB image in the GIMP .c file
-    c. Then I add some simple run-length encoding to palette-ized image.
-
-    But now there is a tool that can be found in the NxWidgets package at
-    NxWidgets/tools/bitmap_converter.py that can be used to convert any
-    graphics format to the NuttX RLE format.
-
-    NOTE: As of this writing, most of the pixel depth, scaling options, and
-    combinations thereof have not been tested.
-
 examples/nxtext
 ^^^^^^^^^^^^^^^
 
