@@ -169,10 +169,6 @@ ifeq ($(CONFIG_EXAMPLES_NXFLAT),y)
 CONFIGURED_APPS += examples/nxflat
 endif
 
-ifeq ($(CONFIG_EXAMPLES_NXHELLO),y)
-CONFIGURED_APPS += examples/nxhello
-endif
-
 ifeq ($(CONFIG_EXAMPLES_NXIMAGE),y)
 CONFIGURED_APPS += examples/nximage
 endif
