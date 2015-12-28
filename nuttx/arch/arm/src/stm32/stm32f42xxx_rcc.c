@@ -582,12 +582,6 @@ static inline void rcc_enableapb2(void)
   regval |= RCC_APB2ENR_SPI6EN;
 #endif
 
-#ifdef CONFIG_STM32_LTDC
-  /* LTDC clock enable */
-
-  regval |= RCC_APB2ENR_LTDCEN;
-#endif
-
   putreg32(regval, STM32_RCC_APB2ENR);   /* Enable peripherals */
 }
 
@@ -762,32 +756,6 @@ static void stm32_stdclockconfig(void)
       while ((getreg32(STM32_RCC_CFGR) & RCC_CFGR_SWS_MASK) != RCC_CFGR_SWS_PLL)
         {
         }
-
-#ifdef CONFIG_STM32_LTDC
-      /* Configure PLLSAI */
-
-      regval = getreg32(STM32_RCC_PLLSAICFGR);
-      regval |= (STM32_RCC_PLLSAICFGR_PLLSAIN
-                | STM32_RCC_PLLSAICFGR_PLLSAIR
-                | STM32_RCC_PLLSAICFGR_PLLSAIQ);
-      putreg32(regval, STM32_RCC_PLLSAICFGR);
-
-      regval = getreg32(STM32_RCC_DCKCFGR);
-      regval |= STM32_RCC_DCKCFGR_PLLSAIDIVR;
-      putreg32(regval, STM32_RCC_DCKCFGR);
-
-      /* Enable PLLSAI */
-
-      regval = getreg32(STM32_RCC_CR);
-      regval |= RCC_CR_PLLSAION;
-      putreg32(regval, STM32_RCC_CR);
-
-      /* Wait until the PLLSAI is ready */
-
-      while ((getreg32(STM32_RCC_CR) & RCC_CR_PLLSAIRDY) == 0)
-        {
-        }
-#endif
 
 #if defined(CONFIG_STM32_IWDG) || defined(CONFIG_RTC_LSICLOCK)
       /* Low speed internal clock source LSI */

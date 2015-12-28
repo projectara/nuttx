@@ -81,7 +81,6 @@
 #include "stm32_fsmc.h"
 #include "stm32_gpio.h"
 #include "stm32_i2c.h"
-#include "stm32_ltdc.h"
 #include "stm32_pwr.h"
 #include "stm32_rcc.h"
 #include "stm32_rtc.h"
