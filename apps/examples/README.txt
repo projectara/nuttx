@@ -24,11 +24,6 @@ examples
       "named" applications that can be executed from the NSH
       command line (see apps/README.txt for more information).
 
-examples/cc3000
-^^^^^^^^^^^^^^^
-
-  This is a test for the TI CC3000 wireless networking module.
-
 examples/configdata
 ^^^^^^^^^^^^^^^^^^^
 
