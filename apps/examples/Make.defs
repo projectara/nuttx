@@ -253,10 +253,6 @@ ifeq ($(CONFIG_EXAMPLES_THTTPD),y)
 CONFIGURED_APPS += examples/thttpd
 endif
 
-ifeq ($(CONFIG_EXAMPLES_TIFF),y)
-CONFIGURED_APPS += examples/tiff
-endif
-
 ifeq ($(CONFIG_EXAMPLES_TOUCHSCREEN),y)
 CONFIGURED_APPS += examples/touchscreen
 endif
