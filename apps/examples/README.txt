@@ -1042,12 +1042,6 @@ examples/serloop
       Use C buffered I/O (getchar/putchar) vs. raw console I/O
       (read/read).
 
-examples/slcd
-^^^^^^^^^^^^^
-  A simple test of alphanumeric, segment LCDs (SLCDs).
-
-  * CONFIG_EXAMPLES_SLCD - Enable the SLCD test
-
 examples/smart
 ^^^^^^^^^^^^^^
 

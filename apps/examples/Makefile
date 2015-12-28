@@ -70,7 +70,7 @@ SUBDIRS += keypadtest mm mount mtdpart mtdrwb netpkt nettest
 SUBDIRS += nrf24l01_term nsh null nxffs nxflat
 SUBDIRS += ostest pashello pipe poll posix_spawn pwm qencoder
 SUBDIRS += random relays rgmp romfs sendmail serialblaster serloop serialrx
-SUBDIRS += slcd smart smart_test tcpecho telnetd thttpd touchscreen udp
+SUBDIRS += smart smart_test tcpecho telnetd thttpd touchscreen udp
 SUBDIRS += usbserial usbterm watchdog webserver wget wgetjson xmlrpc
 
 # Sub-directories that might need context setup.  Directories may need
@@ -83,7 +83,7 @@ ifeq ($(CONFIG_NSH_BUILTIN_APPS),y)
 CNTXTDIRS += cpuhog cxxtest dhcpd discover flash_test ftpd
 CNTXTDIRS += hello helloxx i2schar json keypadtestmodbus mtdpart mtdrwb
 CNTXTDIRS += netpkt nettest nrf24l01_term
-CNTXTDIRS += ostest random relays qencoder serialblasterslcd serialrx
+CNTXTDIRS += ostest random relays qencoder serialblaster serialrx
 CNTXTDIRS += smart_test tcpecho telnetd touchscreen usbterm watchdog
 CNTXTDIRS += wgetjson
 endif

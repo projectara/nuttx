@@ -97,12 +97,6 @@ ifeq ($(CONFIG_LIB_KBDCODEC),y)
 CSRCS += lib_kbdencode.c lib_kbddecode.c
 endif
 
-# SLCD driver encoder/decoder
-
-ifeq ($(CONFIG_LIB_SLCDCODEC),y)
-CSRCS += lib_slcdencode.c lib_slcddecode.c
-endif
-
 # Ring buffer package
 
 ifeq ($(CONFIG_LIB_RING_BUF),y)

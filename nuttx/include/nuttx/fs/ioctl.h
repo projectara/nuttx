@@ -275,12 +275,6 @@
 #define _AUDIOIOCVALID(c)  (_IOC_TYPE(c)==_AUDIOIOCBASE)
 #define _AUDIOIOC(nr)      _IOC(_AUDIOIOCBASE,nr)
 
-/* Segment LCD driver ioctl definitions *************************************/
-/* (see nuttx/include/lcd/slcd_codec.h */
-
-#define _SLCDIOCVALID(c)   (_IOC_TYPE(c)==_SLCDIOCBASE)
-#define _SLCDIOC(nr)       _IOC(_SLCDIOCBASE,nr)
-
 /* Wireless driver ioctl definitions ****************************************/
 /* (see nuttx/include/wireless/wireless.h */
 
