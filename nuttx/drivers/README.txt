@@ -122,9 +122,6 @@ serial/
 usbdev/
   USB device drivers.  See also include/nuttx/usb/usbdev.h
 
-usbhost/
-  USB host drivers.  See also include/nuttx/usb/usbhost.h
-
 wireless/
   Drivers for various wireless devices.
 
@@ -138,4 +135,3 @@ The following skeleton files are available:
   drivers/lcd/skeleton.c -- Skeleton LCD driver
   drivers/mtd/skeleton.c -- Skeleton memory technology device drivers
   drivers/net/skeleton.c -- Skeleton network/Ethernet drivers
-  drivers/usbhost/usbhost_skeleton.c -- Skeleton USB host class driver

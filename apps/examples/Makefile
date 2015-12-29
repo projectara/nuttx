@@ -65,7 +65,7 @@
 # Sub-directories
 
 SUBDIRS  = cpuhog cxxtest dhcpd discover elf
-SUBDIRS += flash_test ftpc ftpd hello helloxx hidkbd igmp i2schar json
+SUBDIRS += flash_test ftpc ftpd hello helloxx igmp i2schar json
 SUBDIRS += keypadtest mm mount mtdpart mtdrwb netpkt nettest
 SUBDIRS += nrf24l01_term nsh null nxffs nxflat
 SUBDIRS += ostest pashello pipe poll posix_spawn pwm qencoder

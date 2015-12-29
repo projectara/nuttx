@@ -525,16 +525,6 @@ if USBDEV
 source drivers/usbdev/Kconfig
 endif # USBDEV
 
-menuconfig USBHOST
-	bool "USB Host Driver Support"
-	default n
-	---help---
-		USB host drivers.  See also include/nuttx/usb/usbhost.h
-
-if USBHOST
-source drivers/usbhost/Kconfig
-endif # USBHOST
-
 menuconfig WIRELESS
 	bool "Wireless Device Support"
 	default n

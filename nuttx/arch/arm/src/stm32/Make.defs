@@ -165,25 +165,6 @@ CHIP_CSRCS += stm32_otgfsdev.c
 endif
 endif
 
-ifeq ($(CONFIG_USBHOST),y)
-ifeq ($(CONFIG_STM32_OTGFS),y)
-CHIP_CSRCS += stm32_otgfshost.c
-endif
-ifeq ($(CONFIG_STM32_OTGFS2),y)
-CHIP_CSRCS += stm32_otgfshost.c
-endif
-endif
-
-ifeq ($(CONFIG_USBHOST),y)
-ifeq ($(CONFIG_USBHOST_TRACE),y)
-CHIP_CSRCS += stm32_usbhost.c
-else
-ifeq ($(CONFIG_DEBUG_USB),y)
-CHIP_CSRCS += stm32_usbhost.c
-endif
-endif
-endif
-
 ifneq ($(CONFIG_ARCH_IDLE_CUSTOM),y)
 CHIP_CSRCS += stm32_idle.c
 endif
