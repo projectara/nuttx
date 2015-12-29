@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015 Google Inc.
+ * Copyright (c) 2014-2016 Google Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -55,15 +55,6 @@ struct gpio_ops_s
     int (*mask_irq)(void *driver_data, uint8_t which);
     int (*unmask_irq)(void *driver_data, uint8_t which);
     int (*clear_interrupt)(void *driver_data, uint8_t which);
-};
-
-struct gpio_chip_s
-{
-    struct list_head list;
-    struct gpio_ops_s *ops;
-    void *driver_data;
-    uint8_t base;
-    uint8_t end;
 };
 
 int gpio_get_direction(uint8_t which);
