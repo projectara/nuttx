@@ -83,7 +83,6 @@ include gpio$(DELIM)Make.defs
 include input$(DELIM)Make.defs
 include mmcsd$(DELIM)Make.defs
 include mtd$(DELIM)Make.defs
-include net$(DELIM)Make.defs
 include pipes$(DELIM)Make.defs
 include power$(DELIM)Make.defs
 include sensors$(DELIM)Make.defs
@@ -92,7 +91,6 @@ include serial$(DELIM)Make.defs
 include spi$(DELIM)Make.defs
 include syslog$(DELIM)Make.defs
 include usbdev$(DELIM)Make.defs
-include wireless$(DELIM)Make.defs
 include greybus$(DELIM)Make.defs
 
 ifneq ($(CONFIG_NFILE_DESCRIPTORS),0)

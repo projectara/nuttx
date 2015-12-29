@@ -54,7 +54,6 @@
 #include <nuttx/irq.h>
 #include <nuttx/mm/shm.h>
 #include <nuttx/fs/fs.h>
-#include <nuttx/net/net.h>
 
 #include <arch/arch.h>
 

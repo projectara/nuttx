@@ -47,7 +47,6 @@
 #include <assert.h>
 
 #include <nuttx/sched.h>
-#include <nuttx/net/net.h>
 
 #if CONFIG_NFILE_DESCRIPTORS > 0 && CONFIG_NET_SENDFILE
 

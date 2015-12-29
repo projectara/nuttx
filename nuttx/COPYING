@@ -44,23 +44,6 @@ License for NuttX in general (authorship of individual files may vary):
  *
  *************************************************************************/
 
-uIP
-^^^
-
-Many lower-level networking components of NuttX derive from uIP which
-has a similar BSD style license:
-
-   Copyright (c) 2001-2003, Adam Dunkels.
-   All rights reserved.
-
-IGMP
-^^^^
-
-IGMP support, if enabled in uIP, adds additional logic by Steve Reynolds:
-
-  Copyright (c) 2002 CITEL Technologies Ltd.
-  All rights reserved.
-
 Certain functions in the NuttX C-library derive from other BSD-compatible
 sources:
 

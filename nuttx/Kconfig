@@ -460,13 +460,6 @@ config DEBUG_SHM
 	---help---
 		Enable shared memory management debug SYSLOG output (disabled by default)
 
-config DEBUG_NET
-	bool "Network Debug Output"
-	default n
-	depends on ARCH_HAVE_NET
-	---help---
-		Enable network debug SYSLOG output (disabled by default)
-
 config DEBUG_SCHED
 	bool "Scheduler Debug Output"
 	default n
@@ -724,10 +717,6 @@ endmenu
 menu "Device Drivers"
 source drivers/Kconfig
 endmenu
-
-#menu "Networking Support"
-#source net/Kconfig
-#endmenu
 
 #menu "Crypto API"
 #source crypto/Kconfig

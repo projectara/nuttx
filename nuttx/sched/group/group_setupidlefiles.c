@@ -47,7 +47,6 @@
 #include <debug.h>
 
 #include <nuttx/fs/fs.h>
-#include <nuttx/net/net.h>
 
 #include "group/group.h"
 

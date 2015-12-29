@@ -74,7 +74,6 @@
 #include  <nuttx/arch.h>
 #include  <nuttx/compiler.h>
 #include  <nuttx/fs/fs.h>
-#include  <nuttx/net/net.h>
 #include  <nuttx/lib.h>
 #include  <nuttx/mm/mm.h>
 #include  <nuttx/mm/shm.h>

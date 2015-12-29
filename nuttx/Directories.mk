@@ -144,13 +144,6 @@ else
 KERNDEPDIRS += $(FSDIRS)
 endif
 
-# Add networking directories to KERNDEPDIRS and CLEANDIRS
-
-ifeq ($(CONFIG_NET),y)
-KERNDEPDIRS += net
-endif
-CLEANDIRS += net
-
 ifeq ($(CONFIG_CRYPTO),y)
 KERNDEPDIRS += crypto
 endif

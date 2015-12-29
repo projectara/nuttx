@@ -69,24 +69,8 @@ ifeq ($(CONFIG_EXAMPLES_CXXTEST),y)
 CONFIGURED_APPS += examples/cxxtest
 endif
 
-ifeq ($(CONFIG_EXAMPLES_DHCPD),y)
-CONFIGURED_APPS += examples/dhcpd
-endif
-
-ifeq ($(CONFIG_EXAMPLES_DISCOVER),y)
-CONFIGURED_APPS += examples/discover
-endif
-
 ifeq ($(CONFIG_EXAMPLES_ELF),y)
 CONFIGURED_APPS += examples/elf
-endif
-
-ifeq ($(CONFIG_EXAMPLES_FTPC),y)
-CONFIGURED_APPS += examples/ftpc
-endif
-
-ifeq ($(CONFIG_EXAMPLES_FTPD),y)
-CONFIGURED_APPS += examples/ftpd
 endif
 
 ifeq ($(CONFIG_EXAMPLES_HELLO),y)
@@ -127,14 +111,6 @@ endif
 
 ifeq ($(CONFIG_EXAMPLES_MTDRWB),y)
 CONFIGURED_APPS += examples/mtdrwb
-endif
-
-ifeq ($(CONFIG_EXAMPLES_NETPKT),y)
-CONFIGURED_APPS += examples/netpkt
-endif
-
-ifeq ($(CONFIG_EXAMPLES_NETTEST),y)
-CONFIGURED_APPS += examples/nettest
 endif
 
 ifeq ($(CONFIG_EXAMPLES_NRF24L01TERM),y)
@@ -227,10 +203,6 @@ endif
 
 ifeq ($(CONFIG_EXAMPLES_SMART),y)
 CONFIGURED_APPS += examples/smart
-endif
-
-ifeq ($(CONFIG_EXAMPLES_TCPECHO),y)
-CONFIGURED_APPS += examples/tcpecho
 endif
 
 ifeq ($(CONFIG_EXAMPLES_TELNETD),y)

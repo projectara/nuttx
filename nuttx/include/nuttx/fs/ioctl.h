@@ -275,12 +275,6 @@
 #define _AUDIOIOCVALID(c)  (_IOC_TYPE(c)==_AUDIOIOCBASE)
 #define _AUDIOIOC(nr)      _IOC(_AUDIOIOCBASE,nr)
 
-/* Wireless driver ioctl definitions ****************************************/
-/* (see nuttx/include/wireless/wireless.h */
-
-#define _WLIOCVALID(c)     (_IOC_TYPE(c)==_WLIOCBASE)
-#define _WLIOC(nr)         _IOC(_WLIOCBASE,nr)
-
 /* Application Config Data driver ioctl definitions *************************/
 /* (see nuttx/include/configdata.h */
 

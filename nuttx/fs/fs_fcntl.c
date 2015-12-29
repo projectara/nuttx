@@ -45,7 +45,6 @@
 #include <assert.h>
 
 #include <nuttx/fs/fs.h>
-#include <nuttx/net/net.h>
 #include <nuttx/sched.h>
 
 #include "fs_internal.h"

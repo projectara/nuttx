@@ -44,10 +44,6 @@
 #include <errno.h>
 #include <nuttx/fs/fs.h>
 
-#if defined(CONFIG_NET) && CONFIG_NSOCKET_DESCRIPTORS > 0
-# include <nuttx/net/net.h>
-#endif
-
 #include "fs_internal.h"
 
 /****************************************************************************

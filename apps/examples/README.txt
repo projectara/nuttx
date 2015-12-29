@@ -65,59 +65,6 @@ examples/cxxtest
 
   Additional uClibc++ settings may be required in your build environment.
 
-examples/dhcpd
-^^^^^^^^^^^^^^
-
-  This examples builds a tiny DCHP server for the target system.
-
-  NOTE: For test purposes, this example can be built as a
-  host-based DHCPD server.  This can be built as follows:
-
-    cd examples/dhcpd
-    make -f Makefile.host TOPDIR=<nuttx-directory>
-
-  NuttX configuration settings:
-
-    CONFIG_NET=y                   - Of course
-    CONFIG_NSOCKET_DESCRIPTORS     - And, of course, you must allocate some
-                                     socket descriptors.
-    CONFIG_NET_UDP=y               - UDP support is required for DHCP
-                                     (as well as various other UDP-related
-                                     configuration settings)
-    CONFIG_NET_BROADCAST=y         - UDP broadcast support is needed.
-    CONFIG_NETUTILS_NETLIB=y       - The networking library is needed
-
-    CONFIG_EXAMPLES_DHCPD_NOMAC     - (May be defined to use software assigned MAC)
-    CONFIG_EXAMPLES_DHCPD_IPADDR    - Target IP address
-    CONFIG_EXAMPLES_DHCPD_DRIPADDR  - Default router IP addess
-    CONFIG_EXAMPLES_DHCPD_NETMASK   - Network mask
-
-  See also CONFIG_NETUTILS_DHCPD_* settings described elsewhere
-  and used in netutils/dhcpd/dhcpd.c. These settings are required
-  to described the behavior of the daemon.
-
-examples/discover
-^^^^^^^^^^^^^^^^^
-
-  This example exercises netutils/discover utility.  This example initializes
-  and starts the UDP discover daemon. This daemon is useful for discovering
-  devices in local networks, especially with DHCP configured devices.  It
-  listens for UDP broadcasts which also can include a device class so that
-  groups of devices can be discovered. It is also possible to address all
-  classes with a kind of broadcast discover.
-
-  This example will automatically be built as an NSH built-in if
-  CONFIG_NSH_BUILTIN_APPS is selected.  Otherwise, it will be a standalone
-  program with entry point "discover_main".
-
-  NuttX configuration settings:
-
-    CONFIG_EXAMPLES_DISCOVER_DHCPC - DHCP Client
-    CONFIG_EXAMPLES_DISCOVER_NOMAC - Use canned MAC address
-    CONFIG_EXAMPLES_DISCOVER_IPADDR - Target IP address
-    CONFIG_EXAMPLES_DISCOVER_DRIPADDR - Router IP address
-    CONFIG_EXAMPLES_DISCOVER_NETMASK - Network Mask
-
 examples/elf
 ^^^^^^^^^^^^
 
@@ -197,109 +144,6 @@ examples/flash_test
     * CONFIG_BUILD_PROTECTED=n and CONFIG_BUILD_KERNEL=n- This test uses
       internal OS interfaces and so is not available in the NUTTX kernel
       builds
-
-examples/ftpc
-^^^^^^^^^^^^^
-
-  This is a simple FTP client shell used to exercise the capabilities
-  of the FTPC library (apps/netutils/ftpc).  This example is configured
-  to that it will only work as a "built-in" program that can be run from
-  NSH when CONFIG_NSH_BUILTIN_APPS is defined.
-
-  From NSH, the startup command sequence is as follows.  This is only
-  an example, your configration could have different mass storage devices,
-  mount paths, and FTP directories:
-
-    nsh> mount -t vfat /dev/mmcsd0 /tmp # Mount the SD card at /tmp
-    nsh> cd /tmp                        # cd into the /tmp directory
-    nsh> ftpc xx.xx.xx.xx[:pp]          # Start the FTP client
-    nfc> login <name> <password>        # Log into the FTP server
-    nfc> help                           # See a list of FTP commands
-
-  where xx.xx.xx.xx is the IP address of the FTP server and pp is an
-  optional port number.
-
-  NOTE:  By default, FTPC uses readline to get data from stdin.  So your
-  defconfig file must have the following build path:
-
-    CONFIG_SYSTEM_READLINE=y
-
-  NOTE: If you use the ftpc task over a telnet NSH connection, then you
-  should set the following configuration item:
-
-    CONFIG_EXAMPLES_FTPC_FGETS=y
-
-  By default, the FTPC client will use readline() to get characters from
-  the console.  Readline includes and command-line editor and echos
-  characters received in stdin back through stdout.  Neither of these
-  behaviors are desire-able if Telnet is used.
-
-  You may also want to define the following in your configuration file.
-  Otherwise, you will have not feeback about what is going on:
-
-    CONFIG_DEBUG=y
-    CONFIG_DEBUG_VERBOSE=y
-    CONFIG_DEBUG_FTPC=y
-
-examples/ftpd
-^^^^^^^^^^^^^^
-
-  This example exercises the FTPD daemon at apps/netuils/ftpd.  Below are
-  configurations specific to the FTPD example (the FTPD daemon itself may
-  require other configuration options as well).
-
-   CONFIG_EXAMPLES_FTPD - Enable the FTPD example.
-   CONFIG_EXAMPLES_FTPD_PRIO - Priority of the FTP daemon.
-     Default: SCHED_PRIORITY_DEFAULT
-   CONFIG_EXAMPLES_FTPD_STACKSIZE - Stack size allocated for the
-     FTP daemon. Default: 2048
-   CONFIG_EXAMPLES_FTPD_NONETINIT - Define to suppress configuration of the
-     network by apps/examples/ftpd.  You would need to suppress network
-     configuration if the network is configuration prior to running the
-     example.
-
-  NSH always initializes the network so if CONFIG_NSH_BUILTIN_APPS is
-  defined, so is CONFIG_EXAMPLES_FTPD_NONETINIT (se it does not explicitly
-  need to be defined in that case):
-
-    CONFIG_NSH_BUILTIN_APPS - Build the FTPD daemon example test as an
-      NSH built-in function.  By default the FTPD daemon will be built
-      as a standalone application.
-
-  If CONFIG_EXAMPLES_FTPD_NONETINIT is not defined, then the following may
-  be specified to customized the network configuration:
-
-    CONFIG_EXAMPLES_FTPD_NOMAC - If the hardware has no MAC address of its
-      own, define this =y to provide a bogus address for testing.
-    CONFIG_EXAMPLES_FTPD_IPADDR - The target IP address.  Default 10.0.0.2
-    CONFIG_EXAMPLES_FTPD_DRIPADDR - The default router address. Default
-      10.0.0.1
-    CONFIG_EXAMPLES_FTPD_NETMASK - The network mask.  Default: 255.255.255.0
-
-  Other required configuration settings:  Of course TCP networking support
-  is required.  But here are a couple that are less obvious:
-
-    CONFIG_DISABLE_PTHREAD - pthread support is required
-    CONFIG_DISABLE_POLL - poll() support is required
-
-  Other FTPD configuration options thay may be of interest:
-
-    CONFIG_FTPD_VENDORID - The vendor name to use in FTP communications.
-      Default: "NuttX"
-    CONFIG_FTPD_SERVERID - The server name to use in FTP communications.
-      Default: "NuttX FTP Server"
-    CONFIG_FTPD_CMDBUFFERSIZE - The maximum size of one command.  Default:
-      512 bytes.
-    CONFIG_FTPD_DATABUFFERSIZE - The size of the I/O buffer for data
-      transfers.  Default: 2048 bytes.
-    CONFIG_FTPD_WORKERSTACKSIZE - The stacksize to allocate for each
-      FTP daemon worker thread.  Default:  2048 bytes.
-
-  The following netutils libraries should be enabled in your defconfig
-  file:
-
-    CONFIG_NETUTILS_NETLIB=y
-    CONFIG_NETUTILS_TELNED=y
 
 examples/hello
 ^^^^^^^^^^^^^^
@@ -546,22 +390,6 @@ examples/mtdrwb
     configuration in drivers/mtd/rammtd.c!
   * CONFIG_EXAMPLES_MTDRWB_NEBLOCKS - This value gives the nubmer of erase
     blocks in MTD RAM device.
-
-examples/netpkt
-^^^^^^^^^^^^^^^
-
-  A test of AF_PACKET, "raw" sockets.  Contributed by Lazlo Sitzer.
-
-examples/nettest
-^^^^^^^^^^^^^^^^
-
-  This is a simple network test for verifying client- and server-
-  functionality in a TCP/IP connection.
-
-    CONFIG_EXAMPLES_NETTEST=y - Enables the nettest example
-    CONFIG_EXAMPLES_NETLIB=y  - The networking library in needed.
-
-  See also examples/tcpecho
 
 examples/nrf24l01_term
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -1062,25 +890,6 @@ examples/smart_test
 
     * CONFIG_NSH_BUILTIN_APPS=y: This test can be built only as an NSH
       command
-
-examples/tcpecho
-^^^^^^^^^^^^^^^^
-
-  Simple single threaded, poll based TCP echo server. This example implements
-  the TCP Echo Server from W. Richard Stevens UNIX Network Programming Book.
-  Contributed by Max Holtberg.
-
-  See also examples/nettest
-
-    * CONFIG_EXAMPLES_TCPECHO =y: Enables the TCP echo server.
-    * CONFIG_XAMPLES_TCPECHO_PORT: Server Port, default 80
-    * CONFIG_EXAMPLES_TCPECHO_BACKLOG: Listen Backlog, default 8
-    * CONFIG_EXAMPLES_TCPECHO_NCONN: Number of Connections, default 8
-    * CONFIG_EXAMPLES_TCPECHO_DHCPC: DHCP Client, default n
-    * CONFIG_EXAMPLES_TCPECHO_NOMAC: Use Canned MAC Address, default n
-    * CONFIG_EXAMPLES_TCPECHO_IPADDR: Target IP address, default 0x0a000002
-    * CONFIG_EXAMPLES_TCPECHO_DRIPADDR: Default Router IP address (Gateway), default 0x0a000001
-    * CONFIG_EXAMPLES_TCPECHO_NETMASK: Network Mask, default 0xffffff00
 
 examples/telnetd
 ^^^^^^^^^^^^^^^^

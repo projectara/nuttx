@@ -64,13 +64,13 @@
 
 # Sub-directories
 
-SUBDIRS  = cpuhog cxxtest dhcpd discover elf
-SUBDIRS += flash_test ftpc ftpd hello helloxx igmp i2schar json
-SUBDIRS += keypadtest mm mount mtdpart mtdrwb netpkt nettest
+SUBDIRS  = cpuhog cxxtest elf
+SUBDIRS += flash_test hello helloxx igmp i2schar json
+SUBDIRS += keypadtest mm mount mtdpart mtdrwb
 SUBDIRS += nrf24l01_term nsh null nxffs nxflat
 SUBDIRS += ostest pashello pipe poll posix_spawn pwm qencoder
 SUBDIRS += random relays rgmp romfs sendmail serialblaster serloop serialrx
-SUBDIRS += smart smart_test tcpecho telnetd thttpd touchscreen udp
+SUBDIRS += smart smart_test telnetd thttpd touchscreen udp
 SUBDIRS += usbserial usbterm watchdog webserver wget wgetjson xmlrpc
 
 # Sub-directories that might need context setup.  Directories may need
@@ -80,11 +80,11 @@ SUBDIRS += usbserial usbterm watchdog webserver wget wgetjson xmlrpc
 CNTXTDIRS = pwm
 
 ifeq ($(CONFIG_NSH_BUILTIN_APPS),y)
-CNTXTDIRS += cpuhog cxxtest dhcpd discover flash_test ftpd
+CNTXTDIRS += cpuhog cxxtest flash_test
 CNTXTDIRS += hello helloxx i2schar json keypadtestmodbus mtdpart mtdrwb
-CNTXTDIRS += netpkt nettest nrf24l01_term
+CNTXTDIRS += nrf24l01_term
 CNTXTDIRS += ostest random relays qencoder serialblaster serialrx
-CNTXTDIRS += smart_test tcpecho telnetd touchscreen usbterm watchdog
+CNTXTDIRS += smart_test telnetd touchscreen usbterm watchdog
 CNTXTDIRS += wgetjson
 endif
 

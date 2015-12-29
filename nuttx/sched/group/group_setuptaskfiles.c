@@ -43,7 +43,6 @@
 #include <errno.h>
 
 #include <nuttx/fs/fs.h>
-#include <nuttx/net/net.h>
 
 #include "sched/sched.h"
 #include "group/group.h"

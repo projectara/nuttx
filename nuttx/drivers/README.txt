@@ -88,9 +88,6 @@ mtd/
   logic is unrelated; I just used the name MTD because I am not
   aware of any other common way to refer to this class of devices).
 
-net/
-  Network interface drivers.  See also include/nuttx/net/net.h
-
 pipes/
   FIFO and named pipe drivers.  Standard interfaces are declared
   in include/unistd.h
@@ -122,9 +119,6 @@ serial/
 usbdev/
   USB device drivers.  See also include/nuttx/usb/usbdev.h
 
-wireless/
-  Drivers for various wireless devices.
-
 Skeleton Files
 ^^^^^^^^^^^^^^
 
@@ -134,4 +128,3 @@ The following skeleton files are available:
 
   drivers/lcd/skeleton.c -- Skeleton LCD driver
   drivers/mtd/skeleton.c -- Skeleton memory technology device drivers
-  drivers/net/skeleton.c -- Skeleton network/Ethernet drivers

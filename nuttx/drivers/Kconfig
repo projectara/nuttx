@@ -425,26 +425,6 @@ if MTD
 source drivers/mtd/Kconfig
 endif # MTD
 
-menuconfig NETDEVICES
-	bool "Network Device/PHY Support"
-	default n if !ARCH_HAVE_PHY
-	default y if ARCH_HAVE_PHY
-	depends on NET
-	---help---
-		Network interface driver and PHY selections.  This options enables
-		selection of drivers for external Ethernet MAC chips.  The majority
-		of MCUs, however, have built-in, internal Ethernet MAC peripherals
-		and that Ethernet support is selected in the MCU-specific
-		configuration menus.
-
-		Most Ethernet MAC drivers, whether internal or external, will
-		require configuration of an external PHY device.  That external PHY
-		device is also selected via this menu.
-
-if NETDEVICES
-source drivers/net/Kconfig
-endif # NETDEVICES
-
 menuconfig PIPES
 	bool "FIFO and named pipe drivers"
 	default n
@@ -524,16 +504,6 @@ menuconfig USBDEV
 if USBDEV
 source drivers/usbdev/Kconfig
 endif # USBDEV
-
-menuconfig WIRELESS
-	bool "Wireless Device Support"
-	default n
-	---help---
-		Drivers for various wireless devices.
-
-if WIRELESS
-source drivers/wireless/Kconfig
-endif # WIRELESS
 
 comment "System Logging Device Options"
 
