@@ -35,6 +35,7 @@
 
 #include <arch/board/board.h>
 #include <arch/chip/gpio.h>
+#include <arch/tsb/chip.h>
 #include <arch/tsb/device_table.h>
 #include <arch/tsb/driver.h>
 
