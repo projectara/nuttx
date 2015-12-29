@@ -86,19 +86,6 @@
 #  undef CONFIG_NX_START
 #endif
 
-#if defined(CONFIG_NXWIDGETS)
-#  if defined(CONFIG_NX_NXSTART)
-#    if !defined(CONFIG_NXWIDGET_SERVERINIT)
-#      define HAVE_NXSTART
-#      include <nuttx/nx/nx.h>
-#    endif
-#  else
-#    if !defined(CONFIG_NXWIDGET_SERVERINIT) && defined(CONFIG_BUILD_PROTECTED)
-#      error CONFIG_NX_NXSTART=y is needed
-#    endif
-#  endif
-#endif
-
 /* Should we initialize the touchscreen for the NxWM (CONFIG_NXWM=y)?  This
  * is done if we have a touchscreen (CONFIG_INPUT_STMPE811=y), NxWM uses the
  * touchscreen (CONFIG_NXWM_TOUCHSCREEN=y), and if we were asked to
