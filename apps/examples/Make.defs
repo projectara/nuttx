@@ -244,7 +244,3 @@ endif
 ifeq ($(CONFIG_EXAMPLES_WGETJSON),y)
 CONFIGURED_APPS += examples/wgetjson
 endif
-
-ifeq ($(CONFIG_EXAMPLES_XMLRPC),y)
-CONFIGURED_APPS += examples/xmlrpc
-endif
