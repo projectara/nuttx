@@ -89,6 +89,24 @@ ifeq ($(CONFIG_ARA_BRIDGE_BOARD_OOT),y)
 CSRCS += $(OOT_BOARD)
 endif
 
+ifeq ($(CONFIG_BOARD_HAVE_AUDIO),y)
+CSRCS += audio_board.c
+endif
+
+ifeq ($(CONFIG_BOARD_CODEC_RT5647),y)
+CSRCS += audcodec.c
+CSRCS += rt5647.c
+endif
+
+#ToDo add to KCONFIG
+ifeq ($(CONFIG_BOARD_CODEC_NXP9890),y)
+CSRCS += audcodec.c
+CSRCS += nxp9890.c
+endif
+
+ifeq ($(CONFIG_APBRIDGEA_AUDIO),y)
+CSRCS += apbridgea_audio.c
+endif
 
 COBJS		= $(CSRCS:.c=$(OBJEXT))
 

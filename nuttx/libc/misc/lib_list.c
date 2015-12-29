@@ -40,6 +40,11 @@ bool list_is_empty(struct list_head *head)
     return head == head->next;
 }
 
+bool list_node_is_last(struct list_head *head, struct list_head *node)
+{
+    return node == head->prev;
+}
+
 void list_add(struct list_head *head, struct list_head *node)
 {
     node->next = head;

@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2014-2015 Google Inc.
+/**
+ * Copyright (c) 2015 Google Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,43 +25,29 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Author: Fabien Parent <fparent@baylibre.com>
+ * @brief Audio board-specific init data
  */
 
-#ifndef __LIST_H__
-#define __LIST_H__
+#ifndef _AUDIO_BOARD__H_
+#define _AUDIO_BOARD__H_
 
-#include <stdbool.h>
 #include <stdint.h>
 
-struct list_head {
-    struct list_head *prev;
-    struct list_head *next;
+struct audio_board_dai {
+    uint16_t        data_cport;
+    unsigned int    i2s_dev_id;
 };
 
-void list_init(struct list_head *head);
-void list_add(struct list_head *head, struct list_head *node);
-void list_del(struct list_head *head);
-bool list_is_empty(struct list_head *head);
-bool list_node_is_last(struct list_head *head, struct list_head *node);
-int list_count(struct list_head *head);
+struct audio_board_bundle {
+    uint16_t                mgmt_cport;
+    unsigned int            codec_dev_id;
+    unsigned int            dai_count;
+    struct audio_board_dai  *dai;
+};
 
-#define list_entry(n, s, f) ((void*) (((uint8_t*) (n)) - offsetof(s, f)))
+struct audio_board_init_data {
+    unsigned int                bundle_count;
+    struct audio_board_bundle   *bundle;
+};
 
-#define list_foreach(head, iter) \
-    for ((iter) = (head)->next; (iter) != (head); (iter) = (iter)->next)
-
-#define list_reverse_foreach(head, iter) \
-    for ((iter) = (head)->prev; (iter) != (head); (iter) = (iter)->prev)
-
-#define list_foreach_safe(head, iter, niter) \
-    for ((iter) = (head)->next, (niter) = (iter)->next; \
-         (iter) != (head); \
-         (iter) = (niter), (niter) = (niter)->next)
-
-#define LIST_INIT(head) { .prev = &head, .next = &head }
-#define LIST_DECLARE(name) struct list_head name = { .prev = &name, \
-                                                     .next = &name }
-
-#endif /* __LIST_H__ */
-
+#endif

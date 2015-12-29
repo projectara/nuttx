@@ -139,7 +139,6 @@ config TSB_PINSHARE_ETM
 
 config ARCH_CHIP_TSB_I2S
 	bool "I2S Support"
-	depends on ARCH_CHIP_GPBRIDGE
 	select DEVICE_CORE
 	select LIB_RING_BUF
 	select ARCH_CHIP_TSB_PLL
@@ -203,7 +202,6 @@ config ARCH_CHIP_DEVICE_PLL
 
 config ARCH_CHIP_TSB_PLL
 	bool "PLL Support"
-	depends on ARCH_CHIP_GPBRIDGE
 	select DEVICE_CORE
 	select ARCH_CHIP_DEVICE_PLL
 	default n

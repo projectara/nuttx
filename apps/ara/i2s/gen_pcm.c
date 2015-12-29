@@ -303,7 +303,7 @@ int fill_output_buff(int16_t *buffer,
         current_buff_size = *buff_size;
         p_fill = buffer;
 
-        while (current_buff_size > number_of_channels * sizeof(current_sample))
+        while (current_buff_size >= number_of_channels * sizeof(current_sample))
         {
             pcm_stream_state.phase_accum += pcm_stream_state.phase_inc;
             if (pcm_stream_state.phase_accum >= NUM_SAMPLES_IN_PERIOD_BUFFER) {
@@ -319,7 +319,8 @@ int fill_output_buff(int16_t *buffer,
             }
 
             for (j = 0; j < number_of_channels; j++) {
-                *p_fill++ = current_sample;
+                *p_fill = current_sample;
+                p_fill++;
             }
 
             current_buff_size -= number_of_channels*sizeof(current_sample);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015 Google Inc.
+ * Copyright (c) 2015 Google, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,44 +24,40 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * Author: Fabien Parent <fparent@baylibre.com>
  */
 
-#ifndef __LIST_H__
-#define __LIST_H__
+#ifndef __I2S_TEST_H__
+#define __I2S_TEST_H__
 
-#include <stdbool.h>
-#include <stdint.h>
-
-struct list_head {
-    struct list_head *prev;
-    struct list_head *next;
+struct i2s_test_stats {
+    unsigned int    tx_cnt;
+    unsigned int    tx_err_cnt;
+    unsigned int    rx_cnt;
+    unsigned int    rx_err_cnt;
+    unsigned int    rx_bad_data_cnt;
 };
 
-void list_init(struct list_head *head);
-void list_add(struct list_head *head, struct list_head *node);
-void list_del(struct list_head *head);
-bool list_is_empty(struct list_head *head);
-bool list_node_is_last(struct list_head *head, struct list_head *node);
-int list_count(struct list_head *head);
+struct i2s_test_info {
+    uint8_t                 is_transmitter;
+    uint8_t                 is_receiver;
+    uint8_t                 is_i2s;
+    uint8_t                 is_gen_audio;
+    uint32_t                aud_frequency;
+    uint32_t                aud_volume;
+    uint8_t                 use_codec;
+    uint8_t                 check_rx_data;
+    unsigned long           rb_entries;
+    unsigned long           samples_per_rb_entry;
+    uint16_t                left;
+    uint16_t                right;
+    struct i2s_test_stats   stats;
+};
 
-#define list_entry(n, s, f) ((void*) (((uint8_t*) (n)) - offsetof(s, f)))
+extern sem_t i2s_test_done_sem;
+extern struct device_i2s_pcm i2s_test_pcm;
 
-#define list_foreach(head, iter) \
-    for ((iter) = (head)->next; (iter) != (head); (iter) = (iter)->next)
+int i2s_test_start_transmitter(struct i2s_test_info *info,
+                               struct device *dev);
+void i2s_test_stop_transmitter(struct device *dev);
 
-#define list_reverse_foreach(head, iter) \
-    for ((iter) = (head)->prev; (iter) != (head); (iter) = (iter)->prev)
-
-#define list_foreach_safe(head, iter, niter) \
-    for ((iter) = (head)->next, (niter) = (iter)->next; \
-         (iter) != (head); \
-         (iter) = (niter), (niter) = (niter)->next)
-
-#define LIST_INIT(head) { .prev = &head, .next = &head }
-#define LIST_DECLARE(name) struct list_head name = { .prev = &name, \
-                                                     .next = &name }
-
-#endif /* __LIST_H__ */
-
+#endif /* __I2S_TEST_H__ */

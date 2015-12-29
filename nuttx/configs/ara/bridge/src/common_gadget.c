@@ -651,7 +651,7 @@ void vendor_data_handler(struct usbdev_req_s *req)
     value = GETUINT16(g_ctrl.value);
     index = GETUINT16(g_ctrl.index);
 
-    g_vendor_request->cb(g_dev, g_ctrl.req, value, index, req->buf, req->xfrd);
+    g_vendor_request->cb(g_dev, g_ctrl.req, index, value, req->buf, req->xfrd);
     g_vendor_request = NULL;
 }
 
@@ -728,7 +728,7 @@ int vendor_request_handler(struct usbdev_s *dev,
                 if (in && (vendor_request->flags & VENDOR_REQ_IN)) {
                     ret = vendor_request->cb(dev, ctrl->req, index, value,
                                              req->buf, len);
-                } else if (!(in && vendor_request->flags & VENDOR_REQ_IN)) {
+                } else if (!(vendor_request->flags & VENDOR_REQ_IN)) {
                     /* we don't expect data from host */
                     if (!(vendor_request->flags & VENDOR_REQ_DATA)) {
                         ret = vendor_request->cb(dev, ctrl->req, index, value,
@@ -740,6 +740,8 @@ int vendor_request_handler(struct usbdev_s *dev,
                         memcpy(&g_ctrl, ctrl, sizeof(g_ctrl));
                     }
                 }
+
+                break;
             }
         }
     }
@@ -747,7 +749,7 @@ int vendor_request_handler(struct usbdev_s *dev,
     if (ret >= 0) {
         req->len = MIN(len, ret);
         req->flags = USBDEV_REQFLAGS_NULLPKT;
-        if (vendor_request->flags && VENDOR_REQ_DEFER) {
+        if (vendor_request->flags & VENDOR_REQ_DEFER) {
             g_req = req;
         } else {
             ret = vendor_request_submit(dev, req, ret);

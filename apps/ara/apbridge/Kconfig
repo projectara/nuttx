@@ -41,6 +41,16 @@ config APBRIDGEA
 		that is not the AP module.  Do not select this for
 		GPBridge either.
 
+config APBRIDGEA_LOCAL_RX
+    bool "APBridgeA local receiver support"
+    depends on APBRIDGEA
+    default n
+	---help---
+        Normally, UniPro messages received by APBridgeA are automatically
+        forwarded to the USB/HSIC interface.  Selecting this feature allows
+        UniPro messages for individual CPorts to be directed to a local
+        receiver on APBridgeA.
+
 choice
 	prompt "Select the backend"
 config APBRIDGEA_UNIPRO

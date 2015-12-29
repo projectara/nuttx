@@ -72,6 +72,20 @@ config ARA_BRIDGE_HAVE_POWER_SUPPLY
 	---help---
 		Power Supply Driver
 
+config BOARD_HAVE_AUDIO
+	bool "Audio support for board"
+	default n
+
+config BOARD_CODEC_RT5647
+	bool "Realteck ALC5647 Audio Codec Support "
+	select BOARD_HAVE_AUDIO
+	default n
+
+config BOARD_CODEC_NXP9890
+	bool "Skeleton NXP 9890A Audio Codec Support "
+	select BOARD_HAVE_AUDIO
+	default n
+
 choice
 	prompt "Select a bridge firmware configuration"
 	depends on ARA_BRIDGE_HAVE_CAMERA || BOARD_HAVE_DISPLAY
@@ -110,6 +124,18 @@ config CAMERA_RX_CDSI0
 config CAMERA_RX_CDSI1
 	bool "Initialize csi-2 rx on CDSI1"
 endchoice
+
+config APBRIDGEA_AUDIO
+    bool "APBridgeA Direct Audio Streaming"
+    depends on APBRIDGEA && APBRIDGEA_LOCAL_RX
+    select DEVICE_CORE
+    select LIB_RING_BUF
+    default n
+	---help---
+        When enabled, audio data may be streamed directly to APBridgeA
+        where it will be packetized into Greybus Audio Device Class
+        Protocol messages and sent to the specified CPort.  Audio data
+        may also be streamed in the opposite direction.
 
 config FOR_GOOGLE_IO_DEMO
 	bool "Start stream for Google I/O Demo"

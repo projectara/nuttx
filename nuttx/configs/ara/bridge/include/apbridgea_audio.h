@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015 Google Inc.
+ * Copyright (c) 2015 Google, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -10,7 +10,7 @@
  * this list of conditions and the following disclaimer in the documentation
  * and/or other materials provided with the distribution.
  * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
+ * * may be used to endorse or promote products derived from this
  * software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
@@ -24,44 +24,14 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * Author: Fabien Parent <fparent@baylibre.com>
  */
 
-#ifndef __LIST_H__
-#define __LIST_H__
+#ifndef _APBRIDGEA_AUDIO_H_
+#define _APBRIDGEA_AUDIO_H_
 
-#include <stdbool.h>
-#include <stdint.h>
+extern int apbridgea_audio_in_demux(uint16_t data_cportid, uint16_t i2s_port,
+                                    uint8_t *buf, uint16_t len);
+extern int apbridgea_audio_out_demux(void *buf, uint16_t len);
+extern int apbridgea_audio_init(void);
 
-struct list_head {
-    struct list_head *prev;
-    struct list_head *next;
-};
-
-void list_init(struct list_head *head);
-void list_add(struct list_head *head, struct list_head *node);
-void list_del(struct list_head *head);
-bool list_is_empty(struct list_head *head);
-bool list_node_is_last(struct list_head *head, struct list_head *node);
-int list_count(struct list_head *head);
-
-#define list_entry(n, s, f) ((void*) (((uint8_t*) (n)) - offsetof(s, f)))
-
-#define list_foreach(head, iter) \
-    for ((iter) = (head)->next; (iter) != (head); (iter) = (iter)->next)
-
-#define list_reverse_foreach(head, iter) \
-    for ((iter) = (head)->prev; (iter) != (head); (iter) = (iter)->prev)
-
-#define list_foreach_safe(head, iter, niter) \
-    for ((iter) = (head)->next, (niter) = (iter)->next; \
-         (iter) != (head); \
-         (iter) = (niter), (niter) = (niter)->next)
-
-#define LIST_INIT(head) { .prev = &head, .next = &head }
-#define LIST_DECLARE(name) struct list_head name = { .prev = &name, \
-                                                     .next = &name }
-
-#endif /* __LIST_H__ */
-
+#endif /* _APBRIDGEA_AUDIO_H_ */

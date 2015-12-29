@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015 Google Inc.
+ * Copyright (c) 2015 Google, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,44 +24,47 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * Author: Fabien Parent <fparent@baylibre.com>
  */
 
-#ifndef __LIST_H__
-#define __LIST_H__
+#ifndef __GB_MIRROR_H__
+#define __GB_MIRROR_H__
 
-#include <stdbool.h>
-#include <stdint.h>
-
-struct list_head {
-    struct list_head *prev;
-    struct list_head *next;
+/* structures from the original */
+struct gb_audio_info { /* One per audio Bundle */
+    bool                    initialized;
+    uint16_t                mgmt_cport;
+    struct device           *codec_dev;
+    struct list_head        dai_list;   /* list of gb_audio_dai_info structs */
+    struct list_head        list;       /* next gb_audio_info struct */
 };
 
-void list_init(struct list_head *head);
-void list_add(struct list_head *head, struct list_head *node);
-void list_del(struct list_head *head);
-bool list_is_empty(struct list_head *head);
-bool list_node_is_last(struct list_head *head, struct list_head *node);
-int list_count(struct list_head *head);
+struct gb_audio_dai_info {
+    uint32_t                flags;
+    uint16_t                data_cport;
+    unsigned int            dai_idx;
+    struct device           *i2s_dev;
+    uint32_t                format;
+    uint32_t                rate;
+    uint8_t                 channels;
+    uint8_t                 sig_bits;
+    unsigned int            sample_size;
+    unsigned int            sample_freq;
 
-#define list_entry(n, s, f) ((void*) (((uint8_t*) (n)) - offsetof(s, f)))
+    struct ring_buf         *tx_rb;
+    unsigned int            tx_data_size;
+    unsigned int            tx_samples_per_msg;
+    uint8_t                 *tx_dummy_data;
 
-#define list_foreach(head, iter) \
-    for ((iter) = (head)->next; (iter) != (head); (iter) = (iter)->next)
+    struct ring_buf         *rx_rb;
+    unsigned int            rx_data_size;
+    unsigned int            rx_samples_per_msg;
 
-#define list_reverse_foreach(head, iter) \
-    for ((iter) = (head)->prev; (iter) != (head); (iter) = (iter)->prev)
+    struct gb_audio_info    *info;      /* parent gb_audio_info struct */
+    struct list_head        list;       /* next gb_audio_dai_info struct */
+};
 
-#define list_foreach_safe(head, iter, niter) \
-    for ((iter) = (head)->next, (niter) = (iter)->next; \
-         (iter) != (head); \
-         (iter) = (niter), (niter) = (niter)->next)
+int gb_audio_config_connection(struct gb_audio_dai_info *dai,
+                               uint32_t format, uint32_t rate,
+                               uint8_t channels, uint8_t sig_bits);
 
-#define LIST_INIT(head) { .prev = &head, .next = &head }
-#define LIST_DECLARE(name) struct list_head name = { .prev = &name, \
-                                                     .next = &name }
-
-#endif /* __LIST_H__ */
-
+#endif /* __GB_MIRROR_H__ */

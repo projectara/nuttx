@@ -38,38 +38,25 @@
 
 #define DEVICE_TYPE_I2S_HW                      "i2s"
 
-#define DEVICE_I2S_BYTE_ORDER_NA                BIT(0)
-#define DEVICE_I2S_BYTE_ORDER_BE                BIT(1)
-#define DEVICE_I2S_BYTE_ORDER_LE                BIT(2)
+#define DEVICE_I2S_PCM_FMT_8                    BIT(0)
+#define DEVICE_I2S_PCM_FMT_16                   BIT(1)
+#define DEVICE_I2S_PCM_FMT_24                   BIT(2)
+#define DEVICE_I2S_PCM_FMT_32                   BIT(3)
+#define DEVICE_I2S_PCM_FMT_64                   BIT(4)
 
-#define DEVICE_I2S_SPATIAL_LOCATION_FL          BIT(0)
-#define DEVICE_I2S_SPATIAL_LOCATION_FR          BIT(1)
-#define DEVICE_I2S_SPATIAL_LOCATION_FC          BIT(2)
-#define DEVICE_I2S_SPATIAL_LOCATION_LFE         BIT(3)
-#define DEVICE_I2S_SPATIAL_LOCATION_BL          BIT(4)
-#define DEVICE_I2S_SPATIAL_LOCATION_BR          BIT(5)
-#define DEVICE_I2S_SPATIAL_LOCATION_FLC         BIT(6)
-#define DEVICE_I2S_SPATIAL_LOCATION_FRC         BIT(7)
-#define DEVICE_I2S_SPATIAL_LOCATION_C           BIT(8) /* BC in USB Spec */
-#define DEVICE_I2S_SPATIAL_LOCATION_SL          BIT(9)
-#define DEVICE_I2S_SPATIAL_LOCATION_SR          BIT(10)
-#define DEVICE_I2S_SPATIAL_LOCATION_TC          BIT(11)
-#define DEVICE_I2S_SPATIAL_LOCATION_TFL         BIT(12)
-#define DEVICE_I2S_SPATIAL_LOCATION_TFC         BIT(13)
-#define DEVICE_I2S_SPATIAL_LOCATION_TFR         BIT(14)
-#define DEVICE_I2S_SPATIAL_LOCATION_TBL         BIT(15)
-#define DEVICE_I2S_SPATIAL_LOCATION_TBC         BIT(16)
-#define DEVICE_I2S_SPATIAL_LOCATION_TBR         BIT(17)
-#define DEVICE_I2S_SPATIAL_LOCATION_TFLC        BIT(18)
-#define DEVICE_I2S_SPATIAL_LOCATION_TFRC        BIT(19)
-#define DEVICE_I2S_SPATIAL_LOCATION_LLFE        BIT(20)
-#define DEVICE_I2S_SPATIAL_LOCATION_RLFE        BIT(21)
-#define DEVICE_I2S_SPATIAL_LOCATION_TSL         BIT(22)
-#define DEVICE_I2S_SPATIAL_LOCATION_TSR         BIT(23)
-#define DEVICE_I2S_SPATIAL_LOCATION_BC          BIT(24)
-#define DEVICE_I2S_SPATIAL_LOCATION_BLC         BIT(25)
-#define DEVICE_I2S_SPATIAL_LOCATION_BRC         BIT(26)
-#define DEVICE_I2S_SPATIAL_LOCATION_RD          BIT(31)
+#define DEVICE_I2S_PCM_RATE_5512                BIT(0)
+#define DEVICE_I2S_PCM_RATE_8000                BIT(1)
+#define DEVICE_I2S_PCM_RATE_11025               BIT(2)
+#define DEVICE_I2S_PCM_RATE_16000               BIT(3)
+#define DEVICE_I2S_PCM_RATE_22050               BIT(4)
+#define DEVICE_I2S_PCM_RATE_32000               BIT(5)
+#define DEVICE_I2S_PCM_RATE_44100               BIT(6)
+#define DEVICE_I2S_PCM_RATE_48000               BIT(7)
+#define DEVICE_I2S_PCM_RATE_64000               BIT(8)
+#define DEVICE_I2S_PCM_RATE_88200               BIT(9)
+#define DEVICE_I2S_PCM_RATE_96000               BIT(10)
+#define DEVICE_I2S_PCM_RATE_176400              BIT(11)
+#define DEVICE_I2S_PCM_RATE_192000              BIT(12)
 
 #define DEVICE_I2S_PROTOCOL_PCM                 BIT(0)
 #define DEVICE_I2S_PROTOCOL_I2S                 BIT(1)
@@ -96,42 +83,41 @@ enum device_i2s_event {
     DEVICE_I2S_EVENT_DATA_LEN,
 };
 
-struct device_i2s_configuration {
-    uint32_t    sample_frequency;
-    uint8_t     num_channels;
-    uint8_t     bytes_per_channel;
-    uint8_t     byte_order;
-    uint8_t     pad;
-    uint32_t    spatial_locations;
-    uint32_t    ll_protocol;
-    uint8_t     ll_mclk_role;
-    uint8_t     ll_bclk_role;
-    uint8_t     ll_wclk_role;
-    uint8_t     ll_wclk_polarity;
-    uint8_t     ll_wclk_change_edge;
-    uint8_t     ll_data_tx_edge;
-    uint8_t     ll_data_rx_edge;
-    uint8_t     ll_data_offset;
-    uint8_t     ll_pad;
-};
-
 typedef void (*device_i2s_callback)(struct ring_buf *rb,
                                     enum device_i2s_event event, void *arg);
 
+struct device_i2s_pcm {
+    uint32_t    format;     /* DEVICE_I2S_PCM_FMT_* */
+    uint32_t    rate;       /* DEVICE_I2S_PCM_RATE_* */
+    uint8_t     channels;
+};
+
+/* low level DAI communication capabilities of a driver
+ * Most capabilities are bitfields,
+ * To find matching capabilities between drivers AND the bitfields
+ * returned from get_caps
+ */
+struct device_i2s_dai {
+    uint32_t    mclk_freq;          /* mclk frequency generated/required */
+    uint8_t     protocol;           /* DEVICE_I2S_PROTOCOL_* */
+    uint8_t     wclk_polarity;      /* DEVICE_I2S_POLARITY_* */
+    uint8_t     wclk_change_edge;   /* DEVICE_I2S_EDGE_* */
+    uint8_t     data_rx_edge;       /* DEVICE_I2S_EDGE_* */
+    uint8_t     data_tx_edge;       /* DEVICE_I2S_EDGE_* */
+};
+
 struct device_i2s_type_ops {
-    int (*get_processing_delay)(struct device *dev,
-                                uint32_t *processing_delay);
-    int (*get_supported_configurations)(struct device *dev,
-                                        uint16_t *configuration_count,
-                                        const struct device_i2s_configuration
-                                                             *configurations[]);
-    int (*set_configuration)(struct device *dev,
-                             struct device_i2s_configuration *configuration);
+    int (*get_caps)(struct device *dev, uint8_t clk_role,
+                    struct device_i2s_pcm *pcm, struct device_i2s_dai *dai);
+    int (*set_config)(struct device *dev, uint8_t clk_role,
+                      struct device_i2s_pcm *pcm, struct device_i2s_dai *dai);
+    int (*get_delay_receiver)(struct device *dev, uint32_t *delay);
     int (*prepare_receiver)(struct device *dev, struct ring_buf *rx_rb,
                             device_i2s_callback callback, void *arg);
     int (*start_receiver)(struct device *dev);
     int (*stop_receiver)(struct device *dev);
     int (*shutdown_receiver)(struct device *dev);
+    int (*get_delay_transmitter)(struct device *dev, uint32_t *delay);
     int (*prepare_transmitter)(struct device *dev, struct ring_buf *tx_rb,
                                device_i2s_callback callback, void *arg);
     int (*start_transmitter)(struct device *dev);
@@ -140,70 +126,51 @@ struct device_i2s_type_ops {
 };
 
 /**
- * @brief Get processing delay
- * @param dev I2S device to get delay of
- * @param processing_delay Address to write delay value
+ * @brief Get device's capabilities with specified PCM values
+ * @param dev I2S device being queried
+ * @param clk_role Specifies if query is for clock master or slave
+ * @param pcm PCM parameters being tested
+ * @param dai DAI parameters that support specified PCM parameters
  * @return 0: Delay value returned successfully
  *         -errno: Cause of failure
  */
-static inline int device_i2s_get_processing_delay(struct device *dev,
-                                                  uint32_t *processing_delay)
+static inline int device_i2s_get_caps(struct device *dev, uint8_t clk_role,
+                                      struct device_i2s_pcm *pcm,
+                                      struct device_i2s_dai *dai)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
     if (!device_is_open(dev))
         return -ENODEV;
 
-    if (DEVICE_DRIVER_GET_OPS(dev, i2s)->get_processing_delay)
-        return DEVICE_DRIVER_GET_OPS(dev, i2s)->get_processing_delay(dev,
-                                                              processing_delay);
+    if (DEVICE_DRIVER_GET_OPS(dev, i2s)->get_caps)
+        return DEVICE_DRIVER_GET_OPS(dev, i2s)->get_caps(dev, clk_role, pcm,
+                                                         dai);
 
     return -ENOSYS;
 }
 
 /**
- * @brief Get supported configurations
- * @param dev I2S device to get configurations of
- * @param configuration_count Address to write number of configurations
- * @param configurations Address to write configuration data
- * @return 0: Supported configurations returned successfully
+ * @brief Set current PCM and DAI configuration
+ * @param dev I2S device being set
+ * @param clk_role Specifies that device is clock master or slave
+ * @param pcm Set PCM parameter values
+ * @param dai Set DAI parameter values
+ * @return 0: Delay value returned successfully
  *         -errno: Cause of failure
  */
-static inline int device_i2s_get_supported_configurations(
-                        struct device *dev,
-                        uint16_t *configuration_count,
-                        const struct device_i2s_configuration *configurations[])
+static inline int device_i2s_set_config(struct device *dev, uint8_t clk_role,
+                                        struct device_i2s_pcm *pcm,
+                                        struct device_i2s_dai *dai)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
     if (!device_is_open(dev))
         return -ENODEV;
 
-    if (DEVICE_DRIVER_GET_OPS(dev, i2s)->get_supported_configurations)
-        return DEVICE_DRIVER_GET_OPS(dev, i2s)->get_supported_configurations(
-                                     dev,configuration_count, configurations);
-
-    return -ENOSYS;
-}
-
-/**
- * @brief Set supported configuration
- * @param dev I2S device whose configuration is set
- * @param configuration Address of configuration data
- * @return 0: Configuration set successfully
- *         -errno: Cause of failure
- */
-static inline int device_i2s_set_configuration(struct device *dev,
-                                 struct device_i2s_configuration *configuration)
-{
-    DEVICE_DRIVER_ASSERT_OPS(dev);
-
-    if (!device_is_open(dev))
-        return -ENODEV;
-
-    if (DEVICE_DRIVER_GET_OPS(dev, i2s)->set_configuration)
-        return DEVICE_DRIVER_GET_OPS(dev, i2s)->set_configuration(dev,
-                                                                 configuration);
+    if (DEVICE_DRIVER_GET_OPS(dev, i2s)->set_config)
+        return DEVICE_DRIVER_GET_OPS(dev, i2s)->set_config(dev, clk_role, pcm,
+                                                           dai);
 
     return -ENOSYS;
 }
@@ -229,6 +196,27 @@ static inline int device_i2s_prepare_receiver(struct device *dev,
     if (DEVICE_DRIVER_GET_OPS(dev, i2s)->prepare_receiver)
         return DEVICE_DRIVER_GET_OPS(dev, i2s)->prepare_receiver(dev, rx_rb,
                                                                  callback, arg);
+
+    return -ENOSYS;
+}
+
+/**
+ * @brief Get receiver start-up delay
+ * @param dev I2S device to get delay of
+ * @param delay Address to write delay value
+ * @return 0: Delay value returned successfully
+ *         -errno: Cause of failure
+ */
+static inline int device_i2s_get_delay_receiver(struct device *dev,
+                                                uint32_t *delay)
+{
+    DEVICE_DRIVER_ASSERT_OPS(dev);
+
+    if (!device_is_open(dev))
+        return -ENODEV;
+
+    if (DEVICE_DRIVER_GET_OPS(dev, i2s)->get_delay_receiver)
+        return DEVICE_DRIVER_GET_OPS(dev, i2s)->get_delay_receiver(dev, delay);
 
     return -ENOSYS;
 }
@@ -290,6 +278,28 @@ static inline int device_i2s_shutdown_receiver(struct device *dev)
 
     if (DEVICE_DRIVER_GET_OPS(dev, i2s)->shutdown_receiver)
         return DEVICE_DRIVER_GET_OPS(dev, i2s)->shutdown_receiver(dev);
+
+    return -ENOSYS;
+}
+
+/**
+ * @brief Get transmitter start-up delay
+ * @param dev I2S device to get delay of
+ * @param delay Address to write delay value
+ * @return 0: Delay value returned successfully
+ *         -errno: Cause of failure
+ */
+static inline int device_i2s_get_delay_transmitter(struct device *dev,
+                                                   uint32_t *delay)
+{
+    DEVICE_DRIVER_ASSERT_OPS(dev);
+
+    if (!device_is_open(dev))
+        return -ENODEV;
+
+    if (DEVICE_DRIVER_GET_OPS(dev, i2s)->get_delay_transmitter)
+        return DEVICE_DRIVER_GET_OPS(dev, i2s)->get_delay_transmitter(dev,
+                                                                      delay);
 
     return -ENOSYS;
 }

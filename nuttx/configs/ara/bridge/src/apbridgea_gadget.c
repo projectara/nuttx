@@ -67,6 +67,8 @@
 #include <arch/byteorder.h>
 #include <arch/board/common_gadget.h>
 #include <arch/board/apbridgea_gadget.h>
+#include <arch/board/apbridgea_audio.h>
+#include <nuttx/wdog.h>
 #include <nuttx/greybus/greybus_timestamp.h>
 
 /****************************************************************************
@@ -210,7 +212,6 @@ struct cport_to_ep {
 enum ctrlreq_state {
     USB_REQ,
     GREYBUS_LOG,
-    GREYBUS_EP_MAPPING,
 };
 
 /****************************************************************************
@@ -1068,6 +1069,13 @@ static int ep_mapping_vendor_request_out(struct usbdev_s *dev, uint8_t req,
     return len;
 }
 
+static int apbridgea_audio_vendor_request_out(struct usbdev_s *dev, uint8_t req,
+                                              uint16_t index, uint16_t value,
+                                              void *buf, uint16_t len)
+{
+    return apbridgea_audio_out_demux(buf, len);
+}
+
 static int latency_tag_en_vendor_request_out(struct usbdev_s *dev, uint8_t req,
                                              uint16_t index, uint16_t value,
                                              void *buf, uint16_t len)
@@ -1342,6 +1350,10 @@ int usbdev_apbinitialize(struct device *dev,
         goto errout_vendor_req;
     if (register_vendor_request(APBRIDGE_ROREQUEST_LATENCY_TAG_DIS, VENDOR_REQ_OUT,
                                 latency_tag_dis_vendor_request_out))
+        goto errout_vendor_req;
+    if (register_vendor_request(APBRIDGE_RWREQUEST_AUDIO_APBRIDGEA,
+                                VENDOR_REQ_DATA,
+                                apbridgea_audio_vendor_request_out))
         goto errout_vendor_req;
 
     /* Allocate the structures needed */
