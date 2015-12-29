@@ -45,14 +45,19 @@ all: nothing
 .PHONY: nothing context depend clean distclean
 
 nothing:
+	@true
 
 install:
+	@true
 
 context:
+	@true
 
 depend:
+	@true
 
 clean:
+	@true
 
 distclean:
 	$(foreach SDIR, $(SUBDIRS), $(call DELDIR, $(SDIR)))
