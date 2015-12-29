@@ -760,16 +760,3 @@ examples/relays
   user-space program.  As a result, this example cannot be used if a
   NuttX is built as a protected, supervisor kernel (CONFIG_BUILD_PROTECTED
   or CONFIG_BUILD_KERNEL).
-
-examples/rgmp
-^^^^^^^^^^^^^
-
-  RGMP stands for RTOS and GPOS on Multi-Processor.  RGMP is a project for
-  running GPOS and RTOS simultaneously on multi-processor platforms. You can
-  port your favorite RTOS to RGMP together with an unmodified Linux to form a
-  hybrid operating system. This makes your application able to use both RTOS
-  and GPOS features.
-
-  See http://rgmp.sourceforge.net/wiki/index.php/Main_Page for further
-
-  At present, the RGMP example folder contains only an empty rgmp_main.c file.
