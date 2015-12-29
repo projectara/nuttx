@@ -70,7 +70,7 @@ SUBDIRS += keypadtest mm mount mtdpart mtdrwb
 SUBDIRS += nrf24l01_term nsh null nxffs nxflat
 SUBDIRS += ostest pashello pipe poll posix_spawn pwm qencoder
 SUBDIRS += random relays rgmp romfs sendmail serialblaster serloop serialrx
-SUBDIRS += smart smart_test telnetd thttpd touchscreen udp
+SUBDIRS += smart smart_test telnetd thttpd touchscreen
 SUBDIRS += watchdog
 
 # Sub-directories that might need context setup.  Directories may need
