@@ -525,12 +525,3 @@ examples/pashello
 
   The correct install location for the NuttX examples and build files is
   apps/interpreters.
-
-examples/pipe
-^^^^^^^^^^^^^
-
-  A test of the mkfifo() and pipe() APIs.
-
- * CONFIG_EXAMPLES_PIPE_STACKSIZE
-     Sets the size of the stack to use when creating the child tasks.
-     The default size is 1024.
