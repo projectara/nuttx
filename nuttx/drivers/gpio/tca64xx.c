@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 Google Inc.
+ * Copyright (c) 2014-2016 Google Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -41,6 +41,7 @@
 #include <stdio.h>
 #include <nuttx/gpio/tca64xx.h>
 #include <nuttx/gpio.h>
+#include <nuttx/gpio_chip.h>
 #include <nuttx/wqueue.h>
 #include <pthread.h>
 #include <sys/wait.h>

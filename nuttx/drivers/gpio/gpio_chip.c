@@ -32,6 +32,7 @@
 #include <stdlib.h>
 
 #include <nuttx/gpio.h>
+#include <nuttx/gpio_chip.h>
 #include <nuttx/list.h>
 
 #include "nuttx/arch.h"

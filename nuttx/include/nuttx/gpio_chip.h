@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016 Google Inc.
+ * Copyright (c) 2016 Google Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,33 +26,33 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _GPIO_H_
-#define _GPIO_H_
+#ifndef _GPIO_CHIP_H_
+#define _GPIO_CHIP_H_
 
 #include <stdint.h>
 #include <nuttx/irq.h>
 
-#define IRQ_TYPE_NONE           0x00000000
-#define IRQ_TYPE_EDGE_RISING    0x00000001
-#define IRQ_TYPE_EDGE_FALLING   0x00000002
-#define IRQ_TYPE_EDGE_BOTH      (IRQ_TYPE_EDGE_FALLING | IRQ_TYPE_EDGE_RISING)
-#define IRQ_TYPE_LEVEL_HIGH     0x00000004
-#define IRQ_TYPE_LEVEL_LOW      0x00000008
+struct gpio_ops_s
+{
+    int (*get_direction)(void *driver_data, uint8_t which);
+    void (*direction_in)(void *driver_data, uint8_t which);
+    void (*direction_out)(void *driver_data, uint8_t which, uint8_t value);
+    void (*activate)(void *driver_data, uint8_t which);
+    uint8_t (*get_value)(void *driver_data, uint8_t which);
+    void (*set_value)(void *driver_data, uint8_t which, uint8_t value);
+    void (*deactivate)(void *driver_data, uint8_t which);
+    uint8_t (*line_count)(void *driver_data);
+    int (*irqattach)(void *driver_data, uint8_t which, xcpt_t isr,
+                     uint8_t base);
+    int (*set_triggering)(void *driver_data, uint8_t which, int trigger);
+    int (*mask_irq)(void *driver_data, uint8_t which);
+    int (*unmask_irq)(void *driver_data, uint8_t which);
+    int (*clear_interrupt)(void *driver_data, uint8_t which);
+};
 
-int gpio_get_direction(uint8_t which);
-void gpio_direction_in(uint8_t which);
-void gpio_direction_out(uint8_t which, uint8_t value);
-void gpio_activate(uint8_t which);
-uint8_t gpio_get_value(uint8_t which);
-void gpio_set_value(uint8_t which, uint8_t value);
-int gpio_set_debounce(uint8_t which, uint16_t delay);
-void gpio_deactivate(uint8_t which);
-uint8_t gpio_line_count(void);
-int gpio_irqattach(uint8_t which, xcpt_t isr);
-int set_gpio_triggering(uint8_t which, int trigger);
-int gpio_mask_irq(uint8_t which);
-int gpio_unmask_irq(uint8_t which);
-int gpio_clear_interrupt(uint8_t which);
+int register_gpio_chip(struct gpio_ops_s *ops, int base, void *driver_data);
+int unregister_gpio_chip(void *driver_data);
 
 #endif
+
 
