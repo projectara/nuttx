@@ -57,11 +57,6 @@
 #   ifdef CONFIG_FS_SMARTFS
 #     include <nuttx/fs/mksmartfs.h>
 #   endif
-#   ifdef CONFIG_NFS
-#     include <sys/socket.h>
-#     include <netinet/in.h>
-#     include <nuttx/fs/nfs.h>
-#   endif
 #   ifdef CONFIG_RAMLOG_SYSLOG
 #     include <nuttx/syslog/ramlog.h>
 #   endif

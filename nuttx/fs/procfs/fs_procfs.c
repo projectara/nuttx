@@ -623,7 +623,6 @@ static int procfs_readdir(struct inode *mountpt, struct fs_dirent_s *dir)
                  * happen in the event of procfs_entry_s such as:
                  *
                  *    fs/smartfs
-                 *    fs/nfs
                  *    fs/nxffs
                  */
 

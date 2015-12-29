@@ -52,11 +52,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_NFS
-#  define DIRENT_NFS_MAXHANDLE 64        /* Maximum length of an NFSv3 file handle */
-#  define DIRENT_NFS_VERFLEN    8        /* Length of the copy verifier */
-#endif
-
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -119,18 +114,6 @@ struct fs_binfsdir_s
 struct fs_nxffsdir_s
 {
   off_t nx_offset;                     /* Offset to the next inode */
-};
-#endif
-
-#ifdef CONFIG_NFS
-/* The NFS client file system */
-
-struct nfsdir_s
-{
-  uint8_t  nfs_fhsize;                        /* Length of the file handle */
-  uint8_t  nfs_fhandle[DIRENT_NFS_MAXHANDLE]; /* File handle (max size allocated) */
-  uint8_t  nfs_verifier[DIRENT_NFS_VERFLEN];  /* Cookie verifier */
-  uint32_t nfs_cookie[2];                     /* Cookie */
 };
 #endif
 
@@ -201,9 +184,6 @@ struct fs_dirent_s
 #endif
 #ifdef CONFIG_FS_NXFFS
       struct fs_nxffsdir_s   nxffs;
-#endif
-#ifdef CONFIG_NFS
-      struct nfsdir_s        nfs;
 #endif
 #ifdef CONFIG_FS_SMARTFS
       struct fs_smartfsdir_s smartfs;

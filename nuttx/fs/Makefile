@@ -139,7 +139,6 @@ endif
 
 include romfs/Make.defs
 include nxffs/Make.defs
-include nfs/Make.defs
 include smartfs/Make.defs
 include binfs/Make.defs
 include procfs/Make.defs
@@ -154,7 +153,7 @@ OBJS = $(AOBJS) $(COBJS)
 
 BIN = libfs$(LIBEXT)
 
-SUBDIRS = mmap romfs nxffs nfs binfs procfs
+SUBDIRS = mmap romfs nxffs binfs procfs
 
 all: $(BIN)
 
