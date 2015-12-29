@@ -146,6 +146,7 @@ $(PLATFORMDIR):
 install:
 
 context: $(PLATFORMDIR)
+	@true
 
 # Dependencies
 

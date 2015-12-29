@@ -133,8 +133,10 @@ $(BUILTIN_REGISTRY)$(DELIM)$(APPNAME)_main.bdat: $(DEPCONFIG) Makefile
 	$(call REGISTER,$(APPNAME),$(PRIORITY),$(STACKSIZE),$(APPNAME)_main)
 
 context: $(BUILTIN_REGISTRY)$(DELIM)$(APPNAME)_main.bdat
+	@true
 else
 context:
+	@true
 endif
 
 .depend: Makefile $(SRCS)
@@ -142,6 +144,7 @@ endif
 	@touch $@
 
 depend: .depend
+	@true
 
 clean:
 	$(call DELFILE, .built)
