@@ -839,13 +839,3 @@ examples/serialrx
   Constant receives serial data.  This is the complement to serialblaster.
   This may be useful if you are trying run down other problems that you
   think might only occur when the serial port usage is high.
-
-examples/serloop
-^^^^^^^^^^^^^^^^
-
-  This is a mindlessly simple loopback test on the console.  Useful
-  for testing new serial drivers.  Configuration options include:
-
-  * CONFIG_EXAMPLES_SERLOOP_BUFIO
-      Use C buffered I/O (getchar/putchar) vs. raw console I/O
-      (read/read).
