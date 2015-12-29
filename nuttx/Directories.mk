@@ -143,8 +143,3 @@ endif
 else
 KERNDEPDIRS += $(FSDIRS)
 endif
-
-ifeq ($(CONFIG_CRYPTO),y)
-KERNDEPDIRS += crypto
-endif
-CLEANDIRS += crypto

@@ -428,13 +428,6 @@ config DEBUG_BINFMT
 	---help---
 		Enable binary loader debug SYSLOG output (disabled by default)
 
-config DEBUG_CRYPTO
-	bool "Crypto Debug Output"
-	default n
-	depends on CRYPTO
-	---help---
-		Enable Crypto debug SYSLOG output (disabled by default)
-
 config DEBUG_FS
 	bool "File System Debug Output"
 	default n
@@ -717,10 +710,6 @@ endmenu
 menu "Device Drivers"
 source drivers/Kconfig
 endmenu
-
-#menu "Crypto API"
-#source crypto/Kconfig
-#endmenu
 
 menu "File Systems"
 source fs/Kconfig

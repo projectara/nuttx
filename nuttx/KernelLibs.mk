@@ -67,12 +67,6 @@ ifeq ($(CONFIG_NET),y)
 NUTTXLIBS += lib$(DELIM)libnet$(LIBEXT)
 endif
 
-# Add libraries for Crypto API support
-
-ifeq ($(CONFIG_CRYPTO),y)
-NUTTXLIBS += lib$(DELIM)libcrypto$(LIBEXT)
-endif
-
 # Add libraries for file system support
 
 ifeq ($(CONFIG_NFILE_DESCRIPTORS),0)
