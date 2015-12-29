@@ -209,10 +209,6 @@ ifeq ($(CONFIG_EXAMPLES_TELNETD),y)
 CONFIGURED_APPS += examples/telnetd
 endif
 
-ifeq ($(CONFIG_EXAMPLES_THTTPD),y)
-CONFIGURED_APPS += examples/thttpd
-endif
-
 ifeq ($(CONFIG_EXAMPLES_WATCHDOG),y)
 CONFIGURED_APPS += examples/watchdog
 endif
