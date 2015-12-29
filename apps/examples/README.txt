@@ -695,34 +695,3 @@ examples/pwm
     CONFIG_EXAMPLES_PWM_PULSECOUNT - The initial PWM pulse count.  This option is
        only available if CONFIG_PWM_PULSECOUNT is non-zero. Default: 0 (i.e., use
        the duration, not the count).
-
-examples/qencoder
-^^^^^^^^^^^^^^^^^
-
-  This example is a simple test of a Quadrature Encoder driver.  It simply reads
-  positional data from the encoder and prints it.,
-
-  This test depends on these specific QE/NSH configurations settings (your
-  specific PWM settings might require additional settings).
-
-    CONFIG_QENCODER - Enables quadrature encoder support (upper-half driver).
-    CONFIG_NSH_BUILTIN_APPS - Build the QE test as an NSH built-in function.
-      Default: Built as a standalone progrem.
-
-  Additional configuration options will mostly likely be required for the board-
-  specific lower-half driver.  See the README.txt file in your board configuration
-  directory.
-
-  Specific configuration options for this example include:
-
-    CONFIG_EXAMPLES_QENCODER_DEVPATH - The path to the QE device. Default:
-      /dev/qe0
-    CONFIG_EXAMPLES_QENCODER_NSAMPLES - If CONFIG_NSH_BUILTIN_APPS
-      is defined, then the number of samples is provided on the command line
-      and this value is ignored.  Otherwise, this number of samples is
-      collected and the program terminates.  Default:  Samples are collected
-      indefinitely.
-    CONFIG_EXAMPLES_QENCODER_DELAY - This value provides the delay (in
-      milliseonds) between each sample.  If CONFIG_NSH_BUILTIN_APPS
-      is defined, then this value is the default delay if no other delay is
-      provided on the command line.  Default:  100 milliseconds
