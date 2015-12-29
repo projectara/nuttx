@@ -236,11 +236,3 @@ endif
 ifeq ($(CONFIG_EXAMPLES_WEBSERVER),y)
 CONFIGURED_APPS += examples/webserver
 endif
-
-ifeq ($(CONFIG_EXAMPLES_WGET),y)
-CONFIGURED_APPS += examples/wget
-endif
-
-ifeq ($(CONFIG_EXAMPLES_WGETJSON),y)
-CONFIGURED_APPS += examples/wgetjson
-endif

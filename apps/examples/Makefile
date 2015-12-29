@@ -71,7 +71,7 @@ SUBDIRS += nrf24l01_term nsh null nxffs nxflat
 SUBDIRS += ostest pashello pipe poll posix_spawn pwm qencoder
 SUBDIRS += random relays rgmp romfs sendmail serialblaster serloop serialrx
 SUBDIRS += smart smart_test telnetd thttpd touchscreen udp
-SUBDIRS += usbserial usbterm watchdog webserver wget wgetjson
+SUBDIRS += usbserial usbterm watchdog webserver
 
 # Sub-directories that might need context setup.  Directories may need
 # context setup for a variety of reasons, but the most common is because
@@ -85,7 +85,6 @@ CNTXTDIRS += hello helloxx i2schar json keypadtestmodbus mtdpart mtdrwb
 CNTXTDIRS += nrf24l01_term
 CNTXTDIRS += ostest random relays qencoder serialblaster serialrx
 CNTXTDIRS += smart_test telnetd touchscreen usbterm watchdog
-CNTXTDIRS += wgetjson
 endif
 
 all: nothing
