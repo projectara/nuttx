@@ -197,110 +197,31 @@ static struct gpio_pinsharing_conf tsb_gpio_pinsharing[APBRIDGE_LINE_COUNT] = {
 
 #endif
 
-int tsb_gpio_get_direction(void *driver_data, uint8_t which)
+static uint8_t tsb_gpio_get_value(void *driver_data, uint8_t which)
+{
+    return !!(getreg32(GPIO_DATA) & (1 << which));
+}
+
+static void tsb_gpio_set_value(void *driver_data, uint8_t which, uint8_t value)
+{
+    putreg32(1 << which, value ? GPIO_ODATASET : GPIO_ODATACLR);
+}
+
+static int tsb_gpio_get_direction(void *driver_data, uint8_t which)
 {
     uint32_t dir = getreg32(GPIO_DIR);
     return !(dir & (1 << which));
 }
 
-void tsb_gpio_direction_in(void *driver_data, uint8_t which)
+static void tsb_gpio_direction_in(void *driver_data, uint8_t which)
 {
     putreg32(1 << which, GPIO_DIRIN);
 }
 
-void tsb_gpio_direction_out(void *driver_data, uint8_t which, uint8_t value)
+static void tsb_gpio_direction_out(void *driver_data, uint8_t which, uint8_t value)
 {
     tsb_gpio_set_value(NULL, which, value);
     putreg32(1 << which, GPIO_DIROUT);
-}
-
-void tsb_gpio_activate(void *driver_data, uint8_t which)
-{
-    struct gpio_pinsharing_conf *conf;
-    uint32_t mask = 0;
-    uint8_t i;
-
-    if (gpio_state[which] == TSB_GPIO_FLAG_OPEN)
-        return;
-
-    tsb_gpio_initialize();
-
-    conf = &tsb_gpio_pinsharing[which];
-
-    /* build the mask of requested bits */
-    for (i = 0; i < conf->count; i++) {
-        uint8_t bit = conf->pin[i].num;
-        mask |= BIT(bit);
-        pinshare_bit_count[bit]++;
-    }
-
-    /* compare it to what we already have */
-    mask = mask ^ (currently_owned & mask);
-
-    /* request the missing bits */
-    if (mask) {
-        if (tsb_request_pinshare(mask))
-            goto err;
-
-        /* we own these bits now */
-        currently_owned |= mask;
-
-        /* clr or set them accordingly */
-        for (i = 0; i < conf->count; i++) {
-            uint8_t bit = conf->pin[i].num;
-            if (conf->pin[i].sts == PIN_CLR_ST)
-                tsb_clr_pinshare(BIT(bit));
-            else
-                tsb_set_pinshare(BIT(bit));
-        }
-    }
-
-    gpio_state[which] = TSB_GPIO_FLAG_OPEN;
-
-    return;
-
-err:
-    for (i = 0; i < conf->count; i++)
-        pinshare_bit_count[conf->pin[i].num]--;
-}
-
-uint8_t tsb_gpio_get_value(void *driver_data, uint8_t which)
-{
-    return !!(getreg32(GPIO_DATA) & (1 << which));
-}
-
-void tsb_gpio_set_value(void *driver_data, uint8_t which, uint8_t value)
-{
-    putreg32(1 << which, value ? GPIO_ODATASET : GPIO_ODATACLR);
-}
-
-void tsb_gpio_deactivate(void *driver_data, uint8_t which)
-{
-    struct gpio_pinsharing_conf *conf;
-    uint32_t mask = 0;
-    uint8_t i;
-
-    if (gpio_state[which] != TSB_GPIO_FLAG_OPEN)
-        return;
-
-    tsb_gpio_uninitialize();
-
-    conf = &tsb_gpio_pinsharing[which];
-
-    /* build the mask of bits we can release */
-    for (i = 0; i < conf->count; i++) {
-        uint8_t bit = conf->pin[i].num;
-        if (--pinshare_bit_count[bit] == 0)
-            mask |= BIT(bit);
-    }
-
-    /* release these bits and stop owning them */
-    if (mask) {
-        tsb_release_pinshare(mask);
-        currently_owned &= ~mask;
-    }
-
-    gpio_state[which] = 0;
 }
 
 uint8_t tsb_gpio_line_count(void *driver_data)
@@ -314,19 +235,19 @@ uint8_t tsb_gpio_line_count(void *driver_data)
     return line_count;
 }
 
-int tsb_gpio_mask_irq(void *driver_data, uint8_t which)
+static int tsb_gpio_mask_irq(void *driver_data, uint8_t which)
 {
     putreg32(1 << which, GPIO_INTMASKSET);
     return 0;
 }
 
-int tsb_gpio_unmask_irq(void *driver_data, uint8_t which)
+static int tsb_gpio_unmask_irq(void *driver_data, uint8_t which)
 {
     putreg32(1 << which, GPIO_INTMASKCLR);
     return 0;
 }
 
-int tsb_gpio_clear_interrupt(void *driver_data, uint8_t which)
+static int tsb_gpio_clear_interrupt(void *driver_data, uint8_t which)
 {
     putreg32(1 << which, GPIO_RAWINTSTAT);
     return 0;
@@ -342,7 +263,7 @@ uint32_t tsb_gpio_get_interrupt(void)
     return getreg32(GPIO_INTSTAT);
 }
 
-int tsb_set_gpio_triggering(void *driver_data, uint8_t which, int trigger)
+static int tsb_set_gpio_triggering(void *driver_data, uint8_t which, int trigger)
 {
     int tsb_trigger;
     uint32_t reg = GPIO_INTCTRL0 + ((which >> 1) & 0xfc);
@@ -406,7 +327,7 @@ static int tsb_gpio_irq_handler(int irq, void *context)
     return 0;
 }
 
-int tsb_gpio_irqattach(void *driver_data, uint8_t irq, xcpt_t isr, uint8_t base)
+static int tsb_gpio_irqattach(void *driver_data, uint8_t irq, xcpt_t isr, uint8_t base)
 {
     irqstate_t flags;
 
@@ -442,7 +363,7 @@ static void tsb_gpio_irqinitialize(void)
     }
 }
 
-void tsb_gpio_initialize(void)
+static void tsb_gpio_initialize(void)
 {
     irqstate_t flags;
 
@@ -464,7 +385,7 @@ out:
     irqrestore(flags);
 }
 
-void tsb_gpio_uninitialize(void)
+static void tsb_gpio_uninitialize(void)
 {
     irqstate_t flags;
 
@@ -483,7 +404,86 @@ out:
     irqrestore(flags);
 }
 
-struct gpio_ops_s tsb_gpio_ops = {
+static void tsb_gpio_activate(void *driver_data, uint8_t which)
+{
+    struct gpio_pinsharing_conf *conf;
+    uint32_t mask = 0;
+    uint8_t i;
+
+    if (gpio_state[which] == TSB_GPIO_FLAG_OPEN)
+        return;
+
+    tsb_gpio_initialize();
+
+    conf = &tsb_gpio_pinsharing[which];
+
+    /* build the mask of requested bits */
+    for (i = 0; i < conf->count; i++) {
+        uint8_t bit = conf->pin[i].num;
+        mask |= BIT(bit);
+        pinshare_bit_count[bit]++;
+    }
+
+    /* compare it to what we already have */
+    mask = mask ^ (currently_owned & mask);
+
+    /* request the missing bits */
+    if (mask) {
+        if (tsb_request_pinshare(mask))
+            goto err;
+
+        /* we own these bits now */
+        currently_owned |= mask;
+
+        /* clr or set them accordingly */
+        for (i = 0; i < conf->count; i++) {
+            uint8_t bit = conf->pin[i].num;
+            if (conf->pin[i].sts == PIN_CLR_ST)
+                tsb_clr_pinshare(BIT(bit));
+            else
+                tsb_set_pinshare(BIT(bit));
+        }
+    }
+
+    gpio_state[which] = TSB_GPIO_FLAG_OPEN;
+
+    return;
+
+err:
+    for (i = 0; i < conf->count; i++)
+        pinshare_bit_count[conf->pin[i].num]--;
+}
+
+static void tsb_gpio_deactivate(void *driver_data, uint8_t which)
+{
+    struct gpio_pinsharing_conf *conf;
+    uint32_t mask = 0;
+    uint8_t i;
+
+    if (gpio_state[which] != TSB_GPIO_FLAG_OPEN)
+        return;
+
+    tsb_gpio_uninitialize();
+
+    conf = &tsb_gpio_pinsharing[which];
+
+    /* build the mask of bits we can release */
+    for (i = 0; i < conf->count; i++) {
+        uint8_t bit = conf->pin[i].num;
+        if (--pinshare_bit_count[bit] == 0)
+            mask |= BIT(bit);
+    }
+
+    /* release these bits and stop owning them */
+    if (mask) {
+        tsb_release_pinshare(mask);
+        currently_owned &= ~mask;
+    }
+
+    gpio_state[which] = 0;
+}
+
+static struct gpio_ops_s tsb_gpio_ops = {
     .get_direction = tsb_gpio_get_direction,
     .direction_in = tsb_gpio_direction_in,
     .direction_out = tsb_gpio_direction_out,

@@ -34,33 +34,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-#include <arch/irq.h>
-
-int tsb_gpio_get_direction(void *driver_data, uint8_t which);
-void tsb_gpio_direction_in(void *driver_data, uint8_t which);
-void tsb_gpio_direction_out(void *driver_data, uint8_t which, uint8_t value);
-void tsb_gpio_activate(void *driver_data, uint8_t which);
-uint8_t tsb_gpio_get_value(void *driver_data, uint8_t which);
-void tsb_gpio_set_value(void *driver_data, uint8_t which, uint8_t value);
-void tsb_gpio_deactivate(void *driver_data, uint8_t which);
-uint8_t tsb_gpio_line_count(void *driver_data);
-void tsb_gpio_initialize(void);
-void tsb_gpio_uninitialize(void);
-int tsb_gpio_irqattach(void *driver_data, uint8_t which, xcpt_t isr,
-                       uint8_t base);
-int set_tsb_gpio_triggering(void *driver_data, uint8_t which, int trigger);
-int tsb_gpio_mask_irq(void *driver_data, uint8_t which);
-int tsb_gpio_unmask_irq(void *driver_data, uint8_t which);
-int tsb_gpio_clear_interrupt(void *driver_data, uint8_t which);
-uint32_t tsb_gpio_get_raw_interrupt(void);
-uint32_t tsb_gpio_get_interrupt(void);
-
-int tsb_gpio_register(void *driver_data);
-
-static inline size_t tsb_nr_gpio(void)
-{
-    return tsb_gpio_line_count(NULL);
-}
+#include <nuttx/util.h>
 
 #define TSB_GPIO_CHIP_BASE          0
 
@@ -73,6 +47,17 @@ static inline size_t tsb_nr_gpio(void)
 #define TSB_IO_PULL_UPDOWN0         0x40000A10
 #define TSB_IO_PULL_UPDOWN_ENABLE0  0x40000A20
 #define TSB_IO_PULL_UPDOWN_GPIO(x)  BIT(x)
+
+int tsb_gpio_register(void *driver_data);
+
+static inline size_t tsb_nr_gpio(void)
+{
+    extern uint8_t tsb_gpio_line_count(void *driver_data);
+    return tsb_gpio_line_count(NULL);
+}
+
+uint32_t tsb_gpio_get_raw_interrupt(void);
+uint32_t tsb_gpio_get_interrupt(void);
 
 #endif /* _TSB_GPIO_H_ */
 
