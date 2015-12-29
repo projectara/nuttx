@@ -232,7 +232,3 @@ endif
 ifeq ($(CONFIG_EXAMPLES_WATCHDOG),y)
 CONFIGURED_APPS += examples/watchdog
 endif
-
-ifeq ($(CONFIG_EXAMPLES_WEBSERVER),y)
-CONFIGURED_APPS += examples/webserver
-endif
