@@ -181,10 +181,6 @@ ifeq ($(CONFIG_EXAMPLES_SENDMAIL),y)
 CONFIGURED_APPS += examples/sendmail
 endif
 
-ifeq ($(CONFIG_EXAMPLES_SERIALBLASTER),y)
-CONFIGURED_APPS += examples/serialblaster
-endif
-
 ifeq ($(CONFIG_EXAMPLES_FLASH_TEST),y)
 CONFIGURED_APPS += examples/flash_test
 endif
