@@ -70,7 +70,7 @@ SUBDIRS += keypadtest mm mount mtdpart mtdrwb
 SUBDIRS += nrf24l01_term nsh null nxffs nxflat
 SUBDIRS += ostest pashello pipe poll posix_spawn pwm qencoder
 SUBDIRS += random relays rgmp romfs sendmail serialblaster serloop serialrx
-SUBDIRS += smart smart_test telnetd
+SUBDIRS += telnetd
 SUBDIRS += watchdog
 
 # Sub-directories that might need context setup.  Directories may need
@@ -84,7 +84,7 @@ CNTXTDIRS += cpuhog cxxtest flash_test
 CNTXTDIRS += hello helloxx i2schar json keypadtestmodbus mtdpart mtdrwb
 CNTXTDIRS += nrf24l01_term
 CNTXTDIRS += ostest random relays qencoder serialblaster serialrx
-CNTXTDIRS += smart_test telnetd watchdog
+CNTXTDIRS += telnetd watchdog
 endif
 
 all: nothing
