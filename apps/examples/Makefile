@@ -68,7 +68,6 @@ SUBDIRS  = cpuhog cxxtest elf
 SUBDIRS += flash_test hello helloxx igmp i2schar json
 SUBDIRS += keypadtest mm mount mtdpart mtdrwb
 SUBDIRS += nrf24l01_term nsh null nxffs nxflat
-SUBDIRS += ostest
 
 # Sub-directories that might need context setup.  Directories may need
 # context setup for a variety of reasons, but the most common is because
@@ -78,7 +77,6 @@ ifeq ($(CONFIG_NSH_BUILTIN_APPS),y)
 CNTXTDIRS = cpuhog cxxtest flash_test
 CNTXTDIRS += hello helloxx i2schar json keypadtestmodbus mtdpart mtdrwb
 CNTXTDIRS += nrf24l01_term
-CNTXTDIRS += ostest
 endif
 
 all: nothing
