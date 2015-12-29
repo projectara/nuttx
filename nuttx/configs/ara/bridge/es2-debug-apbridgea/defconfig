@@ -663,11 +663,6 @@ CONFIG_NSH_CONSOLE=y
 # CONFIG_NSH_ARCHINIT is not set
 
 #
-# Platform-specific Support
-#
-# CONFIG_PLATFORM_CONFIGDATA is not set
-
-#
 # System Libraries and NSH Add-Ons
 #
 

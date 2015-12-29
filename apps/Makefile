@@ -76,7 +76,7 @@ TOPDIR ?= $(APPDIR)/import
 
 CONFIGURED_APPS =
 SUBDIRS  = ara examples builtin import nshlib
-SUBDIRS += platform system greybus-utils
+SUBDIRS += system greybus-utils
 
 # The list of configured directories is derived from NuttX configuration
 # file:  The selected applications are enabled settings in the configuration
@@ -94,7 +94,6 @@ include builtin/Make.defs
 include ara/Make.defs
 include examples/Make.defs
 include nshlib/Make.defs
-include platform/Make.defs
 include system/Make.defs
 -include external/Make.defs
 include greybus-utils/Make.defs
