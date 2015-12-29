@@ -514,14 +514,3 @@ examples/ostest
       During round-robin scheduling test two threads are created. Each of the threads
       searches for prime numbers in the configurable range, doing that configurable
       number of times.
-
-examples/pashello
-^^^^^^^^^^^^^^^^^
-
-  This is "Hello, World" implemented via the Pascal P-Code interpreter. In
-  order to use this example, you must first download and install the
-  NuttX pascal module.  After unpacking the pascal module, you can find
-  installation instructions in pascal/nuttx/README.txt.
-
-  The correct install location for the NuttX examples and build files is
-  apps/interpreters.
