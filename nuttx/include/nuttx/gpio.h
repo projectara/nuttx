@@ -29,30 +29,135 @@
 #ifndef _GPIO_H_
 #define _GPIO_H_
 
+/**
+ * @file nuttx/gpio.h
+ * @brief GPIO API
+ */
+
 #include <stdint.h>
 #include <nuttx/irq.h>
 
+/**
+ * @defgroup IRQ_TYPE IRQ trigger type
+ *
+ * Defines which event triggers an interrupt on a certain GPIO line. For
+ * example, an interrupt can be edge-triggered or level-triggered.
+ * @{
+ */
+/** Do not trigger an interrupt */
 #define IRQ_TYPE_NONE           0x00000000
+/** Triggers an interrupt on a rising edge */
 #define IRQ_TYPE_EDGE_RISING    0x00000001
+/** Triggers an interrupt on a falling edge */
 #define IRQ_TYPE_EDGE_FALLING   0x00000002
+/** Triggers an interrupt on a both types of edges */
 #define IRQ_TYPE_EDGE_BOTH      (IRQ_TYPE_EDGE_FALLING | IRQ_TYPE_EDGE_RISING)
+/** Triggers an interrupt when the signal is high */
 #define IRQ_TYPE_LEVEL_HIGH     0x00000004
+/** Triggers an interrupt when the signal is low */
 #define IRQ_TYPE_LEVEL_LOW      0x00000008
+/** @} */
 
-int gpio_get_direction(uint8_t which);
-void gpio_direction_in(uint8_t which);
-void gpio_direction_out(uint8_t which, uint8_t value);
-void gpio_activate(uint8_t which);
-uint8_t gpio_get_value(uint8_t which);
-void gpio_set_value(uint8_t which, uint8_t value);
-int gpio_set_debounce(uint8_t which, uint16_t delay);
-void gpio_deactivate(uint8_t which);
-uint8_t gpio_line_count(void);
-int gpio_irqattach(uint8_t which, xcpt_t isr);
+/**
+ * @brief Set the interrupt trigger type corresponding to a GPIO line
+ * @param which The number of the GPIO line
+ * @param trigger \ref IRQ_TYPE
+ * @return 0 on success, !=0 on failure
+ */
 int set_gpio_triggering(uint8_t which, int trigger);
+
+/**
+ * @brief Get the direction of a GPIO line
+ * @param which The number of the GPIO line
+ * @return 0 if the GPIO line is set as an input, 1 if the GPIO line is set as
+ * an output
+ */
+int gpio_get_direction(uint8_t which);
+
+/**
+ * @brief Set a GPIO line as an input
+ * @param which The number of the GPIO line
+ */
+void gpio_direction_in(uint8_t which);
+
+/**
+ * @brief Set a GPIO line as an output and set its initial value
+ * @param which The number of the GPIO line
+ * @param value 0 for setting the initial value of the GPIO line to logical 0,
+ * !=0 for setting the initial value of GPIO line to logical 1
+ */
+void gpio_direction_out(uint8_t which, uint8_t value);
+
+/**
+ * @brief Get the value of a GPIO line
+ * @param which The number of the GPIO line
+ * @return 0 if the value of the GPIO line is logical 0, 1 if the value of the
+ * GPIO line is logical 1
+ */
+uint8_t gpio_get_value(uint8_t which);
+
+/**
+ * @brief Set the value of a GPIO line
+ * @param which The number of the GPIO line
+ * @param value 0 for setting the value of the GPIO line to logical 0, !=0 for
+ * setting the value of GPIO line to logical 1
+ */
+void gpio_set_value(uint8_t which, uint8_t value);
+
+/**
+ * @brief Set the debouncing delay of a GPIO line
+ * @param which The number of the GPIO line
+ * @param delay Debouncing delay
+ * @return 0 on success, !=0 on failure
+ */
+int gpio_set_debounce(uint8_t which, uint16_t delay);
+
+/**
+ * @brief Get the number of GPIO lines
+ * @return The number of GPIO lines
+ */
+uint8_t gpio_line_count(void);
+
+/**
+ * @brief Attach an interrupt handler to a GPIO line
+ * @param which The number of the GPIO line
+ * @param isr The interrupt handler (int (*xcpt_t)(int irq, void *context))
+ * @return 0 on success, !=0 on failure
+ */
+int gpio_irqattach(uint8_t which, xcpt_t isr);
+
+/**
+ * @brief Mask the interrupt corresponding to a GPIO line
+ * @param which The number of the GPIO line
+ * @return 0 on success, !=0 on failure
+ */
 int gpio_mask_irq(uint8_t which);
+
+/**
+ * @brief Unmask the interrupt corresponding to a GPIO line
+ * @param which The number of the GPIO line
+ * @return 0 on success, !=0 on failure
+ */
 int gpio_unmask_irq(uint8_t which);
+
+/**
+ * @brief Clear the interrupt corresponding to a GPIO line
+ * @param which The number of the GPIO line
+ * @return 0 on success, !=0 on failure
+ */
 int gpio_clear_interrupt(uint8_t which);
+
+/**
+ * @brief Request a GPIO line
+ * @param which The number of the GPIO line
+ */
+void gpio_activate(uint8_t which);
+
+/**
+ * @brief Free a GPIO line
+ * @param which The number of the GPIO line
+ */
+void gpio_deactivate(uint8_t which);
 
 #endif
 
