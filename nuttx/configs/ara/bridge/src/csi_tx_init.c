@@ -34,7 +34,6 @@
 #include <nuttx/gpio.h>
 #include <nuttx/wqueue.h>
 #include <arch/tsb/cdsi.h>
-#include <arch/tsb/gpio.h>
 #include <arch/board/cdsi0_offs_def.h>
 #include <arch/board/cdsi0_reg_def.h>
 

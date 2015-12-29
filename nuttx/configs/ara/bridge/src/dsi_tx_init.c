@@ -42,7 +42,6 @@
 #include <arch/board/cdsi0_offs_def.h>
 #include <arch/board/cdsi0_reg_def.h>
 #include <arch/tsb/pwm.h>
-#include <arch/tsb/gpio.h>
 
 #include <arch/board/lg4892.h>
 

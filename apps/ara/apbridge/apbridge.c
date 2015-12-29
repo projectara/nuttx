@@ -39,7 +39,6 @@
 #include <apps/ara/service_mgr.h>
 #include <apps/ara/gb_loopback.h>
 #include <apps/nsh.h>
-#include <arch/tsb/gpio.h>
 
 #include <arch/board/apbridgea_gadget.h>
 
