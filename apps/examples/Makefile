@@ -67,7 +67,7 @@
 SUBDIRS  = cpuhog cxxtest elf
 SUBDIRS += flash_test hello helloxx igmp i2schar json
 SUBDIRS += keypadtest mm mount mtdpart mtdrwb
-SUBDIRS += nrf24l01_term nsh null nxflat
+SUBDIRS += nrf24l01_term nsh nxflat
 
 # Sub-directories that might need context setup.  Directories may need
 # context setup for a variety of reasons, but the most common is because

@@ -466,9 +466,3 @@ examples/nxflat
   test programs under examples/nxflat tests.  These tests are build using
   the NXFLAT format and installed in a ROMFS file system.  At run time,
   each program in the ROMFS file system is executed.  Requires CONFIG_NXFLAT.
-
-examples/null
-^^^^^^^^^^^^^
-
-  This is the do nothing application.  It is only used for bringing
-  up new NuttX architectures in the most minimal of environments.
