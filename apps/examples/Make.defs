@@ -101,10 +101,6 @@ ifeq ($(CONFIG_EXAMPLES_MM),y)
 CONFIGURED_APPS += examples/mm
 endif
 
-ifeq ($(CONFIG_EXAMPLES_MOUNT),y)
-CONFIGURED_APPS += examples/mount
-endif
-
 ifeq ($(CONFIG_EXAMPLES_NSH),y)
 CONFIGURED_APPS += examples/nsh
 endif

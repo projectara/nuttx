@@ -66,7 +66,7 @@
 
 SUBDIRS  = cpuhog cxxtest elf
 SUBDIRS += flash_test hello helloxx igmp i2schar json
-SUBDIRS += keypadtest mm mount
+SUBDIRS += keypadtest mm
 SUBDIRS += nsh nxflat
 
 # Sub-directories that might need context setup.  Directories may need
