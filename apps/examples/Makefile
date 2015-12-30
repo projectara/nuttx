@@ -65,7 +65,7 @@
 # Sub-directories
 
 SUBDIRS  = cpuhog cxxtest elf
-SUBDIRS += flash_test hello helloxx igmp i2schar json
+SUBDIRS += flash_test hello helloxx igmp i2schar
 SUBDIRS += nsh nxflat
 
 # Sub-directories that might need context setup.  Directories may need
@@ -74,7 +74,7 @@ SUBDIRS += nsh nxflat
 
 ifeq ($(CONFIG_NSH_BUILTIN_APPS),y)
 CNTXTDIRS = cpuhog cxxtest flash_test
-CNTXTDIRS += hello helloxx i2schar json
+CNTXTDIRS += hello helloxx i2schar
 endif
 
 all: nothing
