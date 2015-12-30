@@ -43,6 +43,18 @@
 #include <nuttx/config.h>
 #include <nuttx/i2c.h>
 
+/* If a dynamic timeout is selected, then a non-negative, non-zero micro-
+ * seconds per byte value must be provided as well.
+ */
+
+#ifdef CONFIG_STM32_I2C_DYNTIMEO
+#  if CONFIG_STM32_I2C_DYNTIMEO_USECPERBYTE < 1
+#    warning "Ignoring CONFIG_STM32_I2C_DYNTIMEO because of CONFIG_STM32_I2C_DYNTIMEO_USECPERBYTE"
+#    undef CONFIG_STM32_I2C_DYNTIMEO
+#  endif
+#endif
+
+
 #include "chip.h"
 #if defined(CONFIG_STM32_STM32F30XX)
 #  include "chip/stm32f30xxx_i2c.h"
