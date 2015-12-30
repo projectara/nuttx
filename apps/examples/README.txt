@@ -127,24 +127,6 @@ examples/elf
 
        LDELFFLAGS = -r -e main -T$(TOPDIR)/binfmt/libelf/gnu-elf.ld
 
-examples/flash_test
-^^^^^^^^^^^^^^^^^^^
-
-  This example performs a SMART flash block device test.  This test performs
-  a sector allocate, read, write, free and garbage collection test on a SMART
-  MTD block device.
-
-    * CONFIG_EXAMPLES_FLASH_TEST=y - Enables the FLASH Test
-
-  Dependencies:
-
-    * CONFIG_MTD_SMART=y - SMART block driver support
-    * CONFIG_NSH_BUILTIN_APPS=y - This example can only be built as an NSH
-      command
-    * CONFIG_BUILD_PROTECTED=n and CONFIG_BUILD_KERNEL=n- This test uses
-      internal OS interfaces and so is not available in the NUTTX kernel
-      builds
-
 examples/hello
 ^^^^^^^^^^^^^^
 

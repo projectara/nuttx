@@ -96,7 +96,3 @@ endif
 ifeq ($(CONFIG_EXAMPLES_NXFLAT),y)
 CONFIGURED_APPS += examples/nxflat
 endif
-
-ifeq ($(CONFIG_EXAMPLES_FLASH_TEST),y)
-CONFIGURED_APPS += examples/flash_test
-endif
