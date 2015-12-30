@@ -29,6 +29,5 @@
 # see misc/tools/kconfig-language.txt.
 #
 
-source "$APPSDIR/examples/elf/Kconfig"
 source "$APPSDIR/examples/hello/Kconfig"
 source "$APPSDIR/examples/nsh/Kconfig"

@@ -64,8 +64,7 @@
 
 # Sub-directories
 
-SUBDIRS  = elf
-SUBDIRS += hello
+SUBDIRS = hello
 SUBDIRS += nsh
 
 # Sub-directories that might need context setup.  Directories may need

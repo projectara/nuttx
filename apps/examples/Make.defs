@@ -61,10 +61,6 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-ifeq ($(CONFIG_EXAMPLES_ELF),y)
-CONFIGURED_APPS += examples/elf
-endif
-
 ifeq ($(CONFIG_EXAMPLES_HELLO),y)
 CONFIGURED_APPS += examples/hello
 endif
