@@ -113,10 +113,6 @@ ifeq ($(CONFIG_EXAMPLES_MTDRWB),y)
 CONFIGURED_APPS += examples/mtdrwb
 endif
 
-ifeq ($(CONFIG_EXAMPLES_NRF24L01TERM),y)
-CONFIGURED_APPS += examples/nrf24l01_term
-endif
-
 ifeq ($(CONFIG_EXAMPLES_NSH),y)
 CONFIGURED_APPS += examples/nsh
 endif

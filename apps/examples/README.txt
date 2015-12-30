@@ -391,18 +391,6 @@ examples/mtdrwb
   * CONFIG_EXAMPLES_MTDRWB_NEBLOCKS - This value gives the nubmer of erase
     blocks in MTD RAM device.
 
-examples/nrf24l01_term
-^^^^^^^^^^^^^^^^^^^^^^
-
-  These is a simple test of NRF24L01-based wireless connectivity.  Enabled\
-  with:
-
-    CONFIG_EXAMPLES_NRF24L01TERM
-
-  Options:
-
-    CONFIG_NSH_BUILTIN_APPS - Built as an NSH built-in applications.
-
 examples/nsh
 ^^^^^^^^^^^^
 
