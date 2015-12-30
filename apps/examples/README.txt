@@ -293,11 +293,6 @@ examples/keypadtest
   CONFIG_EXAMPLES_KEYPAD_DEVNAME - The name of the keypad device that will
     be opened in order to perform the keypad test.  Default: "/dev/keypad"
 
-examples/mm
-^^^^^^^^^^^
-
-  This is a simple test of the memory manager.
-
 examples/modbus
 ^^^^^^^^^^^^^^^
 
