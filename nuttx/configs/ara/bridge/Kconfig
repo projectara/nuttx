@@ -46,6 +46,15 @@ config ARA_BRIDGE_HAVE_HID_TOUCH
 	---help---
 		Multi-Touch HID Device Driver
 
+config ARA_BRIDGE_HAVE_HID_DEVICE
+	bool "Generic HID Device Driver"
+	select DEVICE_CORE
+	default n
+	---help---
+		This is a generic HID driver that vendor
+		can hook up with HW  specific require code
+		in FDK
+
 config ARA_BRIDGE_HAVE_LIGHTS
 	bool "Lights Support"
 	depends on ARCH_CHIP_GPBRIDGE
