@@ -61,10 +61,6 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-ifeq ($(CONFIG_EXAMPLES_CPUHOG),y)
-CONFIGURED_APPS += examples/cpuhog
-endif
-
 ifeq ($(CONFIG_EXAMPLES_ELF),y)
 CONFIGURED_APPS += examples/elf
 endif

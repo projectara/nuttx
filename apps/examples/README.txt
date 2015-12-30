@@ -24,13 +24,6 @@ examples
       "named" applications that can be executed from the NSH
       command line (see apps/README.txt for more information).
 
-examples/cpuhog
-^^^^^^^^^^^^^^^
-
-  Attempts to keep the system busy by passing data through a pipe in loop
-  back mode.  This may be useful if you are trying run down other problems
-  that you think might only occur when the system is very busy.
-
 examples/elf
 ^^^^^^^^^^^^
 
