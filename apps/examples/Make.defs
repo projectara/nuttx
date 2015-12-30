@@ -72,7 +72,3 @@ endif
 ifeq ($(CONFIG_EXAMPLES_NSH),y)
 CONFIGURED_APPS += examples/nsh
 endif
-
-ifeq ($(CONFIG_EXAMPLES_NXFLAT),y)
-CONFIGURED_APPS += examples/nxflat
-endif

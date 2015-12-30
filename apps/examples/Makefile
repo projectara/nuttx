@@ -66,7 +66,7 @@
 
 SUBDIRS  = elf
 SUBDIRS += hello
-SUBDIRS += nsh nxflat
+SUBDIRS += nsh
 
 # Sub-directories that might need context setup.  Directories may need
 # context setup for a variety of reasons, but the most common is because
