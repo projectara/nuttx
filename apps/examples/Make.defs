@@ -77,10 +77,6 @@ ifeq ($(CONFIG_EXAMPLES_HELLO),y)
 CONFIGURED_APPS += examples/hello
 endif
 
-ifeq ($(CONFIG_EXAMPLES_HELLOXX),y)
-CONFIGURED_APPS += examples/helloxx
-endif
-
 ifeq ($(CONFIG_EXAMPLES_NSH),y)
 CONFIGURED_APPS += examples/nsh
 endif
