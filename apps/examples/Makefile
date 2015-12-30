@@ -65,7 +65,7 @@
 # Sub-directories
 
 SUBDIRS  = cpuhog cxxtest elf
-SUBDIRS += hello helloxx igmp i2schar
+SUBDIRS += hello helloxx i2schar
 SUBDIRS += nsh nxflat
 
 # Sub-directories that might need context setup.  Directories may need

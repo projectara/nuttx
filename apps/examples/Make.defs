@@ -81,10 +81,6 @@ ifeq ($(CONFIG_EXAMPLES_HELLOXX),y)
 CONFIGURED_APPS += examples/helloxx
 endif
 
-ifeq ($(CONFIG_EXAMPLES_IGMP),y)
-CONFIGURED_APPS += examples/igmp
-endif
-
 ifeq ($(CONFIG_EXAMPLES_I2SCHAR),y)
 CONFIGURED_APPS += examples/i2schar
 endif
