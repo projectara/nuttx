@@ -64,7 +64,7 @@
 
 # Sub-directories
 
-SUBDIRS  = cpuhog cxxtest elf
+SUBDIRS  = cpuhog elf
 SUBDIRS += hello
 SUBDIRS += nsh nxflat
 
@@ -73,7 +73,7 @@ SUBDIRS += nsh nxflat
 # the example may be built as an NSH built-in function.
 
 ifeq ($(CONFIG_NSH_BUILTIN_APPS),y)
-CNTXTDIRS = cpuhog cxxtest
+CNTXTDIRS = cpuhog
 CNTXTDIRS += hello
 endif
 

@@ -65,10 +65,6 @@ ifeq ($(CONFIG_EXAMPLES_CPUHOG),y)
 CONFIGURED_APPS += examples/cpuhog
 endif
 
-ifeq ($(CONFIG_EXAMPLES_CXXTEST),y)
-CONFIGURED_APPS += examples/cxxtest
-endif
-
 ifeq ($(CONFIG_EXAMPLES_ELF),y)
 CONFIGURED_APPS += examples/elf
 endif
