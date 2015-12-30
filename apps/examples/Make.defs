@@ -93,10 +93,6 @@ ifeq ($(CONFIG_EXAMPLES_JSON),y)
 CONFIGURED_APPS += examples/json
 endif
 
-ifeq ($(CONFIG_EXAMPLES_KEYPADTEST),y)
-CONFIGURED_APPS += examples/keypadtest
-endif
-
 ifeq ($(CONFIG_EXAMPLES_NSH),y)
 CONFIGURED_APPS += examples/nsh
 endif
