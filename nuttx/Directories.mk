@@ -78,27 +78,16 @@ OTHERDIRS = lib
 ifeq ($(CONFIG_BUILD_PROTECTED),y)
 
 USERDIRS += libc mm $(USER_ADDONS)
-ifeq ($(CONFIG_HAVE_CXX),y)
-USERDIRS += libxx
-endif
 
 else
 ifeq ($(CONFIG_BUILD_KERNEL),y)
 
 USERDIRS += libc mm
-ifeq ($(CONFIG_HAVE_CXX),y)
-USERDIRS += libxx
-endif
 
 else
 
 NONFSDIRS += libc mm
 OTHERDIRS += $(USER_ADDONS)
-ifeq ($(CONFIG_HAVE_CXX),y)
-NONFSDIRS += libxx
-else
-OTHERDIRS += libxx
-endif
 
 endif
 endif

@@ -729,7 +729,6 @@ endmenu
 
 menu "Library Routines"
 source libc/Kconfig
-source libxx/Kconfig
 endmenu
 
 menu "Application Configuration"

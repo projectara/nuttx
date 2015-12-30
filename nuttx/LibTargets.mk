@@ -123,12 +123,6 @@ $(ARCH_SRC)$(DELIM)libuarch$(LIBEXT): context
 lib$(DELIM)libuarch$(LIBEXT): $(ARCH_SRC)$(DELIM)libuarch$(LIBEXT)
 	$(Q) install $(ARCH_SRC)$(DELIM)libuarch$(LIBEXT) lib$(DELIM)libuarch$(LIBEXT)
 
-libxx$(DELIM)libcxx$(LIBEXT): context
-	$(Q) $(MAKE) -C libxx TOPDIR="$(TOPDIR)" libcxx$(LIBEXT) KERNEL=n
-
-lib$(DELIM)libcxx$(LIBEXT): libxx$(DELIM)libcxx$(LIBEXT)
-	$(Q) install libxx$(DELIM)libcxx$(LIBEXT) lib$(DELIM)libcxx$(LIBEXT)
-
 $(APPDIR)$(DELIM)libapps$(LIBEXT): context
 	$(Q) $(MAKE) -C $(APPDIR) TOPDIR="$(TOPDIR)" libapps$(LIBEXT) KERNEL=n
 

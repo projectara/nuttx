@@ -518,12 +518,6 @@ CONFIG_SCHED_WORKSTACKSIZE=2048
 CONFIG_LIB_RING_BUF=y
 
 #
-# Basic CXX Support
-#
-# CONFIG_C99_BOOL8 is not set
-# CONFIG_HAVE_CXX is not set
-
-#
 # Application Configuration
 #
 
