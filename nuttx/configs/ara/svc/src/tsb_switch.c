@@ -1970,6 +1970,11 @@ static int switch_prep_for_series_change(struct tsb_switch *sw,
  */
 static int switch_active_cfg_is_sane(const struct unipro_pwr_cfg *pcfg,
                                      unsigned max_nlanes) {
+    if (pcfg->upro_mode == UNIPRO_MODE_UNCHANGED) {
+        /* Unchanged is always sane. */
+        return 1;
+    }
+
     if (pcfg->upro_nlanes > max_nlanes) {
         dbg_error("%s(): attempt to use %u lanes, support at most %u\n",
                   __func__, pcfg->upro_nlanes, max_nlanes);
