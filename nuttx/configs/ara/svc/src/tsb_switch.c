@@ -1975,7 +1975,7 @@ static int switch_active_cfg_is_sane(const struct unipro_pwr_cfg *pcfg,
         return 1;
     }
 
-    if (pcfg->upro_nlanes > max_nlanes) {
+    if (pcfg->upro_nlanes < 1 || pcfg->upro_nlanes > max_nlanes) {
         dbg_error("%s(): attempt to use %u lanes, support at most %u\n",
                   __func__, pcfg->upro_nlanes, max_nlanes);
         return 0;
