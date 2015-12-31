@@ -1946,16 +1946,8 @@ static int switch_prep_for_series_change(struct tsb_switch *sw,
      * PA_HSSeries, but we can set the mode to the same value. Use
      * that to respect the caller's intent to leave a mode
      * unchanged. */
-    if (tx_unchanged || rx_unchanged) {
-        if (tx_unchanged) {
-            *pwr_mode &= ~0x0f;
-            *pwr_mode |= cur_pwr_mode & 0x0f;
-        }
-        if (rx_unchanged) {
-            *pwr_mode &= ~0xf0;
-            *pwr_mode |= cur_pwr_mode & 0xf0;
-        }
-    }
+    *pwr_mode = (tx_unchanged ? cur_pwr_mode & 0x0f : tx->upro_mode)
+              | (rx_unchanged ? cur_pwr_mode & 0xf0 : rx->upro_mode << 4);
 
     /* If both directions of the current mode are ready for the
      * change; there's nothing more to do.
@@ -2318,7 +2310,7 @@ int switch_configure_link(struct tsb_switch *sw,
     uint32_t rx_term = !!(cfg->flags & UPRO_LINKF_RX_TERMINATION);
     uint32_t scrambling = !!(cfg->flags & UPRO_LINKF_SCRAMBLING);
     const struct unipro_pwr_user_data *udata = &cfg->upro_user;
-    uint32_t pwr_mode = tx->upro_mode | (rx->upro_mode << 4);
+    uint32_t pwr_mode;
 
     dbg_verbose("%s(): port=%d\n", __func__, port_id);
 
