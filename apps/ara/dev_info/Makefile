@@ -79,6 +79,8 @@ ROOTDEPPATH = --dep-path .
 VPATH =
 
 all: .built
+	@true
+
 .PHONY: clean depend distclean
 
 $(AOBJS): %$(OBJEXT): %.S
