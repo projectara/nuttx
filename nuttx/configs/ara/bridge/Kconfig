@@ -64,26 +64,12 @@ config ARA_BRIDGE_HAVE_LIGHTS
 	---help---
 		Lights Device Driver
 
-config BOARD_HAVE_DISPLAY
-	bool "Display support for Board"
-	default n
-	select GPIO
-
 config ARA_BRIDGE_HAVE_POWER_SUPPLY
 	bool "Power Supply Support"
 	select DEVICE_CORE
 	default n
 	---help---
 		Power Supply Driver
-
-choice
-	prompt "Select a bridge firmware configuration"
-	depends on BOARD_HAVE_DISPLAY
-config APB_DISPLAY
-	bool "APBridge for Display Module"
-	depends on BOARD_HAVE_DISPLAY
-	select GPIO_TCA64XX
-endchoice
 
 choice
 	prompt "Board"

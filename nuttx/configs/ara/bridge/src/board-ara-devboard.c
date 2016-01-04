@@ -39,8 +39,6 @@
 #include <nuttx/device_hid.h>
 #include <nuttx/util.h>
 #include <nuttx/usb.h>
-#include <nuttx/i2c.h>
-#include <nuttx/gpio/tca64xx.h>
 #include <nuttx/device_lights.h>
 
 #include "tsb_scm.h"
@@ -48,9 +46,6 @@
 
 #include <arch/board/csi_tx_service.h>
 #include <arch/tsb/gpio.h>
-#ifdef CONFIG_BOARD_HAVE_DISPLAY
-#include <arch/board/dsi.h>
-#endif
 
 #ifdef CONFIG_ARA_BRIDGE_HAVE_POWER_SUPPLY
 #include <nuttx/device_power_supply.h>
@@ -65,42 +60,6 @@
 #ifdef CONFIG_APBRIDGEA
 /* must pull up or drive high on SDB APBridgeA to bring Helium out of reset */
 #define HELIUM_EXT_NRST_BTN_GPIO 0
-#endif
-
-#ifdef CONFIG_BOARD_HAVE_DISPLAY
-/* GPIO Chip base of the TCA6408 I/O Expander. Follows the TSB GPIOs */
-#define TCA6408_GPIO_BASE           (TSB_GPIO_CHIP_BASE + tsb_nr_gpio())
-
-#define TCA6408_U72             0x20
-#define TCA6408_U72_INT_GPIO    0x03
-#define TCA6408_U72_RST_GPIO    0x04
-
-static int io_expander_init(void)
-{
-    void *driver_data;
-    struct i2c_dev_s *dev;
-
-    dev = up_i2cinitialize(0);
-    if (!dev) {
-        lowsyslog("%s(): Failed to get I/O Expander I2C bus 0\n", __func__);
-        return -ENODEV;
-    } else {
-        if (tca64xx_init(&driver_data,
-                         TCA6408_PART,
-                         dev,
-                         TCA6408_U72,
-                         TCA6408_U72_RST_GPIO,
-                         TCA6408_U72_INT_GPIO,
-                         TCA6408_GPIO_BASE) < 0) {
-            lowsyslog("%s(): Failed to register I/O Expander(0x%02x)\n",
-                      __func__, TCA6408_U72);
-            up_i2cuninitialize(dev);
-            return -ENODEV;
-        }
-    }
-
-    return 0;
-}
 #endif
 
 #ifdef CONFIG_DEVICE_CORE
@@ -209,13 +168,6 @@ static void bdb_driver_register(void)
 }
 #endif
 
-static void board_display_init(void)
-{
-#ifdef CONFIG_BOARD_HAVE_DISPLAY
-    display_init();
-#endif
-}
-
 static void sdb_fixups(void)
 {
     /**
@@ -262,12 +214,6 @@ static void sdb_fixups(void)
 
 void ara_module_early_init(void)
 {
-#ifdef CONFIG_BOARD_HAVE_DISPLAY
-#ifndef CONFIG_APBRIDGEA
-    /* IO expander init is required by ps_hold */
-    io_expander_init();
-#endif
-#endif
 }
 
 void ara_module_init(void)
@@ -279,7 +225,6 @@ void ara_module_init(void)
     bdb_driver_register();
 #endif
 
-    board_display_init();
 #ifdef CONFIG_APBRIDGEA
     csi_tx_srv_init();
 #endif

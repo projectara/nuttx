@@ -43,10 +43,6 @@
 
 #include <arch/board/apbridgea_gadget.h>
 
-#ifdef CONFIG_BOARD_HAVE_DISPLAY
-#include <arch/board/dsi.h>
-#endif
-
 #include "apbridge_backend.h"
 
 static struct apbridge_dev_s *g_usbdev = NULL;

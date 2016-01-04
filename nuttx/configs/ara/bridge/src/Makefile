@@ -41,13 +41,6 @@ ifeq ($(CONFIG_ARA_BRIDGE_BOARD_ARA_DEVBOARD),y)
 CSRCS		+= board-ara-devboard.c
 endif
 
-ifeq ($(CONFIG_APB_AP),y)
-CSRCS   += dsi_rx_init.c
-else ifeq ($(CONFIG_APB_DISPLAY),y)
-CSRCS   += lg4892.c
-CSRCS   += dsi_tx_init.c
-endif
-
 ifeq ($(CONFIG_PWM),y)
 CSRCS		+= up_pwm.c
 endif
