@@ -65,6 +65,7 @@
 #include <nuttx/greybus/greybus.h>
 #include <nuttx/unipro/unipro.h>
 #include <arch/byteorder.h>
+#include <arch/board/csi_tx_service.h>
 #include <arch/board/common_gadget.h>
 #include <arch/board/apbridgea_gadget.h>
 #include <nuttx/greybus/greybus_timestamp.h>
@@ -205,6 +206,14 @@ struct cport_to_ep {
     __le16 cport_id;
     __u8 endpoint_in;
     __u8 endpoint_out;
+};
+
+struct csi_tx_control {
+    __u8 csi_id;
+    __u8 clock_mode;
+    __u8 num_lanes;
+    __u8 padding;
+    __le32 bus_freq;
 };
 
 enum ctrlreq_state {
@@ -1098,6 +1107,32 @@ static int latency_tag_dis_vendor_request_out(struct usbdev_s *dev, uint8_t req,
     return ret;
 }
 
+static int csi_tx_control_vendor_request_out(struct usbdev_s *dev, uint8_t req,
+                                             uint16_t index, uint16_t value,
+                                             void *buf, uint16_t len)
+{
+    const struct csi_tx_control *ctrl = (const struct csi_tx_control *)buf;
+    struct csi_tx_config cfg;
+
+    if (len != sizeof(*ctrl))
+        return -EINVAL;
+
+    if (ctrl->csi_id != 0 && ctrl->csi_id != 1)
+        return -EINVAL;
+
+    if (ctrl->bus_freq == cpu_to_le32(0))
+        return csi_tx_srv_stop(ctrl->csi_id);
+
+    if (ctrl->num_lanes != 1 && ctrl->num_lanes != 2 && ctrl->num_lanes != 4)
+        return -EINVAL;
+
+    cfg.clock_mode = ctrl->clock_mode;
+    cfg.num_lanes = ctrl->num_lanes;
+    cfg.bus_freq = le32_to_cpu(ctrl->bus_freq);
+
+    return csi_tx_srv_start(ctrl->csi_id, &cfg);
+}
+
 /****************************************************************************
  * Name: usbclass_setup
  *
@@ -1342,6 +1377,9 @@ int usbdev_apbinitialize(struct device *dev,
         goto errout_vendor_req;
     if (register_vendor_request(APBRIDGE_ROREQUEST_LATENCY_TAG_DIS, VENDOR_REQ_OUT,
                                 latency_tag_dis_vendor_request_out))
+        goto errout_vendor_req;
+    if (register_vendor_request(APBRIDGE_RWREQUEST_CSI_TX_CONTROL, VENDOR_REQ_DATA,
+                                csi_tx_control_vendor_request_out))
         goto errout_vendor_req;
 
     /* Allocate the structures needed */

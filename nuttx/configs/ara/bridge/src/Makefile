@@ -72,6 +72,7 @@ endif
 ifeq ($(CONFIG_APBRIDGEA),y)
 CSRCS += common_gadget.c
 CSRCS += apbridgea_gadget.c
+CSRCS += csi_tx_service.c
 endif
 
 ifeq ($(CONFIG_ARA_BRIDGE_HAVE_POWER_SUPPLY),y)

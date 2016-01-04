@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2015 Google, Inc.
+/**
+ * Copyright (c) 2015 Google Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -10,7 +10,7 @@
  * this list of conditions and the following disclaimer in the documentation
  * and/or other materials provided with the distribution.
  * 3. Neither the name of the copyright holder nor the names of its
- * * may be used to endorse or promote products derived from this
+ * contributors may be used to endorse or promote products derived from this
  * software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
@@ -24,47 +24,32 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * @brief Toshiba CSI Receiver and Transmitter Configuration
  */
 
-#ifndef _APBRIDGEA_GADGET_H_
-#define _APBRIDGEA_GADGET_H_
+#ifndef __CSI_TX_SERVICE_H__
+#define __CSI_TX_SERVICE_H__
 
-#include <sys/types.h>
-#include <arch/board/common_gadget.h>
+#include <arch/tsb/csi.h>
 
-/* Vender specific control requests *******************************************/
+int csi_tx_srv_init(void);
 
-#define APBRIDGE_RWREQUEST_LOG                  (0x02)
-#define APBRIDGE_RWREQUEST_EP_MAPPING           (0x03)
-#define APBRIDGE_ROREQUEST_CPORT_COUNT          (0x04)
-#define APBRIDGE_WOREQUEST_CPORT_RESET          (0x05)
-#define APBRIDGE_ROREQUEST_LATENCY_TAG_EN       (0x06)
-#define APBRIDGE_ROREQUEST_LATENCY_TAG_DIS      (0x07)
-#define APBRIDGE_RWREQUEST_CSI_TX_CONTROL       (0x08)
+/**
+ * @brief Start the CSI for data streaming
+ * @param csi_id The CDSI transmitter (0 or 1)
+ * @param cfg Pointer to structure of CSI configuration settings.
+ *
+ * @return 0 on success, negative errno on error.
+ */
+int csi_tx_srv_start(uint8_t csi_id, struct csi_tx_config *cfg);
 
-struct apbridge_dev_s;
+/**
+ * @brief Stop the CSI for data streaming
+ * @param csi_id The CDSI transmitter (0 or 1)
+ *
+ * @return 0 on success, negative errno on error.
+ */
+int csi_tx_srv_stop(uint8_t csi_id);
 
-enum ep_mapping {
-    MULTIPLEXED_EP,
-    DIRECT_EP,
-};
-
-struct apbridge_usb_driver
-{
-    int (*usb_to_unipro)(struct apbridge_dev_s *dev, unsigned int cportid,
-                         void *payload, size_t size);
-    int (*init)(struct apbridge_dev_s *dev);
-
-    void (*unipro_cport_mapping)(unsigned int cportid, enum ep_mapping mapping);
-};
-
-int unipro_to_usb(struct apbridge_dev_s *dev, unsigned cportid,
-                  const void *payload, size_t size);
-
-void usb_wait(struct apbridge_dev_s *dev);
-int usbdev_apbinitialize(struct device *dev,
-                         struct apbridge_usb_driver *driver);
-
-int usb_release_buffer(struct apbridge_dev_s *priv, const void *buf);
-
-#endif /* _APBRIDGEA_GADGET_H_ */
+#endif  /* __CSI_TX_SERVICE_H__ */

@@ -46,6 +46,7 @@
 #include "tsb_scm.h"
 #include "up_arch.h"
 
+#include <arch/board/csi_tx_service.h>
 #include <arch/tsb/gpio.h>
 #ifdef CONFIG_BOARD_HAVE_DISPLAY
 #include <arch/board/dsi.h>
@@ -279,4 +280,7 @@ void ara_module_init(void)
 #endif
 
     board_display_init();
+#ifdef CONFIG_APBRIDGEA
+    csi_tx_srv_init();
+#endif
 }
