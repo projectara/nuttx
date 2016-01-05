@@ -38,9 +38,11 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-
+#include <nuttx/arch.h>
 #include <stdio.h>
 #include <debug.h>
+#include <semaphore.h>
+#include <errno.h>
 
 #include "lib_internal.h"
 
@@ -89,19 +91,42 @@
  ****************************************************************************/
 
 #if defined(CONFIG_ARCH_LOWPUTC) || defined(CONFIG_SYSLOG)
-
 int lowvsyslog(FAR const char *fmt, va_list ap)
 {
-  struct lib_outstream_s stream;
+    struct lib_outstream_s stream;
 
-  /* Wrap the stdout in a stream object and let lib_vsprintf do the work. */
+    /* Wrap the stdout in a stream object and let lib_vsprintf do the work. */
 
 #ifdef CONFIG_SYSLOG
-  lib_syslogstream((FAR struct lib_outstream_s *)&stream);
+    lib_syslogstream((FAR struct lib_outstream_s *)&stream);
+    return lib_vsprintf((FAR struct lib_outstream_s *)&stream, fmt, ap);
 #else
-  lib_lowoutstream((FAR struct lib_outstream_s *)&stream);
+    static int lowsyslog_seminit = 0;
+    static sem_t lowsyslog_sem;
+    int ret = 0;
+
+    lib_lowoutstream((FAR struct lib_outstream_s *)&stream);
+
+    if (!lowsyslog_seminit) {
+        sem_init(&lowsyslog_sem, 0, 1);
+        lowsyslog_seminit = 1;
+    }
+
+    /* Don't do blocking operation on interrupt context, we need make sure
+     * doesn't wait semaphore in interrupt context and IDLE loop (pid = 0),
+     * because it will cause lowvsyslog hang on sem_wait(), so ignore called
+     * from interrupt handler and IDLE loop and just output debug message
+     * without waiting.
+     */
+    if (!up_interrupt_context() && getpid()) {
+        sem_wait(&lowsyslog_sem);
+        ret = lib_vsprintf((struct lib_outstream_s *)&stream, fmt, ap);
+        sem_post(&lowsyslog_sem);
+    } else {
+        ret = lib_vsprintf((struct lib_outstream_s *)&stream, fmt, ap);
+    }
+    return ret;
 #endif
-  return lib_vsprintf((FAR struct lib_outstream_s *)&stream, fmt, ap);
 }
 
 /****************************************************************************
