@@ -642,6 +642,23 @@ static int ep_set_requests_count(struct apbridge_dev_s *priv,
     return 0;
 }
 
+static int set_request_count_vendor_request_out(struct usbdev_s *dev,
+                                                uint8_t req,
+                                                uint16_t index, uint16_t value,
+                                                void *buf, uint16_t len)
+{
+    struct usbdev_ep_s *ep;
+    struct apbridge_dev_s *priv;
+
+    if (index > APBRIDGE_NBULKS)
+        return -EINVAL;
+
+    priv = usbdev_to_apbridge(dev);
+    ep = priv->ep[CONFIG_APBRIDGE_EPBULKOUT + index * 2];
+
+    return ep_set_requests_count(priv, ep, value);
+}
+
 static int apbridge_queue(struct apbridge_dev_s *priv, struct usbdev_ep_s *ep,
                           const void *payload, size_t len, void *data)
 {
@@ -1657,6 +1674,9 @@ int usbdev_apbinitialize(struct device *dev,
         goto errout_vendor_req;
     if (register_vendor_request(APBRIDGE_RWREQUEST_CSI_TX_CONTROL, VENDOR_REQ_DATA,
                                 csi_tx_control_vendor_request_out))
+        goto errout_vendor_req;
+    if (register_vendor_request(APBRIDGE_WOREQUEST_SET_REQUEST_COUNT, VENDOR_REQ_OUT,
+                                set_request_count_vendor_request_out))
         goto errout_vendor_req;
 
 #ifdef CONFIG_APBRIDGEA_AUDIO
