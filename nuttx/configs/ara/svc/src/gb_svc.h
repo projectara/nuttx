@@ -180,7 +180,10 @@ struct gb_svc_intf_set_pwrm_request {
        __u8 flags;
        __le32 quirks;
 } __packed;
-/* interface set power mode response has no payload */
+
+struct gb_svc_intf_set_pwrm_response {
+       __le16 result_code;
+} __packed;
 
 int gb_svc_protocol_version(void);
 int gb_svc_hello(uint8_t ap_intf_id);

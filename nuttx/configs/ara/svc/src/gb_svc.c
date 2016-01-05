@@ -303,6 +303,7 @@ static uint8_t gb_svc_route_destroy(struct gb_operation *op) {
 
 static uint8_t gb_svc_intf_set_power_mode(struct gb_operation *op) {
     struct gb_svc_intf_set_pwrm_request *req;
+    struct gb_svc_intf_set_pwrm_response *resp;
     struct unipro_link_cfg cfg;
     uint32_t quirks;
     int rc;
@@ -313,6 +314,10 @@ static uint8_t gb_svc_intf_set_power_mode(struct gb_operation *op) {
     }
 
     req = gb_operation_get_request_payload(op);
+    resp = gb_operation_alloc_response(op, sizeof(*resp));
+    if (!resp) {
+        return GB_OP_NO_MEMORY;
+    }
 
     quirks = le32_to_cpu(req->quirks);
 
@@ -392,8 +397,11 @@ static uint8_t gb_svc_intf_set_power_mode(struct gb_operation *op) {
     cfg.upro_user.upro_pwr_fc0_protection_timeout = 0x1fff;
 
     rc = svc_intf_set_power_mode(req->intf_id, &cfg);
+    if (rc < 0)
+        return gb_errno_to_op_result(rc);
 
-    return gb_errno_to_op_result(rc);
+    resp->result_code = cpu_to_le16(rc);
+    return GB_OP_SUCCESS;
 }
 
 static struct gb_operation_handler gb_svc_handlers[] = {
