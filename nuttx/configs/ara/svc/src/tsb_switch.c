@@ -2315,7 +2315,7 @@ int switch_configure_link(struct tsb_switch *sw,
     uint32_t rx_term = !!(cfg->flags & UPRO_LINKF_RX_TERMINATION);
     uint32_t scrambling = !!(cfg->flags & UPRO_LINKF_SCRAMBLING);
     const struct unipro_pwr_user_data *udata = &cfg->upro_user;
-    uint32_t pwr_mode;
+    uint32_t pwr_mode = tx->upro_mode | (rx->upro_mode << 4);
 
     dbg_verbose("%s(): port=%d\n", __func__, port_id);
 
