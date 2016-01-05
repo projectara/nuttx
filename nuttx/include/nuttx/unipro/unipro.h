@@ -449,6 +449,10 @@ enum unipro_pwr_mode {
     UNIPRO_FASTAUTO_MODE = 4,
     /** Alternating automatically between SLOW_STATE (PWM) and SLEEP_STATE. */
     UNIPRO_SLOWAUTO_MODE = 5,
+    /**
+     * Special value to use when you don't want to change one link
+     * direction's power mode */
+    UNIPRO_MODE_UNCHANGED = 7,
 
     /*
      * These values are random and can be changed if needd.
@@ -458,10 +462,6 @@ enum unipro_pwr_mode {
     UNIPRO_HIBERNATE_MODE = 100,
     /** Powered off */
     UNIPRO_OFF_MODE = 101,
-    /**
-     * Special value to use when you don't want to change one link
-     * direction's power mode */
-    UNIPRO_MODE_UNCHANGED = 102,
 };
 
 /** @brief UniPro frequency series in high speed mode. */

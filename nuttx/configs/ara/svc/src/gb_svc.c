@@ -349,9 +349,6 @@ static uint8_t gb_svc_intf_set_power_mode(struct gb_operation *op) {
         cfg.upro_hs_ser = UNIPRO_HS_SERIES_UNCHANGED;
 
     switch (req->tx_mode) {
-    case GB_SVC_UNIPRO_MODE_UNCHANGED:
-        cfg.upro_tx_cfg.upro_mode = UNIPRO_MODE_UNCHANGED;
-        break;
     case GB_SVC_UNIPRO_HIBERNATE_MODE:
         cfg.upro_tx_cfg.upro_mode = UNIPRO_HIBERNATE_MODE;
         break;
@@ -368,9 +365,6 @@ static uint8_t gb_svc_intf_set_power_mode(struct gb_operation *op) {
     cfg.upro_tx_cfg.upro_nlanes = req->tx_nlanes;
 
     switch (req->rx_mode) {
-    case GB_SVC_UNIPRO_MODE_UNCHANGED:
-        cfg.upro_rx_cfg.upro_mode = UNIPRO_MODE_UNCHANGED;
-        break;
     case GB_SVC_UNIPRO_HIBERNATE_MODE:
         cfg.upro_rx_cfg.upro_mode = UNIPRO_HIBERNATE_MODE;
         break;
