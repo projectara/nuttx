@@ -112,5 +112,3 @@ clean:
 distclean: clean
 	$(call DELFILE, Make.dep)
 	$(call DELFILE, .depend)
-
--include Make.dep

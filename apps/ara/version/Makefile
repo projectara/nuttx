@@ -52,3 +52,4 @@ PROGNAME = $(CONFIG_ARA_VERSION_PROGNAME)
 # Common build
 
 include ../default.mk
+-include Make.dep

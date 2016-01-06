@@ -45,3 +45,4 @@ PROGNAME = $(CONFIG_ARA_GB_LOOPBACK_PROGNAME)
 # Common build
 
 include ../default.mk
+-include Make.dep

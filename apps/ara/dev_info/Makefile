@@ -46,4 +46,4 @@ CONFIG_ARA_DEV_INFO_MAIN_PROGNAME ?= dev_info$(EXEEXT)
 PROGNAME = $(CONFIG_ARA_DEV_INFO_MAIN_PROGNAME)
 
 include ../default.mk
-
+-include Make.dep
