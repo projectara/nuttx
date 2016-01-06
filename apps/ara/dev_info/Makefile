@@ -45,5 +45,5 @@ MAINSRC = dev_info.c
 CONFIG_ARA_DEV_INFO_MAIN_PROGNAME ?= dev_info$(EXEEXT)
 PROGNAME = $(CONFIG_ARA_DEV_INFO_MAIN_PROGNAME)
 
-include ../default.mk
+include $(APPDIR)/ara/default.mk
 -include Make.dep
