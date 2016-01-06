@@ -375,6 +375,15 @@ void unipro_rxbuf_free(unsigned int cportid, void *ptr);
 #define DME_AFC1REQTIMEOUTVAL       0xd046
 
 /*
+ * Values for DME_DDBL1_MANUFACTURERID and DME_DDBL1_PRODUCTID, used to
+ * determine the type and revision of bridges
+ */
+#define MANUFACTURER_TOSHIBA        0x0126
+#define PRODUCT_ES2_TSB_BRIDGE      0x1000
+#define PRODUCT_ES3_TSB_APBRIDGE    0x1001
+#define PRODUCT_ES3_TSB_GPBRIDGE    0x1002
+
+/*
  * Lower level attribute read/write.
  *
  * Please use one of the unipro_{local,peer}_attr_{read,write}()
