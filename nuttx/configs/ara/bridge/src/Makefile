@@ -61,12 +61,12 @@ ifeq ($(CONFIG_ARA_BRIDGE_HAVE_USB3813),y)
 CSRCS		+= usb3813.c
 endif
 
-ifeq ($(CONFIG_ARA_BRIDGE_HAVE_HID_TOUCH),y)
-CSRCS		+= hid_dummy_touch.c
-endif
-
 ifeq ($(CONFIG_ARA_BRIDGE_HAVE_HID_DEVICE),y)
 CSRCS		+= hid_device.c
+endif
+
+ifeq ($(CONFIG_ARA_BRIDGE_HAVE_HID_TOUCH),y)
+CSRCS		+= hid_dummy_touch.c
 endif
 
 ifeq ($(CONFIG_ARA_BRIDGE_HAVE_LIGHTS),y)

@@ -40,12 +40,7 @@
 #include <nuttx/clock.h>
 
 #include <arch/tsb/chip.h>
-#include <tsb_scm.h>
 #include "clock/clock.h"
-
-#define HID_DEVICE_FLAG_PROBE           BIT(0)  /* device probed */
-#define HID_DEVICE_FLAG_OPEN            BIT(1)  /* device opened */
-#define HID_DEVICE_FLAG_POWERON         BIT(2)  /* device powered on */
 
 #define TIP_SWITCH                      BIT(0)  /* finger touched */
 #define IN_RANGE                        BIT(1)  /* touch is valid */
@@ -74,44 +69,11 @@
 #define CLICK_PRESSURE                  20
 #define SWIPE_PRESSURE                  30
 
-#ifdef CONFIG_TSB_CHIP_REV_ES2
-#define GPIO_TRIGGER                    26   /* Trigger GPIO pin for testing */
-#else
-#define GPIO_TRIGGER                    0   /* Trigger GPIO pin for testing */
-#endif
+#define GPIO_TRIGGER                    9   /* Trigger GPIO pin for testing */
 #define DEFAULT_DEBOUNCE_TIME           25  /* 250ms (1 SysTick = 10ms) */
 #define TOUCH_SAMPLE_RATE               20000 /* 20ms */
 
-static int hid_get_report_length(struct device *dev, uint8_t report_type,
-                                     uint8_t report_id);
-
-static struct device *hid_dev = NULL;
-
-/**
- * HID report length structure
- */
-struct report_len {
-    /** input report length */
-    uint16_t input;
-    /** output report length */
-    uint16_t output;
-    /** feature report length */
-    uint16_t feature;
-} __packed;
-
-/**
- * HID Report Size Structure. Type define for a report item size
- * information structure, to retain the size of a device's reports by ID.
- */
-struct hid_size_info {
-    /** Report ID */
-    uint8_t id;
-    /** HID Report length array */
-    union {
-        uint16_t size[3];
-        struct report_len len;
-    } reports;
-};
+static struct device *touch_dev = NULL;
 
 /**
  * Touch finger data
@@ -141,47 +103,21 @@ struct hid_touch_data {
     uint8_t actual;
 } __packed;
 
-/**
- * wait queue
- */
-struct hid_waitq {
-    /** thread exit flag */
-    int abort;
-    /** condition object for wait event */
-    pthread_cond_t cond;
-    /** mutex object for wait event */
-    pthread_mutex_t mutex;
-};
+struct touch_info {
+    /** Chain to button linking list. */
+    struct list_head list;
 
-/**
- * Private HID device information
- */
-struct hiddev_info {
-    /** Driver model representation of the device */
-    struct device *dev;
-
-    /** HID device descriptor */
-    struct hid_descriptor *hdesc;
-    /** HID report descriptor */
-    uint8_t *rdesc;
-    /** number of HID Report structure */
-    int num_ids;
-    /** report length of each HID Reports */
-    struct hid_size_info *sinfo;
+    uint8_t gpio;
 
     /** number of fingers supported */
     uint8_t maximum_contacts;
-    /** HID device state*/
-    int state;
-    /** hid input event callback function */
-    hid_event_callback event_callback;
-    /** Exclusive access for operation */
-    sem_t lock;
 
     /** store latest valid keyboard interrupt time */
     uint32_t last_activetime;
+
     /** store latest valid keyboard state */
     uint8_t last_gpiostate;
+
     /**
      * GPIO debounce time count
      *
@@ -192,13 +128,19 @@ struct hiddev_info {
 
     /** thread handle */
     pthread_t hid_thread;
-    /** wait queue for gpio trigger event*/
-    struct hid_waitq wq;
+
+    /** thread exit flag */
+    int abort;
+
+    /** Notifying event thread to start */
+    sem_t signal_thread;
 
     /** multitouch data. for testing */
     struct hid_touch_data data;
+
     /** start to generate multitouch data. for testing */
     int mt_generate;
+
     /** multitouch data count. for testing */
     int mt_count;
 };
@@ -237,7 +179,7 @@ struct hiddev_info {
 /**
  * Multitouch HID report descriptor
  */
-uint8_t hid_report_desc[] = {
+uint8_t touch_report_desc[] = {
     0x05, 0x0d,                    /* USAGE_PAGE (Digitizers) */
     0x09, 0x04,                    /* USAGE (Touch Screen) */
     0xa1, 0x01,                    /* COLLECTION (Application) */
@@ -261,9 +203,9 @@ uint8_t hid_report_desc[] = {
 /**
  * Keyboard HID Device Descriptor
  */
-struct hid_descriptor hid_dev_desc = {
+struct hid_descriptor touch_dev_desc = {
     sizeof(struct hid_descriptor), /* hid_descriptor size */
-    sizeof(hid_report_desc), /* hid_report_desc size */
+    sizeof(touch_report_desc), /* hid_report_desc size */
     0x0111, /* HID v1.11 compliant */
     PRODUCTID,
     VENDORID,
@@ -289,13 +231,29 @@ struct hid_size_info hid_sizeinfo[] =
     },
 };
 
+static struct touch_info *touch_get_info(struct device *dev, uint8_t gpio)
+{
+    struct hid_info *info = device_get_private(dev);
+    struct touch_info *dev_info = NULL;
+    struct list_head *iter;
+
+    list_foreach(&info->device_list, iter) {
+        dev_info = list_entry(iter, struct touch_info, list);
+        if (dev_info->gpio == gpio) {
+            return dev_info;
+        }
+    }
+
+    return NULL;
+}
+
 /**
  * @brief generate fake test data for multitouch
  *
- * @param info - pointer to structure of HID private data
+ * @param info - pointer to structure of touch_info
  * @param testcase - type of multitouch test case
  */
-int update_touch_data(struct hiddev_info *info, uint8_t testcase)
+int update_touch_data(struct touch_info *info, uint8_t testcase)
 {
     int i = 0, ret = 0;
 
@@ -367,31 +325,63 @@ int update_touch_data(struct hiddev_info *info, uint8_t testcase)
 }
 
 /**
+ * @brief Get multi-touch report length
+ *
+ * @param dev - pointer to structure of device data
+ * @param report_type - HID report type
+ * @param report_id - HID report id
+ * @return the report size on success, negative errno on error
+ */
+static int touch_get_report_length(struct device *dev, uint8_t report_type,
+                                   uint8_t report_id)
+{
+    struct hid_info *info = device_get_private(dev);
+    struct touch_info *tuh_info = NULL;
+    int len = 0, i;
+
+    tuh_info = touch_get_info(dev, GPIO_TRIGGER);
+    if (!tuh_info) {
+        return -EIO;
+    }
+
+    /* lookup the hid_size_info table to find the report size */
+    for (i = 0; i < info->num_ids; i++) {
+        if (info->sinfo[i].id == report_id) {
+            len = info->sinfo[i].reports.size[report_type];
+            if (report_id != REPORT_ID_ZERO) {
+                len++;
+            }
+            break;
+        }
+    }
+    return len;
+}
+
+/**
  * @brief HID demo thread function
  *
  * @param context - pointer to structure of device data
  */
-void hid_thread_func(void *context)
+void touch_thread_func(void *context)
 {
     struct device *dev = context;
-    struct hiddev_info *info = NULL;
+    struct hid_info *info = device_get_private(dev);
+    struct touch_info *tuh_info = NULL;
     uint8_t testcase = 0;
 
-    /* check input parameters */
-    if (!dev || !device_get_private(dev)) {
+    tuh_info = touch_get_info(dev, GPIO_TRIGGER);
+    if (!tuh_info) {
         return;
     }
-    info = device_get_private(dev);
-
-    pthread_mutex_lock(&info->wq.mutex);
 
     /* Initialize random number generator for Multitouch HID demo case */
     srand(time(NULL));
 
     while (1) {
         /* wait for gpio trigger event */
-        pthread_cond_wait(&info->wq.cond, &info->wq.mutex);
-        if (info->wq.abort) {
+        sem_wait(&tuh_info->signal_thread);
+
+        if (tuh_info->abort) {
             /* exit hid_thread_func loop */
             break;
         }
@@ -399,25 +389,24 @@ void hid_thread_func(void *context)
         /* send demo touch packet to host */
         do {
             /* prepare touch packet */
-            update_touch_data(info, testcase);
+            update_touch_data(tuh_info, testcase);
 
             if (info->event_callback) {
                 /* send touch packet to the caller */
                 info->event_callback(dev, HID_INPUT_REPORT,
-                                     (uint8_t*)&info->data,
+                                     (uint8_t*)&tuh_info->data,
                                      sizeof(struct hid_touch_data));
             }
             usleep(TOUCH_SAMPLE_RATE);
-        } while (info->mt_count > 0);
+        } while (tuh_info->mt_count > 0);
 
         /* switch to next testcase */
         testcase = (testcase + 1) % NUM_OF_TESTCASE;
     }
-    pthread_mutex_unlock(&info->wq.mutex);
 }
 
 /**
- * @brief Get HID Input report data
+ * @brief Get TOUCH Input report data
  *
  * @param dev - pointer to structure of device data
  * @param report_id - HID report id
@@ -425,32 +414,34 @@ void hid_thread_func(void *context)
  * @param len - max input buffer size
  * @return 0 on success, negative errno on error
  */
-static int get_input_report(struct device *dev, uint8_t report_id,
-                            uint8_t *data, uint16_t len)
+static int touch_get_input_report(struct device *dev, uint8_t report_id,
+                                  uint8_t *data, uint16_t len)
 {
-    struct hiddev_info *info = NULL;
-
-    /* check input parameters */
-    if (!dev || !device_get_private(dev)) {
-        return -EINVAL;
-    }
-    info = device_get_private(dev);
+    struct touch_info *tuh_info = NULL;
 
     if (report_id != REPORT_ID_MULTITOUCH) {
         /* For current case, only supports REPORT_ID_MULTITOUCH input report,
          * if report id isn't REPORT_ID_MULTITOUCH, returns error. */
         return -EINVAL;
     }
+
+    tuh_info = touch_get_info(dev, GPIO_TRIGGER);
+    if (!tuh_info) {
+        return -EIO;
+    }
+
     if (len < sizeof(struct hid_touch_data)) {
         /* no enough buffer space to receive touch data */
         return -ENOBUFS;
     }
-    memcpy(data, &info->data, sizeof(struct hid_touch_data));
+
+    memcpy(data, &tuh_info->data, sizeof(struct hid_touch_data));
+
     return 0;
 }
 
 /**
- * @brief Get HID Feature report data
+ * @brief Get TOUCH Feature report data
  *
  * @param dev - pointer to structure of device data
  * @param report_id - HID report id
@@ -458,17 +449,11 @@ static int get_input_report(struct device *dev, uint8_t report_id,
  * @param len - max input buffer size
  * @return 0 on success, negative errno on error
  */
-static int get_feature_report(struct device *dev, uint8_t report_id,
-                            uint8_t *data, uint16_t len)
+static int touch_get_feature_report(struct device *dev, uint8_t report_id,
+                                    uint8_t *data, uint16_t len)
 {
-    struct hiddev_info *info = NULL;
+    struct touch_info *tuh_info = NULL;
     int rptlen = 0;
-
-    /* check input parameters */
-    if (!dev || !device_get_private(dev)) {
-        return -EINVAL;
-    }
-    info = device_get_private(dev);
 
     if (report_id != REPORT_ID_MAX_CONTACTS) {
         /* For current case, only supports REPORT_ID_MAX_CONTACTS feature
@@ -476,12 +461,13 @@ static int get_feature_report(struct device *dev, uint8_t report_id,
         return -EINVAL;
     }
 
-    rptlen = hid_get_report_length(dev, HID_FEATURE_REPORT, report_id);
-    if (report_id != REPORT_ID_ZERO) {
-        /* if report id isn't zero, return data need to contain 1-Byte report
-         * id value */
-        rptlen++;
+    tuh_info = touch_get_info(dev, GPIO_TRIGGER);
+    if (!tuh_info) {
+        return -EIO;
     }
+
+    rptlen = touch_get_report_length(dev, HID_FEATURE_REPORT, report_id);
+
     if (len < rptlen) {
         /* no enough buffer space to receive feature data */
         return -ENOBUFS;
@@ -489,25 +475,8 @@ static int get_feature_report(struct device *dev, uint8_t report_id,
 
     /* Feature report format (2Bytes): [Report ID][Max Contacts] */
     data[0] = report_id;
-    data[1] = info->maximum_contacts;
+    data[1] = tuh_info->maximum_contacts;
     return 0;
-}
-
-/**
- * @brief Set HID Output report data
- *
- * @param dev - pointer to structure of device data
- * @param report_id - HID report id
- * @param data - pointer of output buffer size
- * @param len - max output buffer size
- * @return 0 on success, negative errno on error
- */
-static int set_output_report(struct device *dev, uint8_t report_id,
-                            uint8_t *data, uint16_t len)
-{
-    /* current report descriptor doesn't contain a output report, so just
-     * returns an error code to caller. */
-    return -EIO;
 }
 
 /**
@@ -519,17 +488,11 @@ static int set_output_report(struct device *dev, uint8_t report_id,
  * @param len - max output buffer size
  * @return 0 on success, negative errno on error
  */
-static int set_feature_report(struct device *dev, uint8_t report_id,
-                            uint8_t *data, uint16_t len)
+static int touch_set_feature_report(struct device *dev, uint8_t report_id,
+                                    uint8_t *data, uint16_t len)
 {
-    struct hiddev_info *info = NULL;
+    struct touch_info *tuh_info = NULL;
     int rptlen = 0;
-
-    /* check input parameters */
-    if (!dev || !device_get_private(dev)) {
-        return -EINVAL;
-    }
-    info = device_get_private(dev);
 
     if (report_id != REPORT_ID_MAX_CONTACTS) {
         /* For current case, only supports REPORT_ID_MAX_CONTACTS feature
@@ -537,7 +500,12 @@ static int set_feature_report(struct device *dev, uint8_t report_id,
         return -EINVAL;
     }
 
-    rptlen = hid_get_report_length(dev, HID_FEATURE_REPORT, report_id);
+    tuh_info = touch_get_info(dev, GPIO_TRIGGER);
+    if (!tuh_info) {
+        return -EIO;
+    }
+
+    rptlen = touch_get_report_length(dev, HID_FEATURE_REPORT, report_id);
 
     if (len < rptlen) {
         /* no enough buffer space to receive feature data */
@@ -552,42 +520,42 @@ static int set_feature_report(struct device *dev, uint8_t report_id,
 
     /* Because Greybus HID protocol passed the feature data without report id,
      * so the first byte is maximum contacts field. */
-    info->maximum_contacts = data[0];
+    tuh_info->maximum_contacts = data[0];
+
     return 0;
 }
 
 /**
- * @brief HID device interrupt routine
+ * @brief multi-touch interrupt routine
  *
  * @param context - pointer to structure of device data
  */
-int hid_irq_event(int irq, FAR void *context)
+int touch_irq_event(int irq, FAR void *context)
 {
-    struct device *dev = hid_dev;
-    struct hiddev_info *info = NULL;
+    struct device *dev = touch_dev;
+    struct touch_info *tuh_info = NULL;
     uint8_t new_gpiostate = 0;
     int elapsed = 0;
 
-    if (!dev || !device_get_private(dev)) {
-        return ERROR;
+    tuh_info = touch_get_info(dev, GPIO_TRIGGER);
+    if (!tuh_info) {
+        return -EIO;
     }
 
-    info = device_get_private(hid_dev);
+    elapsed = clock_systimer() - tuh_info->last_activetime;
 
-    elapsed = clock_systimer() - info->last_activetime;
-
-    if (elapsed >= info->debounce_time) {
+    if (elapsed >= tuh_info->debounce_time) {
         gpio_mask_irq(irq);
         new_gpiostate = gpio_get_value(GPIO_TRIGGER);
 
         /* check whether the key state change or not */
-        if (info->last_gpiostate != new_gpiostate) {
-            info->last_gpiostate = new_gpiostate;
-            info->last_activetime = clock_systimer();
+        if (tuh_info->last_gpiostate != new_gpiostate) {
+            tuh_info->last_gpiostate = new_gpiostate;
+            tuh_info->last_activetime = clock_systimer();
 
             /* notify thread function to send demo report data*/
             if (new_gpiostate) {
-                pthread_cond_signal(&info->wq.cond);
+                sem_post(&tuh_info->signal_thread);
             }
         }
         gpio_unmask_irq(irq);
@@ -596,206 +564,50 @@ int hid_irq_event(int irq, FAR void *context)
 }
 
 /**
- * @brief Power-on the HID device.
+ * @brief Power-on/off the HID device.
  *
  * @param dev - pointer to structure of device data
+ * @param on - true for on, false for off
  * @return 0 on success, negative errno on error
  */
-static int hid_power_on(struct device *dev)
+static int touch_power_set(struct device *dev, bool on)
 {
-    struct hiddev_info *info = NULL;
-    int ret = 0;
-
-    /* check input parameters */
-    if (!dev || !device_get_private(dev)) {
-        return -EINVAL;
-    }
-
-    info = device_get_private(dev);
-
-    sem_wait(&info->lock);
-    if (!(info->state & HID_DEVICE_FLAG_OPEN)) {
-        /* device isn't opened. */
-        ret = -EIO;
-        goto err_poweron;
-    }
-    if (!(info->state & HID_DEVICE_FLAG_POWERON)) {
-        info->state |= HID_DEVICE_FLAG_POWERON;
+    if (on) {
         /* enable interrupt */
         gpio_unmask_irq(GPIO_TRIGGER);
     } else {
-        ret = -EBUSY;
-    }
-err_poweron:
-    sem_post(&info->lock);
-    return ret;
-}
-
-/**
- * @brief Power-off the HID device.
- *
- * @param dev - pointer to structure of device data
- * @return 0 on success, negative errno on error
- */
-static int hid_power_off(struct device *dev)
-{
-    struct hiddev_info *info = NULL;
-    int ret = 0;
-
-    /* check input parameters */
-    if (!dev || !device_get_private(dev)) {
-        return -EINVAL;
-    }
-    info = device_get_private(dev);
-
-    sem_wait(&info->lock);
-    if (!(info->state & HID_DEVICE_FLAG_OPEN)) {
-        /* device isn't opened. */
-        ret = -EIO;
-        goto err_poweroff;
-    }
-    if (info->state & HID_DEVICE_FLAG_POWERON) {
-        /* changed power-on state */
-        info->state &= ~HID_DEVICE_FLAG_POWERON;
-        /* disable interrupt */
         gpio_mask_irq(GPIO_TRIGGER);
-    } else {
-        ret = -EIO;
     }
-err_poweroff:
-    sem_post(&info->lock);
-    return ret;
-}
 
-/**
- * @brief Get HID Descriptor
- *
- * @param dev - pointer to structure of device data
- * @param desc - pointer to structure of HID device descriptor
- * @return 0 on success, negative errno on error
- */
-static int hid_get_desc(struct device *dev, struct hid_descriptor *desc)
-{
-    struct hiddev_info *info = NULL;
-
-    /* check input parameters */
-    if (!dev || !device_get_private(dev) || !desc) {
-        return -EINVAL;
-    }
-    info = device_get_private(dev);
-
-    if (!(info->state & HID_DEVICE_FLAG_OPEN)) {
-        /* device isn't opened. */
-        return -EIO;
-    }
-    /* get HID device descriptor */
-    memcpy(desc, info->hdesc, sizeof(struct hid_descriptor));
     return 0;
 }
 
 /**
- * @brief Get HID Report Descriptor
- *
- * @param dev - pointer to structure of device data
- * @param desc - pointer to HID report descriptor
- * @return 0 on success, negative errno on error
- */
-static int hid_get_report_desc(struct device *dev, uint8_t *desc)
-{
-    struct hiddev_info *info = NULL;
-
-    /* check input parameters */
-    if (!dev || !device_get_private(dev) || !desc) {
-        return -EINVAL;
-    }
-    info = device_get_private(dev);
-
-    if (!(info->state & HID_DEVICE_FLAG_OPEN)) {
-        /* device isn't opened. */
-        return -EIO;
-    }
-
-    /* get HID report descriptor */
-    memcpy(desc, info->rdesc, info->hdesc->report_desc_length);
-    return 0;
-}
-
-/**
- * @brief Get HID report length
+ * @brief Set HID Feature report data
  *
  * @param dev - pointer to structure of device data
  * @param report_type - HID report type
  * @param report_id - HID report id
- * @return the report size on success, negative errno on error
+ * @param data - pointer of output buffer size
+ * @param len - max output buffer size
+ * @return 0 on success, negative errno on error
  */
-static int hid_get_report_length(struct device *dev, uint8_t report_type,
-                                     uint8_t report_id)
+static int touch_set_report(struct device *dev, uint8_t report_type,
+                            uint8_t report_id, uint8_t *data, uint16_t len)
 {
-    struct hiddev_info *info = NULL;
-    int ret = 0, i;
+    int ret = 0;
 
-    /* check input parameters */
-    if (!dev || !device_get_private(dev) ||
-        (report_type > HID_FEATURE_REPORT)) {
-        return -EINVAL;
-    }
-    info = device_get_private(dev);
-
-    if (!(info->state & HID_DEVICE_FLAG_OPEN)) {
-        /* device isn't opened. */
-        return -EIO;
+    switch (report_type) {
+        case HID_FEATURE_REPORT:
+            ret = touch_set_feature_report(dev, report_id, data, len);
+        break;
+        default:
+            /* only support output and feature report */
+            ret = -EINVAL;
+        break;
     }
 
-    /* lookup the hid_size_info table to find the report size */
-    for (i = 0; i < info->num_ids; i++) {
-        if (info->sinfo[i].id == report_id) {
-            ret = info->sinfo[i].reports.size[report_type];
-            break;
-        }
-    }
     return ret;
-}
-
-/**
- * @brief Get HID maximum report size in all Report ID for each Report type
- *
- * @param dev - pointer to structure of device data
- * @param report_type - HID report type
- * @return the report size on success, negative errno on error
- */
-static int hid_get_maximum_report_length(struct device *dev,
-                                             uint8_t report_type)
-{
-    struct hiddev_info *info = NULL;
-    int i = 0, maxlen = 0, id = 0;
-
-    /* check input parameters */
-    if (!dev || !device_get_private(dev) ||
-        (report_type > HID_FEATURE_REPORT)) {
-        return -EINVAL;
-    }
-    info = device_get_private(dev);
-
-    if (!(info->state & HID_DEVICE_FLAG_OPEN)) {
-        /* device isn't opened. */
-        return -EIO;
-    }
-
-    /* lookup the hid_size_info table to find the max report size
-     * in specific Report type  */
-
-    for (i = 0; i < info->num_ids; i++) {
-        if (info->sinfo[i].reports.size[report_type] > maxlen) {
-            id = info->sinfo[i].id;
-            maxlen = info->sinfo[i].reports.size[report_type];
-        }
-    }
-    /* If the Report ID isn't zero, add a extra 1-byte space to save
-     * the Report ID.*/
-    if (id) {
-        maxlen++;
-    }
-    return maxlen;
 }
 
 /**
@@ -808,377 +620,142 @@ static int hid_get_maximum_report_length(struct device *dev,
  * @param len - max input buffer size
  * @return 0 on success, negative errno on error
  */
-static int hid_get_report(struct device *dev, uint8_t report_type,
-                              uint8_t report_id, uint8_t *data, uint16_t len)
+static int touch_get_report(struct device *dev, uint8_t report_type,
+                            uint8_t report_id, uint8_t *data, uint16_t len)
 {
-    struct hiddev_info *info = NULL;
     int ret = 0;
-
-    /* check input parameters */
-    if (!dev || !device_get_private(dev) || !data || !len) {
-        return -EINVAL;
-    }
-
-    info = device_get_private(dev);
-
-    sem_wait(&info->lock);
-    if (!(info->state & HID_DEVICE_FLAG_OPEN)) {
-        /* device isn't opened. */
-        ret = -EIO;
-        goto err_getreport;
-    }
 
     switch (report_type) {
         case HID_INPUT_REPORT:
-            ret = get_input_report(dev, report_id, data, len);
+            ret = touch_get_input_report(dev, report_id, data, len);
         break;
         case HID_FEATURE_REPORT:
-            ret = get_feature_report(dev, report_id, data, len);
+            ret = touch_get_feature_report(dev, report_id, data, len);
         break;
         default:
             /* only support input and feature report */
             ret = -EINVAL;
         break;
     }
-err_getreport:
-    sem_post(&info->lock);
+
     return ret;
 }
 
 /**
- * @brief Set HID Output / Feature report data
+ * @brief Configure multi-touch hardware setting
  *
- * @param dev - pointer to structure of device data
- * @param report_type - HID report type
- * @param report_id - HID report id
- * @param data - pointer of output buffer size
- * @param len - max output buffer size
+ * @param dev Pointer to structure of device data
+ * @param dev_info The pointer for hid_info struct
+ *
  * @return 0 on success, negative errno on error
  */
-static int hid_set_report(struct device *dev, uint8_t report_type,
-                              uint8_t report_id, uint8_t *data, uint16_t len)
+static int touch_hw_initialize(struct device *dev, struct hid_info *dev_info)
 {
-    struct hiddev_info *info = NULL;
     int ret = 0;
+    struct touch_info *tuh_info = NULL;
 
-    /* check input parameters */
-    if (!dev || !device_get_private(dev) || !data || !len) {
-        return -EINVAL;
-    }
-
-    info = device_get_private(dev);
-
-    sem_wait(&info->lock);
-    if (!(info->state & HID_DEVICE_FLAG_OPEN)) {
-        /* device isn't opened. */
-        ret = -EIO;
-        goto err_setreport;
-    }
-
-    switch (report_type) {
-        case HID_OUTPUT_REPORT:
-            ret = set_output_report(dev, report_id, data, len);
-        break;
-        case HID_FEATURE_REPORT:
-            ret = set_feature_report(dev, report_id, data, len);
-        break;
-        default:
-            /* only support output and feature report */
-            ret = -EINVAL;
-        break;
-    }
-err_setreport:
-    sem_post(&info->lock);
-    return ret;
-}
-
-/**
- * @brief Register HID Report notify event
- *
- * @param dev - pointer to structure of device data
- * @param callback - callback function for notify event
- * @return 0 on success, negative errno on error
- */
-static int hid_register_callback(struct device *dev,
-                                     hid_event_callback callback)
-{
-    struct hiddev_info *info = NULL;
-
-    /* check input parameters */
-    if (!dev || !device_get_private(dev) || !callback) {
-        return -EINVAL;
-    }
-    info = device_get_private(dev);
-
-    if (!(info->state & HID_DEVICE_FLAG_OPEN)) {
-        /* device isn't opened. */
+    /* check GPIO pin validly*/
+    if (GPIO_TRIGGER >= gpio_line_count()) {
         return -EIO;
     }
-    info->event_callback = callback;
-    return 0;
-}
 
-/**
- * @brief Remove HID Report notify event
- *
- * @param dev - pointer to structure of device data
- * @return 0 on success, negative errno on error
- */
-static int hid_unregister_callback(struct device *dev)
-{
-    struct hiddev_info *info = NULL;
-
-    /* check input parameters */
-    if (!dev || !device_get_private(dev)) {
-        return -EINVAL;
+    tuh_info = zalloc(sizeof(*tuh_info));
+    if (!tuh_info) {
+        ret = -ENOMEM;
+        goto err_hw_init;
     }
-    info = device_get_private(dev);
-
-    if (!(info->state & HID_DEVICE_FLAG_OPEN)) {
-        /* device isn't opened. */
-        return -EIO;
-    }
-    info->event_callback = NULL;
-    return 0;
-}
-
-/**
- * @brief Open HID device
- *
- * This function is called when the caller is preparing to use this device
- * driver. This function should be called after probe () function and need to
- * check whether the driver already open or not. If driver was opened, it needs
- * to return an error code to the caller to notify the driver was opened.
- *
- * @param dev - pointer to structure of device data
- * @return 0 on success, negative errno on error
- */
-static int hid_dev_open(struct device *dev)
-{
-    struct hiddev_info *info = NULL;
-    int ret = 0;
-
-    /* check input parameter */
-    if (!dev || !device_get_private(dev)) {
-        return -EINVAL;
-    }
-    info = device_get_private(dev);
-
-    sem_wait(&info->lock);
-
-    if (!(info->state & HID_DEVICE_FLAG_PROBE)) {
-        ret = -EIO;
-        goto err_open;
-    }
-
-    if (info->state & HID_DEVICE_FLAG_OPEN) {
-        /* device has been opened, return error */
-        ret = -EBUSY;
-        goto err_open;
-    }
-
-    /* calculate report descriptor length dynamically */
-    hid_dev_desc.report_desc_length = sizeof(hid_report_desc);
-
-    info->hdesc = &hid_dev_desc;
-    info->rdesc = hid_report_desc;
-    info->sinfo = hid_sizeinfo;
-    info->num_ids = ARRAY_SIZE(hid_sizeinfo);
-
-    info->event_callback = NULL;
-    info->state |= HID_DEVICE_FLAG_OPEN;
 
     /* set device default value */
-    info->last_activetime = 0;
-    info->last_gpiostate = 0xFF;
-    info->debounce_time = DEFAULT_DEBOUNCE_TIME;
-    info->maximum_contacts = MAX_VALID_CONTACTS;
+    tuh_info->gpio = GPIO_TRIGGER;
+    tuh_info->last_activetime = 0;
+    tuh_info->last_gpiostate = 0xFF;
+    tuh_info->debounce_time = DEFAULT_DEBOUNCE_TIME;
+    tuh_info->maximum_contacts = MAX_VALID_CONTACTS;
 
     /* initialize testcase variable */
-    memset(&info->data, 0, sizeof(struct hid_touch_data));
-    info->mt_count = 0;
-    info->mt_generate = 0;
-    info->data.report_id = REPORT_ID_MULTITOUCH;
+    memset(&tuh_info->data, 0, sizeof(struct hid_touch_data));
+    tuh_info->mt_count = 0;
+    tuh_info->mt_generate = 0;
+    tuh_info->data.report_id = REPORT_ID_MULTITOUCH;
+    sem_init(&tuh_info->signal_thread, 0, 0);
 
-    /* initialize GPIO pin */
-    if (GPIO_TRIGGER >= gpio_line_count()) {
-        info->state &= ~HID_DEVICE_FLAG_OPEN;
+    list_add(&dev_info->device_list, &tuh_info->list);
+
+    /* create thread to send demo report data */
+    if (pthread_create(&tuh_info->hid_thread, NULL, (void*)touch_thread_func,
+                       (void*)dev) != 0) {
         ret = -EIO;
-        goto err_open;
+        goto err_free_tuh_info;
     }
+
     gpio_activate(GPIO_TRIGGER);
     gpio_direction_in(GPIO_TRIGGER);
     gpio_mask_irq(GPIO_TRIGGER);
     set_gpio_triggering(GPIO_TRIGGER, IRQ_TYPE_EDGE_BOTH);
-    gpio_irqattach(GPIO_TRIGGER, hid_irq_event);
+    gpio_irqattach(GPIO_TRIGGER, touch_irq_event);
 
     /* initialize waitqueue */
-    info->wq.abort = 0;
-    pthread_mutex_init(&info->wq.mutex, NULL);
-    pthread_cond_init(&info->wq.cond, NULL);
+    tuh_info->abort = 0;
+    return ret;
 
-    /* create thread to send demo report data */
-    if (pthread_create(&info->hid_thread, NULL, (void*)hid_thread_func,
-                       (void*)dev) != 0) {
-        ret = -EIO;
-    }
-err_open:
-    sem_post(&info->lock);
+err_free_tuh_info:
+    list_del(&tuh_info->list);
+    free(tuh_info);
+err_hw_init:
     return ret;
 }
 
 /**
- * @brief Close HID device
+ * @brief Deinitialize multi-touch hardware setting
  *
- * This function is called when the caller no longer using this driver. It
- * should release or close all resources that allocated by the open() function.
- * This function should be called after the open() function. If the device
- * is not opened yet, this function should return without any operations.
+ * @param dev Pointer to structure of device data
+ * @param dev_info The pointer for hid_info struct
  *
- * @param dev - pointer to structure of device data
+ * @return 0 on success, negative errno on error
  */
-static void hid_dev_close(struct device *dev)
+static int touch_hw_deinitialize(struct device *dev)
 {
-    struct hiddev_info *info = NULL;
+    struct touch_info *tuh_info = NULL;
 
-    /* check input parameter */
-    if (!dev || !device_get_private(dev)) {
-        return;
-    }
-    info = device_get_private(dev);
-
-    sem_wait(&info->lock);
-
-    if (!(info->state & HID_DEVICE_FLAG_OPEN)) {
-        /* device isn't opened. */
-        goto err_close;
+    tuh_info = touch_get_info(dev, GPIO_TRIGGER);
+    if (!tuh_info) {
+        return -EIO;
     }
 
-    if (info->state & HID_DEVICE_FLAG_POWERON) {
-        hid_power_off(dev);
+    if (tuh_info->hid_thread != (pthread_t)0) {
+        tuh_info->abort = 1;
+        sem_post(&tuh_info->signal_thread);
+        /* wait for thread completed */
+        pthread_join(tuh_info->hid_thread, NULL);
     }
 
     /* uninitialize GPIO pin */
-    gpio_unmask_irq(GPIO_TRIGGER);
+    gpio_mask_irq(GPIO_TRIGGER);
     gpio_deactivate(GPIO_TRIGGER);
+    list_del(&tuh_info->list);
+    free(tuh_info);
 
-    if (info->hid_thread != (pthread_t)0) {
-        info->wq.abort = 1;
-        pthread_cond_signal(&info->wq.cond);
-        /* wait for thread completed */
-        pthread_join(info->hid_thread, NULL);
-    }
-
-    pthread_cond_destroy(&info->wq.cond);
-    pthread_mutex_destroy(&info->wq.mutex);
-
-    /* clear open state */
-    info->state &= ~HID_DEVICE_FLAG_OPEN;
-
-    info->hdesc = NULL;
-    info->rdesc = NULL;
-    info->sinfo = NULL;
-    info->num_ids = 0;
-
-    info->last_activetime = 0;
-    info->last_gpiostate = 0xFF;
-    info->debounce_time = 0;
-    info->maximum_contacts = 0;
-
-    info->event_callback = NULL;
-
-err_close:
-    sem_post(&info->lock);
-}
-
-/**
- * @brief Probe HID device
- *
- * This function is called by the system to register the driver when the system
- * boot up. This function allocates memory for the private HID device
- * information, and then setup the hardware resource and interrupt handler.
- *
- * @param dev - pointer to structure of device data
- * @return 0 on success, negative errno on error
- */
-static int hid_dev_probe(struct device *dev)
-{
-    struct hiddev_info *info = NULL;
-
-    if (!dev) {
-        return -EINVAL;
-    }
-
-    info = zalloc(sizeof(*info));
-    if (!info) {
-        return -ENOMEM;
-    }
-
-    hid_dev = dev;
-    info->dev = dev;
-    info->state = HID_DEVICE_FLAG_PROBE;
-    device_set_private(dev, info);
-
-    sem_init(&info->lock, 0, 1);
     return 0;
 }
 
-/**
- * @brief Remove HID device
- *
- * This function is called by the system to unregister the driver. It should
- * release the hardware resource and interrupt setting, and then free memory
- * that allocated by the probe() function.
- * This function should be called after probe() function. If driver was opened,
- * this function should call close() function before releasing resources.
- *
- * @param dev - pointer to structure of device data
- */
-static void hid_dev_remove(struct device *dev)
+static struct hid_vendor_ops touch_ops = {
+    .hw_initialize = touch_hw_initialize,
+    .hw_deinitialize = touch_hw_deinitialize,
+    .power_control = touch_power_set,
+    .get_report = touch_get_report,
+    .set_report = touch_set_report,
+};
+
+int hid_device_init(struct device *dev, struct hid_info *dev_info)
 {
-    struct hiddev_info *info = NULL;
+    int ret = 0;
 
-    /* check input parameter */
-    if (!dev || !device_get_private(dev)) {
-        return;
-    }
-    info = device_get_private(dev);
+    dev_info->hdesc = &touch_dev_desc;
+    dev_info->rdesc = touch_report_desc;
+    dev_info->sinfo = hid_sizeinfo;
+    dev_info->num_ids = ARRAY_SIZE(hid_sizeinfo);
+    dev_info->hid_dev_ops = &touch_ops;
+    touch_dev = dev;
 
-    if (info->state & HID_DEVICE_FLAG_OPEN) {
-        hid_dev_close(dev);
-    }
-    info->state = 0;
-    sem_destroy(&info->lock);
-
-    device_set_private(dev, NULL);
-    hid_dev = NULL;
-    free(info);
+    return ret;
 }
-
-static struct device_hid_type_ops hid_type_ops = {
-    .power_on = hid_power_on,
-    .power_off = hid_power_off,
-    .get_descriptor = hid_get_desc,
-    .get_report_descriptor = hid_get_report_desc,
-    .get_report_length = hid_get_report_length,
-    .get_maximum_report_length = hid_get_maximum_report_length,
-    .get_report = hid_get_report,
-    .set_report = hid_set_report,
-    .register_callback = hid_register_callback,
-    .unregister_callback = hid_unregister_callback,
-};
-
-static struct device_driver_ops hid_driver_ops = {
-    .probe          = hid_dev_probe,
-    .remove         = hid_dev_remove,
-    .open           = hid_dev_open,
-    .close          = hid_dev_close,
-    .type_ops       = &hid_type_ops,
-};
-
-struct device_driver hid_touch_driver = {
-    .type       = DEVICE_TYPE_HID_HW,
-    .name       = "hid_touch",
-    .desc       = "Multi-Touch HID Driver",
-    .ops        = &hid_driver_ops,
-};

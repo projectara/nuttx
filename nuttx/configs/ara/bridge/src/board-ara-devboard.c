@@ -146,11 +146,11 @@ static struct device devices[] = {
         .id             = 0,
     },
 #endif
-#ifdef CONFIG_ARA_BRIDGE_HAVE_HID_TOUCH
+#ifdef CONFIG_ARA_BRIDGE_HAVE_HID_DEVICE
     {
         .type           = DEVICE_TYPE_HID_HW,
-        .name           = "hid_touch",
-        .desc           = "Multi-Touch HID Controller",
+        .name           = HID_DEVICE_NAME,
+        .desc           = HID_DRIVER_DESCRIPTION,
         .id             = 0,
     },
 #endif
@@ -193,9 +193,9 @@ static void bdb_driver_register(void)
     extern struct device_driver power_supply_driver;
     device_register_driver(&power_supply_driver);
 #endif
-#ifdef CONFIG_ARA_BRIDGE_HAVE_HID_TOUCH
-    extern struct device_driver hid_touch_driver;
-    device_register_driver(&hid_touch_driver);
+#ifdef CONFIG_ARA_BRIDGE_HAVE_HID_DEVICE
+    extern struct device_driver hid_dev_driver;
+    device_register_driver(&hid_dev_driver);
 #endif
 #ifdef CONFIG_ARA_BRIDGE_HAVE_LIGHTS
     extern struct device_driver lights_driver;
