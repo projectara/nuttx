@@ -34,8 +34,10 @@
 #include <nuttx/arch.h>
 #include <nuttx/wdog.h>
 #include <nuttx/i2c.h>
+#include <nuttx/power/pm.h>
 
 #include <arch/irq.h>
+#include <arch/tsb/pm.h>
 
 #include "up_arch.h"
 
@@ -557,6 +559,18 @@ static void i2c_timeout(int argc, uint32_t arg, ...)
 
 struct i2c_ops_s dev_i2c_ops;
 
+static void tsb_i2c_pm_notify(struct pm_callback_s *cb,
+                              enum pm_state_e pmstate)
+{
+
+}
+
+static int tsb_i2c_pm_prepare(struct pm_callback_s *cb,
+                              enum pm_state_e pmstate)
+{
+    return OK;
+}
+
 /**
  * Initialise an I2C device
  */
@@ -573,14 +587,17 @@ struct i2c_dev_s *up_i2cinitialize(int port)
 
     flags = irqsave();
 
-    if (refcount++)
+    if (refcount++) {
+        irqrestore(flags);
         goto out;
+    }
 
     retval = tsb_request_pinshare(TSB_PIN_I2C |
             TSB_PIN_GPIO21 | TSB_PIN_GPIO22);
     if (retval) {
+        irqrestore(flags);
         lowsyslog("I2C: cannot get ownership of I2C pins\n");
-        goto err_req_pinshare;
+        goto err_out;
     }
 
     sem_init(&g_mutex, 0, 1);
@@ -615,13 +632,18 @@ struct i2c_dev_s *up_i2cinitialize(int port)
     /* Install our operations */
     g_dev.ops = &dev_i2c_ops;
 
-out:
     irqrestore(flags);
+
+    retval = tsb_pm_register(tsb_i2c_pm_prepare, tsb_i2c_pm_notify, &g_dev);
+    if (retval < 0) {
+        goto err_out;
+    }
+
+out:
     return &g_dev;
 
-err_req_pinshare:
+err_out:
     refcount--;
-    irqrestore(flags);
     return NULL;
 }
 
