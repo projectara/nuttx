@@ -30,6 +30,7 @@
 #define __CONTROL_GB_H__
 
 #include <nuttx/greybus/types.h>
+#include <nuttx/greybus/greybus.h>
 
 /* Version of the Greybus control protocol we support */
 #define GB_CONTROL_VERSION_MAJOR                0x00
@@ -108,6 +109,26 @@ struct gb_control_bundle_pwr_set_request {
 
 struct gb_control_bundle_pwr_set_response {
     __u8      result_code;
+} __packed;
+
+/* Control protocol Interface timesync enable request */
+struct gb_control_timesync_enable_request {
+    __u8    count;
+    __le64  frame_time;
+    __le32  strobe_delay;
+    __le32  refclk;
+} __packed;
+/* Control protocol Interface timesync enable response has no payload */
+
+/* Control protocol Interface timesync authoritative request */
+struct gb_control_timesync_authoritative_request {
+    __le64  frame_time[GB_TIMESYNC_MAX_STROBES];
+} __packed;
+/* Control protocol Interface timesync authoritative response has no payload */
+
+/* Control protocol Interface timesync get_last_event request has no payload */
+struct gb_control_timesync_get_last_event_response {
+    __le64  frame_time;
 } __packed;
 
 #endif /* __CONTROL_GB_H__ */

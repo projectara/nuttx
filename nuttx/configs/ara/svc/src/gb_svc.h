@@ -282,6 +282,32 @@ struct gb_svc_intf_refclk_enable_response {
 #define GB_SVC_INTF_REFCLK_FAIL         0x03
 } __packed;
 
+struct gb_svc_timesync_enable_request {
+    __u8    count;
+    __le64  frame_time;
+    __le32  strobe_delay;
+    __le32  refclk;
+} __packed;
+
+/* timesync enable response has no payload */
+/* timesync authoritative request has no payload */
+
+struct gb_svc_timesync_authoritative_response {
+     __le64 frame_time[GB_TIMESYNC_MAX_STROBES];
+} __packed;
+
+/* timesync ping request has no payload */
+/* timesync ping response */
+struct gb_svc_timesync_ping_response {
+    __le64  frame_time;
+} __packed;
+
+/* timesync wdm pins init request */
+struct gb_svc_timesync_wd_pins_init_request {
+    __le32  strobe_mask;
+} __packed;
+/* timesync wdm pins response has no payload */
+
 int gb_svc_protocol_version(void);
 int gb_svc_hello(uint8_t ap_intf_id);
 int gb_svc_intf_hotplug(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint64_t);
