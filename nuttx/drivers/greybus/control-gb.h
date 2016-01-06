@@ -43,6 +43,9 @@
 #define GB_CONTROL_TYPE_GET_MANIFEST            0x04
 #define GB_CONTROL_TYPE_CONNECTED               0x05
 #define GB_CONTROL_TYPE_DISCONNECTED            0x06
+#define GB_CONTROL_TYPE_TIMESYNC_ENABLE         0x07
+#define GB_CONTROL_TYPE_TIMESYNC_DISABLE        0x08
+#define GB_CONTROL_TYPE_TIMESYNC_AUTHORITATIVE  0x09
 #define GB_CONTROL_TYPE_INTERFACE_VERSION       0x0a
 /*
  * XXX SW-4136: the below operations will need to be adjusted according to
@@ -50,6 +53,7 @@
  */
 /* #define GB_CONTROL_TYPE_INTF_POWER_STATE_SET    0x0b */
 /* #define GB_CONTROL_TYPE_BUNDLE_POWER_STATE_SET  0x0c */
+#define GB_CONTROL_TYPE_TIMESYNC_GET_LAST_EVENT 0x0d
 
 /* version request has no payload */
 struct gb_control_proto_version_response {

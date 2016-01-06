@@ -30,6 +30,7 @@
 #define _GB_SVC_H_
 
 #include <nuttx/greybus/types.h>
+#include <nuttx/greybus/greybus.h>
 
 /* SVC IDs */
 #define GB_SVC_CPORT_ID                         0x00
@@ -53,6 +54,9 @@
 #define GB_SVC_TYPE_DME_PEER_SET                0x0a
 #define GB_SVC_TYPE_ROUTE_CREATE                0x0b
 #define GB_SVC_TYPE_ROUTE_DESTROY               0x0c
+#define GB_SVC_TYPE_TIMESYNC_ENABLE             0x0d
+#define GB_SVC_TYPE_TIMESYNC_DISABLE            0x0e
+#define GB_SVC_TYPE_TIMESYNC_AUTHORITATIVE      0x0f
 #define GB_SVC_TYPE_INTF_SET_PWRM               0x10
 #define GB_SVC_TYPE_INTF_EJECT                  0x11
 #define GB_SVC_TYPE_KEY_EVENT                   0x12
@@ -63,8 +67,10 @@
 #define GB_SVC_TYPE_PWRMON_INTF_SAMPLE_GET      0x17
 #define GB_SVC_TYPE_INTF_PWR_ENABLE             GB_SVC_TYPE_INVALID
 #define GB_SVC_TYPE_INTF_REFCLK_ENABLE          GB_SVC_TYPE_INVALID
+#define GB_SVC_TYPE_TIMESYNC_WD_PINS_INIT       0x18
+#define GB_SVC_TYPE_TIMESYNC_WD_PINS_FINI       0x19
+#define GB_SVC_TYPE_TIMESYNC_PING               0x1a
 #define GB_SVC_TYPE_PWR_DOWN                    0x1d
-
 
 struct gb_svc_protocol_version_request {
     __u8        major;
