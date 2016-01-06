@@ -392,11 +392,33 @@ static int tsb_i2c_handle_tx_abort(void)
 /* Perform a sequence of I2C transfers */
 static int up_i2c_transfer(struct i2c_dev_s *idev, struct i2c_msg_s *msgs, int num)
 {
+#ifdef CONFIG_PM
+    irqstate_t flags;
+#endif
     int ret;
 
     i2cvdbg("msgs: %d\n", num);
 
+#ifdef CONFIG_PM
+    flags = irqsave();
+    /*
+     * We're going to get stuck on sem_wait(&g_wait) if we're sleeping because
+     * the i2c interrupts are disabled, so bail-out immediately. The user
+     * trying to send data over a sleeping bridge should see it as an
+     * input-output error.
+     */
+    if (tsb_pm_getstate() == PM_SLEEP) {
+        irqrestore(flags);
+        return -EIO;
+    }
+
+    /*
+     * Call pm_activity() with interrupts disabled to make sure the pm
+     * framework won't enter the sleep state between it and the above check.
+     */
     pm_activity(TSB_I2C_ACTIVITY);
+    irqrestore(flags);
+#endif
 
     sem_wait(&g_mutex);
 
@@ -562,11 +584,44 @@ static void i2c_timeout(int argc, uint32_t arg, ...)
 
 struct i2c_ops_s dev_i2c_ops;
 
+#ifdef CONFIG_PM
+static void tsb_i2c_pm_notify(struct pm_callback_s *cb,
+                              enum pm_state_e pmstate)
+{
+    irqstate_t flags;
+
+    flags = irqsave();
+
+    switch (pmstate) {
+    case PM_NORMAL:
+        tsb_clk_enable(TSB_CLK_I2CP);
+        tsb_clk_enable(TSB_CLK_I2CS);
+
+        tsb_reset(TSB_RST_I2CP);
+        tsb_reset(TSB_RST_I2CS);
+        break;
+    case PM_IDLE:
+    case PM_STANDBY:
+        /* Nothing to do in idle or standby. */
+        break;
+    case PM_SLEEP:
+        tsb_clk_disable(TSB_CLK_I2CP);
+        tsb_clk_disable(TSB_CLK_I2CS);
+        break;
+    default:
+        /* Can never happen. */
+        PANIC();
+    }
+
+    irqrestore(flags);
+}
+#else
 static void tsb_i2c_pm_notify(struct pm_callback_s *cb,
                               enum pm_state_e pmstate)
 {
 
 }
+#endif
 
 static int tsb_i2c_pm_prepare(struct pm_callback_s *cb,
                               enum pm_state_e pmstate)
