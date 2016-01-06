@@ -101,6 +101,7 @@ static unsigned int     g_rx_outstanding;
 #define TIMEOUT                     20              /* 20 ms */
 #define TSB_I2C_TIMEOUT  ((1000 * CLK_TCK) / 1000)  /* 1000 ms */
 
+#define TSB_I2C_ACTIVITY            9
 
 static int i2c_interrupt(int irq, void *context);
 static void i2c_timeout(int argc, uint32_t arg, ...);
@@ -394,6 +395,8 @@ static int up_i2c_transfer(struct i2c_dev_s *idev, struct i2c_msg_s *msgs, int n
     int ret;
 
     i2cvdbg("msgs: %d\n", num);
+
+    pm_activity(TSB_I2C_ACTIVITY);
 
     sem_wait(&g_mutex);
 
