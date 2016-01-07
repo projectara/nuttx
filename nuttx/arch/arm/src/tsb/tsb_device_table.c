@@ -46,7 +46,9 @@
 #include <arch/irq.h>
 
 #include "chip.h"
+#include "debug.h"
 #include "tsb_pwm.h"
+#include "tsb_scm.h"
 
 #ifdef CONFIG_ARCH_CHIP_DEVICE_PLL
 #define TSB_PLLA_CG_BRIDGE_OFFSET    0x900
@@ -207,6 +209,51 @@ static struct device_resource tsb_sdio_resources[] = {
 #endif
 
 static struct device tsb_devices[] = {
+#ifdef CONFIG_ARCH_CHIP_DEVICE_UART
+    {
+        .type           = DEVICE_TYPE_UART_HW,
+        .name           = "tsb_uart",
+        .desc           = "TSB UART Controller",
+        .id             = 0,
+        .resources      = tsb_uart_resources,
+        .resource_count = ARRAY_SIZE(tsb_uart_resources),
+    },
+#endif
+
+#ifdef CONFIG_ARCH_CHIP_DEVICE_GDMAC
+    {
+        .type           = DEVICE_TYPE_DMA_HW,
+        .name           = "tsb_dma",
+        .desc           = "TSB DMA Controller",
+        .id             = 0,
+        .resources      = tsb_gdmac_resources,
+        .resource_count = ARRAY_SIZE(tsb_gdmac_resources),
+    },
+#endif
+};
+
+static struct device_table tsb_device_table = {
+    .device = tsb_devices,
+    .device_count = ARRAY_SIZE(tsb_devices),
+};
+
+static struct device tsb_apb_devices[] = {
+#ifdef CONFIG_ARCH_CHIP_USB_PCD
+    {
+        .type           = DEVICE_TYPE_USB_PCD,
+        .name           = "dwc2_pcd",
+        .desc           = "DWC2 USB Device Controller",
+        .id             = 0,
+    },
+#endif
+};
+
+static struct device_table tsb_apb_device_table = {
+    .device = tsb_apb_devices,
+    .device_count = ARRAY_SIZE(tsb_apb_devices),
+};
+
+static struct device tsb_gpb_devices[] = {
 #ifdef CONFIG_ARCH_CHIP_DEVICE_PLL
     {
         .type           = DEVICE_TYPE_PLL_HW,
@@ -217,6 +264,7 @@ static struct device tsb_devices[] = {
         .resource_count = ARRAY_SIZE(tsb_plla_resources),
     },
 #endif
+
 #ifdef CONFIG_ARCH_CHIP_DEVICE_I2S
     {
         .type           = DEVICE_TYPE_I2S_HW,
@@ -227,19 +275,12 @@ static struct device tsb_devices[] = {
         .resource_count = ARRAY_SIZE(tsb_i2s_resources_0),
     },
 #endif
+
 #ifdef CONFIG_ARCH_CHIP_USB_HCD
     {
         .type           = DEVICE_TYPE_USB_HCD,
         .name           = "dwc2_hcd",
         .desc           = "DWC2 USB Host Controller",
-        .id             = 0,
-    },
-#endif
-#ifdef CONFIG_ARCH_CHIP_USB_PCD
-    {
-        .type           = DEVICE_TYPE_USB_PCD,
-        .name           = "dwc2_pcd",
-        .desc           = "DWC2 USB Device Controller",
         .id             = 0,
     },
 #endif
@@ -266,28 +307,6 @@ static struct device tsb_devices[] = {
     },
 #endif
 
-#ifdef CONFIG_ARCH_CHIP_DEVICE_UART
-    {
-        .type           = DEVICE_TYPE_UART_HW,
-        .name           = "tsb_uart",
-        .desc           = "TSB UART Controller",
-        .id             = 0,
-        .resources      = tsb_uart_resources,
-        .resource_count = ARRAY_SIZE(tsb_uart_resources),
-    },
-#endif
-
-#ifdef CONFIG_ARCH_CHIP_DEVICE_GDMAC
-    {
-        .type           = DEVICE_TYPE_DMA_HW,
-        .name           = "tsb_dma",
-        .desc           = "TSB DMA Controller",
-        .id             = 0,
-        .resources      = tsb_gdmac_resources,
-        .resource_count = ARRAY_SIZE(tsb_gdmac_resources),
-    },
-#endif
-
 #ifdef CONFIG_ARCH_CHIP_DEVICE_SDIO
     {
         .type           = DEVICE_TYPE_SDIO_HW,
@@ -300,12 +319,32 @@ static struct device tsb_devices[] = {
 #endif
 };
 
-static struct device_table tsb_device_table = {
-    .device = tsb_devices,
-    .device_count = ARRAY_SIZE(tsb_devices),
+static struct device_table tsb_gpb_device_table = {
+    .device = tsb_gpb_devices,
+    .device_count = ARRAY_SIZE(tsb_gpb_devices),
 };
 
 int tsb_device_table_register(void)
 {
+    int retval;
+
+    if (tsb_get_product_id() == tsb_pid_gpbridge &&
+        tsb_gpb_device_table.device_count) {
+        retval = device_table_register(&tsb_gpb_device_table);
+        if (retval) {
+            lowsyslog("%s(): cannot register GPBridge device table (retval = %d)\n",
+                      __func__, retval);
+            return retval;
+        }
+    } else if (tsb_get_product_id() == tsb_pid_apbridge &&
+               tsb_apb_device_table.device_count) {
+        retval = device_table_register(&tsb_apb_device_table);
+        if (retval) {
+            lowsyslog("%s(): cannot register APBridge device table (retval = %d)\n",
+                      __func__, retval);
+            return retval;
+        }
+    }
+
     return device_table_register(&tsb_device_table);
 }
