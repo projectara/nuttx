@@ -1,5 +1,5 @@
 ############################################################################
-# configs/ara/bridge/es2-debug-generic/Make.defs
+# configs/ara/bridge/debug-bringup/Make.defs
 #
 #   Copyright (C) 2011-2012 Gregory Nutt. All rights reserved.
 #   Author: Gregory Nutt <gnutt@nuttx.org>

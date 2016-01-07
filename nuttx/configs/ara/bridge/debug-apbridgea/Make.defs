@@ -1,5 +1,5 @@
 ############################################################################
-# configs/ara/bridge/es3-debug-apbridgea/Make.defs
+# configs/ara/bridge/debug-apbridgea/Make.defs
 #
 #   Based on Gregory Nutt <gnutt@nuttx.org> Make.defs
 #
