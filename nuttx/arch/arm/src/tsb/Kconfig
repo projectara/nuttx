@@ -31,27 +31,6 @@
 
 comment "Toshiba Bridge Configuration Options"
 
-choice
-	prompt "Toshiba Bridge chip configuration options"
-	default ARCH_CHIP_APBRIDGE
-	depends on ARCH_CHIP_TSB
-
-config ARCH_CHIP_APBRIDGE
-	bool "APBridge"
-	select ARCH_CORTEXM3
-	select ARCH_HAVE_UART
-	---help---
-		Toshiba APBridge
-
-config ARCH_CHIP_GPBRIDGE
-	bool "GPBridge"
-	select ARCH_CORTEXM3
-	select ARCH_HAVE_UART
-	---help---
-		Toshiba GPBridge
-
-endchoice
-
 config ARCH_CHIP_TSB_BRIDGE
 	bool
 	select ARCH_CORTEXM3
