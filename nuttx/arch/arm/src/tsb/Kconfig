@@ -72,7 +72,6 @@ config ARCH_UNIPROTX_DMA_NUM_CHANNELS
 choice
 	prompt "Toshiba PinShare1 conflict"
 	default ARCH_CHIP_PINSHARE1_NONE
-	depends on ARCH_CHIP_GPBRIDGE
 	---help---
 		The Toshiba GPBridge PWM, SPI Bitbang, and UART drivers
 		conflict at PinShare1 so only one can be enabled at a time.
@@ -154,7 +153,6 @@ config ARCH_CHIP_USB_COMMON
 
 config ARCH_CHIP_USB_HCD
 	bool "USB Host Support"
-	depends on ARCH_CHIP_GPBRIDGE
 	default n
 	select DEVICE_CORE
 	select ARCH_CHIP_USB_COMMON
@@ -163,8 +161,7 @@ config ARCH_CHIP_USB_HCD
 
 config ARCH_CHIP_USB_PCD
 	bool "USB Device Support"
-	depends on ARCH_CHIP_APBRIDGE
-	default y
+	default n
 	select DEVICE_CORE
 	select ARCH_CHIP_USB_COMMON
 	---help---
@@ -198,7 +195,6 @@ config ARCH_CHIP_DEVICE_I2S
 
 config ARCH_CHIP_DEVICE_SPI
 	bool "SPI Master Support"
-	depends on ARCH_CHIP_GPBRIDGE
 	select DEVICE_CORE
 	default n
 	---help---
@@ -206,7 +202,6 @@ config ARCH_CHIP_DEVICE_SPI
 
 config ARCH_CHIP_DEVICE_SDIO
 	bool "SDIO Support"
-	depends on ARCH_CHIP_GPBRIDGE
 	select DEVICE_CORE
 	default n
 	---help---
@@ -214,7 +209,6 @@ config ARCH_CHIP_DEVICE_SDIO
 
 config ARCH_CHIP_DEVICE_CSI
 	bool "CSI Support"
-	depends on ARCH_CHIP_APBRIDGE
 	select DEVICE_CORE
 	default n
 	---help---
