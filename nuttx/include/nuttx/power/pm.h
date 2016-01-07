@@ -72,6 +72,45 @@
 
 #include <queue.h>
 
+/*
+ * This enumeration provides all power management states.  Receipt of the
+ * state indication is the state transition event.
+ */
+enum pm_state_e
+{
+  PM_NORMAL = 0,   /* Normal full power operating mode.  If the driver is in
+                    * a reduced power usage mode, it should immediately re-
+                    * initialize for normal operatin.
+                    *
+                    * PM_NORMAL may be followed by PM_IDLE.
+                    */
+  PM_IDLE,         /* Drivers will receive this state change if it is
+                    * appropriate to enter a simple IDLE power state.  This
+                    * would include simple things such as reducing display back-
+                    * lighting.  The driver should be ready to resume normal
+                    * activity instantly.
+                    *
+                    * PM_IDLE may be followed by PM_STANDBY or PM_NORMAL.
+                    */
+  PM_STANDBY,      /* The system is entering standby mode. Standby is a lower
+                    * power consumption mode that may involve more extensive
+                    * power management steps such has disabling clocking or
+                    * setting the processor into reduced power consumption
+                    * modes. In this state, the system should still be able
+                    * to resume normal activity almost immediately.
+                    *
+                    * PM_STANDBY may be followed PM_SLEEP or by PM_NORMAL
+                    */
+  PM_SLEEP,        /* The system is entering deep sleep mode.  The most drastic
+                    * power reduction measures possible should be taken in this
+                    * state. It may require some time to get back to normal
+                    * operation from SLEEP (some MCUs may even require going
+                    * through reset).
+                    *
+                    * PM_SLEEP may be following by PM_NORMAL
+                    */
+};
+
 /* Typedef helpers for power-management callbacks. */
 struct pm_callback_s;
 typedef int (*pm_prepare_cb)(FAR struct pm_callback_s *cb, enum pm_state_e pmstate);
@@ -216,45 +255,6 @@ typedef void (*pm_notify_cb)(FAR struct pm_callback_s *cb, enum pm_state_e pmsta
 /****************************************************************************
  * Public Types
  ****************************************************************************/
-
-/* This enumeration provides all power management states.  Receipt of the
- * state indication is the state transition event.
- */
-
-enum pm_state_e
-{
-  PM_NORMAL = 0,   /* Normal full power operating mode.  If the driver is in
-                    * a reduced power usage mode, it should immediately re-
-                    * initialize for normal operatin.
-                    *
-                    * PM_NORMAL may be followed by PM_IDLE.
-                    */
-  PM_IDLE,         /* Drivers will receive this state change if it is
-                    * appropriate to enter a simple IDLE power state.  This
-                    * would include simple things such as reducing display back-
-                    * lighting.  The driver should be ready to resume normal
-                    * activity instantly.
-                    *
-                    * PM_IDLE may be followed by PM_STANDBY or PM_NORMAL.
-                    */
-  PM_STANDBY,      /* The system is entering standby mode. Standby is a lower
-                    * power consumption mode that may involve more extensive
-                    * power management steps such has disabling clocking or
-                    * setting the processor into reduced power consumption
-                    * modes. In this state, the system should still be able
-                    * to resume normal activity almost immediately.
-                    *
-                    * PM_STANDBY may be followed PM_SLEEP or by PM_NORMAL
-                    */
-  PM_SLEEP,        /* The system is entering deep sleep mode.  The most drastic
-                    * power reduction measures possible should be taken in this
-                    * state. It may require some time to get back to normal
-                    * operation from SLEEP (some MCUs may even require going
-                    * through reset).
-                    *
-                    * PM_SLEEP may be following by PM_NORMAL
-                    */
-};
 
 /* This structure contain pointers callback functions in the driver.  These
  * callback functions can be used to provide power management information
