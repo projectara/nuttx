@@ -52,6 +52,12 @@ config ARCH_CHIP_GPBRIDGE
 
 endchoice
 
+config ARCH_CHIP_TSB_BRIDGE
+	bool
+	select ARCH_CORTEXM3
+	select ARCH_HAVE_UART
+	default y
+
 config ARCH_CHIP_DEVICE_GDMAC
 	bool "GDMAC support"
 	select DEVICE_CORE
