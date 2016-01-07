@@ -99,9 +99,7 @@ struct gpio_pinsharing_conf {
 #define PIN_CLR_2(pin1, pin2)   {2, {{pin1,  PIN_CLR_ST}, {pin2,   PIN_CLR_ST}}}
 #define PIN_CLR_SET(pin1, pin2) {2, {{pin1,  PIN_CLR_ST}, {pin2,   PIN_SET_ST}}}
 
-#if defined(CONFIG_ARCH_CHIP_GPBRIDGE)
-
-static struct gpio_pinsharing_conf tsb_gpio_pinsharing[] = {
+static struct gpio_pinsharing_conf tsb_gpb_gpio_pinsharing[] = {
     /* GPIO0 */
     PIN_CLR_1(TSB_PIN_UART_CTSRTS_BIT),
     /* GPIO1, GPIO2 */
@@ -144,9 +142,7 @@ static struct gpio_pinsharing_conf tsb_gpio_pinsharing[] = {
     PIN_SET_1(TSB_PIN_GPIO31_BIT),
 };
 
-#else
-
-static struct gpio_pinsharing_conf tsb_gpio_pinsharing[] = {
+static struct gpio_pinsharing_conf tsb_apb_gpio_pinsharing[] = {
     /* GPIO0 */
     PIN_CLR_1(TSB_PIN_UART_RXTX_BIT),
     /* GPIO1, GPIO2 */
@@ -181,7 +177,7 @@ static struct gpio_pinsharing_conf tsb_gpio_pinsharing[] = {
     PIN_NONE,
 };
 
-#endif
+static struct gpio_pinsharing_conf *tsb_gpio_pinsharing;
 
 static uint8_t tsb_gpio_get_value(void *driver_data, uint8_t which)
 {
@@ -501,6 +497,12 @@ int tsb_gpio_register(void *driver_data)
         } else if (tsb_get_product_id() == tsb_pid_apbridge) {
             tsb_gpio_pinsharing[6].count = 0;
         }
+    }
+
+    if (tsb_get_product_id() == tsb_pid_apbridge) {
+        tsb_gpio_pinsharing = &tsb_apb_gpio_pinsharing[0];
+    } else if (tsb_get_product_id() == tsb_pid_gpbridge) {
+        tsb_gpio_pinsharing = &tsb_gpb_gpio_pinsharing[0];
     }
 
     tsb_gpio_irq_vector = calloc(sizeof(*tsb_gpio_irq_vector), tsb_nr_gpio());
