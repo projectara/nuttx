@@ -264,7 +264,7 @@ static uint8_t gb_camera_configure_streams(struct gb_operation *operation)
     /* Create and fill the greybus response. */
     lldbg("Resp: \n");
     response = gb_operation_alloc_response(operation,
-            sizeof(*response) + num_streams * sizeof(*cfg_ans_resp));
+            sizeof(*response) + request->num_streams * sizeof(*cfg_ans_resp));
     response->num_streams = num_streams;
     response->flags = res_flags;
     response->padding[0] = 0;
