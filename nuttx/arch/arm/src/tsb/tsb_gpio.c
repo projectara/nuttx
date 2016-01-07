@@ -109,11 +109,7 @@ static struct gpio_pinsharing_conf tsb_gpio_pinsharing[] = {
     /* GPIO3, GPIO4, GPIO5 */
     PIN_CLR_1(TSB_PIN_SDIO_BIT), PIN_CLR_1(TSB_PIN_SDIO_BIT), PIN_CLR_1(TSB_PIN_SDIO_BIT),
     /* GPIO6 */
-# if defined(CONFIG_TSB_CHIP_REV_ES3)
     PIN_CLR_2(TSB_PIN_SDIO_BIT, TSB_PIN_SPIM_CS1_BIT),
-# else
-    PIN_CLR_1(TSB_PIN_SDIO_BIT),
-# endif
     /* GPIO7, GPIO8 */
     PIN_CLR_1(TSB_PIN_SDIO_BIT), PIN_CLR_1(TSB_PIN_SDIO_BIT),
     /* GPIO9 */
@@ -138,7 +134,6 @@ static struct gpio_pinsharing_conf tsb_gpio_pinsharing[] = {
     PIN_CLR_SET(TSB_PIN_I2C_BIT, TSB_PIN_GPIO22_BIT),
     /* GPIO23, GPIO24, GPIO25, GPIO26 */
     PIN_NONE, PIN_NONE, PIN_NONE, PIN_NONE,
-#if defined(CONFIG_TSB_CHIP_REV_ES3)
     /* GPIO27, GPIO28 */
     PIN_SET_1(TSB_PIN_GPIO27_BIT), PIN_SET_1(TSB_PIN_GPIO27_BIT),
     /* GPIO29 */
@@ -147,7 +142,6 @@ static struct gpio_pinsharing_conf tsb_gpio_pinsharing[] = {
     PIN_NONE,
     /* GPIO31 */
     PIN_SET_1(TSB_PIN_GPIO31_BIT),
-#endif
 };
 
 #else
@@ -160,11 +154,7 @@ static struct gpio_pinsharing_conf tsb_gpio_pinsharing[] = {
     /* GPIO3, GPIO4, GPIO5 */
     PIN_NONE, PIN_NONE, PIN_NONE,
     /* GPIO6 */
-# if defined(CONFIG_TSB_CHIP_REV_ES3)
     PIN_CLR_1(TSB_PIN_SPIM_CS1_BIT),
-# else
-    PIN_NONE,
-# endif
     /* GPIO7, GPIO8 */
     PIN_NONE, PIN_NONE,
     /* GPIO9 */
@@ -187,10 +177,8 @@ static struct gpio_pinsharing_conf tsb_gpio_pinsharing[] = {
     PIN_SET_1(TSB_PIN_GPIO21_BIT),
     /* GPIO22 */
     PIN_SET_1(TSB_PIN_GPIO22_BIT),
-#if defined(CONFIG_TSB_CHIP_REV_ES3)
     /* GPIO23 */
     PIN_NONE,
-#endif
 };
 
 #endif
@@ -505,6 +493,15 @@ static struct gpio_ops_s tsb_gpio_ops = {
 int tsb_gpio_register(void *driver_data)
 {
     int retval;
+
+    if (tsb_get_rev_id() == tsb_rev_es2) {
+        /* GPIO6 has a different pinshare on both es2 */
+        if (tsb_get_product_id() == tsb_pid_gpbridge) {
+            tsb_gpio_pinsharing[6].count = 1;
+        } else if (tsb_get_product_id() == tsb_pid_apbridge) {
+            tsb_gpio_pinsharing[6].count = 0;
+        }
+    }
 
     tsb_gpio_irq_vector = calloc(sizeof(*tsb_gpio_irq_vector), tsb_nr_gpio());
     if (!tsb_gpio_irq_vector)
