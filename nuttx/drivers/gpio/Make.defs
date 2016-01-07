@@ -70,6 +70,10 @@ endif
 
 endif
 
+ifeq ($(CONFIG_GPIO_DEBOUNCE),y)
+CSRCS += debounce.c
+endif
+
 # Include gpio driver build support
 
 DEPPATH += --dep-path gpio

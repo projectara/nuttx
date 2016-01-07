@@ -38,3 +38,6 @@ config GPIO_TCA64XX
 	select I2C
 	select I2C_TRANSFER
 	default n
+
+config GPIO_DEBOUNCE
+	bool "helper function for debouncing GPIO signals"
