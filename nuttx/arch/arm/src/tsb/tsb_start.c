@@ -86,6 +86,14 @@ void tsb_start(void) {
     /* Configure clocks */
     tsb_clk_init();
 
+    /*
+     * XXX: ES2 HACK - preload product ID as soon as possible
+     * Since on ES2 we use the CDSI1 IP block reset state to determine the pid,
+     * this call will for ES2, reset the CDSI1 block. We want to do it before
+     * anything starts using the CDSI IP, so we are preloading the value here.
+     */
+    tsb_get_product_id();
+
 #ifdef CONFIG_UART_SERIAL_CONSOLE
     /*
      * If we're using the serial console, configure the UART so we can get

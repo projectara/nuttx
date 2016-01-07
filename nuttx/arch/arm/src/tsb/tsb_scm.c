@@ -36,12 +36,14 @@
 #include <debug.h>
 #include <nuttx/config.h>
 #include <arch/board/board.h>
+#include <arch/chip/cdsi0_offs_def.h>
 #include <arch/irq.h>
 #include <nuttx/util.h>
 #include <nuttx/unipro/unipro.h>
 
 #include "up_arch.h"
 #include "tsb_scm.h"
+#include "tsb_unipro.h"
 
 #define TSB_SCM_SOFTRESET0              0x00000000
 #define TSB_SCM_SOFTRESETRELEASE0       0x00000100
@@ -194,11 +196,60 @@ enum tsb_drivestrength tsb_get_drivestrength(uint32_t ds_id)
           DRIVESTRENGTH_MASK(ds_id)) >> DRIVESTRENGTH_SHIFT(ds_id));
 }
 
+/*
+ * XXX: This function will clock/reset/unclok the CDSI1 IP,
+ * make sure to call it at a time the CDSI1 IP is not in use.
+ */
+static enum tsb_product_id es2_tsb_get_product_id(void)
+{
+    enum tsb_product_id pid;
+
+    tsb_clk_enable(TSB_CLK_CDSI1_TX_SYS | TSB_CLK_CDSI1_TX_APB);
+    tsb_reset(TSB_RST_CDSI1_TX | TSB_RST_CDSI1_TX_AIO);
+
+    pid = getreg32(CDSI1_BASE + CDSI0_CDSITX_PLL_CONFIG_00_OFFS) ?
+            tsb_pid_apbridge : tsb_pid_gpbridge;
+
+    tsb_clk_disable(TSB_CLK_CDSI1_TX_SYS | TSB_CLK_CDSI1_TX_APB);
+
+    return pid;
+}
+
 enum tsb_product_id tsb_get_product_id(void)
 {
-    /* cache the value to avoid repeated efuse reads */
+    int retval;
+    uint32_t unipro_pid;
     static enum tsb_product_id pid;
-    return pid ? pid : (pid = (enum tsb_product_id)scm_read(TSB_SCM_PID));
+
+    if (pid) {
+        return pid;
+    }
+
+    /*
+     * We need a special scheme for ES2 since the type of bridges is not encoded
+     * in the PID.
+     */
+    if (tsb_get_rev_id() < tsb_rev_es3) {
+        pid = es2_tsb_get_product_id();
+        return pid;
+    }
+
+    retval = unipro_attr_local_read(DME_DDBL1_PRODUCTID, &unipro_pid, 0);
+    if (retval) {
+        return tsb_pid_unknown;
+    }
+
+    switch (unipro_pid) {
+    case PRODUCT_ES3_TSB_APBRIDGE:
+        pid = tsb_pid_apbridge;
+        break;
+
+    case PRODUCT_ES3_TSB_GPBRIDGE:
+        pid = tsb_pid_gpbridge;
+        break;
+    }
+
+    return pid;
 }
 
 enum tsb_rev_id tsb_get_rev_id(void)
