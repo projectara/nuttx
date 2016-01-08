@@ -35,6 +35,22 @@
 #include "vreg.h"
 #include "tsb_switch.h"
 
+/* HWID values */
+enum hwid {
+    HWID_DB3_0_1,           /* DB3.0 and 3.1 (ES2) */
+    HWID_DB3_2,             /* DB3.2 = ES3 DB3.1 */
+    HWID_DB3_5,             /* DB3.5 (ES3) */
+    HWID_EVT1,              /* EVT1 (ES2) */
+    HWID_EVT1_5,            /* EVT1.5 (ES3) */
+    HWID_EVT1_6,            /* EVT1.6 (ES2) */
+};
+
+/* HWID pins */
+#define HWID_0              (GPIO_INPUT | GPIO_PORTB | GPIO_PIN5)
+#define HWID_1              (GPIO_INPUT | GPIO_PORTB | GPIO_PIN6)
+#define HWID_2              (GPIO_INPUT | GPIO_PORTD | GPIO_PIN12)
+#define HWID_3              (GPIO_INPUT | GPIO_PORTD | GPIO_PIN13)
+
 /*
  * GPIO Chip pins
  *
@@ -110,6 +126,10 @@ struct ara_board_info {
     /* IO Expanders data */
     struct io_expander_info *io_expanders;
     size_t nr_io_expanders;
+
+    /*  Board specific init and exit code */
+    int (*board_init)(struct ara_board_info *);
+    int (*board_exit)(struct ara_board_info *);
 
     /* ara key GPIO */
     uint8_t ara_key_gpio;

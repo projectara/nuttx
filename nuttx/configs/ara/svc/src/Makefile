@@ -77,6 +77,7 @@ CSRCS		+= tsb_switch_es3.c
 CSRCS		+= unipro_svc.c
 CSRCS		+= gb_svc.c
 CSRCS		+= ara_key.c
+CSRCS		+= ara_board.c
 
 ifeq ($(CONFIG_ARCH_BOARD_ARA_BDB2A_SVC),y)
 CSRCS		+= board-bdb2a.c
