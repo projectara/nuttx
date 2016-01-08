@@ -129,7 +129,12 @@ struct ara_board_info *ara_board_init(void) {
     case HWID_DB3_5:
         dbg_info("HWID found as DB3.5\n");
         break;
+    case HWID_EVT1:
+        board_info = &evt1_board_info;
+        dbg_info("HWID found as EVT1\n");
+        break;
     case HWID_EVT1_5:
+        board_info = &evt1_5_board_info;
         dbg_info("HWID found as EVT1.5\n");
         break;
     default:
