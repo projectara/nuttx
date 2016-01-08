@@ -120,6 +120,7 @@ endchoice
 
 config ARCH_BOARD_ARA_SVC
 	bool "Ara SVC support"
+	select GPIO_DEBOUNCE
 	select ARA_SVC_MAIN
 
 config ARCH_BOARD_CUSTOM_DIR
