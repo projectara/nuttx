@@ -67,4 +67,39 @@ int usbdev_apbinitialize(struct device *dev,
 
 int usb_release_buffer(struct apbridge_dev_s *priv, const void *buf);
 
+/*
+ * Offloaded cport
+ * Give ability to APBridgeA to use a cport without AP involvment.
+ * When a cport id offloaded, data comming from UniPro or USB will
+ * be redirected to callbacks.
+ */
+
+/* Offloaded cport callback definition */
+typedef int (*unipro_offloaded_cb)(unsigned int cportid,
+                                   void *payload, size_t len);
+
+/*
+ * @brief Offload a cport
+ * @param priv Pointer on usb gadget device.
+ * @param cportid ID of cport to offload.
+ * @param unipro_cb The callback to invoke when there is incoming data from
+ * UniPro. It is the responsability of callback to release the UniPro buffer
+ * using unipro_rxbuf_free().
+ * @param usb_cb The callback to invoke when there is incoming data from USB.
+ * It is the responsability of callback to release the USB buffer using
+ * usb_release_buffer().
+ * @return 0 on success or -EBUSY is the cport is already offloaded or mapped
+ * to a dirrect mapped endpoint.
+ */
+int map_offloaded_cport(struct apbridge_dev_s *priv, unsigned int cportid,
+                         unipro_offloaded_cb unipro_cb,
+                         unipro_offloaded_cb usb_cb);
+/*
+ * @brief Un-offload a cport
+ * @param priv Pointer on usb gadget device.
+ * @param cportid ID of cport to un-offload.
+ * @return 0 on success or -EINVAL is the cport is not offloaded.
+ */
+int unmap_offloaded_cport(struct apbridge_dev_s *priv, unsigned int cportid);
+
 #endif /* _APBRIDGEA_GADGET_H_ */
