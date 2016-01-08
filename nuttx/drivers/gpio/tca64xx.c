@@ -39,6 +39,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <nuttx/list.h>
 #include <nuttx/gpio/tca64xx.h>
 #include <nuttx/gpio.h>
 #include <nuttx/gpio_chip.h>
