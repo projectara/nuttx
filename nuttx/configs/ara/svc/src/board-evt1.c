@@ -45,7 +45,6 @@
 #include <ara_debug.h>
 #include "ara_board.h"
 #include "interface.h"
-#include "tsb_switch_driver_es2.h"
 #include "stm32.h"
 
 #define HOLD_TIME_SW_CLK_US     10000
@@ -79,34 +78,29 @@
 #define REFCLK_5_EN       U4570_GPIO_PIN(10)
 
 /* Wake/detect pins */
-#define WD_1_DET_IN       STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN1)
-#define WD_2_DET_IN       STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN2)
-#define WD_3A_DET_IN      STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN3)
-#define WD_3B_DET_IN      STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN4)
-#define WD_4A_DET_IN      STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN5)
-#define WD_4B_DET_IN      STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN6)
-#define WD_5_DET_IN       STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN7) /* LCD */
-#define WD_8A_DET_IN      STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN11)
-#define WD_8B_DET_IN      STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN12
+#define WD_1_DET_IN_GPIO    (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN1)
+#define WD_2_DET_IN_GPIO    (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN2)
+#define WD_3A_DET_IN_GPIO   (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN3)
+#define WD_3B_DET_IN_GPIO   (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN4)
+#define WD_4A_DET_IN_GPIO   (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN5)
+#define WD_4B_DET_IN_GPIO   (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN6)
+#define WD_5_DET_IN_GPIO    (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN7) /* LCD */
+#define WD_8A_DET_IN_GPIO   (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN11)
+#define WD_8B_DET_IN_GPIO   (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN12)
 
-#define WD_1_DET_IN_GPIO       (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN1)
-#define WD_2_DET_IN_GPIO       (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN2)
-#define WD_3A_DET_IN_GPIO      (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN3)
-#define WD_3B_DET_IN_GPIO      (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN4)
-#define WD_4A_DET_IN_GPIO      (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN5)
-#define WD_4B_DET_IN_GPIO      (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN6)
-#define WD_5_DET_IN_GPIO       (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN7) /* LCD */
-#define WD_8A_DET_IN_GPIO      (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN11)
-#define WD_8B_DET_IN_GPIO      (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN12)
-
-/* Module hotplug release request pins */
-#define MOD_ACT_SW_1      STM32_GPIO_PIN(GPIO_PORTC | GPIO_PIN0)
-#define MOD_ACT_SW_2      STM32_GPIO_PIN(GPIO_PORTC | GPIO_PIN2)
-#define MOD_ACT_SW_3A     STM32_GPIO_PIN(GPIO_PORTC | GPIO_PIN3)
-#define MOD_ACT_SW_3B     STM32_GPIO_PIN(GPIO_PORTC | GPIO_PIN4)
-#define MOD_ACT_SW_4A     STM32_GPIO_PIN(GPIO_PORTC | GPIO_PIN6)
-#define MOD_ACT_SW_4B     STM32_GPIO_PIN(GPIO_PORTC | GPIO_PIN7)
-#define MOD_ACT_SW_5      STM32_GPIO_PIN(GPIO_PORTC | GPIO_PIN8)
+/*
+ * MOD_ACT_SW lines connected to SVC.
+ *
+ * Configured by default as input pullup, as there is no external
+ * pullup.
+ */
+#define MOD_ACT_SW_1        (GPIO_INPUT | GPIO_PULLUP | GPIO_PORTC | GPIO_PIN0)
+#define MOD_ACT_SW_2        (GPIO_INPUT | GPIO_PULLUP | GPIO_PORTC | GPIO_PIN2)
+#define MOD_ACT_SW_3A       (GPIO_INPUT | GPIO_PULLUP | GPIO_PORTC | GPIO_PIN3)
+#define MOD_ACT_SW_3B       (GPIO_INPUT | GPIO_PULLUP | GPIO_PORTC | GPIO_PIN4)
+#define MOD_ACT_SW_4A       (GPIO_INPUT | GPIO_PULLUP | GPIO_PORTC | GPIO_PIN6)
+#define MOD_ACT_SW_4B       (GPIO_INPUT | GPIO_PULLUP | GPIO_PORTC | GPIO_PIN7)
+#define MOD_ACT_SW_5        (GPIO_INPUT | GPIO_PULLUP | GPIO_PORTC | GPIO_PIN8)
 
 /* Module release pins */
 #define MOD_RELEASE_1_CONFIG  (GPIO_OUTPUT | GPIO_OUTPUT_CLEAR \
@@ -177,6 +171,13 @@
 #define VCHG_EN5_N         U4550_GPIO_PIN(13)
 
 /*
+ * SVC to MSM Wake from Off pin: Active low, pulled up high internally by
+ * the PMIC.
+ * Not used for now, let it in default state of the I/O Expander (input).
+ */
+#define PM_CBL_PWR_N GPIO  U4550_GPIO_PIN(15)
+
+/*
  * APBridges regulator list and interface declarations
  *
  * TODO: clean up APB during bringup
@@ -204,14 +205,9 @@
 static struct vreg_data apb1_vreg_data[] = {
 };
 
-static struct vreg_data apb2_vreg_data[] = {
-};
-
+/* Only APB1 is in use. WD8B is reserved for time sync */
 DECLARE_MODULE_PORT_INTERFACE(apb1, apb1_vreg_data, 3,
                               WD_8A_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_HIGH,
-			      false, 0);
-DECLARE_MODULE_PORT_INTERFACE(apb2, apb2_vreg_data, 1,
-                              WD_8B_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_HIGH,
 			      false, 0);
 
 /*
@@ -226,37 +222,37 @@ DECLARE_MODULE_PORT_INTERFACE(apb2, apb2_vreg_data, 1,
  */
 
 static struct vreg_data module_1_vreg_data[] = {
-    INIT_ACTIVE_LOW_VREG_DATA(VSYS_EN1_N, HOLD_TIME_MODULE),
+    INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN1_N, HOLD_TIME_MODULE),
     INIT_MODULE_CLK_DATA(REFCLK_1_EN),
 };
 
 static struct vreg_data module_2_vreg_data[] = {
-    INIT_ACTIVE_LOW_VREG_DATA(VSYS_EN2_N, HOLD_TIME_MODULE),
+    INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN2_N, HOLD_TIME_MODULE),
     INIT_MODULE_CLK_DATA(REFCLK_2_EN),
 };
 
 static struct vreg_data module_3A_vreg_data[] = {
-    INIT_ACTIVE_LOW_VREG_DATA(VSYS_EN3A_N, HOLD_TIME_MODULE),
+    INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN3A_N, HOLD_TIME_MODULE),
     INIT_MODULE_CLK_DATA(REFCLK_3A_EN),
 };
 
 static struct vreg_data module_3B_vreg_data[] = {
-    INIT_ACTIVE_LOW_VREG_DATA(VSYS_EN3B_N, HOLD_TIME_MODULE),
+    INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN3B_N, HOLD_TIME_MODULE),
     INIT_MODULE_CLK_DATA(REFCLK_3B_EN),
 };
 
 static struct vreg_data module_4A_vreg_data[] = {
-    INIT_ACTIVE_LOW_VREG_DATA(VSYS_EN4A_N, HOLD_TIME_MODULE),
+    INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN4A_N, HOLD_TIME_MODULE),
     INIT_MODULE_CLK_DATA(REFCLK_4A_EN),
 };
 
 static struct vreg_data module_4B_vreg_data[] = {
-    INIT_ACTIVE_LOW_VREG_DATA(VSYS_EN4B_N, HOLD_TIME_MODULE),
+    INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN4B_N, HOLD_TIME_MODULE),
     INIT_MODULE_CLK_DATA(REFCLK_4B_EN),
 };
 
 static struct vreg_data module_5_lcd_vreg_data[] = {
-    INIT_ACTIVE_LOW_VREG_DATA(VSYS_EN5_N, HOLD_TIME_MODULE),
+    INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN5_N, HOLD_TIME_MODULE),
     INIT_MODULE_CLK_DATA(REFCLK_5_EN),
 };
 
@@ -284,7 +280,6 @@ DECLARE_MODULE_PORT_INTERFACE(module_5_lcd, module_5_lcd_vreg_data, 10,
 
 static struct interface *evt1_interfaces[] = {
     &apb1_interface,
-    &apb2_interface,
     &module_1_interface,
     &module_2_interface,
     &module_3A_interface,
@@ -361,7 +356,7 @@ static struct ara_board_info evt1_board_info = {
         .gpio_reset      = SVC_RST_SW_GPIO,
         .gpio_irq        = SW_TO_SVC_INT_GPIO,
         .irq_rising_edge = false,
-        .rev             = SWITCH_REV_ES2,
+        .rev             = SWITCH_REV_ES3,
         .bus             = SW_SPI_PORT_2,
         .spi_cs          = SVC_SW_SPI_CS_GPIO,
     },
@@ -440,6 +435,26 @@ struct ara_board_info *board_init(void) {
             return NULL;
         }
     }
+
+    /*
+     * VSYS and VCHG are active high with a pull-up.
+     * Initialize these lines as output low to prevent any spurious
+     * activation at boot time.
+     */
+    gpio_direction_out(VSYS_EN1_N, 0);
+    gpio_direction_out(VSYS_EN2_N, 0);
+    gpio_direction_out(VSYS_EN3A_N, 0);
+    gpio_direction_out(VSYS_EN3B_N, 0);
+    gpio_direction_out(VSYS_EN4A_N, 0);
+    gpio_direction_out(VSYS_EN4B_N, 0);
+    gpio_direction_out(VSYS_EN5_N, 0);
+    gpio_direction_out(VCHG_EN1_N, 0);
+    gpio_direction_out(VCHG_EN2_N, 0);
+    gpio_direction_out(VCHG_EN3A_N, 0);
+    gpio_direction_out(VCHG_EN3B_N, 0);
+    gpio_direction_out(VCHG_EN4A_N, 0);
+    gpio_direction_out(VCHG_EN4B_N, 0);
+    gpio_direction_out(VCHG_EN5_N, 0);
 
     /* For now, just always enable REFCLK_MAIN and the buffers. */
     rc = vreg_config(&refclk_main_vreg) || vreg_get(&refclk_main_vreg);
