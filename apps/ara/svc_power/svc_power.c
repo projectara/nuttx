@@ -243,8 +243,11 @@ static int dumpstate_func(struct interface *iface, void *context)
 
     if (iface->switch_portid == INVALID_PORT) {
         printf("\tswitch_portid=<none>\n");
+        printf("\tinterface ID=<unknown>\n");
     } else {
         printf("\tswitch_portid=%u\n", iface->switch_portid);
+        printf("\tinterface ID=%u\n",
+               interface_get_id_by_portid(iface->switch_portid));
     }
 
     vreg = iface->vreg;
