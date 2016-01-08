@@ -67,17 +67,15 @@
 
 /* 19.2MHz system reference clocks */
 #define REFCLK_REQ        STM32_GPIO_PIN(GPIO_PORTB | GPIO_PIN9)
-#define REFCLK_APB1_EN    U4570_GPIO_PIN(0) // On-board APB1
-#define REFCLK_APB2_EN    U4570_GPIO_PIN(1) // On-board APB2
 #define REFCLK_BUFFERS_EN U4570_GPIO_PIN(2) // Shared clock enable for modules
 #define REFCLK_SW_EN      U4570_GPIO_PIN(3) // Switch
 #define REFCLK_1_EN       U4570_GPIO_PIN(4) // Modules
 #define REFCLK_2_EN       U4570_GPIO_PIN(5)
-#define REFCLK_3_EN       U4570_GPIO_PIN(6)
-#define REFCLK_4A_EN      U4570_GPIO_PIN(7)
-#define REFCLK_4B_EN      U4570_GPIO_PIN(8)
-#define REFCLK_5_EN       U4570_GPIO_PIN(9)
-#define REFCLK_6_EN       U4570_GPIO_PIN(10)
+#define REFCLK_3A_EN      U4570_GPIO_PIN(6)
+#define REFCLK_3B_EN      U4570_GPIO_PIN(7)
+#define REFCLK_4A_EN      U4570_GPIO_PIN(8)
+#define REFCLK_4B_EN      U4570_GPIO_PIN(9)
+#define REFCLK_5_EN       U4570_GPIO_PIN(10)
 
 /*
  * WAKE_DETECT lines directly connected to the SVC.
@@ -85,11 +83,11 @@
  */
 #define WD_1_DET_IN     (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN1)
 #define WD_2_DET_IN     (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN2)
-#define WD_3_DET_IN     (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN3)
-#define WD_4A_DET_IN    (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN4)
-#define WD_4B_DET_IN    (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN5)
-#define WD_5_DET_IN     (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN6)
-#define WD_6_DET_IN     (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN7)
+#define WD_3A_DET_IN    (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN3)
+#define WD_3B_DET_IN    (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN4)
+#define WD_4A_DET_IN    (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN5)
+#define WD_4B_DET_IN    (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN6)
+#define WD_5_DET_IN     (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN7)
 #define WD8A_DET_IN     (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN11)
 #define WD8B_DET_IN     (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN12)
 
@@ -101,32 +99,57 @@
  */
 #define MOD_ACT_SW_1    (GPIO_INPUT | GPIO_PULLUP | GPIO_PORTC | GPIO_PIN0)
 #define MOD_ACT_SW_2    (GPIO_INPUT | GPIO_PULLUP | GPIO_PORTC | GPIO_PIN2)
-#define MOD_ACT_SW_3    (GPIO_INPUT | GPIO_PULLUP | GPIO_PORTC | GPIO_PIN3)
-#define MOD_ACT_SW_4    (GPIO_INPUT | GPIO_PULLUP | GPIO_PORTC | GPIO_PIN4)
-#define MOD_ACT_SW_5    (GPIO_INPUT | GPIO_PULLUP | GPIO_PORTC | GPIO_PIN6)
-#define MOD_ACT_SW_6    (GPIO_INPUT | GPIO_PULLUP | GPIO_PORTC | GPIO_PIN7)
-#define MOD_ACT_SW_7    (GPIO_INPUT | GPIO_PULLUP | GPIO_PORTC | GPIO_PIN8)
+#define MOD_ACT_SW_3A   (GPIO_INPUT | GPIO_PULLUP | GPIO_PORTC | GPIO_PIN3)
+#define MOD_ACT_SW_3B   (GPIO_INPUT | GPIO_PULLUP | GPIO_PORTC | GPIO_PIN4)
+#define MOD_ACT_SW_4A   (GPIO_INPUT | GPIO_PULLUP | GPIO_PORTC | GPIO_PIN6)
+#define MOD_ACT_SW_4B   (GPIO_INPUT | GPIO_PULLUP | GPIO_PORTC | GPIO_PIN7)
+#define MOD_ACT_SW_5    (GPIO_INPUT | GPIO_PULLUP | GPIO_PORTC | GPIO_PIN8)
+
+/* VSYS enable */
+#define VSYS_EN1_N      U4550_GPIO_PIN(0)
+#define VSYS_EN2_N      U4550_GPIO_PIN(2)
+#define VSYS_EN3A_N     U4550_GPIO_PIN(4)
+#define VSYS_EN3B_N     U4550_GPIO_PIN(6)
+#define VSYS_EN4A_N     U4550_GPIO_PIN(8)
+#define VSYS_EN4B_N     U4550_GPIO_PIN(10)
+#define VSYS_EN5_N      U4550_GPIO_PIN(12)
+
+/* VCHG enable */
+#define VCHG_EN1_N      U4550_GPIO_PIN(1)
+#define VCHG_EN2_N      U4550_GPIO_PIN(3)
+#define VCHG_EN3A_N     U4550_GPIO_PIN(5)
+#define VCHG_EN3B_N     U4550_GPIO_PIN(7)
+#define VCHG_EN4A_N     U4550_GPIO_PIN(9)
+#define VCHG_EN4B_N     U4550_GPIO_PIN(11)
+#define VCHG_EN5_N      U4550_GPIO_PIN(13)
+
+/*
+ * SVC to MSM Wake from Off pin: Active low, pulled up high internally by
+ * the PMIC.
+ * Not used for now, let it in default state of the I/O Expander (input).
+ */
+#define PM_CBL_PWR_N GPIO   U4550_GPIO_PIN(15)
 
 /* Module release pins */
 #define MOD_RELEASE_1_CONFIG  (GPIO_OUTPUT | GPIO_OUTPUT_CLEAR \
                                 | GPIO_PUSHPULL | GPIO_PORTD | GPIO_PIN0)
 #define MOD_RELEASE_2_CONFIG  (GPIO_OUTPUT | GPIO_OUTPUT_CLEAR \
                                 | GPIO_PUSHPULL | GPIO_PORTD | GPIO_PIN1)
-#define MOD_RELEASE_3_CONFIG  (GPIO_OUTPUT | GPIO_OUTPUT_CLEAR \
+#define MOD_RELEASE_3A_CONFIG  (GPIO_OUTPUT | GPIO_OUTPUT_CLEAR \
                                 | GPIO_PUSHPULL | GPIO_PORTD | GPIO_PIN2)
-#define MOD_RELEASE_4_CONFIG  (GPIO_OUTPUT | GPIO_OUTPUT_CLEAR \
+#define MOD_RELEASE_3B_CONFIG  (GPIO_OUTPUT | GPIO_OUTPUT_CLEAR \
                                 | GPIO_PUSHPULL | GPIO_PORTD | GPIO_PIN4)
-#define MOD_RELEASE_5_CONFIG  (GPIO_OUTPUT | GPIO_OUTPUT_CLEAR \
+#define MOD_RELEASE_4A_CONFIG  (GPIO_OUTPUT | GPIO_OUTPUT_CLEAR \
                                 | GPIO_PUSHPULL | GPIO_PORTD | GPIO_PIN6)
-#define MOD_RELEASE_6_CONFIG  (GPIO_OUTPUT | GPIO_OUTPUT_CLEAR \
+#define MOD_RELEASE_4B_CONFIG  (GPIO_OUTPUT | GPIO_OUTPUT_CLEAR \
                                 | GPIO_PUSHPULL | GPIO_PORTD | GPIO_PIN7)
 
 #define MOD_RELEASE_1         STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN0)
 #define MOD_RELEASE_2         STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN1)
-#define MOD_RELEASE_3         STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN2)
-#define MOD_RELEASE_4         STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN4)
-#define MOD_RELEASE_5         STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN6)
-#define MOD_RELEASE_6         STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN7)
+#define MOD_RELEASE_3A        STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN2)
+#define MOD_RELEASE_3B        STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN4)
+#define MOD_RELEASE_4A        STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN6)
+#define MOD_RELEASE_4B        STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN7)
 
 #define ARA_KEY_CONFIG        (GPIO_INPUT | GPIO_PULLDOWN | GPIO_PORTA \
                                | GPIO_PIN0)
@@ -139,12 +162,8 @@
 /* FIXME: put the bridge enables back in here once the handshaking
  * with MSM is OK. */
 
+/* Only APB1 is in use. WD8B is reserved for time sync */
 static struct vreg_data apb1_vreg_data[] = {
-    /* INIT_MODULE_CLK_DATA(REFCLK_APB1_EN), */
-};
-
-static struct vreg_data apb2_vreg_data[] = {
-    /* INIT_MODULE_CLK_DATA(REFCLK_APB2_EN), */
 };
 
 /*
@@ -152,41 +171,43 @@ static struct vreg_data apb2_vreg_data[] = {
  *
  * Notes:
  *
- * 1. The modules loadswitches are controlled by the INA231 ALERT output,
+ * The modules loadswitches are controlled by the INA231 ALERT output,
  * to be driven via I2C commands. Take a shortcut for bring-up until the
  * INA231 support is in: directly control it via the VSYS_ENx GPIO pins.
  * (ToDo)
- * 2. Module port 6 (Display and TS) is controlled by the AP. Interface
- * control pins to the SVC are present but not used:
- * WD_6, REFCLK_6_EN, VSYS_EN6.
  */
 static struct vreg_data module_1_vreg_data[] = {
-    INIT_ACTIVE_LOW_VREG_DATA(U4550_GPIO_PIN(0), HOLD_TIME_MODULE),
+    INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN1_N, HOLD_TIME_MODULE),
     INIT_MODULE_CLK_DATA(REFCLK_1_EN),
 };
 
 static struct vreg_data module_2_vreg_data[] = {
-    INIT_ACTIVE_LOW_VREG_DATA(U4550_GPIO_PIN(2), HOLD_TIME_MODULE),
+    INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN2_N, HOLD_TIME_MODULE),
     INIT_MODULE_CLK_DATA(REFCLK_2_EN),
 };
 
-static struct vreg_data module_3_vreg_data[] = {
-    INIT_ACTIVE_LOW_VREG_DATA(U4550_GPIO_PIN(4), HOLD_TIME_MODULE),
-    INIT_MODULE_CLK_DATA(REFCLK_3_EN),
+static struct vreg_data module_3A_vreg_data[] = {
+    INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN3A_N, HOLD_TIME_MODULE),
+    INIT_MODULE_CLK_DATA(REFCLK_3A_EN),
 };
 
-static struct vreg_data module_4a_vreg_data[] = {
-    INIT_ACTIVE_LOW_VREG_DATA(U4550_GPIO_PIN(6), HOLD_TIME_MODULE),
+static struct vreg_data module_3B_vreg_data[] = {
+    INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN3B_N, HOLD_TIME_MODULE),
+    INIT_MODULE_CLK_DATA(REFCLK_3B_EN),
+};
+
+static struct vreg_data module_4A_vreg_data[] = {
+    INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN4A_N, HOLD_TIME_MODULE),
     INIT_MODULE_CLK_DATA(REFCLK_4A_EN),
 };
 
-static struct vreg_data module_4b_vreg_data[] = {
-    INIT_ACTIVE_LOW_VREG_DATA(U4550_GPIO_PIN(6), HOLD_TIME_MODULE),
+static struct vreg_data module_4B_vreg_data[] = {
+    INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN4B_N, HOLD_TIME_MODULE),
     INIT_MODULE_CLK_DATA(REFCLK_4B_EN),
 };
 
-static struct vreg_data module_5_vreg_data[] = {
-    INIT_ACTIVE_LOW_VREG_DATA(U4550_GPIO_PIN(8), HOLD_TIME_MODULE),
+static struct vreg_data module_5_lcd_vreg_data[] = {
+    INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN5_N, HOLD_TIME_MODULE),
     INIT_MODULE_CLK_DATA(REFCLK_5_EN),
 };
 
@@ -195,26 +216,27 @@ static struct vreg_data module_5_vreg_data[] = {
  */
 DECLARE_MODULE_PORT_INTERFACE(apb1, apb1_vreg_data, 3,
                               WD8A_DET_IN, ARA_IFACE_WD_ACTIVE_HIGH, false, 0);
-DECLARE_MODULE_PORT_INTERFACE(apb2, apb2_vreg_data, 1,
-                              WD8B_DET_IN, ARA_IFACE_WD_ACTIVE_HIGH, false, 0);
 DECLARE_MODULE_PORT_INTERFACE(module_1, module_1_vreg_data, 13,
                               WD_1_DET_IN, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_1);
 DECLARE_MODULE_PORT_INTERFACE(module_2, module_2_vreg_data, 11,
                               WD_2_DET_IN, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_2);
-DECLARE_MODULE_PORT_INTERFACE(module_3, module_3_vreg_data, 4,
-                              WD_3_DET_IN, ARA_IFACE_WD_ACTIVE_LOW,
-                              true, MOD_RELEASE_3);
-DECLARE_MODULE_PORT_INTERFACE(module_4a, module_4a_vreg_data, 8,
+DECLARE_MODULE_PORT_INTERFACE(module_3a, module_3A_vreg_data, 4,
+                              WD_3A_DET_IN, ARA_IFACE_WD_ACTIVE_LOW,
+                              true, MOD_RELEASE_3A);
+DECLARE_MODULE_PORT_INTERFACE(module_3b, module_3B_vreg_data, 10,
+                              WD_3B_DET_IN, ARA_IFACE_WD_ACTIVE_LOW,
+                              true, MOD_RELEASE_3B);
+DECLARE_MODULE_PORT_INTERFACE(module_4a, module_4A_vreg_data, 6,
                               WD_4A_DET_IN, ARA_IFACE_WD_ACTIVE_LOW,
-                              true, MOD_RELEASE_4);
-DECLARE_MODULE_PORT_INTERFACE(module_4b, module_4b_vreg_data, 6,
+                              true, MOD_RELEASE_4A);
+DECLARE_MODULE_PORT_INTERFACE(module_4b, module_4B_vreg_data, 8,
                               WD_4B_DET_IN, ARA_IFACE_WD_ACTIVE_LOW,
-                              true, MOD_RELEASE_4);
-DECLARE_MODULE_PORT_INTERFACE(module_5, module_5_vreg_data, 10,
+                              true, MOD_RELEASE_4B);
+DECLARE_MODULE_PORT_INTERFACE(module_5, module_5_lcd_vreg_data, INVALID_PORT,
                               WD_5_DET_IN, ARA_IFACE_WD_ACTIVE_LOW,
-                              true, MOD_RELEASE_5);
+                              false, 0);
 
 #define I2C_SEL1_A      BIT(0)
 #define I2C_SEL1_B      BIT(1)
@@ -344,10 +366,10 @@ int pwrmon_do_i2c_sel(uint8_t dev)
  */
 static struct interface *db3_interfaces[] = {
     &apb1_interface,
-    &apb2_interface,
     &module_1_interface,
     &module_2_interface,
-    &module_3_interface,
+    &module_3a_interface,
+    &module_3b_interface,
     &module_4a_interface,
     &module_4b_interface,
     &module_5_interface,
@@ -398,8 +420,8 @@ static struct ara_board_info db3_board_info = {
                              GPIO_PORTD | GPIO_PIN11),
         .gpio_irq         = (GPIO_INPUT | GPIO_FLOAT | GPIO_EXTI | \
                              GPIO_PORTC | GPIO_PIN9),
-        .irq_rising_edge  = true,
-        .rev              = SWITCH_REV_ES2,
+        .irq_rising_edge  = false,
+        .rev              = SWITCH_REV_ES3,
         .bus              = SW_SPI_PORT_2,
         .spi_cs           = (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_OUTPUT_SET | \
                              GPIO_PORTB | GPIO_PIN12)
@@ -455,6 +477,26 @@ struct ara_board_info *board_init(void) {
     }
 
     /*
+     * VSYS and VCHG are active high with a pull-up.
+     * Initialize these lines as output low to prevent any spurious
+     * activation at boot time.
+     */
+    gpio_direction_out(VSYS_EN1_N, 0);
+    gpio_direction_out(VSYS_EN2_N, 0);
+    gpio_direction_out(VSYS_EN3A_N, 0);
+    gpio_direction_out(VSYS_EN3B_N, 0);
+    gpio_direction_out(VSYS_EN4A_N, 0);
+    gpio_direction_out(VSYS_EN4B_N, 0);
+    gpio_direction_out(VSYS_EN5_N, 0);
+    gpio_direction_out(VCHG_EN1_N, 0);
+    gpio_direction_out(VCHG_EN2_N, 0);
+    gpio_direction_out(VCHG_EN3A_N, 0);
+    gpio_direction_out(VCHG_EN3B_N, 0);
+    gpio_direction_out(VCHG_EN4A_N, 0);
+    gpio_direction_out(VCHG_EN4B_N, 0);
+    gpio_direction_out(VCHG_EN5_N, 0);
+
+    /*
      * Turn on the global system clock and its buffered copy (which
      * goes to the modules and the switch).
      *
@@ -464,14 +506,6 @@ struct ara_board_info *board_init(void) {
     gpio_activate(REFCLK_BUFFERS_EN);
     gpio_direction_out(REFCLK_REQ, 1);
     gpio_direction_out(REFCLK_BUFFERS_EN, 1);
-
-    /*
-     * FIXME: tear this out once the handshaking with MSM is OK.
-     */
-    gpio_activate(REFCLK_APB1_EN);
-    gpio_activate(REFCLK_APB2_EN);
-    gpio_direction_out(REFCLK_APB1_EN, 1);
-    gpio_direction_out(REFCLK_APB2_EN, 1);
 
     /*
      * Configure the switch power supply lines.
@@ -486,11 +520,11 @@ struct ara_board_info *board_init(void) {
      */
     stm32_configgpio(WD_1_DET_IN);
     stm32_configgpio(WD_2_DET_IN);
-    stm32_configgpio(WD_3_DET_IN);
+    stm32_configgpio(WD_3A_DET_IN);
+    stm32_configgpio(WD_3B_DET_IN);
     stm32_configgpio(WD_4A_DET_IN);
     stm32_configgpio(WD_4B_DET_IN);
     stm32_configgpio(WD_5_DET_IN);
-    stm32_configgpio(WD_6_DET_IN);
     stm32_configgpio(WD8A_DET_IN);
     stm32_configgpio(WD8B_DET_IN);
 
@@ -499,21 +533,21 @@ struct ara_board_info *board_init(void) {
      */
     stm32_configgpio(MOD_ACT_SW_1);
     stm32_configgpio(MOD_ACT_SW_2);
-    stm32_configgpio(MOD_ACT_SW_3);
-    stm32_configgpio(MOD_ACT_SW_4);
+    stm32_configgpio(MOD_ACT_SW_3A);
+    stm32_configgpio(MOD_ACT_SW_3B);
+    stm32_configgpio(MOD_ACT_SW_4A);
+    stm32_configgpio(MOD_ACT_SW_4B);
     stm32_configgpio(MOD_ACT_SW_5);
-    stm32_configgpio(MOD_ACT_SW_6);
-    stm32_configgpio(MOD_ACT_SW_7);
 
     /*
      * Configure the module release pins
      */
     stm32_configgpio(MOD_RELEASE_1_CONFIG);
     stm32_configgpio(MOD_RELEASE_2_CONFIG);
-    stm32_configgpio(MOD_RELEASE_3_CONFIG);
-    stm32_configgpio(MOD_RELEASE_4_CONFIG);
-    stm32_configgpio(MOD_RELEASE_5_CONFIG);
-    stm32_configgpio(MOD_RELEASE_6_CONFIG);
+    stm32_configgpio(MOD_RELEASE_3A_CONFIG);
+    stm32_configgpio(MOD_RELEASE_3B_CONFIG);
+    stm32_configgpio(MOD_RELEASE_4A_CONFIG);
+    stm32_configgpio(MOD_RELEASE_4B_CONFIG);
 
     /* Configure ARA key input pin */
     stm32_configgpio(ARA_KEY_CONFIG);
