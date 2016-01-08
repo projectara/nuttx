@@ -35,6 +35,7 @@
 #define DBG_COMP ARADBG_POWER
 
 #include <nuttx/sensors/ina230.h>
+#include <nuttx/util.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -449,7 +450,8 @@ ina230_device *ina230_init(struct i2c_dev_s *i2c_dev, uint8_t addr,
 int ina230_get_data(ina230_device *dev, ina230_sample *m)
 {
     int ret;
-    int16_t raw_vbus, raw_current, raw_power;
+    int16_t raw_vbus, raw_current;
+    int64_t power_tmp;
 
     if ((!dev) || (!m)) {
         return -EINVAL;
@@ -462,14 +464,12 @@ int ina230_get_data(ina230_device *dev, ina230_sample *m)
                          INA230_BUS_VOLTAGE, (uint16_t *) &raw_vbus);
     ret = ret || ina230_i2c_get(dev->i2c_dev, dev->addr,
                                 INA230_CURRENT, (uint16_t *) &raw_current);
-    ret = ret || ina230_i2c_get(dev->i2c_dev, dev->addr,
-                                INA230_POWER, (uint16_t *) &raw_power);
     if (ret) {
         dbg_error("%s(): failed to read data registers! (%d)\n", __func__, ret);
         return -EIO;
     }
-    dbg_verbose("%s(): addr=0x%02X raw_vbus=0x%04X raw_current=0x%04X raw_power=0x%04X\n",
-                __func__, dev->addr, raw_vbus, raw_current, raw_power);
+    dbg_verbose("%s(): addr=0x%02X raw_vbus=0x%04X raw_current=0x%04X\n",
+                __func__, dev->addr, raw_vbus, raw_current);
 
     /* VBUS LSB = 1.25 mV. */
     m->uV = (int32_t) raw_vbus * INA230_VOLTAGE_LSB;
@@ -477,11 +477,8 @@ int ina230_get_data(ina230_device *dev, ina230_sample *m)
     /* Current register LSB programmed during init. Get it from structure. */
     m->uA = (int32_t) raw_current * dev->current_lsb;
 
-    /*
-     * The Power register LSB is internally programmed to equal 25 times
-     * the programmed value of the Current_LSB.
-     */
-    m->uW = (int32_t) raw_power * INA230_POWER_CURRENT_RATIO * dev->current_lsb;
+    power_tmp = (uint64_t)m->uV * (uint64_t)m->uA;
+    m->uW = DIV_ROUND_CLOSEST(power_tmp, 1000000);
 
     dbg_verbose("%s(): addr=0x%02X ret=%d => %duV %duA %duW\n",
                 __func__, dev->addr, ret, m->uV, m->uA, m->uW);
