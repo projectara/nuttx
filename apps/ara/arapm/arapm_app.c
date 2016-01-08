@@ -506,7 +506,7 @@ static void arapm_main_display_measurements(void)
             printf("| %-11s |", "");
             for (r = 0; r < max_rcount; r++) {
                 if ((r_start + r) < r_end) {
-                    printf(" V (mV): %-10d |", measurements[d][r_start + r].uV);
+                    printf(" V (uV): %-10d |", measurements[d][r_start + r].uV);
                 } else {
                     printf(" %-18s |", "");
                 }
