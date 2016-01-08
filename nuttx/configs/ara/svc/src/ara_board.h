@@ -69,9 +69,10 @@
 #define U4550_GPIO_PIN(p)       (U4550_GPIO_CHIP_START + (p))
 #define U4570_GPIO_PIN(p)       (U4570_GPIO_CHIP_START + (p))
 
-/* ES2-specific repurposing of an attribute */
+/* ES2-specific repurposing of attributes */
 #define ES2_MBOX_ACK_ATTR       T_TSTSRCINTERMESSAGEGAP
 #define MBOX_ACK_ATTR           ES2_MBOX_ACK_ATTR
+#define ES2_DME_INIT_STATUS     T_TSTSRCINCREMENT
 
 /*
  * Common timing parameters

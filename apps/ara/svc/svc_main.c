@@ -60,6 +60,7 @@ enum {
     TESTFEATURE,
     QOS,
     RELEASE,
+    IDMOD,
     MAX_CMD,
 };
 
@@ -79,6 +80,7 @@ static const struct command commands[] = {
     [ROUTINGTABLE] = {'r', "routingtable", "dump Switch routing table"},
     [DME_IO]  = {'d', "dme", "get/set DME attributes"},
     [TESTFEATURE] = {'t', "testfeature", "UniPro test feature"},
+    [IDMOD] = {'m', "idmod", "Identify module and boot status"},
     [QOS] = {'q', "qos", "Quality of Service control"},
     [RELEASE] = {'x', "release", "Pulse module release signals"},
 };
@@ -1714,6 +1716,160 @@ static int release(int argc, char *argv[]) {
     return EXIT_SUCCESS;
 }
 
+static void idmod_usage(int exit_status) {
+    printf("svc %s: usage\n", commands[IDMOD].longc);
+    printf("    -h: print this message and exit\n");
+    printf("\n");
+    printf("Options for specifying which module to identify:\n");
+    printf("    -p <port>   : Port on which to ID module, starting from 0.\n");
+    printf("    -i <interface>: Interface on which to ID module (e.g. \"apb1\", etc.)\n");
+    exit(exit_status);
+}
+
+static int idmod(int argc, char *argv[]) {
+    struct tsb_switch *sw = svc->sw;
+    const char opts[] = "p:i:h";
+    int rc, c;
+    int8_t port = -1;
+    char *iface_name = NULL;
+    const char *attr_name = NULL;
+    uint32_t ddbl1_mfg = 0, ddbl1_pid = 0;
+
+    if (!sw) {
+        return -ENODEV;
+    }
+
+    if (argc < 3) {
+        printf("Invalid argument specification.\n");
+        idmod_usage(-EINVAL);
+    }
+
+    /*
+     * Parse the command-line options
+     */
+    optind = -1; /* Force nuttx's getopt() to re-initialize. */
+    while ((c = getopt(argc - 2, argv + 1, opts)) != -1) {
+        switch (c) {
+            case 'p':
+                port = strtol(optarg, NULL, 10);
+                break;
+            case 'i':
+                iface_name = optarg;
+                break;
+            case 'h':
+                idmod_usage(0);
+                break;
+            default:
+            case '?':
+                printf("Unrecognized argument.\n");
+                idmod_usage(-EINVAL);
+        }
+    }
+
+    /* Override the port if the user specified an interface by name. */
+    if (iface_name) {
+        struct interface *iface = interface_get_by_name(iface_name);
+        if (!iface) {
+            printf("Invalid interface: %s\n", iface_name);
+            return EXIT_FAILURE;
+        }
+        port = iface->switch_portid;
+    }
+
+    /* Check if port is valid */
+    if (port < 0 || port > SWITCH_UNIPORT_MAX) {
+        printf("Invalid port %d, must be between %d and %d.\n",
+               port, 0, SWITCH_UNIPORT_MAX - 1);
+        return EXIT_FAILURE;
+    }
+
+    /*
+     * List out the values of five attributes:
+     * 1) DME DDBL1 Manufacturer ID
+     * 2) DME DDBL1 Product ID
+     * 3) Boot-Status
+     * 4) Ara Vendor ID (ES3+)
+     * 5) Ara Product ID (ES3+)
+     */
+    attr_name = attr_get_name(DME_DDBL1_MANUFACTURERID);
+    rc = switch_dme_peer_get(sw, port, DME_DDBL1_MANUFACTURERID, 0, &ddbl1_mfg);
+    if (rc) {
+        printf("Could not read %s [a=0x%x,p=%u]: %d\n", attr_name,
+               DME_DDBL1_MANUFACTURERID, port, rc);
+        return EXIT_FAILURE;
+    }
+    printf("Port=%d, peer=yes, sel=0, %s (0x%x) = 0x%x (%u)\n",
+           port, attr_name, DME_DDBL1_MANUFACTURERID, ddbl1_mfg, ddbl1_mfg);
+
+    attr_name = attr_get_name(DME_DDBL1_PRODUCTID);
+    rc = switch_dme_peer_get(sw, port, DME_DDBL1_PRODUCTID, 0, &ddbl1_pid);
+    if (rc) {
+        printf("Could not read %s [a=0x%x,p=%u]: %d\n", attr_name,
+               DME_DDBL1_PRODUCTID, port, rc);
+        return EXIT_FAILURE;
+    }
+    printf("Port=%d, peer=yes, sel=0, %s (0x%x) = 0x%x (%u)\n",
+           port, attr_name, DME_DDBL1_PRODUCTID, ddbl1_pid, ddbl1_pid);
+
+    /*
+     * Detect chip revision to determine:
+     * 1) Which attribute stores boot-status.
+     * 2) Whether we can read an Ara VID/PID.
+     */
+    if (ddbl1_mfg == MANUFACTURER_TOSHIBA) {
+        switch (ddbl1_pid) {
+            case PRODUCT_ES2_TSB_BRIDGE:
+                attr_name = attr_get_name(ES2_DME_INIT_STATUS);
+                rc = dme_io_dump(sw, port, attr_name, ES2_DME_INIT_STATUS, 0,
+                                 true);
+                if (rc) {
+                    printf("Could not read %s [a=0x%x,p=%u]: %d\n", attr_name,
+                           ES2_DME_INIT_STATUS, port, rc);
+                    return EXIT_FAILURE;
+                }
+                break;
+            case PRODUCT_ES3_TSB_APBRIDGE:
+            case PRODUCT_ES3_TSB_GPBRIDGE:
+                attr_name = attr_get_name(TSB_DME_ES3_INIT_STATUS);
+                rc = dme_io_dump(sw, port, attr_name, TSB_DME_ES3_INIT_STATUS,
+                                 0, true);
+                if (rc) {
+                    printf("Could not read %s [a=0x%x,p=%u]: %d\n", attr_name,
+                           TSB_DME_ES3_INIT_STATUS, port, rc);
+                    return EXIT_FAILURE;
+                }
+
+                attr_name = attr_get_name(TSB_ARA_VID);
+                rc = dme_io_dump(sw, port, attr_name, TSB_ARA_VID, 0,
+                                 true);
+                if (rc) {
+                    printf("Could not read %s [a=0x%x,p=%u]: %d\n", attr_name,
+                           TSB_ARA_VID, port, rc);
+                    return EXIT_FAILURE;
+                }
+
+                attr_name = attr_get_name(TSB_ARA_PID);
+                rc = dme_io_dump(sw, port, attr_name, TSB_ARA_PID, 0,
+                                 true);
+                if (rc) {
+                    printf("Could not read %s [a=0x%x,p=%u]: %d\n", attr_name,
+                           TSB_ARA_PID, port, rc);
+                    return EXIT_FAILURE;
+                }
+                break;
+            default:
+                printf("Unknown DDBL1 product ID 0x%x\n", ddbl1_pid);
+                return EXIT_FAILURE;
+                break;
+        }
+    } else {
+        printf("Unknown DDLB1 manufacturer ID 0x%x\n", ddbl1_mfg);
+        return EXIT_FAILURE;
+    }
+
+    return 0;
+}
+
 #ifdef CONFIG_BUILD_KERNEL
 int main(int argc, FAR char *argv[])
 #else
@@ -1776,6 +1932,8 @@ int svc_main(int argc, char *argv[])
         break;
     case RELEASE:
         rc = release(argc, argv);
+    case IDMOD:
+        rc = idmod(argc, argv);
         break;
     default:
         usage(EXIT_FAILURE);
