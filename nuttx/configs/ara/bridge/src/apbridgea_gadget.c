@@ -114,8 +114,10 @@
 /* Number of endpoints in the interface  */
 #define APBRIDGE_NENDPOINTS          (APBRIDGE_NBULKS << 1)
 
+#define BULKEPNO_TO_N(epno) \
+  ((epno - CONFIG_APBRIDGE_EPBULKOUT) >> 1)
 #define BULKEP_TO_N(ep) \
-  ((USB_EPNO(ep->eplog) - CONFIG_APBRIDGE_EPBULKOUT) >> 1)
+  BULKEPNO_TO_N(USB_EPNO(ep->eplog))
 
 #define APBRIDGE_NREQS               (1)
 #define APBRIDGE_REQ_SIZE            (2048)
@@ -191,8 +193,8 @@ struct apbridge_dev_s {
     struct list_head msg_queue;
 
     int *cport_to_epin_n;
-    struct gb_timestamp *ts;
     int epout_to_cport_n[APBRIDGE_NBULKS];
+    struct gb_timestamp *ts;
 
     struct gadget_descriptor *g_desc;
 
@@ -383,6 +385,57 @@ static inline struct apbridge_dev_s *ep_to_apbridge(struct usbdev_ep_s *ep)
     return (struct apbridge_dev_s *)ep->priv;
 }
 
+static unsigned int ep_to_cportid(struct usbdev_ep_s *ep)
+{
+    struct apbridge_dev_s *priv;
+
+    priv = ep_to_apbridge(ep);
+    return priv->epout_to_cport_n[BULKEP_TO_N(ep)];
+}
+
+static void epno_set_cportid(struct apbridge_dev_s *priv,
+                             uint8_t epno, unsigned int cportid)
+{
+    priv->epout_to_cport_n[BULKEPNO_TO_N(epno)] = cportid;
+}
+
+static struct usbdev_ep_s *cportid_to_ep(struct apbridge_dev_s *priv,
+                                         unsigned int cportid)
+{
+    uint8_t epno;
+
+    epno = priv->cport_to_epin_n[cportid] & USB_EPNO_MASK;
+    return priv->ep[epno];
+}
+
+static void cportid_set_epno(struct apbridge_dev_s *priv,
+                             uint8_t epno, unsigned int cportid)
+{
+    priv->cport_to_epin_n[cportid] = epno;
+}
+
+static int map_table_init(struct apbridge_dev_s *priv)
+{
+    int i;
+    unsigned int cport_count = unipro_cport_count();
+
+    priv->cport_to_epin_n = kmm_malloc(sizeof(int) * cport_count);
+    if (!priv->cport_to_epin_n) {
+        return -ENOMEM;
+    }
+
+    for (i = 0; i < cport_count; i++) {
+        priv->cport_to_epin_n[i] = CONFIG_APBRIDGE_EPBULKIN;
+    }
+
+    return 0;
+}
+
+static void map_table_free(struct apbridge_dev_s *priv)
+{
+    kmm_free(priv->cport_to_epin_n);
+}
+
 /**
  * @brief Wait until usb connection has been established
  * USB driver is not fully initialized until enumeration is done.
@@ -458,7 +511,7 @@ unsigned int get_cport_id(struct apbridge_dev_s *priv,
         hdr = (struct gb_operation_hdr *)req->buf;
         cportid = hdr->pad[0];
     } else {
-        cportid = priv->epout_to_cport_n[BULKEP_TO_N(ep)];
+        cportid = ep_to_cportid(ep);
     }
     return cportid;
 }
@@ -509,15 +562,13 @@ static int _to_usb_submit(struct usbdev_ep_s *ep, struct usbdev_req_s *req,
 int unipro_to_usb(struct apbridge_dev_s *priv, unsigned int cportid,
                   const void *payload, size_t len)
 {
-    uint8_t epno;
     struct usbdev_ep_s *ep;
     struct usbdev_req_s *req;
 
     if (len > APBRIDGE_REQ_SIZE)
         return -EINVAL;
 
-    epno = priv->cport_to_epin_n[cportid];
-    ep = priv->ep[epno & USB_EPNO_MASK];
+    ep = cportid_to_ep(priv, cportid);
     req = get_request(ep, usbclass_wrcomplete, APBRIDGE_REQ_SIZE,
                       (void*) cportid);
     if (!req) {
@@ -552,11 +603,10 @@ void map_cport_to_ep(struct apbridge_dev_s *priv,
                      struct cport_to_ep *cport_to_ep)
 {
     unsigned int cportid = le16_to_cpu(cport_to_ep->cport_id);
-    uint8_t ep_out = cport_to_ep->endpoint_out - CONFIG_APBRIDGE_EPBULKOUT;
     bool is_multiplexed = cport_to_ep->endpoint_in == CONFIG_APBRIDGE_EPBULKIN;
 
-    priv->cport_to_epin_n[cportid] = cport_to_ep->endpoint_in;
-    priv->epout_to_cport_n[ep_out >> 1] = cportid;
+    cportid_set_epno(priv, cport_to_ep->endpoint_in, cportid);
+    epno_set_cportid(priv, cport_to_ep->endpoint_out, cportid);
 
     if (priv->driver->unipro_cport_mapping) {
         priv->driver->unipro_cport_mapping(cportid,
@@ -1403,11 +1453,10 @@ int usbdev_apbinitialize(struct device *dev,
     memset(priv, 0, sizeof(struct apbridge_dev_s));
     priv->driver = driver;
 
-    priv->cport_to_epin_n = kmm_malloc(sizeof(int) * unipro_cport_count());
-    if (!priv->cport_to_epin_n) {
-        ret = -ENOMEM;
-        goto errout_with_alloc;
+    if (map_table_init(priv)) {
+        goto errout_with_map_table;
     }
+
     priv->ts = kmm_malloc(sizeof(struct gb_timestamp) * unipro_cport_count());
     if (!priv->ts) {
         ret = -ENOMEM;
@@ -1415,7 +1464,6 @@ int usbdev_apbinitialize(struct device *dev,
     }
 
     for (i = 0; i < cport_count; i++) {
-        priv->cport_to_epin_n[i] = CONFIG_APBRIDGE_EPBULKIN;
         priv->ts[i].tag = false;
     }
     sem_init(&priv->config_sem, 0, 0);
@@ -1447,8 +1495,8 @@ int usbdev_apbinitialize(struct device *dev,
 errout_cport_table:
     kmm_free(priv->ts);
 errout_with_alloc_ts:
-    kmm_free(priv->cport_to_epin_n);
- errout_with_alloc:
+    map_table_free(priv);
+ errout_with_map_table:
     kmm_free(priv);
 errout_vendor_req:
     unregister_all_vendor_request();
