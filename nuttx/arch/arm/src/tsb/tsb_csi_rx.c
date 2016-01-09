@@ -292,6 +292,8 @@ int csi_rx_start(struct cdsi_dev *dev)
     return 0;
 }
 
+#define CSI_RX_STOP_TIMEOUT     5 /* 50 us */
+
 int csi_rx_stop(struct cdsi_dev *dev)
 {
     const uint32_t hs_mask = CDSI0_CDSIRX_LANE_STATUS_HS_CLRXACTIVEHS_MASK
@@ -304,20 +306,52 @@ int csi_rx_stop(struct cdsi_dev *dev)
                            | CDSI0_CDSIRX_LANE_STATUS_LP_L2STOPSTATE_MASK
                            | CDSI0_CDSIRX_LANE_STATUS_LP_L1STOPSTATE_MASK
                            | CDSI0_CDSIRX_LANE_STATUS_LP_L0STOPSTATE_MASK;
+    unsigned int timeout;
     uint32_t val;
 
-    /* Verify the lanes state, they should all be stopped (LP-11) */
-    val = cdsi_read(dev, CDSI0_CDSIRX_LANE_STATUS_HS_OFFS);
+    /*
+     * Wait for the CSI receiver to become idle. Lanes should first switch to
+     * Low Power mode, then to the stop state (LP-11) and finally the CSI
+     * receiver should become idle.
+     */
+    for (timeout = 0; timeout < CSI_RX_STOP_TIMEOUT; ++timeout) {
+        val = cdsi_read(dev, CDSI0_CDSIRX_LANE_STATUS_HS_OFFS);
+        if (!(val & hs_mask))
+            break;
+
+        usleep(10);
+    }
+
     if (val & hs_mask)
         printf("cdsi: lanes failed to switch to LP (0x%08x)\n", val);
+    else
+        printf("cdsi: lanes switched to LP (%u us)\n", timeout * 10);
 
-    val = cdsi_read(dev, CDSI0_CDSIRX_LANE_STATUS_LP_OFFS);
+    for (timeout = 0; timeout < CSI_RX_STOP_TIMEOUT; ++timeout) {
+        val = cdsi_read(dev, CDSI0_CDSIRX_LANE_STATUS_LP_OFFS);
+        if ((val & lp_mask) == lp_mask)
+            break;
+
+        usleep(10);
+    }
+
     if ((val & lp_mask) != lp_mask)
         printf("cdsi: lanes failed to switch to LP-11 (0x%08x)\n", val);
+    else
+        printf("cdsi: lanes switched to LP-11 (%u us)\n", timeout * 10);
 
-    val = cdsi_read(dev, CDSI0_CDSIRX_INTERNAL_STAT_OFFS);
+    for (timeout = 0; timeout < CSI_RX_STOP_TIMEOUT; ++timeout) {
+        val = cdsi_read(dev, CDSI0_CDSIRX_INTERNAL_STAT_OFFS);
+        if (!val)
+            break;
+
+        usleep(10);
+    }
+
     if (val)
         printf("cdsi: CDSIRX failed to become idle (0x%08x)\n", val);
+    else
+        printf("cdsi: CDSIRX became idle (%u us)\n", timeout * 10);
 
     /*
      * Stop CDSIRX, clear its internal state, disable it and disable the RX
