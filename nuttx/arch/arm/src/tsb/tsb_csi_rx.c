@@ -121,7 +121,23 @@
 #define CDSI0_CDSIRX_CLKDISABLE_VAL                     0x00000000
 #define CDSI0_AL_RX_BRG_DISABLE_VAL                     0x00000000
 
-int csi_rx_configure(struct cdsi_dev *dev, const struct csi_rx_config *cfg)
+/**
+ * @brief Initialize the CSI receiver
+ * @param dev dev pointer to structure of cdsi_dev device data
+ * @return 0 on success of a negative error value on error
+ *
+ * Initialization of the CSI receiver configures and enables the CSIRX block
+ * and performs LPRX calibration. This results in the CSI receiver being clocked
+ * and ready to be started.
+ *
+ * The receiver shouldn't be left initialized when unused as it consumes power
+ * in that state, even if not started yet. To uninitialize the CSI receiver and
+ * put it back to sleep call csi_rx_uninit().
+ *
+ * This function is stateless and must only be called when the CSI receiver is
+ * unintialized.
+ */
+int csi_rx_init(struct cdsi_dev *dev, const struct csi_rx_config *cfg)
 {
     unsigned int timeout;
 
@@ -257,9 +273,54 @@ int csi_rx_configure(struct cdsi_dev *dev, const struct csi_rx_config *cfg)
 }
 
 /**
- * @brief Initialize the CSI receiver
+ * @brief Uninitialize the CSI receiver
  * @param dev dev pointer to structure of cdsi_dev device data
- * @return void function without return value
+ * @return 0 on success of a negative error value on error
+ *
+ * Uninitializing the CSI receiver disables the clock to the CSIRX block,
+ * lowering its power consumption. The receiver should be kept uninitialized for
+ * as long as possible.
+ *
+ * This function is stateless and must only be called when the CSI receiver is
+ * stopped and initialized.
+ */
+int csi_rx_uninit(struct cdsi_dev *dev)
+{
+    uint32_t val;
+
+    /*
+     * Disable CDSIRX and the RX bridge and verify that the bridge became
+     * idle.
+     */
+    cdsi_write(dev, CDSI0_CDSIRX_CLKEN_OFFS, CDSI0_CDSIRX_CLKDISABLE_VAL);
+    cdsi_write(dev, CDSI0_AL_RX_BRG_MODE_OFFS, CDSI0_AL_RX_BRG_DISABLE_VAL);
+
+    usleep(10);
+
+    val = cdsi_read(dev, CDSI0_AL_RX_BRG_MODE_OFFS);
+    if (val & CDSI0_AL_RX_BRG_MODE_BUSY_MASK)
+        printf("cdsi: RX bridge failed to become idle (0x%08x)\n", val);
+
+    return 0;
+}
+
+/**
+ * @brief Start the CSI receiver
+ * @param dev dev pointer to structure of cdsi_dev device data
+ * @return 0 on success of a negative error value on error
+ *
+ * Starting the CSI receiver enables sending of UniPro packets encapsulating
+ * CSI-2 data. Before starting the CSI receiver it must be initialized with a
+ * call to csi_rx_init().
+ *
+ * The CSI receiver can only be started when all lanes of the CSI input are in
+ * the stopped state (LP-11). The caller must thus start the CSI input after the
+ * CSI receiver.
+ *
+ * This function is stateless and must only be called when the CSI receiver is
+ * initialized and not started.
+ *
+ * To stop the CSI receiver call csi_rx_stop().
  */
 int csi_rx_start(struct cdsi_dev *dev)
 {
@@ -294,6 +355,22 @@ int csi_rx_start(struct cdsi_dev *dev)
 
 #define CSI_RX_STOP_TIMEOUT     5 /* 50 us */
 
+/**
+ * @brief Stop the CSI receiver
+ * @param dev dev pointer to structure of cdsi_dev device data
+ * @return 0 on success of a negative error value on error
+ *
+ * Stopping the CSI receiver disables sending of UniPro packets. Once stopped
+ * the CSI receiver can be put to power down mode with a call to
+ * csi_rx_uninit().
+ *
+ * The CSI receiver can only be stopped when all lanes of the CSI input are in
+ * the stopped state (LP-11). The caller must thus stop the CSI input before the
+ * CSI receiver.
+ *
+ * This function is stateless and must only be called when the CSI receiver is
+ * started.
+ */
 int csi_rx_stop(struct cdsi_dev *dev)
 {
     const uint32_t hs_mask = CDSI0_CDSIRX_LANE_STATUS_HS_CLRXACTIVEHS_MASK
@@ -353,22 +430,10 @@ int csi_rx_stop(struct cdsi_dev *dev)
     else
         printf("cdsi: CDSIRX became idle (%u us)\n", timeout * 10);
 
-    /*
-     * Stop CDSIRX, clear its internal state, disable it and disable the RX
-     * bridge.
-     */
+    /* Stop CDSIRX and clear its internal state. */
     cdsi_write(dev, CDSI0_CDSIRX_START_OFFS, CDSI0_CDSIRX_STOP);
     cdsi_write(dev, CDSI0_CDSIRX_SYSTEM_INIT_OFFS,
                CDSI0_CDSIRX_SYSTEM_CLEAR_VAL);
-    cdsi_write(dev, CDSI0_CDSIRX_CLKEN_OFFS, CDSI0_CDSIRX_CLKDISABLE_VAL);
-    cdsi_write(dev, CDSI0_AL_RX_BRG_MODE_OFFS, CDSI0_AL_RX_BRG_DISABLE_VAL);
-
-    usleep(10);
-
-    /* Verify the the RX bridge has correctly become idle. */
-    val = cdsi_read(dev, CDSI0_AL_RX_BRG_MODE_OFFS);
-    if (val & CDSI0_AL_RX_BRG_MODE_BUSY_MASK)
-        printf("cdsi: RX bridge failed to become idle (0x%08x)\n", val);
 
     return 0;
 }

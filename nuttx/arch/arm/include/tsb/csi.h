@@ -60,7 +60,8 @@ struct csi_rx_config {
 struct cdsi_dev *csi_rx_open(unsigned int cdsi);
 void csi_rx_close(struct cdsi_dev *dev);
 
-int csi_rx_configure(struct cdsi_dev *dev, const struct csi_rx_config *cfg);
+int csi_rx_init(struct cdsi_dev *dev, const struct csi_rx_config *cfg);
+int csi_rx_uninit(struct cdsi_dev *dev);
 
 int csi_rx_start(struct cdsi_dev *dev);
 int csi_rx_stop(struct cdsi_dev *dev);
