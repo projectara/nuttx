@@ -376,6 +376,13 @@ static const struct gadget_strings g_strings_table[] = {
     { }
 };
 
+static struct apbridge_dev_s *g_apbridge_dev;
+
+struct apbridge_dev_s *get_apbridge_dev(void)
+{
+    return g_apbridge_dev;
+}
+
 static inline
 struct apbridge_dev_s *driver_to_apbridge(struct usbdevclass_driver_s *drv)
 {
@@ -1572,6 +1579,7 @@ int usbdev_apbinitialize(struct device *dev,
         usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_ALLOCDEVSTRUCT), 0);
         return -ENOMEM;
     }
+    g_apbridge_dev = priv;
 
     /* Convenience pointers into the allocated blob */
 

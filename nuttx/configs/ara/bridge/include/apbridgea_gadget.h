@@ -58,6 +58,8 @@ struct apbridge_usb_driver
     void (*unipro_cport_mapping)(unsigned int cportid, enum ep_mapping mapping);
 };
 
+struct apbridge_dev_s *get_apbridge_dev(void);
+
 int unipro_to_usb(struct apbridge_dev_s *dev, unsigned cportid,
                   const void *payload, size_t size);
 
