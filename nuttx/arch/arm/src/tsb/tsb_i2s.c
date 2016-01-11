@@ -66,6 +66,12 @@
                                      DEVICE_I2S_PROTOCOL_I2S        | \
                                      DEVICE_I2S_PROTOCOL_LR_STEREO)
 
+/**
+ *     Toshiba states the highes bclk freq supported is: 3.413MHz
+ *     With a maximum 8 x multiplier this makes the maximum mclk - 27,304,000
+ */
+#define TSB_I2S_MCLK_MAX    27304000
+
 #define TSB_I2S_WCLK_PALARITY_MASK  (DEVICE_I2S_POLARITY_NORMAL     | \
                                      DEVICE_I2S_POLARITY_REVERSED)
 
@@ -1279,6 +1285,10 @@ static int tsb_i2s_op_get_caps(struct device *dev,
         dai->data_rx_edge = TSB_I2S_RXCLK_EDGE_MASK;
         dai->data_tx_edge = TSB_I2S_TXCLK_EDGE_MASK;
     } else {
+        if (dai->mclk_freq > TSB_I2S_MCLK_MAX) {
+            return -EINVAL;
+        }
+
         dai->protocol = TSB_I2S_PROTOCOL_MASK;
         dai->wclk_polarity = TSB_I2S_WCLK_PALARITY_MASK;
         dai->wclk_change_edge = TSB_I2S_WCLK_EDGE_MASK;
@@ -1327,6 +1337,10 @@ static int tsb_i2s_op_set_config(struct device *dev,
             return ret;
         } else if (ret == 0) {
             /* this should never happen */
+            return -EINVAL;
+        }
+    } else {
+        if (dai->mclk_freq > TSB_I2S_MCLK_MAX) {
             return -EINVAL;
         }
     }
