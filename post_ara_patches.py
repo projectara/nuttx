@@ -9,6 +9,7 @@ def do_rbt_post(revision, depends_on):
     rbt_post = ['rbt', 'post']
     if depends_on is not None:
         rbt_post.extend('--depends-on {}'.format(depends_on).split())
+    rbt_post.extend(['--tracking-branch', 'upstream/master'])
     rbt_post.extend(['-p', revision])
     output = subprocess.check_output(rbt_post)
     print(output,end='')
