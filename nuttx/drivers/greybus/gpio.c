@@ -64,7 +64,7 @@ static uint8_t gb_gpio_line_count(struct gb_operation *operation)
 
     count = gpio_line_count();
     if (!count)
-	    return GB_OP_UNKNOWN_ERROR;
+        return GB_OP_UNKNOWN_ERROR;
 
     response->count = count - 1;
 
@@ -84,8 +84,7 @@ static uint8_t gb_gpio_activate(struct gb_operation *operation)
     if (request->which >= gpio_line_count())
         return GB_OP_INVALID;
 
-    gpio_activate(request->which);
-    return GB_OP_SUCCESS;
+    return gb_errno_to_op_result(gpio_activate(request->which));
 }
 
 static uint8_t gb_gpio_deactivate(struct gb_operation *operation)
@@ -101,8 +100,7 @@ static uint8_t gb_gpio_deactivate(struct gb_operation *operation)
     if (request->which >= gpio_line_count())
         return GB_OP_INVALID;
 
-    gpio_deactivate(request->which);
-    return GB_OP_SUCCESS;
+    return gb_errno_to_op_result(gpio_deactivate(request->which));
 }
 
 static uint8_t gb_gpio_get_direction(struct gb_operation *operation)
