@@ -391,14 +391,15 @@ out:
     irqrestore(flags);
 }
 
-static void tsb_gpio_activate(void *driver_data, uint8_t which)
+static int tsb_gpio_activate(void *driver_data, uint8_t which)
 {
     struct gpio_pinsharing_conf *conf;
     uint32_t mask = 0;
     uint8_t i;
+    int retval = 0;
 
     if (gpio_state[which] == TSB_GPIO_FLAG_OPEN)
-        return;
+        return -EINVAL;
 
     tsb_gpio_initialize();
 
@@ -416,7 +417,8 @@ static void tsb_gpio_activate(void *driver_data, uint8_t which)
 
     /* request the missing bits */
     if (mask) {
-        if (tsb_request_pinshare(mask))
+        retval = tsb_request_pinshare(mask);
+        if (retval)
             goto err;
 
         /* we own these bits now */
@@ -434,21 +436,22 @@ static void tsb_gpio_activate(void *driver_data, uint8_t which)
 
     gpio_state[which] = TSB_GPIO_FLAG_OPEN;
 
-    return;
+    return 0;
 
 err:
     for (i = 0; i < conf->count; i++)
         pinshare_bit_count[conf->pin[i].num]--;
+    return retval;
 }
 
-static void tsb_gpio_deactivate(void *driver_data, uint8_t which)
+static int tsb_gpio_deactivate(void *driver_data, uint8_t which)
 {
     struct gpio_pinsharing_conf *conf;
     uint32_t mask = 0;
     uint8_t i;
 
     if (gpio_state[which] != TSB_GPIO_FLAG_OPEN)
-        return;
+        return -EINVAL;
 
     tsb_gpio_uninitialize();
 
@@ -468,6 +471,8 @@ static void tsb_gpio_deactivate(void *driver_data, uint8_t which)
     }
 
     gpio_state[which] = 0;
+
+    return 0;
 }
 
 static struct gpio_ops_s tsb_gpio_ops = {

@@ -167,13 +167,13 @@ static uint8_t stm32_gpio_line_count(void *driver_data)
     return STM32_NGPIO + 1;
 }
 
-static void stm32_gpio_activate(void *driver_data, uint8_t pin)
+static int stm32_gpio_activate(void *driver_data, uint8_t pin)
 {
-
+    return 0;
 }
 
 // Configure pin as input floating
-static void stm32_gpio_deactivate(void *driver_data, uint8_t pin)
+static int stm32_gpio_deactivate(void *driver_data, uint8_t pin)
 {
     uint32_t cfgset;
     int ret;
@@ -183,10 +183,11 @@ static void stm32_gpio_deactivate(void *driver_data, uint8_t pin)
     ret = map_pin_nr_to_cfgset(pin, &cfgset);
     if (ret) {
         lldbg("%s: Invalid pin %hhu\n", pin);
-        return;
+        return -EINVAL;
     }
 
     stm32_unconfiggpio(cfgset);
+    return 0;
 }
 
 static int stm32_gpio_irqattach(void *driver_data, uint8_t pin, xcpt_t isr,

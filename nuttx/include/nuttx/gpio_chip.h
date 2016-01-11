@@ -37,10 +37,10 @@ struct gpio_ops_s
     int (*get_direction)(void *driver_data, uint8_t which);
     void (*direction_in)(void *driver_data, uint8_t which);
     void (*direction_out)(void *driver_data, uint8_t which, uint8_t value);
-    void (*activate)(void *driver_data, uint8_t which);
+    int (*activate)(void *driver_data, uint8_t which);
     uint8_t (*get_value)(void *driver_data, uint8_t which);
     void (*set_value)(void *driver_data, uint8_t which, uint8_t value);
-    void (*deactivate)(void *driver_data, uint8_t which);
+    int (*deactivate)(void *driver_data, uint8_t which);
     uint8_t (*line_count)(void *driver_data);
     int (*irqattach)(void *driver_data, uint8_t which, xcpt_t isr,
                      uint8_t base);

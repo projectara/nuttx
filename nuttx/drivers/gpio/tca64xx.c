@@ -902,14 +902,14 @@ int tca64xx_gpio_irqattach(void *driver_data, uint8_t which, xcpt_t isr,
     return OK;
 }
 
-void tca64xx_activate(void *driver_data, uint8_t which)
+int tca64xx_activate(void *driver_data, uint8_t which)
 {
-
+    return 0;
 }
 
-void tca64xx_deactivate(void *driver_data, uint8_t which)
+int tca64xx_deactivate(void *driver_data, uint8_t which)
 {
-
+    return 0;
 }
 
 struct gpio_ops_s tca64xx_gpio_ops = {

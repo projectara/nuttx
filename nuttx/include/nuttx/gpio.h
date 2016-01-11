@@ -150,14 +150,16 @@ int gpio_clear_interrupt(uint8_t which);
 /**
  * @brief Request a GPIO line
  * @param which The number of the GPIO line
+ * @return 0 on success, !=0 on failure
  */
-void gpio_activate(uint8_t which);
+int gpio_activate(uint8_t which);
 
 /**
  * @brief Free a GPIO line
  * @param which The number of the GPIO line
+ * @return 0 on success, !=0 on failure
  */
-void gpio_deactivate(uint8_t which);
+int gpio_deactivate(uint8_t which);
 
 #endif
 

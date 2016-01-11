@@ -142,13 +142,13 @@ void gpio_direction_out(uint8_t which, uint8_t value)
     chip->ops->direction_out(chip->driver_data, which, value);
 }
 
-void gpio_activate(uint8_t which)
+int gpio_activate(uint8_t which)
 {
     struct gpio_chip_s *chip = get_gpio_chip(&which);
 
     DEBUGASSERT(chip);
     DEBUGASSERT(chip->ops->activate);
-    chip->ops->activate(chip->driver_data, which);
+    return chip->ops->activate(chip->driver_data, which);
 }
 
 uint8_t gpio_get_value(uint8_t which)
@@ -176,13 +176,13 @@ int gpio_set_debounce(uint8_t which, uint16_t delay)
     return -ENOSYS;
 }
 
-void gpio_deactivate(uint8_t which)
+int gpio_deactivate(uint8_t which)
 {
     struct gpio_chip_s *chip = get_gpio_chip(&which);
 
     DEBUGASSERT(chip);
     DEBUGASSERT(chip->ops->deactivate);
-    chip->ops->deactivate(chip->driver_data, which);
+    return chip->ops->deactivate(chip->driver_data, which);
 }
 
 uint8_t gpio_line_count(void)
