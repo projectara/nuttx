@@ -233,6 +233,20 @@ static int svc_mailbox_poke(uint8_t intf_id, uint8_t cport) {
 }
 
 /**
+ * @brief Eject a device given an interface id
+ */
+int svc_intf_eject(uint8_t intf_id) {
+    struct interface *iface;
+
+    iface = interface_get(intf_id - 1);
+    if (!iface) {
+	return -EINVAL;
+    }
+
+    return interface_forcibly_eject(iface, MOD_RELEASE_PULSE_WIDTH);
+}
+
+/**
  * @brief Assign a device id given an interface id
  */
 int svc_intf_device_id(uint8_t intf_id, uint8_t dev_id) {

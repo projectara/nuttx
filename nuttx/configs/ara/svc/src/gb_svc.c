@@ -179,6 +179,24 @@ static uint8_t gb_svc_intf_device_id(struct gb_operation *op) {
     return gb_errno_to_op_result(rc);
 }
 
+static uint8_t gb_svc_intf_eject(struct gb_operation *op) {
+    struct gb_svc_intf_eject_request *req;
+    int rc;
+    u8 intf_id;
+
+    if (gb_operation_get_request_payload_size(op) < sizeof(*req)) {
+        gb_error("dropping short message\n");
+        return GB_OP_INVALID;
+    }
+
+    req = gb_operation_get_request_payload(op);
+    intf_id = req->intf_id;
+
+    rc = svc_intf_eject(intf_id);
+
+    return gb_errno_to_op_result(rc);
+}
+
 static uint8_t gb_svc_connection_create(struct gb_operation *op) {
     struct gb_svc_conn_create_request *req;
     int rc;
@@ -406,6 +424,7 @@ static uint8_t gb_svc_intf_set_power_mode(struct gb_operation *op) {
 
 static struct gb_operation_handler gb_svc_handlers[] = {
     GB_HANDLER(GB_SVC_TYPE_INTF_DEVICE_ID, gb_svc_intf_device_id),
+    GB_HANDLER(GB_SVC_TYPE_INTF_EJECT, gb_svc_intf_eject),
     GB_HANDLER(GB_SVC_TYPE_CONN_CREATE, gb_svc_connection_create),
     GB_HANDLER(GB_SVC_TYPE_CONN_DESTROY, gb_svc_connection_destroy),
     GB_HANDLER(GB_SVC_TYPE_ROUTE_CREATE, gb_svc_route_create),

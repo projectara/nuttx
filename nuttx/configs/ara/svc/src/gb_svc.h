@@ -54,6 +54,7 @@
 #define GB_SVC_TYPE_ROUTE_CREATE        0x0b
 #define GB_SVC_TYPE_ROUTE_DESTROY       0x0c
 #define GB_SVC_TYPE_INTF_SET_PWRM       0x10
+#define GB_SVC_TYPE_INTF_EJECT          0x11
 
 struct gb_svc_protocol_version_request {
 	__u8	major;
@@ -109,6 +110,11 @@ struct gb_svc_intf_reset_request {
     __u8 intf_id;
 } __packed;
 /* interface reset response has no payload */
+
+struct gb_svc_intf_eject_request {
+	__u8 intf_id;
+} __packed;
+/* interface eject response has no payload */
 
 struct gb_svc_conn_create_request {
     __u8   intf1_id;
