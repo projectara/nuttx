@@ -194,6 +194,9 @@ copy_image_files() {
   # for more info, run "truncate --help"
   if [ -z $(echo $buildname | grep "svc")  ] ; then
     truncate -s 2M $ARA_BUILD_TOPDIR/image/nuttx.bin
+    if [ -x $(which nuttx2ffff) ] ; then
+        nuttx2ffff --in=$ARA_BUILD_TOPDIR/image/nuttx --build=$buildname >/dev/null 2>&1
+    fi
   fi
 }
 
