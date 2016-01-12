@@ -32,6 +32,8 @@
 
 #define DBG_COMP ARADBG_SVC
 
+#include <stdint.h>
+
 #include <ara_debug.h>
 
 #include <nuttx/clock.h>
@@ -89,7 +91,7 @@ static void ara_key_longpress_update(struct ara_key_context *key, bool active)
 static void ara_key_irqworker(void *priv)
 {
     struct ara_key_context *key = &the_ara_key;
-    bool active = (bool)priv;
+    bool active = (bool)(uintptr_t)priv;
 
     ara_key_longpress_update(key, active);
 
@@ -112,19 +114,20 @@ static int ara_key_irqhandler(int irq, void *context)
     value = !!gpio_get_value(key->db.gpio);
     active = (value == key->rising_edge);
 
-    dbg_insane("ara key press value: %d active: %d\n", value, active);
+    dbg_insane("ara key press value: %u active: %u\n", value, active);
 
     if (!debounce_gpio(&key->db, active)) {
 	goto out;
     }
 
-    dbg_insane("ara key press value: %d active: %d (stable)\n", value, active);
+    dbg_insane("ara key press value: %u active: %u (stable)\n", value, active);
 
     /* if something is pending, cancel it so we can pass the correct active */
     if (!work_available(&key->irq_work)) {
 	work_cancel(HPWORK, &key->irq_work);
     }
-    work_queue(HPWORK, &key->irq_work, ara_key_irqworker, active, 0);
+    work_queue(HPWORK, &key->irq_work, ara_key_irqworker,
+               (void*)(uintptr_t)active, 0);
 
 out:
     irqrestore(flags);
