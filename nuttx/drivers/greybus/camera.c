@@ -412,50 +412,6 @@ static uint8_t gb_camera_flush(struct gb_operation *operation)
 }
 
 /**
- * @brief Request meta-data from camera module
- *
- * Allows the Camera to provide meta-data associated with a frame to the AP over
- * Greybus.
- *
- * @param operation pointer to structure of Greybus operation message
- * @return GB_OP_SUCCESS on success, error code on failure
- */
-static uint8_t gb_camera_metadata(struct gb_operation *operation)
-{
-    struct gb_camera_meta_data_request *request;
-    struct metadata_info meta_data;
-    int ret;
-
-    lldbg("gb_camera_metadata() + \n");
-
-    if (gb_operation_get_request_payload_size(operation) < sizeof(*request)) {
-        gb_error("dropping short message\n");
-        return GB_OP_INVALID;
-    }
-
-    request = gb_operation_get_request_payload(operation);
-
-    meta_data.request_id = le32_to_cpu(request->request_id);
-    meta_data.frame_number = le16_to_cpu(request->frame_number);
-    meta_data.stream = request->stream;
-    meta_data.padding = request->padding;
-    meta_data.data = request->data;
-
-    lldbg("    request_id = %d \n", request->request_id);
-    lldbg("    frame_number = %d \n", request->frame_number);
-    lldbg("    stream = %d \n", request->stream);
-
-    ret = device_camera_trans_metadata(info->dev, &meta_data);
-    if (ret) {
-        return gb_errno_to_op_result(ret);
-    }
-
-    lldbg("gb_camera_metadata() - \n");
-
-    return GB_OP_SUCCESS;
-}
-
-/**
  * @brief Greybus Camera Protocol initialize function
  *
  * This function performs the protocol inintilization, such as open the
@@ -524,7 +480,6 @@ static struct gb_operation_handler gb_camera_handlers[] = {
     GB_HANDLER(GB_CAMERA_TYPE_CONFIGURE_STREAMS, gb_camera_configure_streams),
     GB_HANDLER(GB_CAMERA_TYPE_CAPTURE, gb_camera_capture),
     GB_HANDLER(GB_CAMERA_TYPE_FLUSH, gb_camera_flush),
-    GB_HANDLER(GB_CAMERA_TYPE_METADATA, gb_camera_metadata),
 };
 
 /**

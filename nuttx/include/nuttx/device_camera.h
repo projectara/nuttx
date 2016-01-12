@@ -163,8 +163,6 @@ struct device_camera_type_ops {
     int (*capture)(struct device *dev, struct capture_info *capt_info);
     /** stop capture */
     int (*flush)(struct device *dev, uint32_t *request_id);
-    /** Meta data request */
-    int (*trans_metadata)(struct device *dev, struct metadata_info *meta_data);
 };
 
 /**
@@ -281,28 +279,6 @@ static inline int device_camera_flush(struct device *dev, uint32_t *request_id)
     }
     if (DEVICE_DRIVER_GET_OPS(dev, camera)->flush) {
         return DEVICE_DRIVER_GET_OPS(dev, camera)->flush(dev, request_id);
-    }
-    return -ENOSYS;
-}
-
-/**
- * @brief Transmit metadata from camera module
- *
- * @param dev Pointer to structure of device data
- * @param meta_data Pointer to Meta-data block
- * @return 0 on success, negative errno on error
- */
-static inline int device_camera_trans_metadata(struct device *dev,
-                                               struct metadata_info *meta_data)
-{
-    DEVICE_DRIVER_ASSERT_OPS(dev);
-
-    if (!device_is_open(dev)) {
-        return -ENODEV;
-    }
-    if (DEVICE_DRIVER_GET_OPS(dev, camera)->trans_metadata) {
-        return DEVICE_DRIVER_GET_OPS(dev, camera)->trans_metadata(dev,
-                                                                  meta_data);
     }
     return -ENOSYS;
 }
