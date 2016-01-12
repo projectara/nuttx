@@ -147,10 +147,6 @@ struct metadata_info {
  * Camera device driver operations
  */
 struct device_camera_type_ops {
-    /** power up camera module */
-    int (*power_up)(struct device *dev);
-    /** power down camera module */
-    int (*power_down)(struct device *dev);
     /** Camera capabilities */
     int (*capabilities)(struct device *dev, uint32_t *size,
                         uint8_t *capabilities);
@@ -170,44 +166,6 @@ struct device_camera_type_ops {
     /** Meta data request */
     int (*trans_metadata)(struct device *dev, struct metadata_info *meta_data);
 };
-
-/**
- * @brief Power up camera module
- *
- * @param dev Pointer to structure of device data
- * @return 0 on success, negative errno on error
- */
-static inline int device_camera_power_up(struct device *dev)
-{
-    DEVICE_DRIVER_ASSERT_OPS(dev);
-
-    if (!device_is_open(dev)) {
-        return -ENODEV;
-    }
-    if (DEVICE_DRIVER_GET_OPS(dev, camera)->power_up) {
-        return DEVICE_DRIVER_GET_OPS(dev, camera)->power_up(dev);
-    }
-    return -ENOSYS;
-}
-
-/**
- * @brief Power down camera module
- *
- * @param dev Pointer to structure of device data
- * @return 0 on success, negative errno on error
- */
-static inline int device_camera_power_down(struct device *dev)
-{
-    DEVICE_DRIVER_ASSERT_OPS(dev);
-
-    if (!device_is_open(dev)) {
-        return -ENODEV;
-    }
-    if (DEVICE_DRIVER_GET_OPS(dev, camera)->power_down) {
-        return DEVICE_DRIVER_GET_OPS(dev, camera)->power_down(dev);
-    }
-    return -ENOSYS;
-}
 
 /**
  * @brief Get capabilities of camera module

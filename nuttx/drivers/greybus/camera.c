@@ -192,14 +192,12 @@ static uint8_t gb_camera_configure_streams(struct gb_operation *operation)
             return GB_OP_INVALID;
     }
 
-    /*
-     * Zero streams unconfigures the camera, move to the unconfigured state and
-     * power it down.
-     */
+    /* Zero streams unconfigures the camera, move to the unconfigured state. */
     if (num_streams == 0) {
         info->state = STATE_UNCONFIGURED;
 
-        ret = device_camera_power_down(info->dev);
+        ret = device_camera_set_streams_cfg(info->dev, &num_streams, 0, NULL,
+                                            NULL, NULL);
         if (ret)
             return gb_errno_to_op_result(ret);
 
