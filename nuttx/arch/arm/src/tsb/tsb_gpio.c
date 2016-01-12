@@ -31,7 +31,9 @@
 
 #include <nuttx/gpio.h>
 #include <nuttx/gpio_chip.h>
+#include <nuttx/power/pm.h>
 #include <arch/tsb/gpio.h>
+#include <arch/tsb/pm.h>
 
 #include <stdint.h>
 #include <string.h>
@@ -70,6 +72,8 @@
 #define TSB_IO_PULL_UPDOWN0         0x40000A10
 #define TSB_IO_PULL_UPDOWN_ENABLE0  0x40000A20
 #define TSB_IO_PULL_UP_ENABLE0      0x40000A30
+
+#define TSB_GPIO_ACTIVITY       9
 
 /* A table of handlers for each GPIO interrupt */
 static xcpt_t *tsb_gpio_irq_vector;
@@ -185,27 +189,32 @@ static struct gpio_pinsharing_conf *tsb_gpio_pinsharing;
 
 static uint8_t tsb_gpio_get_value(void *driver_data, uint8_t which)
 {
+    pm_activity(TSB_GPIO_ACTIVITY);
     return !!(getreg32(GPIO_DATA) & (1 << which));
 }
 
 static void tsb_gpio_set_value(void *driver_data, uint8_t which, uint8_t value)
 {
+    pm_activity(TSB_GPIO_ACTIVITY);
     putreg32(1 << which, value ? GPIO_ODATASET : GPIO_ODATACLR);
 }
 
 static int tsb_gpio_get_direction(void *driver_data, uint8_t which)
 {
     uint32_t dir = getreg32(GPIO_DIR);
+    pm_activity(TSB_GPIO_ACTIVITY);
     return !(dir & (1 << which));
 }
 
 static void tsb_gpio_direction_in(void *driver_data, uint8_t which)
 {
+    pm_activity(TSB_GPIO_ACTIVITY);
     putreg32(1 << which, GPIO_DIRIN);
 }
 
 static void tsb_gpio_direction_out(void *driver_data, uint8_t which, uint8_t value)
 {
+    pm_activity(TSB_GPIO_ACTIVITY);
     tsb_gpio_set_value(NULL, which, value);
     putreg32(1 << which, GPIO_DIROUT);
 }
@@ -366,6 +375,8 @@ static int tsb_gpio_irq_handler(int irq, void *context)
     int pin;
     size_t nr_gpio = tsb_nr_gpio();
 
+    pm_activity(TSB_GPIO_ACTIVITY);
+
     /*
      * Clear all GPIO interrupts that we are going to process. "The GPIO_RAWINTSTAT
      * register is the interrupt clear register. Writing a 1 to a bit in this
@@ -420,6 +431,46 @@ static void tsb_gpio_irqinitialize(void)
     for (i = 0; i < tsb_nr_gpio(); i++) {
         tsb_gpio_irq_vector[i] = irq_unexpected_isr;
     }
+}
+
+#ifdef CONFIG_PM
+static void tsb_gpio_pm_notify(struct pm_callback_s *cb,
+                               enum pm_state_e pmstate)
+{
+    irqstate_t flags;
+
+    flags = irqsave();
+
+    switch (pmstate) {
+    case PM_NORMAL:
+        tsb_clk_enable(TSB_CLK_GPIO);
+        break;
+    case PM_IDLE:
+    case PM_STANDBY:
+        /* Nothing to do in idle or standby. */
+        break;
+    case PM_SLEEP:
+        tsb_clk_disable(TSB_CLK_GPIO);
+        break;
+    default:
+        /* Can never happen. */
+        PANIC();
+    }
+
+    irqrestore(flags);
+}
+#else
+static void tsb_gpio_pm_notify(struct pm_callback_s *cb,
+                               enum pm_state_e pmstate)
+{
+
+}
+#endif
+
+static int tsb_gpio_pm_prepare(struct pm_callback_s *cb,
+                               enum pm_state_e pmstate)
+{
+    return OK;
 }
 
 static void tsb_gpio_initialize(void)
@@ -598,6 +649,11 @@ int tsb_gpio_register(void *driver_data)
     retval = register_gpio_chip(&tsb_gpio_ops, TSB_GPIO_CHIP_BASE, driver_data);
     if (retval)
         goto err_register_gpio_chip;
+
+    retval = tsb_pm_register(tsb_gpio_pm_prepare, tsb_gpio_pm_notify, NULL);
+    if (retval < 0) {
+        goto err_register_gpio_chip;
+    }
 
     return 0;
 
