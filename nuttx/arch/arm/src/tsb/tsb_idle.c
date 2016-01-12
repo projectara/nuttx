@@ -70,6 +70,7 @@
 #include <nuttx/arch.h>
 #include "up_internal.h"
 #include "tsb_pm.h"
+#include "tsb_scm.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -113,55 +114,42 @@ void up_idle(void)
   up_idlepm();
 
   /* SW-425 */
-#ifdef CONFIG_DEBUG
-  /* We theorize that instruction fetch on the bridge silicon may stall an
-   * in-progress USB DMA transfer.  The ideal solution is to halt the processor
-   * during idle via WFI (wait for interrupt), but that degrades the JTAG
-   * debugging experience (see discussion below).
-   *
-   * For debug builds, we'll try a work-around suggested by Olin Siebert, namely
-   * to execute a sequence of 16-bit nop instructions.  The theory is that the CM3
-   * core will fetch two 16-bit instructions at a time, but execute them
-   * sequentially, dropping instruction fetch bandwidth by 50% during idle
-   * periods, and offering USB DMA transfers the opportunity to progress and
-   * complete.
-   */
-  asm("nop");
-  asm("nop");
-  asm("nop");
-  asm("nop");
-  asm("nop");
-  asm("nop");
-  asm("nop");
-  asm("nop");
-  asm("nop");
-  asm("nop");
-  asm("nop");
-  asm("nop");
-  asm("nop");
-  asm("nop");
-  asm("nop");
-  asm("nop");
-  asm("nop");
-  asm("nop");
-  asm("nop");
-  asm("nop");
-#else
-  /*
-   * Sleep until an interrupt occurs to avoid the possibility that a tight
-   * idle loop on the bridge silicon may stall an in-progress USB DMA
-   * transfer, and to save power.
-   *
-   * The JTAG interface is disabled during WFI, and WFI transitions may result in
-   * unexpected traps when a JTAG debugger is connected.  A potential
-   * work-around is to use the SWD interface lines instead of JTAG, e.g. by
-   * supplying the "-if SWD" argument to JLinkGDBServer when using SEGGER products.
-   * This appears to increase stability based on limited experimentation, but may
-   * not be a panacea.  As such, we use the CONFIG_DEBUG option to select between
-   * two approaches to resolving SW-425, with the hueristic that CONFIG_DEBUG
-   * being enabled indicates a debug rather than production environment.
-   */
-  asm("WFI");
-#endif
+  if (tsb_get_rev_id() > tsb_rev_es2) {
+    asm("wfi");
+  } else {
+    /* We theorize that instruction fetch on the bridge silicon may stall an
+     * in-progress USB DMA transfer.  The ideal solution is to halt the processor
+     * during idle via WFI (wait for interrupt), but that degrades the JTAG
+     * debugging experience (see discussion below).
+     *
+     * For es2 builds, we'll try a work-around suggested by Olin Siebert, namely
+     * to execute a sequence of 16-bit nop instructions.  The theory is that the CM3
+     * core will fetch two 16-bit instructions at a time, but execute them
+     * sequentially, dropping instruction fetch bandwidth by 50% during idle
+     * periods, and offering USB DMA transfers the opportunity to progress and
+     * complete.
+     */
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+  }
+
 #endif
 }
