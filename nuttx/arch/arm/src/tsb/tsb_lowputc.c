@@ -121,7 +121,7 @@ void up_lowputc(int c){
 }
 
 
-#ifdef CONFIG_16550_NO_SERIAL_CONSOLE
+#if !defined(CONFIG_16550_UART) || defined(CONFIG_16550_NO_SERIAL_CONSOLE)
 
 int up_putc(int ch) {
     if (ch == '\n') {
