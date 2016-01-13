@@ -102,9 +102,9 @@ config GREYBUS_LIGHTS
 	default n
 
 config GREYBUS_CAMERA
-    bool "Camera support"
-    select DEVICE_CORE
-    default n
+	bool "Camera support"
+	select DEVICE_CORE
+	default n
 
 config GREYBUS_AUDIO
 	bool "Audio support"
