@@ -41,6 +41,9 @@
 #include <nuttx/usb_device.h>
 #ifdef CONFIG_ARCH_CHIP_DEVICE_GDMAC
 #include <nuttx/device_dma.h>
+#ifdef CONFIG_ARCH_UNIPROTX_USE_DMA
+#include <nuttx/device_atabl.h>
+#endif
 #endif
 
 #include <arch/irq.h>
@@ -189,6 +192,17 @@ static struct device_resource tsb_gdmac_resources[] = {
         .count  = 32,
     },
 };
+
+#ifdef CONFIG_ARCH_UNIPROTX_USE_DMA
+static struct device_resource tsb_atabl_resources[] = {
+    {
+        .name   = "reg_base",
+        .type   = DEVICE_RESOURCE_TYPE_REGS,
+        .start  = ATABL_BASE,
+        .count  = ATABL_SIZE,
+    },
+};
+#endif
 #endif
 
 #ifdef CONFIG_ARCH_CHIP_DEVICE_SDIO
@@ -229,6 +243,16 @@ static struct device tsb_devices[] = {
         .resources      = tsb_gdmac_resources,
         .resource_count = ARRAY_SIZE(tsb_gdmac_resources),
     },
+#ifdef CONFIG_ARCH_UNIPROTX_USE_DMA
+    {
+        .type           = DEVICE_TYPE_ATABL_HW,
+        .name           = "tsb_atabl",
+        .desc           = "TSB ATABL Controller",
+        .id             = 0,
+        .resources      = tsb_atabl_resources,
+        .resource_count = ARRAY_SIZE(tsb_atabl_resources),
+    },
+#endif
 #endif
 
 #ifdef CONFIG_ARCH_CHIP_DEVICE_PLL

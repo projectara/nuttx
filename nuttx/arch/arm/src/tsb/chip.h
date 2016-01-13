@@ -82,6 +82,9 @@
 #define UHSSD_BASE      0x40019000
 #define UHSSD_SIZE      0x100
 
+#define ATABL_BASE      0x4001B000
+#define ATABL_SIZE      0x300
+
 #define AIO_UNIPRO_BASE 0x40020000
 #define AIO_UNIPRO_SIZE 0x2000
 
