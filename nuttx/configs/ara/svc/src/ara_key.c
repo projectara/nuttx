@@ -43,6 +43,7 @@
 
 #include "ara_board.h"
 #include "ara_key.h"
+#include "gb_svc.h"
 
 #define ARA_KEY_LONGPRESS_TIME_MS (5000)    /* 5s */
 #define ARA_KEY_DEBOUNCE_TIME_MS (300)	    /* 300ms */
@@ -92,10 +93,14 @@ static void ara_key_irqworker(void *priv)
 {
     struct ara_key_context *key = &the_ara_key;
     bool active = (bool)(uintptr_t)priv;
+    uint8_t event;
 
     ara_key_longpress_update(key, active);
 
-    /* TODO handle normal key presses */
+    /* send event to ap */
+    event = active ? GB_SVC_KEY_PRESSED : GB_SVC_KEY_RELEASED;
+
+    gb_svc_key_event(GB_KEYCODE_ARA, event);
 }
 
 /*

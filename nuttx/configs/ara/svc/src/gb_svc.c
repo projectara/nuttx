@@ -156,6 +156,30 @@ int gb_svc_intf_hot_unplug(uint32_t intf_id) {
     return 0;
 }
 
+int gb_svc_key_event(uint16_t code, uint8_t event) {
+    struct gb_operation *op_req;
+    struct gb_svc_key_event_request *req;
+
+    if ((event != GB_SVC_KEY_PRESSED) && (event != GB_SVC_KEY_RELEASED)) {
+        return -EINVAL;
+    }
+
+    op_req = gb_operation_create(g_svc_cport, GB_SVC_TYPE_KEY_EVENT,
+                                 sizeof(*req));
+    if (!op_req) {
+        return -ENOMEM;
+    }
+
+    req = gb_operation_get_request_payload(op_req);
+    req->key_code = cpu_to_le16(code);
+    req->key_event = event;
+
+    gb_operation_send_request(op_req, NULL, false);
+    gb_operation_destroy(op_req);
+
+    return 0;
+}
+
 /*
  * SVC Protocol Request handlers
  */
