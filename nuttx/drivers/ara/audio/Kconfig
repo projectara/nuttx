@@ -43,3 +43,6 @@ config DRIVERS_ARA_AUDIO_BOARD
 		on the module to access that information.  This driver
 		provides that information in a relatively easy manner
 		and is required for Greybus audio to work.
+
+config DRIVERS_ARA_AUDIO_CODEC
+	bool

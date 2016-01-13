@@ -30,6 +30,10 @@ ifeq ($(CONFIG_DRIVERS_ARA_AUDIO_BOARD),y)
 CSRCS += audio_board.c
 endif
 
+ifeq ($(CONFIG_DRIVERS_ARA_AUDIO_CODEC),y)
+CSRCS += codec.c
+endif
+
 DEPPATH += --dep-path ara/audio
 VPATH += :ara/audio
 CFLAGS += ${shell $(INCDIR) $(INCDIROPT) "$(CC)" $(TOPDIR)$(DELIM)drivers$(DELIM)ara$(DELIM)audio}
