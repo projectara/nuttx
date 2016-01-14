@@ -161,8 +161,7 @@ static int link_test_port_v(uint8_t port,
         cfg.upro_rx_cfg.upro_gear   = gear;
         cfg.upro_rx_cfg.upro_nlanes = nlanes;
         /* Default user data. */
-        cfg.upro_user.flags                           = UPRO_PWRF_FC0;
-        cfg.upro_user.upro_pwr_fc0_protection_timeout = 0x1FFF;
+        cfg.upro_user.flags         = UPRO_PWRF_NONE;
         /* TX/RX termination. */
         cfg.flags = UPRO_LINKF_TX_TERMINATION | UPRO_LINKF_RX_TERMINATION;
     } else {
@@ -177,8 +176,7 @@ static int link_test_port_v(uint8_t port,
         cfg.upro_rx_cfg.upro_gear   = gear;
         cfg.upro_rx_cfg.upro_nlanes = nlanes;
         /* Default user data */
-        cfg.upro_user.flags                           = UPRO_PWRF_FC0;
-        cfg.upro_user.upro_pwr_fc0_protection_timeout = 0x1FFF;
+        cfg.upro_user.flags         = UPRO_PWRF_NONE;
         /* TX termination only. */
         cfg.flags = UPRO_LINKF_TX_TERMINATION;
     }
