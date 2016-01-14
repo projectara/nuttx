@@ -48,11 +48,14 @@ struct attr_name_group {
     const char *group_name;
 };
 
-extern const struct attr_name_group unipro_l1_attr_group;
+extern const struct attr_name_group unipro_l1_tx_attr_group;
+extern const struct attr_name_group unipro_l1_rx_attr_group;
 extern const struct attr_name_group unipro_l1_5_attr_group;
 extern const struct attr_name_group unipro_l2_attr_group;
 extern const struct attr_name_group unipro_l3_attr_group;
 extern const struct attr_name_group unipro_l4_attr_group;
+extern const struct attr_name_group unipro_cport_attr_group;
+extern const struct attr_name_group unipro_testfeature_attr_group;
 extern const struct attr_name_group unipro_dme_attr_group;
 extern const struct attr_name_group unipro_tsb_attr_group;
 

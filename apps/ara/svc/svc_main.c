@@ -541,10 +541,12 @@ static void dme_io_usage(void) {
     printf("\n");
     printf("        -a <attrs>: attribute (in hexadecimal) to read, or one of:\n");
     printf("                      \"L1\" (PHY layer),\n");
-    printf("                      \"L1.5\" (PHY adapter layer),\n");
-    printf("                      \"L2\" (link layer),\n");
-    printf("                      \"L3\" (network layer),\n");
-    printf("                      \"L4\" (transport layer),\n");
+    printf("                      \"L1.5\" (PHY Adapter layer),\n");
+    printf("                      \"L2\" (Data Link layer),\n");
+    printf("                      \"L3\" (Network layer),\n");
+    printf("                      \"L4\" (Transport layer),\n");
+    printf("                      \"CPORTS\" (CPorts in L4),\n");
+    printf("                      \"TESTFEATURE\" (Test Features in L4),\n");
     printf("                      \"DME\" (DME),\n");
     printf("                      \"TSB\" (Toshiba-specific attributes),\n");
     printf("                      \"all\" (all of the above).\n");
@@ -652,7 +654,7 @@ static int dme_io_set(struct tsb_switch *sw, uint8_t port,
 
 static int dme_io(int argc, char *argv[]) {
     enum {
-        NONE, ALL, ONE, L1, L1_5, L2, L3, L4, L5, LD, TSB
+        NONE, ALL, ONE, L1, L1_5, L2, L3, L4, L5, CP, ALLCPORTS, TF, LD, TSB
     };
     int which_attrs = NONE;
     const char opts[] = "a:s:i:p:Ph";
@@ -669,6 +671,7 @@ static int dme_io(int argc, char *argv[]) {
     char **args;
     int read;
     int c;
+    uint16_t cportid = 0;
 
     if (!sw) {
         return -ENODEV;
@@ -716,7 +719,14 @@ static int dme_io(int argc, char *argv[]) {
                 which_attrs = L3;
             } else if (!strcmp(optarg, "l4") || !strcmp(optarg, "L4")) {
                 which_attrs = L4;
-                peer = 1;
+            } else if (!strncmp(optarg, "cp", 2) || !strncmp(optarg, "CP", 2)) {
+                which_attrs = CP;
+                end = NULL;
+                cportid = strtoul(optarg+2, &end, 10);
+            } else if (!strcmp(optarg, "allcports") || !strcmp(optarg, "ALLCPORTS")) {
+                which_attrs = ALLCPORTS;
+            } else if (!strcmp(optarg, "testfeature") || !strcmp(optarg, "TESTFEATURE")) {
+                which_attrs = TF;
             } else if (!strcmp(optarg, "dme") || !strcmp(optarg, "DME")) {
                 which_attrs = LD;
             } else if (!strcmp(optarg, "tsb") || !strcmp(optarg, "TSB")) {
@@ -726,7 +736,7 @@ static int dme_io(int argc, char *argv[]) {
                 attr = strtoul(optarg, &end, 16);
                 if (*end) {
                     printf("-a %s invalid: must be one of: \"all\", \"L1\", "
-                           "\"L2\", \"L3\", \"L4\", \"DME\", or a hexadecimal "
+                           "\"L2\", \"L3\", \"L4\", \"CPn\", \"CPORTS\", \"TESTFEATURE\", \"DME\", or a hexadecimal "
                            "attribute\n\n", optarg);
                     dme_io_usage();
                     return EXIT_FAILURE;
@@ -787,7 +797,10 @@ static int dme_io(int argc, char *argv[]) {
         dme_io_usage();
         return EXIT_FAILURE;
     }
-    if (which_attrs == L4 && !peer) {
+    if ((which_attrs == L4 ||
+         which_attrs == CP ||
+         which_attrs == ALLCPORTS ||
+         which_attrs == TF) && !peer) {
         printf("No L4 attributes on switch ports (missing -P?).\n\n");
         dme_io_usage();
         return EXIT_FAILURE;
@@ -836,32 +849,38 @@ static int dme_io(int argc, char *argv[]) {
     if (read) {
         int rc = 0;
         int i;
-        const struct attr_name_group *attr_name_groups[7] = {0};
+        const struct attr_name_group *attr_name_groups[8] = {0};
         int n_attr_name_groups;
+        uint16_t sel = UNIPRO_SELINDEX_NULL;
+        uint16_t nlanes = 1;
+        uint16_t numcports = 0;
+
         switch (which_attrs) {
         case ONE:
             ASSERT(attr_set);
             return dme_io_dump(sw, port, attr_get_name(attr), attr, selector,
                                peer);
         case ALL:
-            attr_name_groups[0] = &unipro_l1_attr_group;
-            attr_name_groups[1] = &unipro_l1_5_attr_group;
-            attr_name_groups[2] = &unipro_l2_attr_group;
-            attr_name_groups[3] = &unipro_l3_attr_group;
+            attr_name_groups[0] = &unipro_l1_tx_attr_group;
+            attr_name_groups[1] = &unipro_l1_rx_attr_group;
+            attr_name_groups[2] = &unipro_l1_5_attr_group;
+            attr_name_groups[3] = &unipro_l2_attr_group;
+            attr_name_groups[4] = &unipro_l3_attr_group;
             if (peer) {
-                attr_name_groups[4] = &unipro_l4_attr_group;
+                attr_name_groups[5] = &unipro_l4_attr_group;
+                attr_name_groups[6] = &unipro_dme_attr_group;
+                attr_name_groups[7] = &unipro_tsb_attr_group;
+                n_attr_name_groups = 8;
+            } else {
                 attr_name_groups[5] = &unipro_dme_attr_group;
                 attr_name_groups[6] = &unipro_tsb_attr_group;
                 n_attr_name_groups = 7;
-            } else {
-                attr_name_groups[4] = &unipro_dme_attr_group;
-                attr_name_groups[5] = &unipro_tsb_attr_group;
-                n_attr_name_groups = 6;
             }
             break;
         case L1:
-            attr_name_groups[0] = &unipro_l1_attr_group;
-            n_attr_name_groups = 1;
+            attr_name_groups[0] = &unipro_l1_tx_attr_group;
+            attr_name_groups[1] = &unipro_l1_rx_attr_group;
+            n_attr_name_groups = 2;
             break;
         case L1_5:
             attr_name_groups[0] = &unipro_l1_5_attr_group;
@@ -879,6 +898,15 @@ static int dme_io(int argc, char *argv[]) {
             attr_name_groups[0] = &unipro_l4_attr_group;
             n_attr_name_groups = 1;
             break;
+        case CP:
+        case ALLCPORTS:
+            attr_name_groups[0] = &unipro_cport_attr_group;
+            n_attr_name_groups = 1;
+            break;
+        case TF:
+            attr_name_groups[0] = &unipro_testfeature_attr_group;
+            n_attr_name_groups = 1;
+            break;
         case LD:
             attr_name_groups[0] = &unipro_dme_attr_group;
             n_attr_name_groups = 1;
@@ -894,12 +922,108 @@ static int dme_io(int argc, char *argv[]) {
         }
         for (i = 0; i < n_attr_name_groups; i++) {
             const struct attr_name *ans = attr_name_groups[i]->attr_names;
-            while (ans->name) {
-                rc = (dme_io_dump(sw, port,
-                                  ans->name, ans->attr,
-                                  selector, peer) ||
-                      rc);
-                ans++;
+            if (!strcmp(attr_name_groups[i]->group_name,
+                        unipro_l1_tx_attr_group.group_name)) {
+                if (peer) {
+                    rc = switch_dme_peer_get(sw, port, PA_AVAILTXDATALANES,
+                                             UNIPRO_SELINDEX_NULL, &val);
+                } else {
+                    rc = switch_dme_get(sw, port, PA_AVAILTXDATALANES,
+                                        UNIPRO_SELINDEX_NULL, &val);
+                }
+                if (rc) {
+                    return rc;
+                }
+                nlanes = (uint16_t)val;
+                for (sel = 0; sel < nlanes; sel++) {
+                    printf("Lane %d\n", sel);
+                    ans = attr_name_groups[i]->attr_names;
+                    while (ans->name) {
+                        rc = (dme_io_dump(sw, port,
+                                          ans->name, ans->attr,
+                                          sel, peer) ||
+                                rc);
+                        ans++;
+                    }
+                }
+            } else if (!strcmp(attr_name_groups[i]->group_name,
+                               unipro_l1_rx_attr_group.group_name)) {
+                if (peer) {
+                    rc = switch_dme_peer_get(sw, port, PA_AVAILRXDATALANES,
+                                             UNIPRO_SELINDEX_NULL, &val);
+                } else {
+                    rc = switch_dme_get(sw, port, PA_AVAILRXDATALANES,
+                                        UNIPRO_SELINDEX_NULL, &val);
+                }
+                if (rc) {
+                    return rc;
+                }
+                nlanes = (uint16_t)val;
+                for (sel = 0; sel < nlanes; sel++) {
+                    printf("Lane %d\n", sel);
+                    ans = attr_name_groups[i]->attr_names;
+                    while (ans->name) {
+                        rc = (dme_io_dump(sw, port,
+                                          ans->name, ans->attr,
+                                          sel + 4, peer) ||
+                              rc);
+                        ans++;
+                    }
+                }
+            } else if (!strcmp(attr_name_groups[i]->group_name,
+                               unipro_cport_attr_group.group_name)) {
+                rc = switch_dme_peer_get(sw, port, T_NUMCPORTS,
+                                         UNIPRO_SELINDEX_NULL, &val);
+                if (rc) {
+                    return rc;
+                }
+                numcports = (uint16_t)val;
+                if (which_attrs == CP) {
+                    if (cportid >= 0 && cportid < numcports) {
+                        numcports = 1;
+                    } else {
+                        printf("CPort %d out of range [0:%d]\n", cportid, numcports - 1);
+                        return EXIT_FAILURE;
+                    }
+                }
+                for (sel = cportid; sel < cportid + numcports; sel++) {
+                    printf("CPort %d\n", sel);
+                    ans = attr_name_groups[i]->attr_names;
+                    while (ans->name) {
+                        rc = (dme_io_dump(sw, port,
+                                          ans->name, ans->attr,
+                                          sel, peer) ||
+                              rc);
+                        ans++;
+                    }
+                }
+            } else if (!strcmp(attr_name_groups[i]->group_name,
+                               unipro_testfeature_attr_group.group_name)) {
+                rc = switch_dme_peer_get(sw, port, T_NUMTESTFEATURES,
+                                         UNIPRO_SELINDEX_NULL, &val);
+                if (rc) {
+                    return rc;
+                }
+                numcports = (uint16_t)val;
+                for (sel = 0; sel < numcports; sel++) {
+                    printf("Test Feature %d\n", sel);
+                    ans = attr_name_groups[i]->attr_names;
+                    while (ans->name) {
+                        rc = (dme_io_dump(sw, port,
+                                          ans->name, ans->attr,
+                                          sel, peer) ||
+                              rc);
+                        ans++;
+                    }
+                }
+            } else {
+                while (ans->name) {
+                    rc = (dme_io_dump(sw, port,
+                                      ans->name, ans->attr,
+                                      selector, peer) ||
+                          rc);
+                    ans++;
+                }
             }
         }
         return rc;

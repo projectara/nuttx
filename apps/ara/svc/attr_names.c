@@ -35,7 +35,7 @@
 
 #define TO_ATTR_NAME(a) {.attr = a, .name = #a}
 
-static const struct attr_name unipro_l1_attrs[] = {
+static const struct attr_name unipro_l1_tx_attrs[] = {
     TO_ATTR_NAME(TX_HSMODE_CAPABILITY),
     TO_ATTR_NAME(TX_HSGEAR_CAPABILITY),
     TO_ATTR_NAME(TX_PWMG0_CAPABILITY),
@@ -82,6 +82,9 @@ static const struct attr_name unipro_l1_attrs[] = {
     TO_ATTR_NAME(MC_LS_TERMINATED_ENABLE),
     TO_ATTR_NAME(MC_HS_UNTERMINATED_LINE_DRIVE_ENABLE),
     TO_ATTR_NAME(MC_LS_TERMINATED_LINE_DRIVE_ENABLE),
+    {.attr = 0, .name = NULL},
+};
+static const struct attr_name unipro_l1_rx_attrs[] = {
     TO_ATTR_NAME(RX_HSMODE_CAPABILITY),
     TO_ATTR_NAME(RX_HSGEAR_CAPABILITY),
     TO_ATTR_NAME(RX_PWMG0_CAPABILITY),
@@ -247,6 +250,10 @@ static const struct attr_name unipro_l4_attrs[] = {
     TO_ATTR_NAME(T_NUMTESTFEATURES),
     TO_ATTR_NAME(T_TC0TXMAXSDUSIZE),
     TO_ATTR_NAME(T_TC1TXMAXSDUSIZE),
+    {.attr = 0, .name = NULL},
+};
+
+static const struct attr_name unipro_testfeature_attrs[] = {
     TO_ATTR_NAME(T_TSTCPORTID),
     TO_ATTR_NAME(T_TSTSRCON),
     TO_ATTR_NAME(T_TSTSRCPATTERN),
@@ -265,6 +272,10 @@ static const struct attr_name unipro_l4_attrs[] = {
     TO_ATTR_NAME(T_TSTDSTINTERFCTOKENGAP),
     TO_ATTR_NAME(T_TSTDSTINITIALFCCREDITS),
     TO_ATTR_NAME(T_TSTDSTERRORCODE),
+    {.attr = 0, .name = NULL},
+};
+
+static const struct attr_name unipro_cport_attrs[] = {
     TO_ATTR_NAME(T_PEERDEVICEID),
     TO_ATTR_NAME(T_PEERCPORTID),
     TO_ATTR_NAME(T_CONNECTIONSTATE),
@@ -359,19 +370,24 @@ static const struct attr_name unipro_tsb_attrs[] = {
     {.attr = 0, .name = NULL},
 };
 
-const struct attr_name_group unipro_l1_attr_group = {
-    .attr_names = unipro_l1_attrs,
-    .group_name = "PHY layer (L1)",
+const struct attr_name_group unipro_l1_tx_attr_group = {
+    .attr_names = unipro_l1_tx_attrs,
+    .group_name = "PHY layer (L1) TX",
+};
+
+const struct attr_name_group unipro_l1_rx_attr_group = {
+    .attr_names = unipro_l1_rx_attrs,
+    .group_name = "PHY layer (L1) RX",
 };
 
 const struct attr_name_group unipro_l1_5_attr_group = {
     .attr_names = unipro_l1_5_attrs,
-    .group_name = "PHY adapter layer (L1.5)",
+    .group_name = "PHY Adapter layer (L1.5)",
 };
 
 const struct attr_name_group unipro_l2_attr_group = {
     .attr_names = unipro_l2_attrs,
-    .group_name = "Link layer (L2)",
+    .group_name = "Data Link layer (L2)",
 };
 
 const struct attr_name_group unipro_l3_attr_group = {
@@ -382,6 +398,16 @@ const struct attr_name_group unipro_l3_attr_group = {
 const struct attr_name_group unipro_l4_attr_group = {
     .attr_names = unipro_l4_attrs,
     .group_name = "Transport layer (L4)",
+};
+
+const struct attr_name_group unipro_cport_attr_group = {
+    .attr_names = unipro_cport_attrs,
+    .group_name = "CPort (L4)",
+};
+
+const struct attr_name_group unipro_testfeature_attr_group = {
+    .attr_names = unipro_testfeature_attrs,
+    .group_name = "Test Feature (L4)",
 };
 
 const struct attr_name_group unipro_dme_attr_group = {
@@ -416,7 +442,11 @@ const char* attr_get_name(uint16_t attr)
 {
     const char *ret;
 
-    ret = attr_group_get_name(attr, &unipro_l1_attr_group);
+    ret = attr_group_get_name(attr, &unipro_l1_tx_attr_group);
+    if (ret) {
+        return ret;
+    }
+    ret = attr_group_get_name(attr, &unipro_l1_rx_attr_group);
     if (ret) {
         return ret;
     }
