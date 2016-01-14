@@ -1932,6 +1932,7 @@ int svc_main(int argc, char *argv[])
         break;
     case RELEASE:
         rc = release(argc, argv);
+        break;
     case IDMOD:
         rc = idmod(argc, argv);
         break;
