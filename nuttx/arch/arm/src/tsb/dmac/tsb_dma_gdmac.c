@@ -1603,8 +1603,9 @@ int gdmac_irq_abort_handler(int irq, void *context)
 
     chan = gsmac_bit_to_pos(fsrc) & 0x07;
 
-    value = (DMAKILL << 16) | chan << 7 | 0x01;
+    value = (DMAKILL << 16) | chan << 8 | 0x01;
     putreg32(value, &dbg_regs->dbg_inst_0);
+    putreg32(0, &dbg_regs->dbg_inst_1);
 
     /* Get going */
     putreg32(0, &dbg_regs->dbg_cmd);
