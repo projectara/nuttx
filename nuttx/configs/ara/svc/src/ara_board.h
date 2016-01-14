@@ -58,10 +58,6 @@ enum hwid {
  */
 #define STM32_GPIO_CHIP_NR      140
 
-/* SDB */
-#define U701_GPIO_CHIP_START    (STM32_GPIO_CHIP_BASE + STM32_GPIO_CHIP_NR)
-#define U701_GPIO_CHIP_NR       16
-
 /* DB3 and EVT1 */
 #define U4550_GPIO_CHIP_START   (STM32_GPIO_CHIP_BASE + STM32_GPIO_CHIP_NR)
 #define U4550_GPIO_CHIP_NR      16
