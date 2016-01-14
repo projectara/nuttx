@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 Google Inc.
+ * Copyright (c) 2014-2016 Google Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -2029,7 +2029,7 @@ int main(int argc, FAR char *argv[])
 int svc_main(int argc, char *argv[])
 #endif
 {
-    /* Current main(), for configs/ara/svc (BDB1B, BDB2A, spiral 2
+    /* Current main(), for configs/ara/svc (Development Boards, spiral 2
      * modules, etc.). */
     int rc = 0;
     int i;

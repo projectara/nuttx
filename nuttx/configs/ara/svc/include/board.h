@@ -35,7 +35,7 @@
  ************************************************************************************/
 
 /*
- * Copyright (c) 2014, 2015 Google Inc.
+ * Copyright (c) 2014-2016 Google Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -87,12 +87,12 @@
 
 /*
  * Different sets of settings are defined for SYSCLK of 104 and 168MHz:
- *  BDB_ARA_STM32_104MHZ
- *  BDB_ARA_STM32_168MHZ
+ *  ARA_BOARD_STM32_104MHZ
+ *  ARA_BOARD_STM32_168MHZ
  * Only one shall be defined here. If needed this could become a Kconfig
  * option.
  */
-#define BDB_ARA_STM32_104MHZ
+#define ARA_BOARD_STM32_104MHZ
 
 /* Four clock sources are available on STM3240G-EVAL evaluation board for
  * STM32F407IGH6 and RTC embedded:
@@ -140,7 +140,7 @@
 
 #define STM32_BOARD_USEHSI      1
 
-#ifdef BDB_ARA_STM32_168MHZ
+#ifdef ARA_BOARD_STM32_168MHZ
 /* Main PLL Configuration.
  *
  * PLL source is HSE
@@ -162,9 +162,9 @@
 
 #define STM32_SYSCLK_FREQUENCY  168000000ul
 
-#endif // BDB_ARA_STM32_168MHZ
+#endif // ARA_BOARD__STM32_168MHZ
 
-#ifdef BDB_ARA_STM32_104MHZ
+#ifdef ARA_BOARD_STM32_104MHZ
 /* Main PLL Configuration.
  *
  * Formula:
@@ -203,7 +203,7 @@
 
 #define STM32_SYSCLK_FREQUENCY  104000000ul
 
-#endif // BDB_ARA_STM32_104MHZ
+#endif // ARA_BOARD_STM32_104MHZ
 
 /* AHB clock (HCLK) is SYSCLK */
 
@@ -378,17 +378,8 @@
 #define GPIO_USART3_TX GPIO_USART3_TX_2
 
 /*  UART1 pins selection */
-
-#if defined(CONFIG_ARCH_BOARD_ARA_BDB2A_SVC)
-/* BDB2A */
-#define GPIO_USART1_RX  GPIO_USART1_RX_2 /* PB7 */
-#define GPIO_USART1_TX  GPIO_USART1_TX_2 /* PB6 */
-#elif defined(CONFIG_ARCH_BOARD_ARA_SDB_SVC) || \
-      defined(CONFIG_ARCH_BOARD_ARA_DB3_SVC) || \
-      defined(CONFIG_ARCH_BOARD_ARA_EVT1_SVC)
 #define GPIO_USART1_RX  GPIO_USART1_RX_1 /* PA10 */
 #define GPIO_USART1_TX  GPIO_USART1_TX_1 /* PA9 */
-#endif
 
 /* PWM
  *
@@ -473,8 +464,7 @@
 /*
  * I2C
  */
-#if defined(CONFIG_ARCH_BOARD_ARA_BDB2A_SVC) || \
-    defined(CONFIG_ARCH_BOARD_ARA_SDB_SVC)
+#if defined(CONFIG_ARCH_BOARD_ARA_SDB_SVC)
 #define GPIO_I2C1_SCL GPIO_I2C1_SCL_1 /* PB6 is I2C1_SCL -> ETP161 */
 #define GPIO_I2C1_SDA GPIO_I2C1_SDA_1 /* PB7 is I2C1_SDA -> ETP166 */
 #elif defined(CONFIG_ARCH_BOARD_ARA_DB3_SVC) || \

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Google Inc.
+ * Copyright (c) 2015-2016 Google Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,7 +28,7 @@
 
 /*
  * @file    apps/ara/arapm/arapm_app.c
- * @brief   BDB Power Measurement SVC Application
+ * @brief   Power Measurement SVC Application
  * @author  Patrick Titiano
  */
 

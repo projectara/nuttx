@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Google Inc.
+ * Copyright (c) 2015-2016 Google Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -85,7 +85,7 @@ struct wd_data {
 
 /* Interface types. */
 enum ara_iface_type {
-    /* Connected to built-in UniPro peer (like a bridge ASIC on a BDB). */
+    /* Connected to built-in UniPro peer (like a bridge ASIC on DB3 e.g.). */
     ARA_IFACE_TYPE_BUILTIN,
     /* Connected to an interface block (like on an endo, or an
      * interface block on a BDB). */
@@ -165,7 +165,7 @@ enum hotplug_state interface_get_hotplug_state(struct interface *iface);
  * @brief Test if an interface connects to a built-in peer on the board.
  *
  * Some boards have built-in UniPro peers for some switch ports. For
- * example, BDBs have built-in bridge ASICs. This function tests if an
+ * example, DB3s have built-in bridge ASICs. This function tests if an
  * interface is to such ap eer.
  *
  * @return 1 if the interface is connected to a built-in peer, 0 otherwise.

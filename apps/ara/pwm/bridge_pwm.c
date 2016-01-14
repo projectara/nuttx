@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 Google Inc.
+ * Copyright (c) 2014-2016 Google Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -45,7 +45,7 @@
 #include <up_arch.h>
 
 /*
- * Interface provided by TSB (currently for BDBs) and other architectures to initialize
+ * Interface provided by TSB (currently for DB3s) and other architectures to initialize
  * the PWM hardware.  It is safe to call repeatedly.
  */
 int pwm_devinit(void);
