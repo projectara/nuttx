@@ -230,6 +230,28 @@ static struct device tsb_devices[] = {
         .resource_count = ARRAY_SIZE(tsb_gdmac_resources),
     },
 #endif
+
+#ifdef CONFIG_ARCH_CHIP_DEVICE_PLL
+    {
+        .type           = DEVICE_TYPE_PLL_HW,
+        .name           = "tsb_pll",
+        .desc           = "TSB PLLA Controller",
+        .id             = 0,
+        .resources      = tsb_plla_resources,
+        .resource_count = ARRAY_SIZE(tsb_plla_resources),
+    },
+#endif
+
+#ifdef CONFIG_ARCH_CHIP_DEVICE_I2S
+    {
+        .type           = DEVICE_TYPE_I2S_HW,
+        .name           = "tsb_i2s",
+        .desc           = "TSB I2S Controller",
+        .id             = 0,
+        .resources      = tsb_i2s_resources_0,
+        .resource_count = ARRAY_SIZE(tsb_i2s_resources_0),
+    },
+#endif
 };
 
 static struct device_table tsb_device_table = {
@@ -254,28 +276,6 @@ static struct device_table tsb_apb_device_table = {
 };
 
 static struct device tsb_gpb_devices[] = {
-#ifdef CONFIG_ARCH_CHIP_DEVICE_PLL
-    {
-        .type           = DEVICE_TYPE_PLL_HW,
-        .name           = "tsb_pll",
-        .desc           = "TSB PLLA Controller",
-        .id             = 0,
-        .resources      = tsb_plla_resources,
-        .resource_count = ARRAY_SIZE(tsb_plla_resources),
-    },
-#endif
-
-#ifdef CONFIG_ARCH_CHIP_DEVICE_I2S
-    {
-        .type           = DEVICE_TYPE_I2S_HW,
-        .name           = "tsb_i2s",
-        .desc           = "TSB I2S Controller",
-        .id             = 0,
-        .resources      = tsb_i2s_resources_0,
-        .resource_count = ARRAY_SIZE(tsb_i2s_resources_0),
-    },
-#endif
-
 #ifdef CONFIG_ARCH_CHIP_USB_HCD
     {
         .type           = DEVICE_TYPE_USB_HCD,
