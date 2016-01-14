@@ -92,9 +92,6 @@ enum ara_iface_type {
 };
 
 /* Interface flags */
-/*  Wake In active low or high signal */
-#define ARA_IFACE_FLAG_WAKE_IN_ACTIVE_LOW       (0U << 0)
-#define ARA_IFACE_FLAG_WAKE_IN_ACTIVE_HIGH      (1U << 0)
 /*  Detect In active low or high signal */
 #define ARA_IFACE_FLAG_DETECT_IN_ACTIVE_LOW     (0U << 1)
 #define ARA_IFACE_FLAG_DETECT_IN_ACTIVE_HIGH    (1U << 1)
@@ -115,8 +112,6 @@ struct interface {
     struct vreg *vreg;
     enum ara_iface_pwr_state power_state;
     struct pm_data *pm;
-    unsigned int wake_out;
-    struct wd_data wake_in;
     struct wd_data detect_in;
     enum hotplug_state hp_state;
     bool ejectable;
@@ -204,7 +199,6 @@ uint32_t interface_pm_get_spin(struct interface *iface);
 /*
  * Module port interface, as on DB3 board.
  *
- * There is only one pin for detect_in, wake_in and wake_out.
  * If there is no Unipro port connected to the interface, portid
  * is INVALID_PORT.
  */
