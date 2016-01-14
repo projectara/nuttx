@@ -32,7 +32,7 @@
 #
 ############################################################################
 #
-# Copyright (c) 2015 Google, Inc.
+# Copyright (c) 2015-2016 Google, Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -78,12 +78,6 @@ CSRCS		+= unipro_svc.c
 CSRCS		+= gb_svc.c
 CSRCS		+= ara_key.c
 CSRCS		+= ara_board.c
-
-ifeq ($(CONFIG_ARCH_BOARD_ARA_BDB2A_SVC),y)
-CSRCS		+= board-bdb2a.c
-CSRCS		+= pwr_mon.c
-CSRCS       += up_adc.c up_spring_pm.c
-endif
 
 ifeq ($(CONFIG_ARCH_BOARD_ARA_SDB_SVC),y)
 CSRCS		+= board-sdb.c
