@@ -2039,69 +2039,153 @@ static int switch_configure_link_rx(struct tsb_switch *sw,
     return rc;
 }
 
+/**
+ * @brief UniPro link L2 User Data configuration routine.
+ *
+ * This function supports configuration of the UniPro link
+ * L2 timeout values, FCx Protection, AFCx Replay and AFCx Request.
+ *
+ * Note: The Toshiba UniPro stack updates all L2 Timeout Values
+ *       during a UniPro Power Mode change regardless of whether
+ *       or not the caller updated any L2 User Data (flags = 0).
+ *       Therefore, the PA_PWRMODEUSERDATAn Attributes must be
+ *       updated with some values to avoid inadvertently
+ *       disabling the L2 Timers (PA_PWRMODEUSERDATAn = 0).
+ *
+ * Note: The L2 timeout values are written to DME Attributes that
+ *       are updated on the next PA_PWRMode update.
+ *
+ * It is not known if this function is needed, so it is included for completeness.
+ *
+ * @param sw Switch handle
+ * @param port_id Port whose link to reconfigure
+ * @param udata UniPro L2 timeout values to apply
+ */
 static int switch_configure_link_user_data
         (struct tsb_switch *sw,
          uint8_t port_id,
          const struct unipro_pwr_user_data *udata) {
     int rc = 0;
     const uint32_t flags = udata->flags;
-    if (flags & UPRO_PWRF_FC0) {
-        rc = switch_dme_set(sw,
+    uint32_t val;
+
+    if (flags & UPRO_PWRF_FC0) {    // Update FC0 Protection timeout value
+        val = udata->upro_pwr_fc0_protection_timeout;
+    } else {    // Use existing FC0 Protection timeout value
+        rc = switch_dme_get(sw,
                             port_id,
-                            PA_PWRMODEUSERDATA0,
+                            DME_FC0PROTECTIONTIMEOUTVAL,
                             UNIPRO_SELINDEX_NULL,
-                            udata->upro_pwr_fc0_protection_timeout);
+                            &val);
         if (rc) {
             return rc;
         }
     }
-    if (flags & UPRO_PWRF_TC0) {
-        rc = switch_dme_set(sw,
+    rc = switch_dme_set(sw,
+                        port_id,
+                        PA_PWRMODEUSERDATA0,
+                        UNIPRO_SELINDEX_NULL,
+                        val);
+    if (rc) {
+        return rc;
+    }
+    if (flags & UPRO_PWRF_TC0) {    // Update TC0 Replay timeout value
+        val = udata->upro_pwr_tc0_replay_timeout;
+    } else {    // Use existing TC0 Replay timeout value
+        rc = switch_dme_get(sw,
                             port_id,
-                            PA_PWRMODEUSERDATA1,
+                            DME_TC0REPLAYTIMEOUTVAL,
                             UNIPRO_SELINDEX_NULL,
-                            udata->upro_pwr_tc0_replay_timeout);
+                            &val);
         if (rc) {
             return rc;
         }
     }
-    if (flags & UPRO_PWRF_AFC0) {
-        rc = switch_dme_set(sw,
+    rc = switch_dme_set(sw,
+                        port_id,
+                        PA_PWRMODEUSERDATA1,
+                        UNIPRO_SELINDEX_NULL,
+                        val);
+    if (rc) {
+        return rc;
+    }
+    if (flags & UPRO_PWRF_AFC0) {    // Update AFC0 Request timeout value
+        val = udata->upro_pwr_afc0_req_timeout;
+    } else {    // Use existing AFC0 Request timeout value
+        rc = switch_dme_get(sw,
                             port_id,
-                            PA_PWRMODEUSERDATA2,
+                            DME_AFC0REQTIMEOUTVAL,
                             UNIPRO_SELINDEX_NULL,
-                            udata->upro_pwr_afc0_req_timeout);
+                            &val);
         if (rc) {
             return rc;
         }
     }
-    if (flags & UPRO_PWRF_FC1) {
-        rc = switch_dme_set(sw,
+    rc = switch_dme_set(sw,
+                        port_id,
+                        PA_PWRMODEUSERDATA2,
+                        UNIPRO_SELINDEX_NULL,
+                        val);
+    if (rc) {
+        return rc;
+    }
+    if (flags & UPRO_PWRF_FC1) {    // Update FC1 Protection timeout value
+        val = udata->upro_pwr_fc1_protection_timeout;
+    } else {    // Use existing FC1 Protection timeout value
+        rc = switch_dme_get(sw,
                             port_id,
-                            PA_PWRMODEUSERDATA3,
+                            DME_FC1PROTECTIONTIMEOUTVAL,
                             UNIPRO_SELINDEX_NULL,
-                            udata->upro_pwr_fc1_protection_timeout);
+                            &val);
         if (rc) {
             return rc;
         }
     }
-    if (flags & UPRO_PWRF_TC1) {
-        rc = switch_dme_set(sw,
+    rc = switch_dme_set(sw,
+                        port_id,
+                        PA_PWRMODEUSERDATA3,
+                        UNIPRO_SELINDEX_NULL,
+                        val);
+    if (rc) {
+        return rc;
+    }
+    if (flags & UPRO_PWRF_TC1) {    // Update TC1 Replay timeout value
+        val = udata->upro_pwr_tc1_replay_timeout;
+    } else {    // Use existing TC1 Replay timeout value
+        rc = switch_dme_get(sw,
                             port_id,
-                            PA_PWRMODEUSERDATA4,
+                            DME_TC1REPLAYTIMEOUTVAL,
                             UNIPRO_SELINDEX_NULL,
-                            udata->upro_pwr_tc1_replay_timeout);
+                            &val);
         if (rc) {
             return rc;
         }
     }
-    if (flags & UPRO_PWRF_AFC1) {
-        rc = switch_dme_set(sw,
-                            port_id,
-                            PA_PWRMODEUSERDATA5,
-                            UNIPRO_SELINDEX_NULL,
-                            udata->upro_pwr_afc1_req_timeout);
+    rc = switch_dme_set(sw,
+                        port_id,
+                        PA_PWRMODEUSERDATA4,
+                        UNIPRO_SELINDEX_NULL,
+                        val);
+    if (rc) {
+        return rc;
     }
+    if (flags & UPRO_PWRF_AFC1) {    // Update AFC1 Request timeout value
+        val = udata->upro_pwr_afc1_req_timeout;
+    } else {    // Use existing AFC1 Request timeout value
+        rc = switch_dme_get(sw,
+                            port_id,
+                            DME_AFC1REQTIMEOUTVAL,
+                            UNIPRO_SELINDEX_NULL,
+                            &val);
+        if (rc) {
+            return rc;
+        }
+    }
+    rc = switch_dme_set(sw,
+                        port_id,
+                        PA_PWRMODEUSERDATA5,
+                        UNIPRO_SELINDEX_NULL,
+                        val);
     return rc;
 }
 

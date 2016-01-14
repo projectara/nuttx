@@ -487,6 +487,8 @@ enum unipro_hs_series {
  * configuration procedure.
  */
 struct unipro_pwr_user_data {
+    /* Do not try to set any peer L2 Timeout Values */
+#   define UPRO_PWRF_NONE (0U)
     /* Try to set peer DL_FC0PROTECTIONTIMEOUTVAL */
 #   define UPRO_PWRF_FC0  (1U << 0)
     /* Try to set peer DL_TC0REPLAYTIMEOUTVAL */
