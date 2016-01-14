@@ -76,37 +76,26 @@ static int interface_config(struct interface *iface)
     /* Configure default state for the regulator pins */
     rc = vreg_config(iface->vreg);
 
-    /* Configure the WAKEOUT pin according to the interface type */
+    /* Configure the interfaces pin according to the interface type */
     switch (iface->if_type) {
     case ARA_IFACE_TYPE_MODULE_PORT:
         /*
          * DB3 module port:
-         * The pin is configured as interrupt input at handler
+         * The WAKEOUT pin is configured as interrupt input at handler
          * installation time
          */
 
-        /* configure the release line */
+        /* Configure the release line */
         if (iface->ejectable) {
             gpio_activate(iface->release_gpio);
             gpio_direction_out(iface->release_gpio, 0);
         }
         break;
     default:
-        /*
-         * Pre-DB3 Interface block, spring or expansion interface:
-         * Configure WAKEOUT as input, floating so that it does not interfere
-         * with the wake and detect input pin
-         */
-        if (iface->wake_out) {
-            if (stm32_configgpio(iface->wake_out | GPIO_INPUT) < 0) {
-                dbg_error("Failed to configure WAKEOUT pin for interface %s\n",
-                          iface->name ? iface->name : "unknown");
-                rc = -1;
-            }
-        }
         break;
     }
 
+    /* Init power state */
     iface->power_state = rc ? ARA_IFACE_PWR_ERROR : ARA_IFACE_PWR_DOWN;
 
     return rc;
@@ -206,79 +195,40 @@ int interface_generate_wakeout(struct interface *iface, bool assert,
                  iface->name ? iface->name : "unknown", length);
     }
 
-    /* Generate a WAKEOUT pulse according to the interface type */
-    switch (iface->if_type) {
-    case ARA_IFACE_TYPE_MODULE_PORT:
-        /*
-         * DB3 module port:
-         * Generate a pulse on the WD line. The polarity is reversed
-         * from the DETECT_IN polarity.
-         */
-        if (iface->detect_in.gpio) {
-            bool polarity =
-                (iface->flags & ARA_IFACE_FLAG_DETECT_IN_ACTIVE_HIGH) ?
-                true : false;
-            uint32_t pulse_cfg =
-                (iface->detect_in.gpio & ~GPIO_MODE_MASK) |
-                GPIO_OUTPUT |
-                (polarity ? GPIO_OUTPUT_CLEAR : GPIO_OUTPUT_SET);
-            int pulse_len = (length > 0) ?
-                            length : MODULE_PORT_WAKEOUT_PULSE_DURATION_IN_US;
+    /* Generate a WAKEOUT pulse
+     *
+     * DB3 module port:
+     * Generate a pulse on the WD line. The polarity is reversed
+     * from the DETECT_IN polarity.
+     */
+    if (iface->detect_in.gpio) {
+        bool polarity =
+            (iface->flags & ARA_IFACE_FLAG_DETECT_IN_ACTIVE_HIGH) ?
+            true : false;
+        uint32_t pulse_cfg =
+            (iface->detect_in.gpio & ~GPIO_MODE_MASK) | GPIO_OUTPUT |
+            (polarity ? GPIO_OUTPUT_CLEAR : GPIO_OUTPUT_SET);
+        int pulse_len = (length > 0) ?
+                        length : MODULE_PORT_WAKEOUT_PULSE_DURATION_IN_US;
 
-            /* First uninstall the interrupt handler on the pin */
-            interface_uninstall_wd_handler(&iface->detect_in);
-            /* Then configure the pin as output and assert it */
-            rc = stm32_configgpio(pulse_cfg);
-            if (rc < 0) {
-                dbg_error("Failed to assert WAKEOUT pin for interface %s\n",
-                          iface->name ? iface->name : "unknown");
-                return rc;
-            }
-
-            /* Keep the line asserted for the given duration */
-            up_udelay(pulse_len);
-
-            /* Finally re-install the interrupt handler on the pin */
-            rc = interface_install_wd_handler(&iface->detect_in);
-            if (rc) {
-                return rc;
-            }
+        /* First uninstall the interrupt handler on the pin */
+        interface_uninstall_wd_handler(&iface->detect_in);
+        /* Then configure the pin as output and assert it */
+        rc = stm32_configgpio(pulse_cfg);
+        if (rc < 0) {
+            dbg_error("Failed to assert WAKEOUT pin for interface %s\n",
+                      iface->name ? iface->name : "unknown");
+            return rc;
         }
-        break;
-    default:
-        /*
-         * Pre-DB3 Interface block, spring or expansion interface:
-         * Assert the WAKEOUT line on the interfaces in order to power up
-         * the modules.
-         * When the WAKEOUT signal is de-asserted the bridges have to assert
-         * the PS_HOLD signal asap in order to stay powered up.
-         */
-        if (iface->wake_out) {
-            int pulse_len = (length > 0) ?
-                            length : WAKEOUT_PULSE_DURATION_IN_US;
 
-            rc = stm32_configgpio(iface->wake_out |
-                                  GPIO_OUTPUT | GPIO_OUTPUT_SET);
-            if (rc < 0) {
-                dbg_error("Failed to assert WAKEOUT pin for interface %s\n",
-                          iface->name ? iface->name : "unknown");
-                return rc;
-            }
+        /* Keep the line asserted for the given duration */
+        up_udelay(pulse_len);
 
-            if (!assert) {
-                /* Wait for the bridges to react */
-                up_udelay(pulse_len);
-
-                /* De-assert the lines */
-                rc = stm32_configgpio(iface->wake_out | GPIO_INPUT);
-                if (rc < 0) {
-                    dbg_error("Failed to de-assert WAKEOUT pin for interface %s\n",
-                              iface->name ? iface->name : "unknown");
-                    return rc;
-                }
-            }
+        /* Finally re-install the interrupt handler on the pin */
+        rc = interface_install_wd_handler(&iface->detect_in);
+        if (rc) {
+            return rc;
         }
-        break;
     }
 
     return 0;
@@ -658,8 +608,7 @@ static struct interface* interface_get_by_wd(uint32_t gpio)
     struct interface *ifc;
 
     interface_foreach(ifc, i) {
-        if ((ifc->wake_in.gpio == gpio) ||
-            (ifc->detect_in.gpio == gpio)) {
+        if (ifc->detect_in.gpio == gpio) {
             return ifc;
         }
     }
@@ -819,132 +768,6 @@ static int interface_debounce_wd(struct interface *iface,
     return 0;
 }
 
-/* Debounce the wake_in and detect_in signals, as on SDB */
-static int interface_debounce_wakein_detectin(struct interface *iface,
-                                              struct wd_data *wd,
-                                              bool active)
-{
-    struct timeval now, diff, timeout_tv = { 0, WD_DEBOUNCE_TIME_MS * 1000 };
-    irqstate_t flags;
-
-    flags = irqsave();
-
-    /* Debounce signal */
-    switch (wd->db_state) {
-    case WD_ST_INVALID:
-    default:
-        gettimeofday(&wd->debounce_tv, NULL);
-        wd->db_state = active ?
-                       WD_ST_ACTIVE_DEBOUNCE : WD_ST_INACTIVE_DEBOUNCE;
-        interface_wd_delay_check(wd);
-        break;
-    case WD_ST_ACTIVE_DEBOUNCE:
-        if (active) {
-            /* Signal did not change ... for how long ? */
-            gettimeofday(&now, NULL);
-            timersub(&now, &wd->debounce_tv, &diff);
-            if (timercmp(&diff, &timeout_tv, >=)) {
-                /* We have a stable signal */
-                wd->db_state = WD_ST_ACTIVE_STABLE;
-                dbg_verbose("W&D: got stable %s_%s %s (gpio %d)\n",
-                            iface->name,
-                            (wd == &iface->wake_in) ? "wake_in" : "detect_in",
-                            active ? "Act" : "Ina",
-                            wd->gpio);
-                /*
-                 * DETECT_IN transition to active
-                 *
-                 * - Power ON the interface
-                 *   Note: If coming back to the active stable state from
-                 *         the same last stable state after an unstable
-                 *         transition, power cycle (OFF/ON) the interface.
-                 *         In that case consecutive hotplug events are
-                 *         sent to the AP.
-                 * - Signal HOTPLUG state to the higher layer
-                 */
-                if (wd == &iface->detect_in) {
-                    if (wd->last_state == WD_ST_ACTIVE_STABLE) {
-                        interface_power_off(iface);
-                    }
-                    interface_power_on(iface);
-                    if (iface->switch_portid != INVALID_PORT) {
-                        svc_hot_plug(iface->switch_portid);
-                    }
-                }
-                /* Save last stable state for power ON/OFF handling */
-                wd->last_state = wd->db_state;
-            } else {
-                /* Check for a stable signal after the debounce timeout */
-                interface_wd_delay_check(wd);
-            }
-        } else {
-            /* Signal did change, reset the debounce timer */
-            gettimeofday(&wd->debounce_tv, NULL);
-            wd->db_state = WD_ST_INACTIVE_DEBOUNCE;
-            interface_wd_delay_check(wd);
-        }
-        break;
-    case WD_ST_INACTIVE_DEBOUNCE:
-        if (!active) {
-            /* Signal did not change ... for how long ? */
-            gettimeofday(&now, NULL);
-            timersub(&now, &wd->debounce_tv, &diff);
-            if (timercmp(&diff, &timeout_tv, >=)) {
-                /* We have a stable signal */
-                wd->db_state = WD_ST_INACTIVE_STABLE;
-                dbg_verbose("W&D: got stable %s_%s %s (gpio %d)\n",
-                            iface->name,
-                            (wd == &iface->wake_in) ? "wake_in" : "detect_in",
-                            active ? "Act" : "Ina",
-                            wd->gpio);
-                /*
-                 * DETECT_IN transition to inactive
-                 *
-                 * Power OFF the interface
-                 * Signal HOTPLUG state to the higher layer
-                 */
-                if (wd == &iface->detect_in) {
-                    interface_power_off(iface);
-                    if (iface->switch_portid != INVALID_PORT) {
-                        svc_hot_unplug(iface->switch_portid);
-                    }
-                }
-                /* Save last stable state for power ON/OFF handling */
-                wd->last_state = wd->db_state;
-            } else {
-                /* Check for a stable signal after the debounce timeout */
-                interface_wd_delay_check(wd);
-            }
-        } else {
-            /* Signal did change, reset the debounce timer */
-            gettimeofday(&wd->debounce_tv, NULL);
-            wd->db_state = WD_ST_ACTIVE_DEBOUNCE;
-            interface_wd_delay_check(wd);
-        }
-        break;
-    case WD_ST_ACTIVE_STABLE:
-        if (!active) {
-            /* Signal did change, reset the debounce timer */
-            gettimeofday(&wd->debounce_tv, NULL);
-            wd->db_state = WD_ST_INACTIVE_DEBOUNCE;
-            interface_wd_delay_check(wd);
-        }
-        break;
-    case WD_ST_INACTIVE_STABLE:
-        if (active) {
-            /* Signal did change, reset the debounce timer */
-            gettimeofday(&wd->debounce_tv, NULL);
-            wd->db_state = WD_ST_ACTIVE_DEBOUNCE;
-            interface_wd_delay_check(wd);
-        }
-        break;
-    }
-
-    irqrestore(flags);
-
-    return 0;
-}
-
 /* Interface Wake & Detect handler */
 static int interface_wd_handler(int irq, void *context)
 {
@@ -961,32 +784,18 @@ static int interface_wd_handler(int irq, void *context)
     }
 
     /* Get signal type, polarity, active state etc. */
-    if (iface->wake_in.gpio == irq) {
-        wd = &iface->wake_in;
-        polarity = (iface->flags & ARA_IFACE_FLAG_WAKE_IN_ACTIVE_HIGH) ?
-            true : false;
-    } else {
-        wd = &iface->detect_in;
-        polarity = (iface->flags & ARA_IFACE_FLAG_DETECT_IN_ACTIVE_HIGH) ?
-            true : false;
-    }
+    wd = &iface->detect_in;
+    polarity = (iface->flags & ARA_IFACE_FLAG_DETECT_IN_ACTIVE_HIGH) ?
+               true : false;
     active = (gpio_get_value(irq) == polarity);
 
-    dbg_insane("W&D: got %s_%s %s (gpio %d)\n",
+    dbg_insane("W&D: got %s DETECT_IN %s (gpio %d)\n",
                iface->name,
-               (wd == &iface->wake_in) ? "wake_in" : "detect_in",
                active ? "Act" : "Ina",
                irq);
 
-    /* Debounce and handle state changes according to the interface type */
-    switch (iface->if_type) {
-    case ARA_IFACE_TYPE_MODULE_PORT:
-        ret = interface_debounce_wd(iface, wd, active);
-        break;
-    default:
-        ret = interface_debounce_wakein_detectin(iface, wd, active);
-        break;
-    }
+    /* Debounce and handle state changes */
+    ret = interface_debounce_wd(iface, wd, active);
 
     return ret;
 }
@@ -1161,17 +970,13 @@ int interface_init(struct interface **ints,
             break;
         }
 
-        /* Install handlers for WAKE_IN and DETECT_IN signals */
-        ifc->wake_in.db_state = WD_ST_INVALID;
+        /* Install handlers for DETECT_IN signal */
         ifc->detect_in.db_state = WD_ST_INVALID;
-        ifc->wake_in.last_state = WD_ST_INVALID;
         ifc->detect_in.last_state = WD_ST_INVALID;
-        rc = interface_install_wd_handler(&ifc->wake_in);
-        if (rc)
-            return rc;
         rc = interface_install_wd_handler(&ifc->detect_in);
-        if (rc)
+        if (rc) {
             return rc;
+        }
     }
 
     return 0;
@@ -1193,9 +998,8 @@ void interface_exit(void) {
         return;
     }
 
-    /* Uninstall handlers for WAKE_IN and DETECT_IN signals */
+    /* Uninstall handlers for DETECT_IN signal */
     interface_foreach(ifc, i) {
-        interface_uninstall_wd_handler(&ifc->wake_in);
         interface_uninstall_wd_handler(&ifc->detect_in);
     }
 
