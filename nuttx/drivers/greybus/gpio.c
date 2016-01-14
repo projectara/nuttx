@@ -232,7 +232,7 @@ static uint8_t gb_gpio_irq_mask(struct gb_operation *operation)
     if (request->which >= gpio_line_count())
         return GB_OP_INVALID;
 
-    gpio_mask_irq(request->which);
+    gpio_irq_mask(request->which);
     return GB_OP_SUCCESS;
 }
 
@@ -249,7 +249,7 @@ static uint8_t gb_gpio_irq_unmask(struct gb_operation *operation)
     if (request->which >= gpio_line_count())
         return GB_OP_INVALID;
 
-    gpio_unmask_irq(request->which);
+    gpio_irq_unmask(request->which);
     return GB_OP_SUCCESS;
 }
 
@@ -267,7 +267,7 @@ int gb_gpio_irq_event(int irq, FAR void *context)
     request->which = irq;
 
     /* Host is responsible for unmasking. */
-    gpio_mask_irq(irq);
+    gpio_irq_mask(irq);
 
     /* Send unidirectional operation. */
     gb_operation_send_request(operation, NULL, false);
@@ -311,10 +311,10 @@ static uint8_t gb_gpio_irq_type(struct gb_operation *operation)
     default:
         return GB_OP_INVALID;
     }
-    ret = set_gpio_triggering(request->which, trigger);
+    ret = gpio_irq_settriggering(request->which, trigger);
     if (ret)
         return GB_OP_INVALID;
-    ret = gpio_irqattach(request->which, gb_gpio_irq_event);
+    ret = gpio_irq_attach(request->which, gb_gpio_irq_event);
     if (ret)
         return GB_OP_UNKNOWN_ERROR;
     return GB_OP_SUCCESS;

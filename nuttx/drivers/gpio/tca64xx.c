@@ -842,8 +842,8 @@ static void _tca64xx_gpio_irq_handler(void *data)
         }
     }
 
-    gpio_clear_interrupt(tca64xx->irq);
-    gpio_unmask_irq(tca64xx->irq);
+    gpio_irq_clear(tca64xx->irq);
+    gpio_irq_unmask(tca64xx->irq);
 }
 
 static int tca64xx_trigger_worker(struct tca64xx_platform_data *tca64xx)
@@ -855,7 +855,7 @@ static int tca64xx_trigger_worker(struct tca64xx_platform_data *tca64xx)
      * interrupt until thread done with tca64xx irq.
      */
     if (work_available(&tca64xx->work)) {
-        gpio_mask_irq(tca64xx->irq);
+        gpio_irq_mask(tca64xx->irq);
         work_queue(HPWORK, &tca64xx->work, _tca64xx_gpio_irq_handler,
                    tca64xx, 0);
     }
@@ -992,11 +992,11 @@ int tca64xx_init(void **driver_data, tca64xx_part part, struct i2c_dev_s *dev,
         list_add(&tca64xx_irq_pdata_list, &tca64xx->list);
         gpio_activate(tca64xx->irq);
         gpio_direction_in(tca64xx->irq);
-        gpio_irqattach(tca64xx->irq, tca64xx_gpio_irq_handler);
+        gpio_irq_attach(tca64xx->irq, tca64xx_gpio_irq_handler);
         /* Set to EDGE_BOTH to catch missed interrupt */
-        set_gpio_triggering(tca64xx->irq, IRQ_TYPE_EDGE_BOTH);
-        gpio_clear_interrupt(tca64xx->irq);
-        gpio_unmask_irq(tca64xx->irq);
+        gpio_irq_settriggering(tca64xx->irq, IRQ_TYPE_EDGE_BOTH);
+        gpio_irq_clear(tca64xx->irq);
+        gpio_irq_unmask(tca64xx->irq);
 
         /* Initialize the work queue */
         tca64xx->work.worker = NULL;
@@ -1049,8 +1049,8 @@ void tca64xx_deinit(void *driver_data)
             }
         }
         /* Unregister IRQ */
-        gpio_mask_irq(tca64xx->irq);
-        gpio_irqattach(tca64xx->irq, NULL);
+        gpio_irq_mask(tca64xx->irq);
+        gpio_irq_attach(tca64xx->irq, NULL);
         list_foreach_safe(&tca64xx_irq_pdata_list, iter, iter_next) {
             pdata = list_entry(iter, struct tca64xx_platform_data, list);
             if (pdata == tca64xx) {

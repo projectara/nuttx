@@ -1186,7 +1186,7 @@ int sdio_irq_event(int irq, void *context)
     struct tsb_sdio_info *info = device_get_private(sdio_dev);
     uint8_t value = 0;
 
-    gpio_mask_irq(irq);
+    gpio_irq_mask(irq);
     value = gpio_get_value(info->cd_pin_number);
 
     if (value) { /* Card remove */
@@ -1228,7 +1228,7 @@ int sdio_irq_event(int irq, void *context)
         info->pre_card_event = info->card_event;
     }
 
-    gpio_unmask_irq(irq);
+    gpio_irq_unmask(irq);
 
     return 0;
 }
@@ -2009,8 +2009,8 @@ static int tsb_sdio_dev_open(struct device *dev)
         goto err_close_device;
     }
     info->cd_pin_number = pin_number;
-    gpio_irqattach(info->cd_pin_number, sdio_irq_event);
-    gpio_unmask_irq(info->cd_pin_number);
+    gpio_irq_attach(info->cd_pin_number, sdio_irq_event);
+    gpio_irq_unmask(info->cd_pin_number);
 
     info->thread_abort = false;
     ret = pthread_create(&info->write_data_thread, NULL, sdio_write_data_thread,
@@ -2060,7 +2060,7 @@ err_write_pthread_join:
     /* Wait for write_data_thread completed */
     pthread_join(info->write_data_thread, NULL);
 err_gpio_deactivate:
-    gpio_unmask_irq(info->cd_pin_number);
+    gpio_irq_unmask(info->cd_pin_number);
     gpio_deactivate(info->cd_pin_number);
 err_close_device:
     device_close(sdio_board_dev);
@@ -2119,7 +2119,7 @@ static void tsb_sdio_dev_close(struct device *dev)
     /* Wait for write_data_thread completed */
     pthread_join(info->write_data_thread, NULL);
 
-    gpio_unmask_irq(info->cd_pin_number);
+    gpio_irq_unmask(info->cd_pin_number);
     gpio_deactivate(info->cd_pin_number);
 
     device_close(sdio_board_dev);

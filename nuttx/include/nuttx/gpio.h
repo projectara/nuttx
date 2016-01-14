@@ -64,7 +64,7 @@
  * @param trigger \ref IRQ_TYPE
  * @return 0 on success, !=0 on failure
  */
-int set_gpio_triggering(uint8_t which, int trigger);
+int gpio_irq_settriggering(uint8_t which, int trigger);
 
 /**
  * @brief Get the direction of a GPIO line
@@ -124,28 +124,28 @@ uint8_t gpio_line_count(void);
  * @param isr The interrupt handler (int (*xcpt_t)(int irq, void *context))
  * @return 0 on success, !=0 on failure
  */
-int gpio_irqattach(uint8_t which, xcpt_t isr);
+int gpio_irq_attach(uint8_t which, xcpt_t isr);
 
 /**
  * @brief Mask the interrupt corresponding to a GPIO line
  * @param which The number of the GPIO line
  * @return 0 on success, !=0 on failure
  */
-int gpio_mask_irq(uint8_t which);
+int gpio_irq_mask(uint8_t which);
 
 /**
  * @brief Unmask the interrupt corresponding to a GPIO line
  * @param which The number of the GPIO line
  * @return 0 on success, !=0 on failure
  */
-int gpio_unmask_irq(uint8_t which);
+int gpio_irq_unmask(uint8_t which);
 
 /**
  * @brief Clear the interrupt corresponding to a GPIO line
  * @param which The number of the GPIO line
  * @return 0 on success, !=0 on failure
  */
-int gpio_clear_interrupt(uint8_t which);
+int gpio_irq_clear(uint8_t which);
 
 /**
  * @brief Request a GPIO line

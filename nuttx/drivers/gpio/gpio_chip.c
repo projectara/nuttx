@@ -190,7 +190,7 @@ uint8_t gpio_line_count(void)
     return g_gpio_line_count;
 }
 
-int gpio_irqattach(uint8_t which, xcpt_t isr)
+int gpio_irq_attach(uint8_t which, xcpt_t isr)
 {
     struct gpio_chip_s *chip = get_gpio_chip(&which);
 
@@ -201,7 +201,7 @@ int gpio_irqattach(uint8_t which, xcpt_t isr)
     return -EINVAL;
 }
 
-int set_gpio_triggering(uint8_t which, int trigger)
+int gpio_irq_settriggering(uint8_t which, int trigger)
 {
     struct gpio_chip_s *chip = get_gpio_chip(&which);
 
@@ -211,7 +211,7 @@ int set_gpio_triggering(uint8_t which, int trigger)
     return -EINVAL;
 }
 
-int gpio_mask_irq(uint8_t which)
+int gpio_irq_mask(uint8_t which)
 {
     struct gpio_chip_s *chip = get_gpio_chip(&which);
 
@@ -221,7 +221,7 @@ int gpio_mask_irq(uint8_t which)
     return -EINVAL;
 }
 
-int gpio_unmask_irq(uint8_t which)
+int gpio_irq_unmask(uint8_t which)
 {
     struct gpio_chip_s *chip = get_gpio_chip(&which);
 
@@ -231,7 +231,7 @@ int gpio_unmask_irq(uint8_t which)
     return -EINVAL;
 }
 
-int gpio_clear_interrupt(uint8_t which)
+int gpio_irq_clear(uint8_t which)
 {
     struct gpio_chip_s *chip = get_gpio_chip(&which);
 

@@ -545,7 +545,7 @@ int touch_irq_event(int irq, FAR void *context)
     elapsed = clock_systimer() - tuh_info->last_activetime;
 
     if (elapsed >= tuh_info->debounce_time) {
-        gpio_mask_irq(irq);
+        gpio_irq_mask(irq);
         new_gpiostate = gpio_get_value(GPIO_TRIGGER);
 
         /* check whether the key state change or not */
@@ -558,7 +558,7 @@ int touch_irq_event(int irq, FAR void *context)
                 sem_post(&tuh_info->signal_thread);
             }
         }
-        gpio_unmask_irq(irq);
+        gpio_irq_unmask(irq);
     }
     return OK;
 }
@@ -574,9 +574,9 @@ static int touch_power_set(struct device *dev, bool on)
 {
     if (on) {
         /* enable interrupt */
-        gpio_unmask_irq(GPIO_TRIGGER);
+        gpio_irq_unmask(GPIO_TRIGGER);
     } else {
-        gpio_mask_irq(GPIO_TRIGGER);
+        gpio_irq_mask(GPIO_TRIGGER);
     }
 
     return 0;
@@ -690,9 +690,9 @@ static int touch_hw_initialize(struct device *dev, struct hid_info *dev_info)
 
     gpio_activate(GPIO_TRIGGER);
     gpio_direction_in(GPIO_TRIGGER);
-    gpio_mask_irq(GPIO_TRIGGER);
-    set_gpio_triggering(GPIO_TRIGGER, IRQ_TYPE_EDGE_BOTH);
-    gpio_irqattach(GPIO_TRIGGER, touch_irq_event);
+    gpio_irq_mask(GPIO_TRIGGER);
+    gpio_irq_settriggering(GPIO_TRIGGER, IRQ_TYPE_EDGE_BOTH);
+    gpio_irq_attach(GPIO_TRIGGER, touch_irq_event);
 
     /* initialize waitqueue */
     tuh_info->abort = 0;
@@ -730,7 +730,7 @@ static int touch_hw_deinitialize(struct device *dev)
     }
 
     /* uninitialize GPIO pin */
-    gpio_mask_irq(GPIO_TRIGGER);
+    gpio_irq_mask(GPIO_TRIGGER);
     gpio_deactivate(GPIO_TRIGGER);
     list_del(&tuh_info->list);
     free(tuh_info);

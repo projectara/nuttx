@@ -158,7 +158,7 @@ static int sdio_board_config_card_detect(struct device *dev)
     tsb_set_pinshare(TSB_PIN_GPIO22);
     gpio_activate(info->sdio_gpio_cd);
     gpio_direction_in(info->sdio_gpio_cd);
-    set_gpio_triggering(info->sdio_gpio_cd, IRQ_TYPE_EDGE_BOTH);
+    gpio_irq_settriggering(info->sdio_gpio_cd, IRQ_TYPE_EDGE_BOTH);
 
     return 0;
 }

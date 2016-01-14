@@ -958,8 +958,8 @@ static int interface_wd_handler(int irq, void *context)
 static void interface_uninstall_wd_handler(struct wd_data *wd)
 {
     if (wd->gpio) {
-        gpio_mask_irq(wd->gpio);
-        gpio_irqattach(wd->gpio, NULL);
+        gpio_irq_mask(wd->gpio);
+        gpio_irq_attach(wd->gpio, NULL);
     }
 }
 
@@ -970,9 +970,9 @@ static int interface_install_wd_handler(struct wd_data *wd)
 {
     if (wd->gpio) {
         gpio_direction_in(wd->gpio);
-        if (set_gpio_triggering(wd->gpio, IRQ_TYPE_EDGE_BOTH) ||
-            gpio_irqattach(wd->gpio, interface_wd_handler) ||
-            gpio_unmask_irq(wd->gpio)) {
+        if (gpio_irq_settriggering(wd->gpio, IRQ_TYPE_EDGE_BOTH) ||
+            gpio_irq_attach(wd->gpio, interface_wd_handler) ||
+            gpio_irq_unmask(wd->gpio)) {
             dbg_error("Failed to attach Wake & Detect handler for pin %d\n",
                       wd->gpio);
             interface_uninstall_wd_handler(wd);
