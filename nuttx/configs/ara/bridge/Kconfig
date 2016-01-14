@@ -103,7 +103,7 @@ choice
 	prompt "Board"
 	---help---
 		Board which bridge firmware runs on. Examples include a
-		software dev board (SDB or DB3), or form-factor module (EVT1).
+		software dev board (DB3) or form-factor module (EVT1).
 
 config ARA_BRIDGE_BOARD_ARA_DEVBOARD
 	bool "Bridge on ARA development board"

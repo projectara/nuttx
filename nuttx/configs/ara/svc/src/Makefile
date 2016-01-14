@@ -77,11 +77,6 @@ CSRCS		+= gb_svc.c
 CSRCS		+= ara_key.c
 CSRCS		+= ara_board.c
 
-ifeq ($(CONFIG_ARCH_BOARD_ARA_SDB_SVC),y)
-CSRCS		+= board-sdb.c
-CSRCS		+= pwr_mon.c
-endif
-
 ifeq ($(CONFIG_ARCH_BOARD_ARA_DB3_SVC),y)
 CSRCS		+= board-db3.c
 CSRCS		+= pwr_mon.c

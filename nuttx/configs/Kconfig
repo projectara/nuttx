@@ -38,23 +38,6 @@ choice
 		be available for selection.  Use ARCH_BOARD_CUSTOM to create a new
 		board configuration.
 
-config ARCH_BOARD_ARA_SDB_SVC
-	bool "ARA SVC in SDB"
-	depends on ARCH_CHIP_STM32F407IG
-	select ARCH_BOARD_ARA_SVC
-	select SPI
-	select SPI_OWNBUS
-	select SPI_EXCHANGE
-	select STM32_SPI1
-	select SENSORS
-	select INA230
-	---help---
-		The ARA SVC is based on the STMicro STM32F417IG microcontroller
-		(ARM Cortex-M4 with FPU + crypto).
-		This options selects the support for the SVC on the SDB
-		development platform, aka 'Software Dev Board'.
-		This port uses a GNU Cortex-M4 toolchain (such as GCC ARM Embedded).
-
 config ARCH_BOARD_ARA_DB3_SVC
 	bool "ARA SVC on DB3"
 	depends on ARCH_CHIP_STM32F446M
