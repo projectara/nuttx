@@ -50,8 +50,7 @@
  */
 static int usb3813_open(struct device *dev)
 {
-    gpio_activate(HUB_LINE_N_RESET);
-    return 0;
+    return gpio_activate(HUB_LINE_N_RESET);
 }
 
 /**
