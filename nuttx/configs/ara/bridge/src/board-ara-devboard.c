@@ -168,58 +168,12 @@ static void bdb_driver_register(void)
 }
 #endif
 
-static void sdb_fixups(void)
-{
-    /**
-     * DETECT_IN is not working on both GPBridges on the SDB. The workaround
-     * is to pull up GPIO24.
-     *
-     * Documentation related to this fix (items 33 and 44)
-     * https://docs.google.com/spreadsheets/d/1BBVHjFZu6GEUDCua8WlXHl9TmGYdpUwQXF82NXWEI-o/edit#gid=779323147
-     *
-     * This change will have no impact on BDB2{A,B} since the GPIO24 is
-     * only connected to a test point.
-     */
-    if (tsb_get_product_id() == tsb_pid_gpbridge) {
-        modifyreg32(TSB_IO_PULL_UPDOWN_ENABLE0, TSB_IO_PULL_UPDOWN_GPIO(24), 0);
-        modifyreg32(TSB_IO_PULL_UPDOWN0, 0, TSB_IO_PULL_UPDOWN_GPIO(24));
-    }
-
-    /**
-     * When attached to the 96Boards Expansion Header on the SDB, Helium is
-     * held in reset unless HELIUM_EXT_NRST_BTN_GPIO is pulled high or
-     * driven high on APBridgeA.
-     *
-     * Rob Herring indicates that this behavior is the opposite of the
-     * 96Boards specification, which would suggest active low.
-     *
-     * We'll pull the pin high, as that's less aggressive and avoids
-     * the need to enable the GPIO subsystem at this point in the boot
-     * sequence.
-     *
-     * This change should have no impact on BDB2{A,B} since on APBridgeA,
-     * HELIUM_EXT_NRST_BTN_GPIO is only connected to a test point.
-     */
-#ifdef CONFIG_APBRIDGEA
-    if (tsb_get_product_id() == tsb_pid_apbridge) {
-        modifyreg32(TSB_IO_PULL_UPDOWN_ENABLE0,
-                    TSB_IO_PULL_UPDOWN_GPIO(HELIUM_EXT_NRST_BTN_GPIO),
-                    0);
-        modifyreg32(TSB_IO_PULL_UPDOWN0,
-                    0,
-                    TSB_IO_PULL_UPDOWN_GPIO(HELIUM_EXT_NRST_BTN_GPIO));
-    }
-#endif
-}
-
 void ara_module_early_init(void)
 {
 }
 
 void ara_module_init(void)
 {
-    sdb_fixups();
-
 #ifdef CONFIG_DEVICE_CORE
     device_table_register(&bdb_device_table);
     bdb_driver_register();
