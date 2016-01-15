@@ -1192,6 +1192,43 @@ static void es2_sys_ctrl_get_req(struct tsb_switch *sw,
     *req_size = sizeof(sys_ctrl_get);
 }
 
+static void es2_qos_attr_set_req(struct tsb_switch *sw,
+                                 uint8_t  portid,
+                                 uint8_t  attrid,
+                                 uint32_t attr_val,
+                                 uint8_t *req, size_t *req_size) {
+    uint8_t qos_attr_set[] = {
+        SWITCH_DEVICE_ID,
+        portid,
+        NCP_QOSATTRSETREQ,
+        NCP_RESERVED,
+        attrid,
+        (attr_val & 0xff000000) >> 24,
+        (attr_val & 0xff0000) >> 16,
+        (attr_val & 0xff00) >> 8,
+        (attr_val & 0xff) >> 0
+    };
+    DEBUGASSERT(*req_size >= sizeof(qos_attr_set));
+    memcpy(req, qos_attr_set, sizeof(qos_attr_set));
+    *req_size = sizeof(qos_attr_set);
+}
+
+static void es2_qos_attr_get_req(struct tsb_switch *sw,
+                                 uint8_t portid,
+                                 uint8_t attrid,
+                                 uint8_t *req, size_t *req_size) {
+    uint8_t qos_attr_get[] = {
+        SWITCH_DEVICE_ID,
+        portid,
+        NCP_QOSATTRGETREQ,
+        NCP_RESERVED,
+        attrid
+    };
+    DEBUGASSERT(*req_size >= sizeof(qos_attr_get));
+    memcpy(req, qos_attr_get, sizeof(qos_attr_get));
+    *req_size = sizeof(qos_attr_get);
+}
+
  /**
  * @brief Update the valid device bitmask for device_id on port_id
  */
@@ -1439,43 +1476,6 @@ static int es2_fct_enable(struct tsb_switch *sw) {
     }
 
     return rc;
-}
-
-static void es2_qos_attr_set_req(struct tsb_switch *sw,
-                                 uint8_t  portid,
-                                 uint8_t  attrid,
-                                 uint32_t attr_val,
-                                 uint8_t *req, size_t *req_size) {
-    uint8_t qos_attr_set[] = {
-        SWITCH_DEVICE_ID,
-        portid,
-        NCP_QOSATTRSETREQ,
-        NCP_RESERVED,
-        attrid,
-        (attr_val & 0xff000000) >> 24,
-        (attr_val & 0xff0000) >> 16,
-        (attr_val & 0xff00) >> 8,
-        (attr_val & 0xff) >> 0
-    };
-    DEBUGASSERT(*req_size >= sizeof(qos_attr_set));
-    memcpy(req, qos_attr_set, sizeof(qos_attr_set));
-    *req_size = sizeof(qos_attr_set);
-}
-
-static void es2_qos_attr_get_req(struct tsb_switch *sw,
-                                 uint8_t portid,
-                                 uint8_t attrid,
-                                 uint8_t *req, size_t *req_size) {
-    uint8_t qos_attr_get[] = {
-        SWITCH_DEVICE_ID,
-        portid,
-        NCP_QOSATTRGETREQ,
-        NCP_RESERVED,
-        attrid
-    };
-    DEBUGASSERT(*req_size >= sizeof(qos_attr_get));
-    memcpy(req, qos_attr_get, sizeof(qos_attr_get));
-    *req_size = sizeof(qos_attr_get);
 }
 
 static struct tsb_rev_data es2_rev_data = {
