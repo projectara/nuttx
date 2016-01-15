@@ -1846,6 +1846,8 @@ static struct tsb_switch_ops es2_ops = {
     .switch_irq_handler    = es2_switch_irq_handler,
 
     .switch_data_send      = es2_data_send,
+
+    .__ncp_transfer        = es2_ncp_transfer,
 };
 
 int tsb_switch_es2_init(struct tsb_switch *sw, unsigned int spi_bus)

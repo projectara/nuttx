@@ -351,6 +351,16 @@ struct tsb_switch_ops {
     int (*switch_irq_handler)(struct tsb_switch *sw);
 
     int (*switch_data_send)(struct tsb_switch *, void *, size_t);
+
+    /*
+     * The following functions exist to make it easier to support ES2
+     * and ES3 at the same time.
+     *
+     * They don't have corresponding user-visible APIs.
+     */
+    int (*__ncp_transfer)(struct tsb_switch *sw,
+                          uint8_t *tx_buf, size_t tx_size,
+                          uint8_t *rx_buf, size_t rx_size);
 };
 
 struct tsb_switch {
