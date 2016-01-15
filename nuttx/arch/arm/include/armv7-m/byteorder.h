@@ -33,6 +33,8 @@
 #ifndef  _ARMV7M_BYTEORDER_H_
 #define  _ARMV7M_BYTEORDER_H_
 
+#include <stdint.h>
+
 #ifdef CONFIG_ENDIAN_BIG
 #error "big-endian unsupported"
 #endif
