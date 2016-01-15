@@ -75,7 +75,7 @@ struct device_driver {
     char                        *name;
     char                        *desc;
     struct device_driver_ops    *ops;
-    void                        *private;
+    void                        *priv;
 };
 
 struct device {
@@ -88,7 +88,7 @@ struct device {
     void                    *init_data;
     enum device_state       state;
     struct device_driver    *driver;
-    void                    *private;
+    void                    *priv;
 };
 
 /* Called by device driver clients */
@@ -203,7 +203,7 @@ static inline unsigned int device_get_resource_count(struct device *dev)
  */
 static inline void *device_get_private(struct device *dev)
 {
-    return dev->private;
+    return dev->priv;
 }
 
 /**
@@ -213,7 +213,7 @@ static inline void *device_get_private(struct device *dev)
  */
 static inline void device_set_private(struct device *dev, void *priv)
 {
-    dev->private = priv;
+    dev->priv= priv;
 }
 
 /**
@@ -286,7 +286,7 @@ static inline char *device_driver_get_desc(struct device *dev)
  */
 static inline void *device_driver_get_private(struct device *dev)
 {
-    return dev->driver->private;
+    return dev->driver->priv;
 }
 
 /**
@@ -296,7 +296,7 @@ static inline void *device_driver_get_private(struct device *dev)
  */
 static inline void device_driver_set_private(struct device *dev, void *priv)
 {
-    dev->driver->private = priv;
+    dev->driver->priv= priv;
 }
 
 /**
