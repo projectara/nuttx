@@ -102,7 +102,10 @@ enum device_dma_error {
 };
 
 enum device_dma_dev {
-    DEVICE_DMA_DEV_INVALID, DEVICE_DMA_DEV_MEM, DEVICE_DMA_DEV_IO,
+    DEVICE_DMA_DEV_INVALID,
+    DEVICE_DMA_DEV_MEM,
+    DEVICE_DMA_DEV_IO,
+    DEVICE_DMA_DEV_UNIPRO,
 };
 
 struct device_dma_caps {

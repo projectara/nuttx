@@ -63,7 +63,7 @@
 #define DMAADDH(reg, value)         (0x54 | DMAADD_##reg), DMA_UINT32(value)
 #define DMAADDNH(reg, value)        (0x5C | DMAADD_##reg), DMA_UINT32(value)
 #define DMAEND                      (0x00)
-#define DMAFLUSH(peripheral)        (0x35), (peripheral << 3)
+#define DMAFLUSHP(peripheral)       (0x35), (peripheral << 3)
 #define DMAGO(ch, secure, addr)     \
     (0xA0 | DMAGO_##secure), ch, DMA_UINT32((uint32_t)addr)
 #define DMAKILL                     (0x01)
