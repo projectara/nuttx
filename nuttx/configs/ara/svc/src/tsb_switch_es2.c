@@ -1222,13 +1222,12 @@ static int es2_dump_routing_table(struct tsb_switch *sw) {
     return 0;
 }
 
-static int es2_sys_ctrl_set(struct tsb_switch *sw,
-                            uint16_t sc_addr,
-                            uint32_t val)
+static void es2_sys_ctrl_set_req(struct tsb_switch *sw,
+                                 uint16_t sc_addr,
+                                 uint32_t val,
+                                 uint8_t *req, size_t *req_size)
 {
-    int rc;
-
-    uint8_t req[] = {
+    uint8_t sys_ctrl_set[] = {
         SWITCH_DEVICE_ID,
         NCP_RESERVED,
         NCP_SYSCTRLSETREQ,
@@ -1239,68 +1238,25 @@ static int es2_sys_ctrl_set(struct tsb_switch *sw,
         (val >> 8) & 0xff,
         val & 0xff,
     };
-
-    struct __attribute__((packed)) cnf {
-        uint8_t rc;
-        uint8_t function_id;
-    } cnf;
-
-    dbg_verbose("%s(): sc_addr=0x%x, val=0x%x (%d)",
-                __func__, sc_addr, val, val);
-    rc = es2_ncp_transfer(sw, req, sizeof(req), (uint8_t*)&cnf,
-                          sizeof(struct cnf));
-    if (rc) {
-        dbg_error("%s(): sc_addr=0x%x, val=0x%x (%d) failed: %d",
-                  __func__, sc_addr, val, val, rc);
-        return rc;
-    }
-    if (cnf.function_id != NCP_SYSCTRLSETCNF) {
-        dbg_error("%s(): unexpected CNF 0x%x\n", __func__, cnf.function_id);
-        return -EPROTO;
-    }
-
-    dbg_verbose("%s(): fid=0x%02x, rc=%u", __func__, cnf.function_id, cnf.rc);
-    return cnf.rc;
+    DEBUGASSERT(*req_size >= sizeof(sys_ctrl_set));
+    memcpy(req, sys_ctrl_set, sizeof(sys_ctrl_set));
+    *req_size = sizeof(sys_ctrl_set);
 }
 
-static int es2_sys_ctrl_get(struct tsb_switch *sw,
-                            uint16_t sc_addr,
-                            uint32_t *val)
+static void es2_sys_ctrl_get_req(struct tsb_switch *sw,
+                                 uint16_t sc_addr,
+                                 uint8_t *req, size_t *req_size)
 {
-    int rc;
-    uint8_t req[] = {
+    uint8_t sys_ctrl_get[] = {
         SWITCH_DEVICE_ID,
         NCP_RESERVED,
         NCP_SYSCTRLGETREQ,
         sc_addr >> 8,
         sc_addr & 0xff,
     };
-    struct __attribute__((packed)) cnf {
-        uint8_t rc;
-        uint8_t function_id;
-        uint32_t val;
-    } cnf;
-
-    dbg_verbose("%s(): sc_addr=0x%x\n", __func__, sc_addr);
-
-    rc = es2_ncp_transfer(sw, req, sizeof(req), (uint8_t *)&cnf,
-                          sizeof(struct cnf));
-    if (rc) {
-        dbg_error("%s(): sc_addr=0x%x failed: %d\n", __func__, sc_addr, rc);
-        return rc;
-    }
-
-    if (cnf.function_id != NCP_SYSCTRLGETCNF) {
-        dbg_error("%s(): unexpected CNF 0x%x\n", __func__, cnf.function_id);
-        return -EPROTO;
-    }
-
-    if (cnf.rc == 0) {
-        *val = be32_to_cpu(cnf.val);
-    }
-    dbg_verbose("%s(): fid=0x%02x, rc=%u", __func__, cnf.function_id, cnf.rc);
-
-    return cnf.rc;
+    DEBUGASSERT(*req_size >= sizeof(sys_ctrl_get));
+    memcpy(req, sys_ctrl_get, sizeof(sys_ctrl_get));
+    *req_size = sizeof(sys_ctrl_get);
 }
 
 static int es2_dev_id_mask_set(struct tsb_switch *sw,
@@ -1614,11 +1570,11 @@ static struct tsb_switch_ops es2_ops = {
     .switch_attr_get_req   = es2_switch_attr_get_req,
     .switch_attr_set_req   = es2_switch_attr_set_req,
 
+    .sys_ctrl_set_req      = es2_sys_ctrl_set_req,
+    .sys_ctrl_get_req      = es2_sys_ctrl_get_req,
+
     .set_valid_device      = es2_set_valid_device,
     .dump_routing_table    = es2_dump_routing_table,
-
-    .sys_ctrl_set          = es2_sys_ctrl_set,
-    .sys_ctrl_get          = es2_sys_ctrl_get,
 
     .dev_id_mask_get       = es2_dev_id_mask_get,
     .dev_id_mask_set       = es2_dev_id_mask_set,

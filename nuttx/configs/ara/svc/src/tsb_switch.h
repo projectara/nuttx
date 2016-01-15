@@ -327,6 +327,13 @@ struct tsb_switch_ops {
                                uint16_t attrid,
                                uint32_t val,
                                uint8_t *req, size_t *req_size);
+    void (*sys_ctrl_set_req)(struct tsb_switch *sw,
+                             uint16_t sc_addr,
+                             uint32_t val,
+                             uint8_t *req, size_t *req_size);
+    void (*sys_ctrl_get_req)(struct tsb_switch *sw,
+                             uint16_t sc_addr,
+                             uint8_t *req, size_t *req_size);
 
     int (*port_irq_enable)(struct tsb_switch *sw,
                            uint8_t port_id,
@@ -349,12 +356,6 @@ struct tsb_switch_ops {
     int (*qos_attr_get)(struct tsb_switch *,
                         uint8_t portid,
                         uint8_t attrid,
-                        uint32_t *val);
-    int (*sys_ctrl_set)(struct tsb_switch *sw,
-                        uint16_t sc_addr,
-                        uint32_t val);
-    int (*sys_ctrl_get)(struct tsb_switch *sw,
-                        uint16_t sc_addr,
                         uint32_t *val);
     int (*dev_id_mask_get)(struct tsb_switch *,
                            uint8_t unipro_portid,

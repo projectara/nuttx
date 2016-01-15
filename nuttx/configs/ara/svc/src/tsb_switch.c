@@ -158,6 +158,21 @@ static void get_switch_attr_set_req(struct tsb_switch *sw,
     sw->ops->switch_attr_set_req(sw, attrid, val, req, req_size);
 }
 
+static void get_sys_ctrl_set_req(struct tsb_switch *sw,
+                                 uint16_t sc_addr,
+                                 uint32_t val,
+                                 uint8_t *req, size_t *req_size) {
+    DEBUGASSERT(sw->ops->sys_ctrl_set_req);
+    sw->ops->sys_ctrl_set_req(sw, sc_addr, val, req, req_size);
+}
+
+static void get_sys_ctrl_get_req(struct tsb_switch *sw,
+                                 uint16_t sc_addr,
+                                 uint8_t *req, size_t *req_size) {
+    DEBUGASSERT(sw->ops->sys_ctrl_get_req);
+    sw->ops->sys_ctrl_get_req(sw, sc_addr, req, req_size);
+}
+
 /*
  * Device ID helpers
  */
@@ -540,6 +555,72 @@ int switch_internal_setattr(struct tsb_switch *sw,
     return cnf.rc;
 }
 
+/*
+ * System controller accessors
+ */
+
+int switch_sys_ctrl_set(struct tsb_switch *sw,
+                        uint16_t sc_addr,
+                        uint32_t val) {
+    int rc;
+    size_t req_size = sw->rdata->ncp_req_max_size;
+    uint8_t req[req_size];
+    struct __attribute__((packed)) cnf {
+        uint8_t rc;
+        uint8_t function_id;
+    } cnf;
+
+    dbg_verbose("%s(): sc_addr=0x%x, val=0x%x (%d)",
+                __func__, sc_addr, val, val);
+    get_sys_ctrl_set_req(sw, sc_addr, val, req, &req_size);
+    rc = ncp_transfer(sw, req, req_size, (uint8_t*)&cnf, sizeof(struct cnf));
+    if (rc) {
+        dbg_error("%s(): sc_addr=0x%x, val=0x%x (%d) failed: %d",
+                  __func__, sc_addr, val, val, rc);
+        return rc;
+    }
+    if (cnf.function_id != NCP_SYSCTRLSETCNF) {
+        dbg_error("%s(): unexpected CNF 0x%x\n", __func__, cnf.function_id);
+        return -EPROTO;
+    }
+
+    dbg_verbose("%s(): fid=0x%02x, rc=%u", __func__, cnf.function_id, cnf.rc);
+    return cnf.rc;
+}
+
+int switch_sys_ctrl_get(struct tsb_switch *sw,
+                        uint16_t sc_addr,
+                        uint32_t *val) {
+    int rc;
+    size_t req_size = sw->rdata->ncp_req_max_size;
+    uint8_t req[req_size];
+    struct __attribute__((packed)) cnf {
+        uint8_t rc;
+        uint8_t function_id;
+        uint32_t val;
+    } cnf;
+
+    dbg_verbose("%s(): sc_addr=0x%x\n", __func__, sc_addr);
+    get_sys_ctrl_get_req(sw, sc_addr, req, &req_size);
+    rc = ncp_transfer(sw, req, req_size, (uint8_t*)&cnf, sizeof(struct cnf));
+    if (rc) {
+        dbg_error("%s(): sc_addr=0x%x failed: %d\n", __func__, sc_addr, rc);
+        return rc;
+    }
+
+    if (cnf.function_id != NCP_SYSCTRLGETCNF) {
+        dbg_error("%s(): unexpected CNF 0x%x\n", __func__, cnf.function_id);
+        return -EPROTO;
+    }
+
+    if (cnf.rc == 0) {
+        *val = be32_to_cpu(cnf.val);
+    }
+    dbg_verbose("%s(): fid=0x%02x, rc=%u", __func__, cnf.function_id, cnf.rc);
+
+    return cnf.rc;
+}
+
 int switch_port_irq_enable(struct tsb_switch *sw,
                            uint8_t portid,
                            bool enable) {
@@ -732,24 +813,6 @@ int switch_disable_test_traffic(struct tsb_switch *sw,
     }
 
     return 0;
-}
-
-int switch_sys_ctrl_set(struct tsb_switch *sw,
-                        uint16_t sc_addr,
-                        uint32_t val) {
-    if (!sw->ops->sys_ctrl_set) {
-        return -EOPNOTSUPP;
-    }
-    return sw->ops->sys_ctrl_set(sw, sc_addr, val);
-}
-
-int switch_sys_ctrl_get(struct tsb_switch *sw,
-                        uint16_t sc_addr,
-                        uint32_t *val) {
-    if (!sw->ops->sys_ctrl_get) {
-        return -EOPNOTSUPP;
-    }
-    return sw->ops->sys_ctrl_get(sw, sc_addr, val);
 }
 
 int switch_dev_id_mask_get(struct tsb_switch *sw,
