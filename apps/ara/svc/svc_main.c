@@ -85,6 +85,19 @@ static const struct command commands[] = {
     [RELEASE] = {'x', "release", "Pulse module release signals"},
 };
 
+static char *seltostr(uint16_t sel, char *buf) {
+    const int n = snprintf(NULL, 0, "%lu", sel);
+
+    int c = sizeof(buf)/sizeof(buf[0]);
+    c = c < (n + 1) ? c : n + 1;
+    if (sel == UNIPRO_SELINDEX_NULL) {
+        snprintf(buf, c, "N/A");
+    } else {
+        snprintf(buf, c, "%lu", sel);
+    }
+    return buf;
+}
+
 static void usage(int exit_status) {
     int i;
     printf("svc: usage:\n");
@@ -573,6 +586,7 @@ static int dme_io_dump(struct tsb_switch *sw, uint8_t port,
                        uint16_t selector, int peer) {
     int rc;
     uint32_t val;
+    char buf[6];    // Largest valid selector is five digits plus '\0'
 
     if (peer) {
         rc = switch_dme_peer_get(sw, port, attr, selector, &val);
@@ -590,19 +604,19 @@ static int dme_io_dump(struct tsb_switch *sw, uint8_t port,
         return -EIO;
     }
     if (attr_str) {
-        printf("Port=%d, peer=%s, sel=%d, %s (0x%x) = 0x%x (%u)\n",
+        printf("Port=%d, peer=%s, sel=%s, %s (0x%x) = 0x%x (%u)\n",
                port,
                peer ? "yes" : "no",
-               selector,
+               seltostr(selector, buf),
                attr_str,
                attr,
                val,
                val);
     } else {
-        printf("Port=%d, peer=%s, sel=%d, 0x%x = 0x%x (%u)\n",
+        printf("Port=%d, peer=%s, sel=%s, 0x%x = 0x%x (%u)\n",
                port,
                peer ? "yes" : "no",
-               selector,
+               seltostr(selector, buf),
                attr,
                val,
                val);
@@ -614,6 +628,7 @@ static int dme_io_set(struct tsb_switch *sw, uint8_t port,
                       const char *attr_str, uint16_t attr, uint32_t val,
                       uint16_t selector, int peer) {
     int rc;
+    char buf[6];    // Largest valid selector is five digits plus '\0'
 
     if (peer) {
         rc = switch_dme_peer_set(sw, port, attr, selector, val);
@@ -632,19 +647,19 @@ static int dme_io_set(struct tsb_switch *sw, uint8_t port,
         return -EIO;
     }
     if (attr_str) {
-        printf("Port=%d, peer=%s, sel=%d, set %s (0x%x) = 0x%x (%u)\n",
+        printf("Port=%d, peer=%s, sel=%s, set %s (0x%x) = 0x%x (%u)\n",
                port,
                peer ? "yes" : "no",
-               selector,
+               seltostr(selector, buf),
                attr_str,
                attr,
                val,
                val);
     } else {
-        printf("Port=%d, peer=%s, sel=%d, set 0x%x = 0x%x (%u)\n",
+        printf("Port=%d, peer=%s, sel=%s, set 0x%x = 0x%x (%u)\n",
                port,
                peer ? "yes" : "no",
-               selector,
+               seltostr(selector, buf),
                attr,
                val,
                val);

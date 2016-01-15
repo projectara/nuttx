@@ -79,7 +79,7 @@ void unipro_rxbuf_free(unsigned int cportid, void *ptr);
 /*
  * "Don't care" selector index
  */
-#define UNIPRO_SELINDEX_NULL 0
+#define UNIPRO_SELINDEX_NULL 0xffff
 
 /*
  * Result codes for UniPro DME accesses
