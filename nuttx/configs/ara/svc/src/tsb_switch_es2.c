@@ -1441,13 +1441,12 @@ static int es2_fct_enable(struct tsb_switch *sw) {
     return rc;
 }
 
-static int es2_qos_attr_set(struct tsb_switch *sw,
-                            uint8_t  portid,
-                            uint8_t  attrid,
-                            uint32_t attr_val) {
-    int rc;
-
-    uint8_t req[] = {
+static void es2_qos_attr_set_req(struct tsb_switch *sw,
+                                 uint8_t  portid,
+                                 uint8_t  attrid,
+                                 uint32_t attr_val,
+                                 uint8_t *req, size_t *req_size) {
+    uint8_t qos_attr_set[] = {
         SWITCH_DEVICE_ID,
         portid,
         NCP_QOSATTRSETREQ,
@@ -1458,97 +1457,25 @@ static int es2_qos_attr_set(struct tsb_switch *sw,
         (attr_val & 0xff00) >> 8,
         (attr_val & 0xff) >> 0
     };
-
-    struct __attribute__ ((__packed__)) cnf {
-        uint8_t portid;
-        uint8_t function_id;
-        uint8_t reserved;
-        uint8_t rc;
-    } cnf;
-
-    dbg_verbose("%s: portid: %u attrid: %u attr_val: %u\n",
-                __func__,
-                portid,
-                attrid,
-                attr_val);
-
-    rc = es2_ncp_transfer(sw, req, sizeof(req), (uint8_t*)&cnf, sizeof(cnf));
-
-    if (rc) {
-        dbg_error("%s() failed: rc=%d\n", __func__, rc);
-        return rc;
-    }
-
-    if (cnf.portid != portid) {
-        dbg_error("%s(): unexpected portid 0x%x\n", __func__, cnf.portid);
-        return -EPROTO;
-    }
-
-    if (cnf.function_id != NCP_QOSATTRSETCNF) {
-        dbg_error("%s(): unexpected CNF 0x%x\n", __func__, cnf.function_id);
-        return -EPROTO;
-    }
-
-    dbg_verbose("%s(): ret=0x%02x, portid=0x%02x, attr(0x%04x)=0x%04x\n",
-                __func__,
-                cnf.rc,
-                portid,
-                attrid,
-                attr_val);
-
-    return cnf.rc;
+    DEBUGASSERT(*req_size >= sizeof(qos_attr_set));
+    memcpy(req, qos_attr_set, sizeof(qos_attr_set));
+    *req_size = sizeof(qos_attr_set);
 }
 
-static int es2_qos_attr_get(struct tsb_switch *sw,
-                            uint8_t portid,
-                            uint8_t attrid,
-                            uint32_t *val) {
-    int rc;
-
-    uint8_t req[] = {
+static void es2_qos_attr_get_req(struct tsb_switch *sw,
+                                 uint8_t portid,
+                                 uint8_t attrid,
+                                 uint8_t *req, size_t *req_size) {
+    uint8_t qos_attr_get[] = {
         SWITCH_DEVICE_ID,
         portid,
         NCP_QOSATTRGETREQ,
         NCP_RESERVED,
         attrid
     };
-
-    struct __attribute__ ((__packed__)) cnf {
-        uint8_t portid;
-        uint8_t function_id;
-        uint8_t reserved;
-        uint8_t rc;
-        uint32_t attr_val;
-    } cnf;
-
-    dbg_verbose("%s: portid: %u attrid: %u\n", __func__, portid, attrid);
-
-    rc = es2_ncp_transfer(sw, req, sizeof(req), (uint8_t*)&cnf, sizeof(cnf));
-
-    if (rc) {
-        dbg_error("%s() failed: rc=%d\n", __func__, rc);
-        return rc;
-    }
-
-    if (cnf.portid != portid) {
-        dbg_error("%s(): unexpected portid 0x%x\n", __func__, cnf.portid);
-        return -EPROTO;
-    }
-
-    if (cnf.function_id != NCP_QOSATTRGETCNF) {
-        dbg_error("%s(): unexpected CNF 0x%x\n", __func__, cnf.function_id);
-        return -EPROTO;
-    }
-
-    *val = be32_to_cpu(cnf.attr_val);
-    dbg_verbose("%s(): ret=0x%02x, portid=0x%02x, attr(0x%04x)=0x%04x\n",
-                    __func__,
-                    cnf.rc,
-                    portid,
-                    attrid,
-                    *val);
-
-    return cnf.rc;
+    DEBUGASSERT(*req_size >= sizeof(qos_attr_get));
+    memcpy(req, qos_attr_get, sizeof(qos_attr_get));
+    *req_size = sizeof(qos_attr_get);
 }
 
 static struct tsb_rev_data es2_rev_data = {
@@ -1573,6 +1500,9 @@ static struct tsb_switch_ops es2_ops = {
     .sys_ctrl_set_req      = es2_sys_ctrl_set_req,
     .sys_ctrl_get_req      = es2_sys_ctrl_get_req,
 
+    .qos_attr_set_req      = es2_qos_attr_set_req,
+    .qos_attr_get_req      = es2_qos_attr_get_req,
+
     .set_valid_device      = es2_set_valid_device,
     .dump_routing_table    = es2_dump_routing_table,
 
@@ -1582,9 +1512,6 @@ static struct tsb_switch_ops es2_ops = {
     .port_irq_enable       = es2_port_irq_enable,
 
     .switch_id_set         = es2_switch_id_set,
-
-    .qos_attr_set          = es2_qos_attr_set,
-    .qos_attr_get          = es2_qos_attr_get,
 
     .fct_enable            = es2_fct_enable,
 

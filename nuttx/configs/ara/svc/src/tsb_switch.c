@@ -173,6 +173,23 @@ static void get_sys_ctrl_get_req(struct tsb_switch *sw,
     sw->ops->sys_ctrl_get_req(sw, sc_addr, req, req_size);
 }
 
+static void get_qos_attr_set_req(struct tsb_switch *sw,
+                                 uint8_t portid,
+                                 uint8_t attrid,
+                                 uint32_t attr_val,
+                                 uint8_t *req, size_t *req_size) {
+    DEBUGASSERT(sw->ops->qos_attr_set_req);
+    sw->ops->qos_attr_set_req(sw, portid, attrid, attr_val, req, req_size);
+}
+
+static void get_qos_attr_get_req(struct tsb_switch *sw,
+                                 uint8_t portid,
+                                 uint8_t attrid,
+                                 uint8_t *req, size_t *req_size) {
+    DEBUGASSERT(sw->ops->qos_attr_get_req);
+    sw->ops->qos_attr_get_req(sw, portid, attrid, req, req_size);
+}
+
 /*
  * Device ID helpers
  */
@@ -621,6 +638,127 @@ int switch_sys_ctrl_get(struct tsb_switch *sw,
     return cnf.rc;
 }
 
+/*
+ * Switch QoS configuration commands
+ */
+
+int switch_qos_attr_set(struct tsb_switch *sw,
+                        uint8_t portid,
+                        uint8_t attrid,
+                        uint32_t attr_val) {
+    int rc;
+    size_t req_size = sw->rdata->ncp_req_max_size;
+    uint8_t req[req_size];
+    /*
+     * There is a gratuitous difference in the cnf framing for this
+     * NCP command on ES3, which this wart / abstraction violation
+     * reflects.
+     */
+    struct __attribute__((packed)) es2_cnf {
+        uint8_t portid;
+        uint8_t function_id;
+        uint8_t reserved;
+        uint8_t rc;
+    };
+    union {
+        struct es2_cnf es2;
+    } cnf;
+    size_t cnf_size = sizeof(cnf.es2);
+    uint8_t *cnf_portid;
+    uint8_t *cnf_function_id;
+    uint8_t *cnf_rc;
+
+    dbg_verbose("%s: portid: %u attrid: %u attr_val: %u\n",
+                __func__,
+                portid,
+                attrid,
+                attr_val);
+
+    get_qos_attr_set_req(sw, portid, attrid, attr_val, req, &req_size);
+    rc = ncp_transfer(sw, req, req_size, (uint8_t*)&cnf, cnf_size);
+    if (rc) {
+        dbg_error("%s() failed: rc=%d\n", __func__, rc);
+        return rc;
+    }
+
+    switch (sw->pdata->rev) {
+    case SWITCH_REV_ES2:
+        cnf_portid = &cnf.es2.portid;
+        cnf_function_id = &cnf.es2.function_id;
+        cnf_rc = &cnf.es2.rc;
+        break;
+    default:
+        dbg_error("%s: unsupported switch revision: %u\n",
+                  __func__, sw->pdata->rev);
+        return -EINVAL;
+    }
+
+    if (*cnf_portid != portid) {
+        dbg_error("%s(): unexpected portid 0x%x\n", __func__, *cnf_portid);
+        return -EPROTO;
+    }
+
+    if (*cnf_function_id != NCP_QOSATTRSETCNF) {
+        dbg_error("%s(): unexpected CNF 0x%x\n", __func__, *cnf_function_id);
+        return -EPROTO;
+    }
+
+    dbg_verbose("%s(): ret=0x%02x, portid=0x%02x, attr(0x%04x)=0x%04x\n",
+                __func__,
+                *cnf_rc,
+                portid,
+                attrid,
+                attr_val);
+
+    return *cnf_rc;
+}
+
+int switch_qos_attr_get(struct tsb_switch *sw,
+                        uint8_t portid,
+                        uint8_t attrid,
+                        uint32_t *val) {
+    int rc;
+    size_t req_size = sw->rdata->ncp_req_max_size;
+    uint8_t req[req_size];
+    struct __attribute__ ((__packed__)) cnf {
+        uint8_t portid;
+        uint8_t function_id;
+        uint8_t reserved;
+        uint8_t rc;
+        uint32_t attr_val;
+    } cnf;
+
+    dbg_verbose("%s: portid: %u attrid: %u\n", __func__, portid, attrid);
+
+    get_qos_attr_get_req(sw, portid, attrid, req, &req_size);
+    rc = ncp_transfer(sw, req, req_size, (uint8_t*)&cnf, sizeof(struct cnf));
+
+    if (rc) {
+        dbg_error("%s() failed: rc=%d\n", __func__, rc);
+        return rc;
+    }
+
+    if (cnf.portid != portid) {
+        dbg_error("%s(): unexpected portid 0x%x\n", __func__, cnf.portid);
+        return -EPROTO;
+    }
+
+    if (cnf.function_id != NCP_QOSATTRGETCNF) {
+        dbg_error("%s(): unexpected CNF 0x%x\n", __func__, cnf.function_id);
+        return -EPROTO;
+    }
+
+    *val = be32_to_cpu(cnf.attr_val);
+    dbg_verbose("%s(): ret=0x%02x, portid=0x%02x, attr(0x%04x)=0x%04x\n",
+                    __func__,
+                    cnf.rc,
+                    portid,
+                    attrid,
+                    *val);
+
+    return cnf.rc;
+}
+
 int switch_port_irq_enable(struct tsb_switch *sw,
                            uint8_t portid,
                            bool enable) {
@@ -842,37 +980,6 @@ static int switch_internal_set_id(struct tsb_switch *sw,
         return -EOPNOTSUPP;
     }
     return sw->ops->switch_id_set(sw, cportid, peercportid, dis, irt);
-}
-
-/*
- * Switch QoS configuration commands
- */
-int switch_qos_attr_set(struct tsb_switch *sw,
-                               uint8_t portid,
-                               uint8_t attrid,
-                               uint32_t attr_val) {
-    if (!sw) {
-        return -EINVAL;
-    }
-    if (!sw->ops->qos_attr_set) {
-        return -EOPNOTSUPP;
-    }
-
-    return sw->ops->qos_attr_set(sw, portid, attrid, attr_val);
-}
-
-int switch_qos_attr_get(struct tsb_switch *sw,
-                               uint8_t portid,
-                               uint8_t attrid,
-                               uint32_t *val) {
-    if (!sw) {
-        return -EINVAL;
-    }
-    if (!sw->ops->qos_attr_get) {
-        return -EOPNOTSUPP;
-    }
-
-    return sw->ops->qos_attr_get(sw, portid, attrid, val);
 }
 
 int switch_qos_band_reset(struct tsb_switch *sw, uint8_t portid) {
