@@ -181,7 +181,7 @@ static inline enum device_state device_get_state(struct device *dev)
  * @param dev Device whose state will be tested
  * @return 0: Device is not open; 1: Device is open
  */
-static inline enum device_state device_is_open(struct device *dev)
+static inline int device_is_open(struct device *dev)
 {
     return device_get_state(dev) == DEVICE_STATE_OPEN;
 }
