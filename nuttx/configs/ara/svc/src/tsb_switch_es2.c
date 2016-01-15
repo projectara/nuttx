@@ -1155,6 +1155,43 @@ static void es2_switch_attr_get_req(struct tsb_switch *sw,
     *req_size = sizeof(switch_attr_get);
 }
 
+static void es2_sys_ctrl_set_req(struct tsb_switch *sw,
+                                 uint16_t sc_addr,
+                                 uint32_t val,
+                                 uint8_t *req, size_t *req_size)
+{
+    uint8_t sys_ctrl_set[] = {
+        SWITCH_DEVICE_ID,
+        NCP_RESERVED,
+        NCP_SYSCTRLSETREQ,
+        sc_addr >> 8,
+        sc_addr & 0xff,
+        val >> 24,
+        (val >> 16) & 0xff,
+        (val >> 8) & 0xff,
+        val & 0xff,
+    };
+    DEBUGASSERT(*req_size >= sizeof(sys_ctrl_set));
+    memcpy(req, sys_ctrl_set, sizeof(sys_ctrl_set));
+    *req_size = sizeof(sys_ctrl_set);
+}
+
+static void es2_sys_ctrl_get_req(struct tsb_switch *sw,
+                                 uint16_t sc_addr,
+                                 uint8_t *req, size_t *req_size)
+{
+    uint8_t sys_ctrl_get[] = {
+        SWITCH_DEVICE_ID,
+        NCP_RESERVED,
+        NCP_SYSCTRLGETREQ,
+        sc_addr >> 8,
+        sc_addr & 0xff,
+    };
+    DEBUGASSERT(*req_size >= sizeof(sys_ctrl_get));
+    memcpy(req, sys_ctrl_get, sizeof(sys_ctrl_get));
+    *req_size = sizeof(sys_ctrl_get);
+}
+
  /**
  * @brief Update the valid device bitmask for device_id on port_id
  */
@@ -1220,43 +1257,6 @@ static int es2_dump_routing_table(struct tsb_switch *sw) {
     dbg_info("======================================================\n");
 
     return 0;
-}
-
-static void es2_sys_ctrl_set_req(struct tsb_switch *sw,
-                                 uint16_t sc_addr,
-                                 uint32_t val,
-                                 uint8_t *req, size_t *req_size)
-{
-    uint8_t sys_ctrl_set[] = {
-        SWITCH_DEVICE_ID,
-        NCP_RESERVED,
-        NCP_SYSCTRLSETREQ,
-        sc_addr >> 8,
-        sc_addr & 0xff,
-        val >> 24,
-        (val >> 16) & 0xff,
-        (val >> 8) & 0xff,
-        val & 0xff,
-    };
-    DEBUGASSERT(*req_size >= sizeof(sys_ctrl_set));
-    memcpy(req, sys_ctrl_set, sizeof(sys_ctrl_set));
-    *req_size = sizeof(sys_ctrl_set);
-}
-
-static void es2_sys_ctrl_get_req(struct tsb_switch *sw,
-                                 uint16_t sc_addr,
-                                 uint8_t *req, size_t *req_size)
-{
-    uint8_t sys_ctrl_get[] = {
-        SWITCH_DEVICE_ID,
-        NCP_RESERVED,
-        NCP_SYSCTRLGETREQ,
-        sc_addr >> 8,
-        sc_addr & 0xff,
-    };
-    DEBUGASSERT(*req_size >= sizeof(sys_ctrl_get));
-    memcpy(req, sys_ctrl_get, sizeof(sys_ctrl_get));
-    *req_size = sizeof(sys_ctrl_get);
 }
 
 static int es2_dev_id_mask_set(struct tsb_switch *sw,
