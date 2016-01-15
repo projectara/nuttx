@@ -1120,6 +1120,41 @@ static void es2_lut_get_req(struct tsb_switch *sw,
     *req_size = sizeof(lut_get);
 }
 
+static void es2_switch_attr_set_req(struct tsb_switch *sw,
+                                    uint16_t attrid,
+                                    uint32_t val,
+                                    uint8_t *req, size_t *req_size) {
+    uint8_t switch_attr_set[] = {
+        SWITCH_DEVICE_ID,
+        NCP_RESERVED,
+        NCP_SWITCHATTRSETREQ,
+        (attrid & 0xFF00) >> 8,
+        (attrid & 0xFF),
+        ((val >> 24) & 0xff),
+        ((val >> 16) & 0xff),
+        ((val >> 8) & 0xff),
+        (val & 0xff)
+    };
+    DEBUGASSERT(*req_size >= sizeof(switch_attr_set));
+    memcpy(req, switch_attr_set, sizeof(switch_attr_set));
+    *req_size = sizeof(switch_attr_set);
+}
+
+static void es2_switch_attr_get_req(struct tsb_switch *sw,
+                                    uint16_t attrid,
+                                    uint8_t *req, size_t *req_size) {
+    uint8_t switch_attr_get[] = {
+        SWITCH_DEVICE_ID,
+        NCP_RESERVED,
+        NCP_SWITCHATTRGETREQ,
+        (attrid & 0xFF00) >> 8,
+        (attrid & 0xFF),
+    };
+    DEBUGASSERT(*req_size >= sizeof(switch_attr_get));
+    memcpy(req, switch_attr_get, sizeof(switch_attr_get));
+    *req_size = sizeof(switch_attr_get);
+}
+
  /**
  * @brief Update the valid device bitmask for device_id on port_id
  */
@@ -1356,41 +1391,6 @@ static int es2_dev_id_mask_get(struct tsb_switch *sw,
 
     /* Return resultCode */
     return cnf.rc;
-}
-
-static void es2_switch_attr_set_req(struct tsb_switch *sw,
-                                    uint16_t attrid,
-                                    uint32_t val,
-                                    uint8_t *req, size_t *req_size) {
-    uint8_t switch_attr_set[] = {
-        SWITCH_DEVICE_ID,
-        NCP_RESERVED,
-        NCP_SWITCHATTRSETREQ,
-        (attrid & 0xFF00) >> 8,
-        (attrid & 0xFF),
-        ((val >> 24) & 0xff),
-        ((val >> 16) & 0xff),
-        ((val >> 8) & 0xff),
-        (val & 0xff)
-    };
-    DEBUGASSERT(*req_size >= sizeof(switch_attr_set));
-    memcpy(req, switch_attr_set, sizeof(switch_attr_set));
-    *req_size = sizeof(switch_attr_set);
-}
-
-static void es2_switch_attr_get_req(struct tsb_switch *sw,
-                                    uint16_t attrid,
-                                    uint8_t *req, size_t *req_size) {
-    uint8_t switch_attr_get[] = {
-        SWITCH_DEVICE_ID,
-        NCP_RESERVED,
-        NCP_SWITCHATTRGETREQ,
-        (attrid & 0xFF00) >> 8,
-        (attrid & 0xFF),
-    };
-    DEBUGASSERT(*req_size >= sizeof(switch_attr_get));
-    memcpy(req, switch_attr_get, sizeof(switch_attr_get));
-    *req_size = sizeof(switch_attr_get);
 }
 
 static int es2_switch_id_set(struct tsb_switch *sw,
