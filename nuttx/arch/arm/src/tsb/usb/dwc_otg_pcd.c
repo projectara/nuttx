@@ -2553,17 +2553,17 @@ void update_ring_dma_desc_chain(dwc_otg_core_if_t * core_if,
 	dwc_otg_dev_dma_desc_t *dma_desc;
 
 	desc_cnt = ep->dwc_ep.desc_cnt;
-	if (!desc_cnt && ep->sg_dma_queue_count < desc_cnt) {
-		DWC_ERROR("Removing a request from ring descriptor is not supported\n");
-		return;
-	}
-
 	ep->dwc_ep.desc_cnt = ep->sg_dma_queue_count;
 	ep->dwc_ep.desc_cnt_save = ep->sg_dma_queue_count;
 	ep->dwc_ep.next_desc = 0;
 	ep->dwc_ep.busy_desc = 0;
 	if (ep->dwc_ep.desc_cnt > MAX_DMA_DESC_CNT)
 		ep->dwc_ep.desc_cnt = MAX_DMA_DESC_CNT;
+
+	if (desc_cnt > ep->sg_dma_queue_count) {
+		init_ring_dma_desc_chain(core_if, ep);
+		return;
+	}
 
 	DWC_CIRCLEQ_FOREACH(req, &ep->sg_dma_queue, sg_dma_queue_entry) {
 		/* Sanity check */
@@ -2938,6 +2938,10 @@ int dwc_otg_pcd_ep_dequeue(dwc_otg_pcd_t * pcd, void *ep_handle,
 		return -DWC_E_INVALID;
 	}
 
+	/* Invalidate the entry in the ring to cause a BNA */
+	if (invalidate_ring_entry(&ep->dwc_ep, req->dma_desc) < 0) {
+		return -DWC_E_INVALID;
+	}
 	dwc_otg_pcd_dequeue_req(pcd->core_if, ep, req);
 
 	if (!DWC_CIRCLEQ_EMPTY_ENTRY(req, queue_entry)) {

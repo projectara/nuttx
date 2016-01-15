@@ -3770,6 +3770,55 @@ void init_ring_dma_desc(dwc_ep_t * ep, dwc_otg_dev_dma_desc_t *dma_desc,
 	dma_desc->status.b.bs = BS_HOST_READY;
 }
 
+static int invalidated_ring_entry(dwc_otg_dev_dma_desc_t *dma_desc)
+{
+	return dma_desc->status.d32 == 0xffffffff &&
+		dma_desc->buf == 0xffffffff;
+}
+
+int invalidate_ring_entry(dwc_ep_t * ep, dwc_otg_dev_dma_desc_t *dma_desc)
+{
+	int i;
+	int index = dma_desc - ep->desc_addr;
+
+	if (index >= ep->desc_cnt) {
+		return -DWC_E_INVALID;
+	}
+
+	/* We can't invalidate an entry in use. It would cause data loss */
+	if (dma_desc->status.b.bs != BS_HOST_READY) {
+		return -DWC_E_BUSY;
+	}
+
+	/*
+	 * We could not invalidate an entry with an index bigger than
+	 * the number of request to reach. Otherwise, the DMA may block on
+	 * an entry that doesn't exist anymore and loop.
+	 * Invalidate the first one, second and so on.
+	 */
+	for (i = 0; i < index; i++) {
+		if (!invalidated_ring_entry(&ep->desc_addr[i])) {
+			return -DWC_E_INVALID;
+		}
+	}
+
+	/* Ensure the DMA does not use this entry */
+	if (dma_desc->status.b.bs != BS_HOST_READY) {
+		return -DWC_E_BUSY;
+	}
+
+	dma_desc->status.b.bs = BS_HOST_BUSY;
+	dma_desc->status.b.l = 1;
+	dma_desc->status.b.ioc = 0;
+	dma_desc->status.b.sp = 0;
+	dma_desc->status.b.bytes = 0;
+	dma_desc->status.b.sts = 0;
+	dma_desc->status.b.mtrf = 0;
+	dma_desc->buf = 0xffffffff;
+
+	return 0;
+}
+
 void init_fifo_dma_desc(dwc_ep_t * ep, dwc_otg_dev_dma_desc_t *dma_desc,
 			uint32_t buf, uint32_t length)
 {
