@@ -33,6 +33,7 @@
 
 #define DBG_COMP    ARADBG_SWITCH
 #include <nuttx/config.h>
+#include <arch/byteorder.h>
 #include <nuttx/arch.h>
 #include <nuttx/unipro/unipro.h>
 #include <errno.h>
@@ -74,6 +75,59 @@
 #define CPORT_DEFAULT_TOKENVALUE           32
 #define CPORT_DEFAULT_T_PROTOCOLID         0
 #define CPORT_DEFAULT_TSB_MAXSEGMENTCONFIG 0x118
+
+/*
+ * Internal "ops" implementations and helpers.
+ */
+
+static int ncp_transfer(struct tsb_switch *sw,
+                        uint8_t *tx_buf, size_t tx_size,
+                        uint8_t *rx_buf, size_t rx_size) {
+    DEBUGASSERT(sw->ops->__ncp_transfer);
+    return sw->ops->__ncp_transfer(sw, tx_buf, tx_size, rx_buf, rx_size);
+}
+
+static void get_dme_set_req(struct tsb_switch *sw,
+                            uint8_t port_id,
+                            uint16_t attrid,
+                            uint16_t select_index,
+                            uint32_t val,
+                            uint8_t *req, size_t *req_size) {
+    DEBUGASSERT(sw->ops->set_req);
+    sw->ops->set_req(sw, port_id, attrid, select_index, val, req, req_size);
+}
+
+static void get_dme_get_req(struct tsb_switch *sw,
+                            uint8_t port_id,
+                            uint16_t attrid,
+                            uint16_t select_index,
+                            uint8_t *req, size_t *req_size) {
+    DEBUGASSERT(sw->ops->get_req);
+    sw->ops->get_req(sw, port_id, attrid, select_index, req, req_size);
+}
+
+static void get_dme_peer_set_req(struct tsb_switch *sw,
+                                 uint8_t port_id,
+                                 uint16_t attrid,
+                                 uint16_t select_index,
+                                 uint32_t val,
+                                 uint8_t *req, size_t *req_size) {
+    DEBUGASSERT(sw->ops->peer_set_req);
+    sw->ops->peer_set_req(sw, port_id, attrid, select_index, val, req, req_size);
+}
+
+static void get_dme_peer_get_req(struct tsb_switch *sw,
+                                 uint8_t port_id,
+                                 uint16_t attrid,
+                                 uint16_t select_index,
+                                 uint8_t *req, size_t *req_size) {
+    DEBUGASSERT(sw->ops->peer_get_req);
+    sw->ops->peer_get_req(sw, port_id, attrid, select_index, req, req_size);
+}
+
+/*
+ * Device ID helpers
+ */
 
 static inline void dev_ids_update(struct tsb_switch *sw,
                                   uint8_t port_id,
@@ -147,39 +201,120 @@ int switch_enable_port(struct tsb_switch *sw,
 }
 
 /*
- * Unipro NCP commands
+ * DME accessors
  */
+
 int switch_dme_set(struct tsb_switch *sw,
-                          uint8_t portid,
-                          uint16_t attrid,
-                          uint16_t select_index,
-                          uint32_t attr_value) {
-    if (!sw->ops->set) {
-        return -EOPNOTSUPP;
+                   uint8_t portid,
+                   uint16_t attrid,
+                   uint16_t select_index,
+                   uint32_t attr_value) {
+    int rc;
+    size_t req_size = sw->rdata->ncp_req_max_size;
+    uint8_t req[req_size];
+    struct __attribute__ ((__packed__)) cnf {
+        uint8_t portid;
+        uint8_t function_id;
+        uint8_t reserved;
+        uint8_t rc;
+    } cnf;
+
+    dbg_verbose("%s(): portId=%d, attrId=0x%04x, selectIndex=%d, val=0x%04x\n",
+                __func__, portid, attrid, select_index, attr_value);
+
+    get_dme_set_req(sw, portid, attrid, select_index, attr_value,
+                    req, &req_size);
+    rc = ncp_transfer(sw, req, req_size, (uint8_t*)&cnf, sizeof(struct cnf));
+    if (rc) {
+        dbg_error("%s(): portId=%u, attrId=0x%04x failed: rc=%d\n",
+                  __func__, portid, attrid, rc);
+        return rc;
     }
-    return sw->ops->set(sw, portid, attrid, select_index, attr_value);
+    if (cnf.function_id != NCP_SETCNF) {
+        dbg_error("%s(): unexpected CNF 0x%x\n", __func__, cnf.function_id);
+        return -EPROTO;
+    }
+
+    dbg_verbose("%s(): fid=0x%02x, rc=%u, attr(0x%04x)=0x%04x\n",
+                __func__, cnf.function_id, cnf.rc, attrid, attr_value);
+
+    return cnf.rc;
 }
 
 int switch_dme_get(struct tsb_switch *sw,
-                          uint8_t portid,
-                          uint16_t attrid,
-                          uint16_t select_index,
-                          uint32_t *attr_value) {
-    if (!sw->ops->get) {
-        return -EOPNOTSUPP;
+                   uint8_t portid,
+                   uint16_t attrid,
+                   uint16_t select_index,
+                   uint32_t *attr_value) {
+    int rc;
+    size_t req_size = sw->rdata->ncp_req_max_size;
+    uint8_t req[req_size];
+    struct __attribute__ ((__packed__)) cnf {
+        uint8_t portid;
+        uint8_t function_id;
+        uint8_t reserved;
+        uint8_t rc;
+        uint32_t attr_val;
+    } cnf;
+
+    dbg_verbose("%s(): portId=%d, attrId=0x%04x, selectIndex=%d\n",
+                __func__, portid, attrid, select_index);
+
+    get_dme_get_req(sw, portid, attrid, select_index,
+                    req, &req_size);
+    rc = ncp_transfer(sw, req, req_size, (uint8_t*)&cnf, sizeof(struct cnf));
+    if (rc) {
+        dbg_error("%s(): attrId=0x%04x failed: rc=%d\n", __func__, attrid, rc);
+        return rc;
     }
-    return sw->ops->get(sw, portid, attrid, select_index, attr_value);
+    if (cnf.function_id != NCP_GETCNF) {
+        dbg_error("%s(): unexpected CNF 0x%x\n", __func__, cnf.function_id);
+        return -EPROTO;
+    }
+
+    *attr_value = be32_to_cpu(cnf.attr_val);
+    dbg_verbose("%s(): fid=0x%02x, rc=%u, attr(0x%04x)=0x%04x\n",
+                __func__, cnf.function_id, cnf.rc, attrid, *attr_value);
+
+    return cnf.rc;
 }
 
 int switch_dme_peer_set(struct tsb_switch *sw,
-                               uint8_t portid,
-                               uint16_t attrid,
-                               uint16_t select_index,
-                               uint32_t attr_value) {
-    if (!sw->ops->peer_set) {
-        return -EOPNOTSUPP;
+                        uint8_t portid,
+                        uint16_t attrid,
+                        uint16_t select_index,
+                        uint32_t attr_value) {
+    int rc;
+    size_t req_size = sw->rdata->ncp_req_max_size;
+    uint8_t req[req_size];
+    struct __attribute__ ((__packed__)) cnf {
+        uint8_t portid;
+        uint8_t function_id;
+        uint8_t reserved;
+        uint8_t rc;
+    } cnf;
+
+    dbg_verbose("%s(): portid=%d, attrId=0x%04x, selectIndex=%d, val=0x%04x\n",
+                __func__, portid, attrid, select_index, attr_value);
+
+    get_dme_peer_set_req(sw, portid, attrid, select_index, attr_value,
+                         req, &req_size);
+    rc = ncp_transfer(sw, req, req_size, (uint8_t*)&cnf, sizeof(struct cnf));
+    if (rc) {
+        dbg_error("%s(): portid=%u, attrId=0x%04x failed: rc=%d\n",
+                  __func__, portid, attrid, rc);
+        return rc;
     }
-    return sw->ops->peer_set(sw, portid, attrid, select_index, attr_value);
+
+    if (cnf.function_id != NCP_PEERSETCNF) {
+        dbg_error("%s(): unexpected CNF 0x%x\n", __func__, cnf.function_id);
+        return -EPROTO;
+    }
+
+    dbg_verbose("%s(): fid=0x%02x, rc=%u, attr(0x%04x)=0x%04x\n",
+                __func__, cnf.function_id, cnf.rc, attrid, attr_value);
+
+    return cnf.rc;
 }
 
 int switch_dme_peer_get(struct tsb_switch *sw,
@@ -187,10 +322,37 @@ int switch_dme_peer_get(struct tsb_switch *sw,
                                uint16_t attrid,
                                uint16_t select_index,
                                uint32_t *attr_value) {
-    if (!sw->ops->peer_get) {
-        return -EOPNOTSUPP;
+    int rc;
+    size_t req_size = sw->rdata->ncp_req_max_size;
+    uint8_t req[req_size];
+    struct __attribute__ ((__packed__)) cnf {
+        uint8_t portid;
+        uint8_t function_id;
+        uint8_t reserved;
+        uint8_t rc;
+        uint32_t attr_val;
+    } cnf;
+
+    dbg_verbose("%s(): portid=%d, attrId=0x%04x, selectIndex=%d\n",
+                 __func__, portid, attrid, select_index);
+
+    get_dme_peer_get_req(sw, portid, attrid, select_index, req, &req_size);
+    rc = ncp_transfer(sw, req, req_size, (uint8_t*)&cnf, sizeof(struct cnf));
+    if (rc) {
+        dbg_error("%s(): attrId=0x%04x failed: rc=%d\n", __func__, attrid, rc);
+        return rc;
     }
-    return sw->ops->peer_get(sw, portid, attrid, select_index, attr_value);
+
+    if (cnf.function_id != NCP_PEERGETCNF) {
+        dbg_error("%s(): unexpected CNF 0x%x\n", __func__, cnf.function_id);
+        return -EPROTO;
+    }
+
+    *attr_value = be32_to_cpu(cnf.attr_val);
+    dbg_verbose("%s(): fid=0x%02x, rc=%u, attr(0x%04x)=0x%04x\n",
+                __func__, cnf.function_id, cnf.rc, attrid, *attr_value);
+
+    return cnf.rc;
 }
 
 int switch_port_irq_enable(struct tsb_switch *sw,

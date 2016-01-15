@@ -59,6 +59,8 @@
 #define ES2_SWITCH_NUM_UNIPORTS 14
 
 #define ES2_IRQ_MAX    16
+/* Device ID mask set is the longest NCP request. */
+#define ES2_NCP_MAX_REQ_SIZE 19
 /* 16-byte max delay + 5-byte header + 272-byte max payload + 2-byte footer */
 #define ES2_CPORT_RX_MAX_SIZE        (16 + 5 + 272 + 2)
 #define ES2_CPORT_NCP_MAX_PAYLOAD    (256)
@@ -995,16 +997,17 @@ static int es2_port_irq_enable(struct tsb_switch *sw, uint8_t port_id,
     return OK;
 }
 
-/* NCP commands */
-static int es2_set(struct tsb_switch *sw,
-                   uint8_t port_id,
-                   uint16_t attrid,
-                   uint16_t select_index,
-                   uint32_t val)
-{
-    int rc;
+/*
+ * NCP command request helpers.
+ */
 
-    uint8_t req[] = {
+static void es2_dme_set_req(struct tsb_switch *sw,
+                            uint8_t port_id,
+                            uint16_t attrid,
+                            uint16_t select_index,
+                            uint32_t val,
+                            uint8_t *req, size_t *req_size) {
+    uint8_t set_req[] = {
         SWITCH_DEVICE_ID,
         port_id,
         NCP_SETREQ,
@@ -1017,45 +1020,17 @@ static int es2_set(struct tsb_switch *sw,
         ((val >> 8) & 0xff),
         (val & 0xff)
     };
-
-    struct __attribute__ ((__packed__)) cnf {
-        uint8_t port_id;
-        uint8_t function_id;
-        uint8_t reserved;
-        uint8_t rc;
-    } cnf;
-
-    dbg_verbose("%s(): portId=%d, attrId=0x%04x, selectIndex=%d, val=0x%04x\n",
-                __func__, port_id, attrid, select_index, val);
-
-    rc = es2_ncp_transfer(sw, req, sizeof(req), (uint8_t *) &cnf,
-                          sizeof(struct cnf));
-    if (rc) {
-        dbg_error("%s(): portId=%u, attrId=0x%04x failed: rc=%d\n",
-                  __func__, port_id, attrid, rc);
-        return rc;
-    }
-
-    if (cnf.function_id != NCP_SETCNF) {
-        dbg_error("%s(): unexpected CNF 0x%x\n", __func__, cnf.function_id);
-        return -EPROTO;
-    }
-
-    dbg_verbose("%s(): fid=0x%02x, rc=%u, attr(0x%04x)=0x%04x\n",
-                __func__, cnf.function_id, cnf.rc, attrid, val);
-
-    return cnf.rc;
+    DEBUGASSERT(*req_size >= sizeof(set_req));
+    memcpy(req, set_req, sizeof(set_req));
+    *req_size = sizeof(set_req);
 }
 
-static int es2_get(struct tsb_switch *sw,
-                   uint8_t port_id,
-                   uint16_t attrid,
-                   uint16_t select_index,
-                   uint32_t *val)
-{
-    int rc;
-
-    uint8_t req[] = {
+static void es2_dme_get_req(struct tsb_switch *sw,
+                            uint8_t port_id,
+                            uint16_t attrid,
+                            uint16_t select_index,
+                            uint8_t *req, size_t *req_size) {
+    uint8_t get_req[] = {
         SWITCH_DEVICE_ID,
         port_id,
         NCP_GETREQ,
@@ -1064,47 +1039,18 @@ static int es2_get(struct tsb_switch *sw,
         (select_index >> 8),
         (select_index & 0xff),
     };
-
-    struct __attribute__ ((__packed__)) cnf {
-        uint8_t port_id;
-        uint8_t function_id;
-        uint8_t reserved;
-        uint8_t rc;
-        uint32_t attr_val;
-    } cnf;
-
-    dbg_verbose("%s(): portId=%d, attrId=0x%04x, selectIndex=%d\n",
-                __func__, port_id, attrid, select_index);
-
-    rc = es2_ncp_transfer(sw, req, sizeof(req), (uint8_t *) &cnf,
-                          sizeof(struct cnf));
-    if (rc) {
-        dbg_error("%s(): attrId=0x%04x failed: rc=%d\n", __func__, attrid, rc);
-        return rc;
-    }
-
-    if (cnf.function_id != NCP_GETCNF) {
-        dbg_error("%s(): unexpected CNF 0x%x\n", __func__, cnf.function_id);
-        return -EPROTO;
-    }
-
-    *val = be32_to_cpu(cnf.attr_val);
-    dbg_verbose("%s(): fid=0x%02x, rc=%u, attr(0x%04x)=0x%04x\n",
-                __func__, cnf.function_id, cnf.rc, attrid, *val);
-
-    return cnf.rc;
+    DEBUGASSERT(*req_size >= sizeof(get_req));
+    memcpy(req, get_req, sizeof(get_req));
+    *req_size = sizeof(get_req);
 }
 
-
-static int es2_peer_set(struct tsb_switch *sw,
-                        uint8_t port_id,
-                        uint16_t attrid,
-                        uint16_t select_index,
-                        uint32_t val)
-{
-    int rc;
-
-    uint8_t req[] = {
+static void es2_dme_peer_set_req(struct tsb_switch *sw,
+                                 uint8_t port_id,
+                                 uint16_t attrid,
+                                 uint16_t select_index,
+                                 uint32_t val,
+                                 uint8_t *req, size_t *req_size) {
+    uint8_t peer_set[] = {
         SWITCH_DEVICE_ID,
         port_id,
         NCP_PEERSETREQ,
@@ -1117,45 +1063,17 @@ static int es2_peer_set(struct tsb_switch *sw,
         ((val >> 8) & 0xff),
         (val & 0xff)
     };
-
-    struct __attribute__ ((__packed__)) cnf {
-        uint8_t port_id;
-        uint8_t function_id;
-        uint8_t reserved;
-        uint8_t rc;
-    } cnf;
-
-    dbg_verbose("%s(): portId=%d, attrId=0x%04x, selectIndex=%d, val=0x%04x\n",
-                __func__, port_id, attrid, select_index, val);
-
-    rc = es2_ncp_transfer(sw, req, sizeof(req), (uint8_t *)  &cnf,
-                          sizeof(struct cnf));
-    if (rc) {
-        dbg_error("%s(): portId=%u, attrId=0x%04x failed: rc=%d\n",
-                  __func__, port_id, attrid, rc);
-        return rc;
-    }
-
-    if (cnf.function_id != NCP_PEERSETCNF) {
-        dbg_error("%s(): unexpected CNF 0x%x\n", __func__, cnf.function_id);
-        return -EPROTO;
-    }
-
-    dbg_verbose("%s(): fid=0x%02x, rc=%u, attr(0x%04x)=0x%04x\n",
-                __func__, cnf.function_id, cnf.rc, attrid, val);
-
-    return cnf.rc;
+    DEBUGASSERT(*req_size >= sizeof(peer_set));
+    memcpy(req, peer_set, sizeof(peer_set));
+    *req_size = sizeof(peer_set);
 }
 
-static int es2_peer_get(struct tsb_switch *sw,
-                        uint8_t port_id,
-                        uint16_t attrid,
-                        uint16_t select_index,
-                        uint32_t *val)
-{
-    int rc;
-
-    uint8_t req[] = {
+static void es2_dme_peer_get_req(struct tsb_switch *sw,
+                                 uint8_t port_id,
+                                 uint16_t attrid,
+                                 uint16_t select_index,
+                                 uint8_t *req, size_t *req_size) {
+    uint8_t peer_get[] = {
         SWITCH_DEVICE_ID,
         port_id,
         NCP_PEERGETREQ,
@@ -1164,35 +1082,9 @@ static int es2_peer_get(struct tsb_switch *sw,
         (select_index >> 8),
         (select_index & 0xff),
     };
-
-    struct __attribute__ ((__packed__)) cnf {
-        uint8_t port_id;
-        uint8_t function_id;
-        uint8_t reserved;
-        uint8_t rc;
-        uint32_t attr_val;
-    } cnf;
-
-    dbg_verbose("%s(): portId=%d, attrId=0x%04x, selectIndex=%d\n",
-                 __func__, port_id, attrid, select_index);
-
-    rc = es2_ncp_transfer(sw, req, sizeof(req), (uint8_t *) &cnf,
-                          sizeof(struct cnf));
-    if (rc) {
-        dbg_error("%s(): attrId=0x%04x failed: rc=%d\n", __func__, attrid, rc);
-        return rc;
-    }
-
-    if (cnf.function_id != NCP_PEERGETCNF) {
-        dbg_error("%s(): unexpected CNF 0x%x\n", __func__, cnf.function_id);
-        return -EPROTO;
-    }
-
-    *val = be32_to_cpu(cnf.attr_val);
-    dbg_verbose("%s(): fid=0x%02x, rc=%u, attr(0x%04x)=0x%04x\n",
-                __func__, cnf.function_id, cnf.rc, attrid, *val);
-
-    return cnf.rc;
+    DEBUGASSERT(*req_size >= sizeof(peer_get));
+    memcpy(req, peer_get, sizeof(peer_get));
+    *req_size = sizeof(peer_get);
 }
 
 static int es2_lut_set(struct tsb_switch *sw,
@@ -1811,14 +1703,18 @@ static int es2_qos_attr_get(struct tsb_switch *sw,
     return cnf.rc;
 }
 
+static struct tsb_rev_data es2_rev_data = {
+    .ncp_req_max_size       = ES2_NCP_MAX_REQ_SIZE,
+};
+
 static struct tsb_switch_ops es2_ops = {
     .init_comm             = es2_init_seq,
 
-    .set                   = es2_set,
-    .get                   = es2_get,
+    .set_req               = es2_dme_set_req,
+    .get_req               = es2_dme_get_req,
 
-    .peer_set              = es2_peer_set,
-    .peer_get              = es2_peer_get,
+    .peer_set_req          = es2_dme_peer_set_req,
+    .peer_get_req          = es2_dme_peer_get_req,
 
     .lut_set               = es2_lut_set,
     .lut_get               = es2_lut_get,
@@ -1881,6 +1777,7 @@ int tsb_switch_es2_init(struct tsb_switch *sw, unsigned int spi_bus)
 
     sw->priv = priv;
     sw->ops = &es2_ops;
+    sw->rdata = &es2_rev_data;
 
     /* Configure the SPI1 bus in Mode0, 8bits, 13MHz clock */
     SPI_SETMODE(spi_dev, SPIDEV_MODE0);

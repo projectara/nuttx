@@ -277,26 +277,41 @@ struct tsb_switch_ops {
 
     int (*enable_port)(struct tsb_switch *,
                        uint8_t portid);
-    int (*set)(struct tsb_switch *,
-               uint8_t portid,
-               uint16_t attrid,
-               uint16_t select_index,
-               uint32_t attr_value);
-    int (*get)(struct tsb_switch *,
-               uint8_t portid,
-               uint16_t attrid,
-               uint16_t select_index,
-               uint32_t *attr_value);
-    int (*peer_set)(struct tsb_switch *,
+
+    /*
+     * Fill in NCP DME requests and their sizes
+     *
+     * These routines take the parameters needed for the DME NCP
+     * request payloads, and copy them into req, which has size
+     * *req_size at invocation time. They leave the number of bytes
+     * copied into req in *req_size.
+     *
+     * The caller must ensure a safe maximum buffer size. A minimum
+     * value safe for all requests is in sw->rdata->ncp_req_max_size.
+     */
+    void (*set_req)(struct tsb_switch *sw,
                     uint8_t portid,
                     uint16_t attrid,
                     uint16_t select_index,
-                    uint32_t attr_value);
-    int (*peer_get)(struct tsb_switch *,
+                    uint32_t attr_value,
+                    uint8_t *req, size_t *req_size);
+    void (*get_req)(struct tsb_switch *sw,
                     uint8_t portid,
                     uint16_t attrid,
                     uint16_t select_index,
-                    uint32_t *attr_value);
+                    uint8_t *req, size_t *req_size);
+    void (*peer_set_req)(struct tsb_switch *sw,
+                         uint8_t portid,
+                         uint16_t attrid,
+                         uint16_t select_index,
+                         uint32_t attr_value,
+                         uint8_t *req, size_t *req_size);
+    void (*peer_get_req)(struct tsb_switch *sw,
+                         uint8_t portid,
+                         uint16_t attrid,
+                         uint16_t select_index,
+                         uint8_t *req, size_t *req_size);
+
     int (*port_irq_enable)(struct tsb_switch *sw,
                            uint8_t port_id,
                            bool enable);
@@ -368,6 +383,7 @@ struct tsb_switch {
     struct tsb_switch_ops   *ops;
     struct vreg             *vreg;
     struct tsb_switch_data  *pdata;
+    struct tsb_rev_data     *rdata;
     sem_t                   sw_irq_lock;
     int                     worker_id;
     bool                    sw_irq_worker_exit;
@@ -579,6 +595,14 @@ int switch_enable_test_traffic(struct tsb_switch *sw,
 int switch_disable_test_traffic(struct tsb_switch *sw,
                                 uint8_t src_portid, uint8_t dst_portid,
                                 const struct unipro_test_feature_cfg *cfg);
+
+/*
+ * Revision (ES2, ES3) specific data for switch management
+ */
+struct tsb_rev_data {
+    /* Max size in bytes of an NCP command request. */
+    size_t ncp_req_max_size;
+};
 
 /*
  * Platform specific data for switch initialization
