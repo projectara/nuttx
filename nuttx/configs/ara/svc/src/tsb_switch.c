@@ -125,6 +125,24 @@ static void get_dme_peer_get_req(struct tsb_switch *sw,
     sw->ops->peer_get_req(sw, port_id, attrid, select_index, req, req_size);
 }
 
+static void get_lut_set_req(struct tsb_switch *sw,
+                            uint8_t unipro_portid,
+                            uint8_t lut_address,
+                            uint8_t dest_portid,
+                            uint8_t *req, size_t *req_size) {
+    DEBUGASSERT(sw->ops->lut_set_req);
+    sw->ops->lut_set_req(sw, unipro_portid, lut_address, dest_portid,
+                         req, req_size);
+}
+
+static void get_lut_get_req(struct tsb_switch *sw,
+                            uint8_t unipro_portid,
+                            uint8_t lut_address,
+                            uint8_t *req, size_t *req_size) {
+    DEBUGASSERT(sw->ops->lut_get_req);
+    sw->ops->lut_get_req(sw, unipro_portid, lut_address, req, req_size);
+}
+
 /*
  * Device ID helpers
  */
@@ -355,6 +373,90 @@ int switch_dme_peer_get(struct tsb_switch *sw,
     return cnf.rc;
 }
 
+/*
+ * Routing table configuration commands
+ */
+
+int switch_lut_set(struct tsb_switch *sw,
+                   uint8_t unipro_portid,
+                   uint8_t lut_address,
+                   uint8_t dest_portid) {
+    int rc;
+    size_t req_size = sw->rdata->ncp_req_max_size;
+    uint8_t req[req_size];
+    struct __attribute__ ((__packed__)) cnf {
+        uint8_t rc;
+        uint8_t function_id;
+
+        /* Two pad bytes are needed to retrieve a couple of fields
+         * returned on ES2 that we don't care about. (We get back null
+         * bytes here on ES3.) */
+        uint8_t padding1;
+        uint8_t padding2;
+    } cnf;
+
+    dbg_verbose("%s(): unipro_portid=%d, lutAddress=%d, destPortId=%d\n",
+                __func__, unipro_portid, lut_address, dest_portid);
+
+    get_lut_set_req(sw, unipro_portid, lut_address, dest_portid,
+                    req, &req_size);
+    rc = ncp_transfer(sw, req, req_size, (uint8_t*)&cnf, sizeof(struct cnf));
+    if (rc) {
+        dbg_error("%s(): unipro_portid=%d, destPortId=%d failed: rc=%d\n",
+                  __func__, unipro_portid, dest_portid, rc);
+        return rc;
+    }
+
+    if (cnf.function_id != NCP_LUTSETCNF) {
+        dbg_error("%s(): unexpected CNF 0x%x\n", __func__, cnf.function_id);
+        return -EPROTO;
+    }
+
+    dbg_verbose("%s(): fid=0x%02x, rc=%u\n",
+                __func__, cnf.function_id, cnf.rc);
+
+    return cnf.rc;
+
+}
+
+int switch_lut_get(struct tsb_switch *sw,
+                   uint8_t unipro_portid,
+                   uint8_t lut_address,
+                   uint8_t *dest_portid) {
+    int rc;
+    size_t req_size = sw->rdata->ncp_req_max_size;
+    uint8_t req[req_size];
+    struct __attribute__ ((__packed__)) cnf {
+        uint8_t rc;
+        uint8_t function_id;
+        uint8_t padding;  /* for a "don't care" field on ES2 */
+        uint8_t dest_portid;
+    } cnf;
+
+    dbg_verbose("%s(): unipro_portid=%d, lutAddress=%d, destPortId=%d\n",
+                __func__, unipro_portid, lut_address, *dest_portid);
+
+    get_lut_get_req(sw, unipro_portid, lut_address, req, &req_size);
+    rc = ncp_transfer(sw, req, req_size, (uint8_t*)&cnf, sizeof(struct cnf));
+    if (rc) {
+        dbg_error("%s(): unipro_portid=%d, destPortId=%d failed: rc=%d\n",
+                  __func__, unipro_portid, *dest_portid, rc);
+        return rc;
+    }
+
+    if (cnf.function_id != NCP_LUTGETCNF) {
+        dbg_error("%s(): unexpected CNF 0x%x\n", __func__, cnf.function_id);
+        return -EPROTO;
+    }
+
+    *dest_portid = cnf.dest_portid;
+
+    dbg_verbose("%s(): fid=0x%02x, rc=%u, portID=%u\n", __func__,
+                cnf.function_id, cnf.rc, cnf.dest_portid);
+
+    return cnf.rc;
+}
+
 int switch_port_irq_enable(struct tsb_switch *sw,
                            uint8_t portid,
                            bool enable) {
@@ -362,29 +464,6 @@ int switch_port_irq_enable(struct tsb_switch *sw,
         return -EOPNOTSUPP;
     }
     return sw->ops->port_irq_enable(sw, portid, enable);
-}
-
-/*
- * Routing table configuration commands
- */
-int switch_lut_set(struct tsb_switch *sw,
-                   uint8_t unipro_portid,
-                   uint8_t addr,
-                   uint8_t dst_portid) {
-    if (!sw->ops->lut_set) {
-        return -EOPNOTSUPP;
-    }
-    return sw->ops->lut_set(sw, unipro_portid, addr, dst_portid);
-}
-
-int switch_lut_get(struct tsb_switch *sw,
-                   uint8_t unipro_portid,
-                   uint8_t addr,
-                   uint8_t *dst_portid) {
-    if (!sw->ops->lut_get) {
-        return -EOPNOTSUPP;
-    }
-    return sw->ops->lut_get(sw, unipro_portid, addr, dst_portid);
 }
 
 int switch_set_valid_device(struct tsb_switch *sw,

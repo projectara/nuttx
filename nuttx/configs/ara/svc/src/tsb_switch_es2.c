@@ -1087,96 +1087,37 @@ static void es2_dme_peer_get_req(struct tsb_switch *sw,
     *req_size = sizeof(peer_get);
 }
 
-static int es2_lut_set(struct tsb_switch *sw,
-                       uint8_t unipro_portid,
-                       uint8_t lut_address,
-                       uint8_t dest_portid)
-{
-    int rc;
-
-    uint8_t req[] = {
+static void es2_lut_set_req(struct tsb_switch *sw,
+                            uint8_t unipro_portid,
+                            uint8_t lut_address,
+                            uint8_t dest_portid,
+                            uint8_t *req, size_t *req_size) {
+    uint8_t lut_set[] = {
         SWITCH_DEVICE_ID,
         lut_address,
         NCP_LUTSETREQ,
         unipro_portid,
         dest_portid
     };
-
-    struct __attribute__ ((__packed__)) cnf {
-        uint8_t rc;
-        uint8_t function_id;
-        uint8_t portid;
-        uint8_t reserved;
-    } cnf;
-
-    dbg_verbose("%s(): unipro_portid=%d, lutAddress=%d, destPortId=%d\n",
-                __func__, unipro_portid, lut_address, dest_portid);
-
-    rc = es2_ncp_transfer(sw, req, sizeof(req), (uint8_t *) &cnf,
-                          sizeof(struct cnf));
-    if (rc) {
-        dbg_error("%s(): unipro_portid=%d, destPortId=%d failed: rc=%d\n",
-                  __func__, unipro_portid, dest_portid, rc);
-        return rc;
-    }
-
-    if (cnf.function_id != NCP_LUTSETCNF) {
-        dbg_error("%s(): unexpected CNF 0x%x\n", __func__, cnf.function_id);
-        return -EPROTO;
-    }
-
-    dbg_verbose("%s(): fid=0x%02x, rc=%u, portID=%u\n",
-                __func__, cnf.function_id, cnf.rc, cnf.portid);
-
-    /* Return resultCode */
-    return cnf.rc;
+    DEBUGASSERT(*req_size >= sizeof(lut_set));
+    memcpy(req, lut_set, sizeof(lut_set));
+    *req_size = sizeof(lut_set);
 }
 
-static int es2_lut_get(struct tsb_switch *sw,
-                       uint8_t unipro_portid,
-                       uint8_t lut_address,
-                       uint8_t *dest_portid)
-{
-    int rc;
-
-    uint8_t req[] = {
+static void es2_lut_get_req(struct tsb_switch *sw,
+                            uint8_t unipro_portid,
+                            uint8_t lut_address,
+                            uint8_t *req, size_t *req_size) {
+    uint8_t lut_get[] = {
         SWITCH_DEVICE_ID,
         lut_address,
         NCP_LUTGETREQ,
         unipro_portid,
         NCP_RESERVED,
     };
-
-    struct __attribute__ ((__packed__)) cnf {
-        uint8_t rc;
-        uint8_t function_id;
-        uint8_t portid;
-        uint8_t dest_portid;
-    } cnf;
-
-    dbg_verbose("%s(): unipro_portid=%d, lutAddress=%d, destPortId=%d\n",
-                __func__, unipro_portid, lut_address, *dest_portid);
-
-    rc = es2_ncp_transfer(sw, req, sizeof(req), (uint8_t *) &cnf,
-                          sizeof(struct cnf));
-    if (rc) {
-        dbg_error("%s(): unipro_portid=%d, destPortId=%d failed: rc=%d\n",
-                  __func__, unipro_portid, *dest_portid, rc);
-        return rc;
-    }
-
-    if (cnf.function_id != NCP_LUTGETCNF) {
-        dbg_error("%s(): unexpected CNF 0x%x\n", __func__, cnf.function_id);
-        return -EPROTO;
-    }
-
-    *dest_portid = cnf.dest_portid;
-
-    dbg_verbose("%s(): fid=0x%02x, rc=%u, portID=%u\n", __func__,
-                cnf.function_id, cnf.rc, cnf.dest_portid);
-
-    /* Return resultCode */
-    return cnf.rc;
+    DEBUGASSERT(*req_size >= sizeof(lut_get));
+    memcpy(req, lut_get, sizeof(lut_get));
+    *req_size = sizeof(lut_get);
 }
 
  /**
@@ -1716,8 +1657,9 @@ static struct tsb_switch_ops es2_ops = {
     .peer_set_req          = es2_dme_peer_set_req,
     .peer_get_req          = es2_dme_peer_get_req,
 
-    .lut_set               = es2_lut_set,
-    .lut_get               = es2_lut_get,
+    .lut_set_req           = es2_lut_set_req,
+    .lut_get_req           = es2_lut_get_req,
+
     .set_valid_device      = es2_set_valid_device,
     .dump_routing_table    = es2_dump_routing_table,
 

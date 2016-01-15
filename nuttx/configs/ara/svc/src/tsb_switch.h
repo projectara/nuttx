@@ -311,19 +311,20 @@ struct tsb_switch_ops {
                          uint16_t attrid,
                          uint16_t select_index,
                          uint8_t *req, size_t *req_size);
+    void (*lut_set_req)(struct tsb_switch *sw,
+                        uint8_t unipro_portid,
+                        uint8_t lut_address,
+                        uint8_t dest_portid,
+                        uint8_t *req, size_t *req_size);
+    void (*lut_get_req)(struct tsb_switch *sw,
+                        uint8_t unipro_portid,
+                        uint8_t lut_address,
+                        uint8_t *req, size_t *req_size);
 
     int (*port_irq_enable)(struct tsb_switch *sw,
                            uint8_t port_id,
                            bool enable);
 
-    int (*lut_set)(struct tsb_switch *,
-                   uint8_t unipro_portid,
-                   uint8_t addr,
-                   uint8_t dst_portid);
-    int (*lut_get)(struct tsb_switch *,
-                   uint8_t unipro_portid,
-                   uint8_t addr,
-                   uint8_t *dst_portid);
     int (*set_valid_device)(struct tsb_switch *sw,
                             uint8_t port_id,
                             uint8_t device_id,
