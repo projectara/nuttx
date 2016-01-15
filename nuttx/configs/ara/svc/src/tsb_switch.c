@@ -143,6 +143,21 @@ static void get_lut_get_req(struct tsb_switch *sw,
     sw->ops->lut_get_req(sw, unipro_portid, lut_address, req, req_size);
 }
 
+static void get_switch_attr_get_req(struct tsb_switch *sw,
+                                    uint16_t attrid,
+                                    uint8_t *req, size_t *req_size) {
+    DEBUGASSERT(sw->ops->switch_attr_get_req);
+    sw->ops->switch_attr_get_req(sw, attrid, req, req_size);
+}
+
+static void get_switch_attr_set_req(struct tsb_switch *sw,
+                                    uint16_t attrid,
+                                    uint32_t val,
+                                    uint8_t *req, size_t *req_size) {
+    DEBUGASSERT(sw->ops->switch_attr_set_req);
+    sw->ops->switch_attr_set_req(sw, attrid, val, req, req_size);
+}
+
 /*
  * Device ID helpers
  */
@@ -457,6 +472,74 @@ int switch_lut_get(struct tsb_switch *sw,
     return cnf.rc;
 }
 
+/*
+ * Switch attribute accessors
+ */
+
+int switch_internal_getattr(struct tsb_switch *sw,
+                            uint16_t attrid,
+                            uint32_t *val) {
+    int rc;
+    size_t req_size = sw->rdata->ncp_req_max_size;
+    uint8_t req[req_size];
+    struct __attribute__ ((__packed__)) cnf {
+        uint8_t rc;
+        uint8_t function_id;
+        uint32_t attr_val;
+    } cnf;
+
+    dbg_verbose("%s(): attrId=0x%04x\n", __func__, attrid);
+
+    get_switch_attr_get_req(sw, attrid, req, &req_size);
+    rc = ncp_transfer(sw, req, req_size, (uint8_t*)&cnf, sizeof(struct cnf));
+    if (rc) {
+        dbg_error("%s(): attrId=0x%04x failed: rc=%d\n", __func__, attrid, rc);
+        return rc;
+    }
+
+    if (cnf.function_id != NCP_SWITCHATTRGETCNF) {
+        dbg_error("%s(): unexpected CNF 0x%x\n", __func__, cnf.function_id);
+        return -EPROTO;
+    }
+
+    *val = be32_to_cpu(cnf.attr_val);
+    dbg_verbose("%s(): fid=0x%02x, rc=%u, attr(0x%04x)=0x%04x\n",
+                __func__, cnf.function_id, cnf.rc, attrid, *val);
+
+    return cnf.rc;
+}
+
+int switch_internal_setattr(struct tsb_switch *sw,
+                            uint16_t attrid,
+                            uint32_t val) {
+    int rc;
+    size_t req_size = sw->rdata->ncp_req_max_size;
+    uint8_t req[req_size];
+    struct __attribute__ ((__packed__)) cnf {
+        uint8_t rc;
+        uint8_t function_id;
+    } cnf;
+
+    dbg_verbose("%s(): attrId=0x%04x\n", __func__, attrid);
+
+    get_switch_attr_set_req(sw, attrid, val, req, &req_size);
+    rc = ncp_transfer(sw, req, req_size, (uint8_t*)&cnf, sizeof(struct cnf));
+    if (rc) {
+        dbg_error("%s(): attrId=0x%04x failed: rc=%d\n", __func__, attrid, rc);
+        return rc;
+    }
+
+    if (cnf.function_id != NCP_SWITCHATTRSETCNF) {
+        dbg_error("%s(): unexpected CNF 0x%x\n", __func__, cnf.function_id);
+        return -EPROTO;
+    }
+
+    dbg_verbose("%s(): fid=0x%02x, rc=%u, attr(0x%04x)=0x%04x\n",
+                __func__, cnf.function_id, cnf.rc, attrid, val);
+
+    return cnf.rc;
+}
+
 int switch_port_irq_enable(struct tsb_switch *sw,
                            uint8_t portid,
                            bool enable) {
@@ -685,27 +768,6 @@ int switch_dev_id_mask_set(struct tsb_switch *sw,
         return -EOPNOTSUPP;
     }
     return sw->ops->dev_id_mask_set(sw, unipro_portid, mask);
-}
-
-/*
- * Switch internal configuration commands
- */
-int switch_internal_getattr(struct tsb_switch *sw,
-                            uint16_t attrid,
-                            uint32_t *val) {
-    if (!sw->ops->switch_attr_get) {
-        return -EOPNOTSUPP;
-    }
-    return sw->ops->switch_attr_get(sw, attrid, val);
-}
-
-int switch_internal_setattr(struct tsb_switch *sw,
-                            uint16_t attrid,
-                            uint32_t val) {
-    if (!sw->ops->switch_attr_set) {
-        return -EOPNOTSUPP;
-    }
-    return sw->ops->switch_attr_set(sw, attrid, val);
 }
 
 static int switch_internal_set_id(struct tsb_switch *sw,

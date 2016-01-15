@@ -1358,13 +1358,11 @@ static int es2_dev_id_mask_get(struct tsb_switch *sw,
     return cnf.rc;
 }
 
-static int es2_switch_attr_set(struct tsb_switch *sw,
-                               uint16_t attrid,
-                               uint32_t val)
-{
-    int rc;
-
-    uint8_t req[] = {
+static void es2_switch_attr_set_req(struct tsb_switch *sw,
+                                    uint16_t attrid,
+                                    uint32_t val,
+                                    uint8_t *req, size_t *req_size) {
+    uint8_t switch_attr_set[] = {
         SWITCH_DEVICE_ID,
         NCP_RESERVED,
         NCP_SWITCHATTRSETREQ,
@@ -1375,71 +1373,24 @@ static int es2_switch_attr_set(struct tsb_switch *sw,
         ((val >> 8) & 0xff),
         (val & 0xff)
     };
-
-    struct __attribute__ ((__packed__)) cnf {
-        uint8_t rc;
-        uint8_t function_id;
-    } cnf;
-
-    dbg_verbose("%s(): attrId=0x%04x\n", __func__, attrid);
-
-    rc = es2_ncp_transfer(sw, req, sizeof(req), (uint8_t *) &cnf,
-                          sizeof(struct cnf));
-    if (rc) {
-        dbg_error("%s(): attrId=0x%04x failed: rc=%d\n", __func__, attrid, rc);
-        return rc;
-    }
-
-    if (cnf.function_id != NCP_SWITCHATTRSETCNF) {
-        dbg_error("%s(): unexpected CNF 0x%x\n", __func__, cnf.function_id);
-        return -EPROTO;
-    }
-
-    dbg_verbose("%s(): fid=0x%02x, rc=%u, attr(0x%04x)=0x%04x\n",
-                __func__, cnf.function_id, cnf.rc, attrid, val);
-
-    return cnf.rc;
+    DEBUGASSERT(*req_size >= sizeof(switch_attr_set));
+    memcpy(req, switch_attr_set, sizeof(switch_attr_set));
+    *req_size = sizeof(switch_attr_set);
 }
 
-static int es2_switch_attr_get(struct tsb_switch *sw,
-                               uint16_t attrid,
-                               uint32_t *val)
-{
-    int rc;
-
-    uint8_t req[] = {
+static void es2_switch_attr_get_req(struct tsb_switch *sw,
+                                    uint16_t attrid,
+                                    uint8_t *req, size_t *req_size) {
+    uint8_t switch_attr_get[] = {
         SWITCH_DEVICE_ID,
         NCP_RESERVED,
         NCP_SWITCHATTRGETREQ,
         (attrid & 0xFF00) >> 8,
         (attrid & 0xFF),
     };
-
-    struct __attribute__ ((__packed__)) cnf {
-        uint8_t rc;
-        uint8_t function_id;
-        uint32_t attr_val;
-    } cnf;
-
-    dbg_verbose("%s(): attrId=0x%04x\n", __func__, attrid);
-
-    rc = es2_ncp_transfer(sw, req, sizeof(req), (uint8_t *) &cnf,
-                          sizeof(struct cnf));
-    if (rc) {
-        dbg_error("%s(): attrId=0x%04x failed: rc=%d\n", __func__, attrid, rc);
-        return rc;
-    }
-
-    if (cnf.function_id != NCP_SWITCHATTRGETCNF) {
-        dbg_error("%s(): unexpected CNF 0x%x\n", __func__, cnf.function_id);
-        return -EPROTO;
-    }
-
-    *val = be32_to_cpu(cnf.attr_val);
-    dbg_verbose("%s(): fid=0x%02x, rc=%u, attr(0x%04x)=0x%04x\n",
-                __func__, cnf.function_id, cnf.rc, attrid, *val);
-
-    return cnf.rc;
+    DEBUGASSERT(*req_size >= sizeof(switch_attr_get));
+    memcpy(req, switch_attr_get, sizeof(switch_attr_get));
+    *req_size = sizeof(switch_attr_get);
 }
 
 static int es2_switch_id_set(struct tsb_switch *sw,
@@ -1660,6 +1611,9 @@ static struct tsb_switch_ops es2_ops = {
     .lut_set_req           = es2_lut_set_req,
     .lut_get_req           = es2_lut_get_req,
 
+    .switch_attr_get_req   = es2_switch_attr_get_req,
+    .switch_attr_set_req   = es2_switch_attr_set_req,
+
     .set_valid_device      = es2_set_valid_device,
     .dump_routing_table    = es2_dump_routing_table,
 
@@ -1671,8 +1625,6 @@ static struct tsb_switch_ops es2_ops = {
 
     .port_irq_enable       = es2_port_irq_enable,
 
-    .switch_attr_get       = es2_switch_attr_get,
-    .switch_attr_set       = es2_switch_attr_set,
     .switch_id_set         = es2_switch_id_set,
 
     .qos_attr_set          = es2_qos_attr_set,

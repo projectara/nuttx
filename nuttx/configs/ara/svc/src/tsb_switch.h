@@ -320,6 +320,13 @@ struct tsb_switch_ops {
                         uint8_t unipro_portid,
                         uint8_t lut_address,
                         uint8_t *req, size_t *req_size);
+    void (*switch_attr_get_req)(struct tsb_switch *sw,
+                               uint16_t attrid,
+                               uint8_t *req, size_t *req_size);
+    void (*switch_attr_set_req)(struct tsb_switch *sw,
+                               uint16_t attrid,
+                               uint32_t val,
+                               uint8_t *req, size_t *req_size);
 
     int (*port_irq_enable)(struct tsb_switch *sw,
                            uint8_t port_id,
@@ -330,12 +337,6 @@ struct tsb_switch_ops {
                             uint8_t device_id,
                             bool valid);
     int (*dump_routing_table)(struct tsb_switch*);
-    int (*switch_attr_get)(struct tsb_switch *,
-                           uint16_t attrid,
-                           uint32_t *val);
-    int (*switch_attr_set)(struct tsb_switch *,
-                           uint16_t attrid,
-                           uint32_t val);
     int (*switch_id_set)(struct tsb_switch *,
                          uint8_t cportid,
                          uint8_t peer_cportid,
