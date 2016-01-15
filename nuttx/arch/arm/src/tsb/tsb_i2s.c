@@ -1672,26 +1672,26 @@ static int tsb_i2s_extract_resources(struct device *dev,
 {
     struct device_resource *r;
 
-    r = device_resource_get_by_name(dev, DEVICE_RESOURCE_TYPE_REGS,
+    r = device_resource_get_by_name(dev, DEVICE_RESOURCE_TYPE_REG,
                                     "cg_bridge");
     if (!r)
         return -EINVAL;
 
     info->cg_base = r->start;
 
-    r = device_resource_get_by_name(dev, DEVICE_RESOURCE_TYPE_REGS, "i2slp_sc");
+    r = device_resource_get_by_name(dev, DEVICE_RESOURCE_TYPE_REG, "i2slp_sc");
     if (!r)
         return -EINVAL;
 
     info->sc_base = r->start;
 
-    r = device_resource_get_by_name(dev, DEVICE_RESOURCE_TYPE_REGS, "i2slp_so");
+    r = device_resource_get_by_name(dev, DEVICE_RESOURCE_TYPE_REG, "i2slp_so");
     if (!r)
         return -EINVAL;
 
     info->so_base = r->start;
 
-    r = device_resource_get_by_name(dev, DEVICE_RESOURCE_TYPE_REGS, "i2slp_si");
+    r = device_resource_get_by_name(dev, DEVICE_RESOURCE_TYPE_REG, "i2slp_si");
     if (!r)
         return -EINVAL;
 

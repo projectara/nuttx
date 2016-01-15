@@ -426,7 +426,7 @@ static int tsb_pwm_op_activate(struct device *dev, uint16_t which)
 
     /* Get register base by specific generator of name */
     sprintf(string, "pwm%u", which);
-    r = device_resource_get_by_name(dev, DEVICE_RESOURCE_TYPE_REGS, string);
+    r = device_resource_get_by_name(dev, DEVICE_RESOURCE_TYPE_REG, string);
     if (!r) {
         ret = -EINVAL;
         goto err_resc;
@@ -1029,7 +1029,7 @@ static int tsb_pwm_dev_probe(struct device *dev)
        return -ENOMEM;
     }
 
-    r = device_resource_get_by_name(dev, DEVICE_RESOURCE_TYPE_REGS, "pwm_base");
+    r = device_resource_get_by_name(dev, DEVICE_RESOURCE_TYPE_REG, "pwm_base");
     if (!r) {
         ret = -EINVAL;
         lldbg("get pwm_base error!\n");

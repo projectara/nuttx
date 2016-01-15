@@ -57,7 +57,7 @@
 static struct device_resource tsb_plla_resources[] = {
     {
         .name   = "reg_base",
-        .type   = DEVICE_RESOURCE_TYPE_REGS,
+        .type   = DEVICE_RESOURCE_TYPE_REG,
         .start  = SYSCTL_BASE + TSB_PLLA_CG_BRIDGE_OFFSET,
         .count  = TSB_PLLA_SIZE,
     },
@@ -68,19 +68,19 @@ static struct device_resource tsb_plla_resources[] = {
 static struct device_resource tsb_pwm_resources[] = {
     {
         .name   = "pwm_base",
-        .type   = DEVICE_RESOURCE_TYPE_REGS,
+        .type   = DEVICE_RESOURCE_TYPE_REG,
         .start  = TSB_PWM_BASE,
         .count  = 1,
     },
     {
         .name   = "pwm0",
-        .type   = DEVICE_RESOURCE_TYPE_REGS,
+        .type   = DEVICE_RESOURCE_TYPE_REG,
         .start  = TSB_PWM0,
         .count  = 20,
     },
     {
         .name   = "pwm1",
-        .type   = DEVICE_RESOURCE_TYPE_REGS,
+        .type   = DEVICE_RESOURCE_TYPE_REG,
         .start  = TSB_PWM1,
         .count  = 20,
     },
@@ -97,25 +97,25 @@ static struct device_resource tsb_pwm_resources[] = {
 static struct device_resource tsb_i2s_resources_0[] = {
     {
         .name   = "cg_bridge",
-        .type   = DEVICE_RESOURCE_TYPE_REGS,
+        .type   = DEVICE_RESOURCE_TYPE_REG,
         .start  = SYSCTL_BASE,
         .count  = SYSCTL_SIZE,
     },
     {
         .name   = "i2slp_sc",
-        .type   = DEVICE_RESOURCE_TYPE_REGS,
+        .type   = DEVICE_RESOURCE_TYPE_REG,
         .start  = I2SLP_SC_BASE,
         .count  = I2SLP_SC_SIZE,
     },
     {
         .name   = "i2slp_so",
-        .type   = DEVICE_RESOURCE_TYPE_REGS,
+        .type   = DEVICE_RESOURCE_TYPE_REG,
         .start  = I2SLP_SO_BASE,
         .count  = I2SLP_SO_SIZE,
     },
     {
         .name   = "i2slp_si",
-        .type   = DEVICE_RESOURCE_TYPE_REGS,
+        .type   = DEVICE_RESOURCE_TYPE_REG,
         .start  = I2SLP_SI_BASE,
         .count  = I2SLP_SI_SIZE,
     },
@@ -150,7 +150,7 @@ static struct device_resource tsb_i2s_resources_0[] = {
 static struct device_resource tsb_spi_resources[] = {
     {
         .name   = "reg_base",
-        .type   = DEVICE_RESOURCE_TYPE_REGS,
+        .type   = DEVICE_RESOURCE_TYPE_REG,
         .start  = SPI_BASE,
         .count  = SPI_SIZE,
     },
@@ -161,7 +161,7 @@ static struct device_resource tsb_spi_resources[] = {
 static struct device_resource tsb_uart_resources[] = {
     {
         .name   = "reg_base",
-        .type   = DEVICE_RESOURCE_TYPE_REGS,
+        .type   = DEVICE_RESOURCE_TYPE_REG,
         .start  = UART_BASE,
         .count  = UART_SIZE,
     },
@@ -178,7 +178,7 @@ static struct device_resource tsb_uart_resources[] = {
 static struct device_resource tsb_gdmac_resources[] = {
     {
         .name   = "reg_base",
-        .type   = DEVICE_RESOURCE_TYPE_REGS,
+        .type   = DEVICE_RESOURCE_TYPE_REG,
         .start  = GDMAC_BASE,
         .count  = GDMAC_SIZE,
     },
@@ -195,7 +195,7 @@ static struct device_resource tsb_gdmac_resources[] = {
 static struct device_resource tsb_sdio_resources[] = {
     {
         .name   = "sdio_reg_base",
-        .type   = DEVICE_RESOURCE_TYPE_REGS,
+        .type   = DEVICE_RESOURCE_TYPE_REG,
         .start  = UHSSD_BASE,
         .count  = UHSSD_SIZE,
     },

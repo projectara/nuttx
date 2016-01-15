@@ -537,7 +537,7 @@ static int tsb_spi_dev_probe(struct device *dev)
         return -ENOMEM;
     }
     /* get register data from resource block */
-    r = device_resource_get_by_name(dev, DEVICE_RESOURCE_TYPE_REGS, "reg_base");
+    r = device_resource_get_by_name(dev, DEVICE_RESOURCE_TYPE_REG, "reg_base");
     if (!r) {
         ret = -EINVAL;
         goto err_freemem;

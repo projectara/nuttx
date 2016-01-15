@@ -299,7 +299,7 @@ static int tsb_pll_extract_resources(struct device *dev,
 
     struct device_resource *r;
 
-    r = device_resource_get_by_name(dev, DEVICE_RESOURCE_TYPE_REGS, "reg_base");
+    r = device_resource_get_by_name(dev, DEVICE_RESOURCE_TYPE_REG, "reg_base");
     if (!r)
         return -EINVAL;
 

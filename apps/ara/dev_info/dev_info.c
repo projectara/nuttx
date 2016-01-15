@@ -90,7 +90,7 @@ static struct {
     char                        *restype_str;
 } restype_to_str[] = {
     {
-        .restype        = DEVICE_RESOURCE_TYPE_REGS,
+        .restype        = DEVICE_RESOURCE_TYPE_REG,
         .restype_str    = "REG",
     },
     {
