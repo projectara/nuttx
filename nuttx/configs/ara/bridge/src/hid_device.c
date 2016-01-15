@@ -60,11 +60,9 @@ static int hid_dev_get_report_length(struct device *dev, uint8_t report_type,
     int ret = 0, i;
 
     /* check input parameters */
-    if (!dev || !dev->private) {
+    if (!dev || !(info = device_get_private(dev))) {
         return -EINVAL;
     }
-
-    info = device_get_private(dev);
 
     /* lookup the hid_size_info table to find the report size */
     for (i = 0; i < info->num_ids; i++) {
@@ -88,11 +86,9 @@ static int hid_dev_power_on(struct device *dev)
     int ret = 0;
 
     /* check input parameters */
-    if (!dev || !dev->private) {
+    if (!dev || !(info = device_get_private(dev))) {
         return -EINVAL;
     }
-
-    info = device_get_private(dev);
 
     sem_wait(&info->lock);
 
@@ -137,11 +133,9 @@ static int hid_dev_power_off(struct device *dev)
     int ret = 0;
 
     /* check input parameters */
-    if (!dev || !dev->private) {
+    if (!dev || !(info = device_get_private(dev))) {
         return -EINVAL;
     }
-
-    info = device_get_private(dev);
 
     sem_wait(&info->lock);
 
@@ -184,11 +178,9 @@ static int hid_dev_get_desc(struct device *dev, struct hid_descriptor *desc)
     int ret = 0;
 
     /* check input parameters */
-    if (!dev || !dev->private || !desc) {
+    if (!dev || !(info = device_get_private(dev))) {
         return -EINVAL;
     }
-
-    info = device_get_private(dev);
 
     sem_wait(&info->lock);
 
@@ -219,11 +211,9 @@ static int hid_dev_get_report_desc(struct device *dev, uint8_t *desc)
     int ret = 0;
 
     /* check input parameters */
-    if (!dev || !dev->private || !desc) {
+    if (!desc || !dev || !(info = device_get_private(dev))) {
         return -EINVAL;
     }
-
-    info = device_get_private(dev);
 
     sem_wait(&info->lock);
 
@@ -258,11 +248,9 @@ static int hid_dev_get_maximum_report_length(struct device *dev,
     int i = 0, maxlen = 0, id = 0;
 
     /* check input parameters */
-    if (!dev || !dev->private) {
+    if (!dev || !(info = device_get_private(dev))) {
         return -EINVAL;
     }
-
-    info = device_get_private(dev);
 
     /* lookup the hid_size_info table to find the max report size
      * in specific Report type  */
@@ -302,11 +290,9 @@ static int hid_dev_get_report(struct device *dev, uint8_t report_type,
     int ret = 0;
 
     /* check input parameters */
-    if (!dev || !dev->private || !data) {
+    if (!data || !dev || !(info = device_get_private(dev))) {
         return -EINVAL;
     }
-
-    info = device_get_private(dev);
 
     sem_wait(&info->lock);
 
@@ -350,11 +336,9 @@ static int hid_dev_set_report(struct device *dev, uint8_t report_type,
     int ret = 0;
 
     /* check input parameters */
-    if (!dev || !dev->private || !data) {
+    if (!data || !dev || !(info = device_get_private(dev))) {
         return -EINVAL;
     }
-
-    info = device_get_private(dev);
 
     sem_wait(&info->lock);
 
@@ -395,11 +379,9 @@ static int hid_dev_register_callback(struct device *dev,
     struct hid_info *info = NULL;
 
     /* check input parameters */
-    if (!dev || !dev->private || !callback) {
+    if (!callback || !dev || !(info = device_get_private(dev))) {
         return -EINVAL;
     }
-
-    info = device_get_private(dev);
 
     if (!(info->state & HID_DEVICE_FLAG_OPEN)) {
         /* device isn't opened. */
@@ -422,11 +404,9 @@ static int hid_dev_unregister_callback(struct device *dev)
     struct hid_info *info = NULL;
 
     /* check input parameters */
-    if (!dev || !dev->private) {
+    if (!dev || !(info = device_get_private(dev))) {
         return -EINVAL;
     }
-
-    info = device_get_private(dev);
 
     if (!(info->state & HID_DEVICE_FLAG_OPEN)) {
         /* device isn't opened. */
@@ -454,11 +434,9 @@ static int hid_dev_open(struct device *dev)
     int ret = 0;
 
     /* check input parameter */
-    if (!dev || !dev->private) {
+    if (!dev || !(info = device_get_private(dev))) {
         return -EINVAL;
     }
-
-    info = device_get_private(dev);
 
     sem_wait(&info->lock);
 
@@ -506,11 +484,9 @@ static void hid_dev_close(struct device *dev)
     struct hid_info *info = NULL;
 
     /* check input parameter */
-    if (!dev || !dev->private) {
+    if (!dev || !(info = device_get_private(dev))) {
         return;
     }
-
-    info = device_get_private(dev);
 
     sem_wait(&info->lock);
 
@@ -571,7 +547,7 @@ static int hid_dev_probe(struct device *dev)
     hid_dev = dev;
     info->dev = dev;
     info->state = HID_DEVICE_FLAG_PROBE;
-    dev->private = info;
+    device_set_private(dev, info);
 
     info->device_list.prev = &info->device_list;
     info->device_list.next = &info->device_list;
@@ -597,11 +573,9 @@ static void hid_dev_remove(struct device *dev)
     struct hid_info *info = NULL;
 
     /* check input parameter */
-    if (!dev || !dev->private) {
+    if (!dev || !(info = device_get_private(dev))) {
         return;
     }
-
-    info = device_get_private(dev);
 
     if (info->state & HID_DEVICE_FLAG_OPEN) {
         hid_dev_close(dev);
@@ -611,7 +585,7 @@ static void hid_dev_remove(struct device *dev)
     info->state = 0;
     sem_destroy(&info->lock);
 
-    dev->private = NULL;
+    device_set_private(dev, NULL);
     hid_dev = NULL;
     free(info);
 }
