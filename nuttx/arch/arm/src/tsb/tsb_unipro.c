@@ -411,8 +411,26 @@ static int mailbox_evt(void)
     return 0;
 }
 
+static int unipro_enable_mailbox_irq(void)
+{
+    int retval;
+    uint32_t val;
+
+    retval = unipro_attr_local_read(TSB_INTERRUPTENABLE, &val,
+                                    UNIPRO_SELINDEX_NULL);
+    if (retval) {
+        return retval;
+    }
+
+    return unipro_attr_local_write(TSB_INTERRUPTENABLE,
+                                   val | TSB_INTERRUPTSTATUS_MAILBOX,
+                                   UNIPRO_SELINDEX_NULL);
+}
+
 static void unipro_evt_handler(enum unipro_event evt)
 {
+    int retval;
+
     DBG_UNIPRO("UniPro: event %d.\n", evt);
 
     switch (evt) {
@@ -423,26 +441,17 @@ static void unipro_evt_handler(enum unipro_event evt)
     case UNIPRO_EVT_LUP_DONE:
         if (tsb_get_rev_id() == tsb_rev_es2)
             es2_apply_mphy_fixup();
+
+        retval = unipro_enable_mailbox_irq();
+        if (retval) {
+            lowsyslog("unipro: failed to enable mailbox irq\n");
+        }
         break;
     }
 
     if (evt_handler) {
         evt_handler(evt);
     }
-}
-
-static int unipro_enable_mailbox_irq(void)
-{
-    int retval;
-    uint32_t val;
-
-    retval = unipro_attr_local_read(TSB_INTERRUPTENABLE, &val, 0);
-    if (retval) {
-        return retval;
-    }
-
-    return unipro_attr_local_write(TSB_INTERRUPTENABLE,
-                                   val | TSB_INTERRUPTSTATUS_MAILBOX, 0);
 }
 
 static int irq_unipro(int irq, void *context) {
@@ -469,16 +478,6 @@ static int irq_unipro(int irq, void *context) {
     }
 
 done:
-    /**
-     * XXX: This hack is for ES3 modules where the mailbox IRQs gets disabled
-     * after the initial mailbox handshake.
-     * This issue is not affecting ES2 based modules.
-     */
-    rc = unipro_enable_mailbox_irq();
-    if (rc) {
-        lowsyslog("unipro: failed to enable mailbox irq\n");
-    }
-
     return 0;
 }
 
@@ -804,13 +803,6 @@ void unipro_init(void)
         unipro_write(CPB_RX_E2EFC_EN_1, 0x0);
     }
 
-    /*
-     * Enable the mailbox interrupt
-     */
-    retval = unipro_attr_local_write(TSB_INTERRUPTENABLE, 0x1 << 15, 0);
-    if (retval) {
-        lldbg("Failed to enable mailbox interrupt\n");
-    }
     irq_attach(TSB_IRQ_UNIPRO, irq_unipro);
     up_enable_irq(TSB_IRQ_UNIPRO);
 
