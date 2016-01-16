@@ -329,8 +329,8 @@ static inline enum device_resource_type device_resource_get_type(
  * @param idx Index of the device resource to be returned
  * @return The device's device resource
  */
-static inline char *device_resource_get_start(struct device *dev,
-                                              unsigned int idx)
+static inline uint32_t device_resource_get_start(struct device *dev,
+                                                 unsigned int idx)
 {
     return dev->resources[idx].start;
 }
@@ -341,8 +341,8 @@ static inline char *device_resource_get_start(struct device *dev,
  * @param idx Index of the device resource to be returned
  * @return The device's device resource
  */
-static inline char *device_resource_get_count(struct device *dev,
-                                              unsigned int idx)
+static inline unsigned int device_resource_get_count(struct device *dev,
+                                                     unsigned int idx)
 {
     return dev->resources[idx].count;
 }
