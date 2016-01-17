@@ -99,8 +99,8 @@ static struct gb_operation_handler gb_vibrator_handlers[] = {
 };
 
 static struct gb_driver gb_vibrator_driver = {
-        .op_handlers = gb_vibrator_handlers,
-        .op_handlers_count = ARRAY_SIZE(gb_vibrator_handlers),
+    .op_handlers = gb_vibrator_handlers,
+    .op_handlers_count = ARRAY_SIZE(gb_vibrator_handlers),
 };
 
 void gb_vibrator_register(int cport)
