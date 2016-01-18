@@ -197,7 +197,7 @@ static struct device_resource tsb_gdmac_resources[] = {
 static struct device_resource tsb_atabl_resources[] = {
     {
         .name   = "reg_base",
-        .type   = DEVICE_RESOURCE_TYPE_REGS,
+        .type   = DEVICE_RESOURCE_TYPE_REG,
         .start  = ATABL_BASE,
         .count  = ATABL_SIZE,
     },
