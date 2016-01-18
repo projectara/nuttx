@@ -76,15 +76,14 @@ CSRCS		+= unipro_svc.c
 CSRCS		+= gb_svc.c
 CSRCS		+= ara_key.c
 CSRCS		+= ara_board.c
+CSRCS		+= pwr_mon.c
 
 ifeq ($(CONFIG_ARCH_BOARD_ARA_DB3_SVC),y)
 CSRCS		+= board-db3.c
-CSRCS		+= pwr_mon.c
 endif
 
 ifeq ($(CONFIG_ARCH_BOARD_ARA_EVT1_SVC),y)
 CSRCS		+= board-evt1.c
-CSRCS		+= pwr_mon.c
 endif
 
 ifeq ($(CONFIG_NSH_ARCHINIT),y)

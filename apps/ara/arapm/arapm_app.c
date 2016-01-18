@@ -74,6 +74,7 @@ static ina230_avg_count avg_count;
 static uint32_t timestamp = 0;
 static char separator[512];
 static char header[512];
+static size_t pwrmon_num_devs;
 
 static const char ct_strings[ina230_ct_count + 1][8] = {
     "140us",
@@ -567,6 +568,15 @@ static int arapm_main_init(void)
 
     timestamp = 0;
 
+    /* Init library */
+    ret = pwrmon_init(current_lsb, conversion_time, avg_count,
+                      &pwrmon_num_devs);
+    if (ret) {
+        fprintf(stderr, "%s(): Init failed!!! (%d)\n", __func__, ret);
+        return ret;
+    }
+
+    /* Alloc data structs */
     arapm_rails = zalloc(sizeof(pwrmon_rail **) * pwrmon_num_devs);
     if (arapm_rails == NULL)
         return -ENOMEM;
@@ -596,13 +606,6 @@ static int arapm_main_init(void)
     }
 
     measurements[i] = malloc(sizeof(ina230_sample) * INA230_MAX_DEVS);
-
-    /* Init library */
-    ret = pwrmon_init(current_lsb, conversion_time, avg_count);
-    if (ret) {
-        fprintf(stderr, "Error during initialization!!! (%d)\n", ret);
-        return ret;
-    }
 
     /* Clear pointers and measurements*/
     for (d = 0; d < pwrmon_num_devs; d++) {
@@ -691,16 +694,16 @@ int arapm_main(int argc, char *argv[])
 {
     int ret;
 
-    ret = arapm_main_get_user_options(argc, argv);
-    if (ret) {
-        usage();
-        exit(-EINVAL);
-    }
-
     ret = arapm_main_init();
     if (ret) {
         arapm_main_deinit();
         exit(ret);
+    }
+
+    ret = arapm_main_get_user_options(argc, argv);
+    if (ret) {
+        usage();
+        exit(-EINVAL);
     }
 
     printf("\nGetting power measurements...\n\n");

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Google Inc.
+ * Copyright (c) 2016 Google Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,7 +34,6 @@
 
 #define DBG_COMP ARADBG_POWER
 
-#include <pwr_mon.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -46,10 +45,12 @@
 
 #include <ara_debug.h>
 #include "ara_board.h"
+#include "pwr_mon.h"
 
 #define INVALID_I2C_ADDR            0xFF
 #define INA230_SHUNT_VALUE          2 /* mohm */
 
+static pwrmon_board_info *board_info;
 static struct i2c_dev_s *i2c_dev;
 static uint32_t pwrmon_current_lsb;
 static ina230_conversion_time pwrmon_ct;
@@ -63,11 +64,12 @@ static int current_dev;
  */
 const char *pwrmon_dev_name(uint8_t dev)
 {
-    if (dev >= pwrmon_num_devs) {
+    if (!board_info ||
+        dev >= board_info->num_devs) {
         return NULL;
     }
 
-    return pwrmon_devs[dev].name;
+    return board_info->devs[dev].name;
 }
 
 /**
@@ -78,11 +80,13 @@ const char *pwrmon_dev_name(uint8_t dev)
  */
 const char *pwrmon_rail_name(uint8_t dev, uint8_t rail)
 {
-    if (dev >= pwrmon_num_devs || rail >= pwrmon_devs[dev].num_rails) {
+    if (!board_info ||
+        dev >= board_info->num_devs ||
+        rail >= board_info->devs[dev].num_rails) {
         return NULL;
     }
 
-    return pwrmon_devs[dev].rails[rail].name;
+    return board_info->devs[dev].rails[rail].name;
 }
 
 /**
@@ -96,9 +100,14 @@ int pwrmon_rail_id(const char *name, uint8_t *dev, uint8_t *rail)
 {
     int i, j;
 
-    for (i = 0; i < pwrmon_num_devs; i++) {
-        for (j = 0; j < pwrmon_devs[i].num_rails; j++) {
-            if (strcmp(pwrmon_devs[i].rails[j].name, name) == 0) {
+    if (!board_info) {
+        return -ENODEV;
+    }
+
+    for (i = 0; i < board_info->num_devs; i++) {
+        for (j = 0; j < board_info->devs[i].num_rails; j++) {
+            if (strcmp(board_info->devs[i].rails[j].name,
+                       name) == 0) {
                 *dev = i;
                 *rail = j;
                 dbg_verbose("%s(): name=%s => device=%u rail=%u\n",
@@ -123,8 +132,12 @@ int pwrmon_device_id(const char *name, uint8_t *dev)
 {
     int i;
 
-    for (i = 0; i < pwrmon_num_devs; i++) {
-        if (strcmp(pwrmon_devs[i].name, name) == 0) {
+    if (!board_info) {
+        return -ENODEV;
+    }
+
+    for (i = 0; i < board_info->num_devs; i++) {
+        if (strcmp(board_info->devs[i].name, name) == 0) {
             *dev = i;
             dbg_verbose("%s(): name=%s => device=%u\n", __func__, name, *dev);
 
@@ -149,7 +162,7 @@ static int pwrmon_ina230_select(uint8_t dev)
         return 0;
     }
 
-    status = pwrmon_do_i2c_sel(dev);
+    status = board_info->do_i2c_sel(dev);
     if (status < 0) {
         return status;
     }
@@ -168,11 +181,13 @@ static int pwrmon_ina230_select(uint8_t dev)
  */
 static uint8_t pwrmon_i2c_addr_get(uint8_t dev, uint8_t rail)
 {
-    if (dev >= pwrmon_num_devs || rail >= pwrmon_devs[dev].num_rails) {
+    if (!board_info ||
+        dev >= board_info->num_devs ||
+        rail >= board_info->devs[dev].num_rails) {
         return -EINVAL;
     }
 
-    return pwrmon_devs[dev].rails[rail].i2c_addr;
+    return board_info->devs[dev].rails[rail].i2c_addr;
 }
 
 /**
@@ -182,11 +197,12 @@ static uint8_t pwrmon_i2c_addr_get(uint8_t dev, uint8_t rail)
  */
 int pwrmon_dev_rail_count(uint8_t dev)
 {
-    if (dev >= pwrmon_num_devs) {
+    if (!board_info ||
+        dev >= board_info->num_devs) {
         return -ENODEV;
     }
 
-    return pwrmon_devs[dev].num_rails;
+    return board_info->devs[dev].num_rails;
 }
 
 /**
@@ -199,14 +215,29 @@ int pwrmon_dev_rail_count(uint8_t dev)
  */
 int pwrmon_init(uint32_t current_lsb_uA,
                ina230_conversion_time ct,
-               ina230_avg_count avg_count)
+               ina230_avg_count avg_count,
+               size_t *num_devs)
 {
     dbg_verbose("%s(): Initializing with options lsb=%uuA, ct=%u, avg_count=%u...\n",
                 __func__, current_lsb_uA, ct, avg_count);
+
+    /* Retrieve board specific info */
+    board_info = board_get_pwrmon_info();
+    if (!board_info) {
+        dbg_error("%s(): No pwrmon board info found, aborting\n", __func__);
+        return -ENODEV;
+    }
+
+    if (!board_info->num_devs) {
+        fprintf(stderr, "%s(): No pwrmon device found, aborting\n", __func__);
+        return -ENODEV;
+    }
+
     /* Initialize I2C internal structs */
-    i2c_dev = up_i2cinitialize(pwrmon_i2c_bus);
+    i2c_dev = up_i2cinitialize(board_info->i2c_bus);
     if (!i2c_dev) {
-        dbg_error("%s(): Failed to get I2C bus %u\n", __func__, pwrmon_i2c_bus);
+        dbg_error("%s(): Failed to get I2C bus %u\n", __func__,
+                  board_info->i2c_bus);
         return -ENXIO;
     }
 
@@ -223,10 +254,11 @@ int pwrmon_init(uint32_t current_lsb_uA,
     }
     pwrmon_ct = ct;
     pwrmon_avg_count = avg_count;
+    *num_devs = board_info->num_devs;
 
     current_dev = -1;
 
-    pwrmon_init_i2c_sel();
+    board_info->init_i2c_sel();
 
     dbg_verbose("%s(): done.\n", __func__);
 
@@ -239,10 +271,17 @@ int pwrmon_init(uint32_t current_lsb_uA,
  */
 void pwrmon_deinit(void)
 {
-    pwrmon_reset_i2c_sel();
+    if (!board_info) {
+        return;
+    }
+
+    board_info->reset_i2c_sel();
 
     /* Release I2C resource */
     up_i2cuninitialize(i2c_dev);
+
+    /* Reset pwrmon board info */
+    board_info = NULL;
 
     return;
 }
@@ -273,7 +312,11 @@ pwrmon_rail *pwrmon_init_rail(uint8_t dev, uint8_t rail)
     uint8_t addr;
     int ret;
 
-    if (dev >= pwrmon_num_devs) {
+    if (!board_info) {
+        return NULL;
+    }
+
+    if (dev >= board_info->num_devs) {
         dbg_error("%s(): invalid dev! (%hhu)\n", __func__, dev);
         goto pwrmon_init_device_end;
     }
