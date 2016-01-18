@@ -146,12 +146,6 @@
 #define SVC_SW_SPI_CS_GPIO (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_OUTPUT_SET | \
                             GPIO_PORTB | GPIO_PIN12)
 
-/* Hardware ID pins */
-#define SVC_HWID_0         STM32_GPIO_PIN(GPIO_PORTB | GPIO_PIN5)
-#define SVC_HWID_1         STM32_GPIO_PIN(GPIO_PORTB | GPIO_PIN6)
-#define SVC_HWID_2         STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN12)
-#define SVC_HWID_3         STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN13)
-
 /* VSYS enable */
 #define VSYS_EN1_N         U4550_GPIO_PIN(0)
 #define VSYS_EN2_N         U4550_GPIO_PIN(2)
@@ -208,7 +202,7 @@ static struct vreg_data apb1_vreg_data[] = {
 /* Only APB1 is in use. WD8B is reserved for time sync */
 DECLARE_MODULE_PORT_INTERFACE(apb1, apb1_vreg_data, 3,
                               WD_8A_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_HIGH,
-			      false, 0);
+			                  false, 0);
 
 /*
  * Modules voltage regulator list and interface declarations.
@@ -220,73 +214,73 @@ DECLARE_MODULE_PORT_INTERFACE(apb1, apb1_vreg_data, 3,
  * Take a shortcut until the relevant INA231-related support is in:
  * directly control it via the VSYS_ENx GPIO pins.
  */
-
-static struct vreg_data module_1_vreg_data[] = {
+static struct vreg_data evt1_5_module_1_vreg_data[] = {
     INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN1_N, HOLD_TIME_MODULE),
     INIT_MODULE_CLK_DATA(REFCLK_1_EN),
 };
 
-static struct vreg_data module_2_vreg_data[] = {
+static struct vreg_data evt1_5_module_2_vreg_data[] = {
     INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN2_N, HOLD_TIME_MODULE),
     INIT_MODULE_CLK_DATA(REFCLK_2_EN),
 };
 
-static struct vreg_data module_3A_vreg_data[] = {
+static struct vreg_data evt1_5_module_3A_vreg_data[] = {
     INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN3A_N, HOLD_TIME_MODULE),
     INIT_MODULE_CLK_DATA(REFCLK_3A_EN),
 };
 
-static struct vreg_data module_3B_vreg_data[] = {
+static struct vreg_data evt1_5_module_3B_vreg_data[] = {
     INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN3B_N, HOLD_TIME_MODULE),
     INIT_MODULE_CLK_DATA(REFCLK_3B_EN),
 };
 
-static struct vreg_data module_4A_vreg_data[] = {
+static struct vreg_data evt1_5_module_4A_vreg_data[] = {
     INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN4A_N, HOLD_TIME_MODULE),
     INIT_MODULE_CLK_DATA(REFCLK_4A_EN),
 };
 
-static struct vreg_data module_4B_vreg_data[] = {
+static struct vreg_data evt1_5_module_4B_vreg_data[] = {
     INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN4B_N, HOLD_TIME_MODULE),
     INIT_MODULE_CLK_DATA(REFCLK_4B_EN),
 };
 
-static struct vreg_data module_5_lcd_vreg_data[] = {
+static struct vreg_data evt1_5_module_5_lcd_vreg_data[] = {
     INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN5_N, HOLD_TIME_MODULE),
     INIT_MODULE_CLK_DATA(REFCLK_5_EN),
 };
 
-DECLARE_MODULE_PORT_INTERFACE(module_1, module_1_vreg_data, 13,
+DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_1, evt1_5_module_1_vreg_data, 13,
                               WD_1_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_1);
-DECLARE_MODULE_PORT_INTERFACE(module_2, module_2_vreg_data, 11,
+DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_2, evt1_5_module_2_vreg_data, 11,
                               WD_2_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_2);
-DECLARE_MODULE_PORT_INTERFACE(module_3A, module_3A_vreg_data, 4,
+DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_3A, evt1_5_module_3A_vreg_data, 4,
                               WD_3A_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_3A);
-DECLARE_MODULE_PORT_INTERFACE(module_3B, module_3B_vreg_data, 2,
+DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_3B, evt1_5_module_3B_vreg_data, 2,
                               WD_3B_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_3B);
-DECLARE_MODULE_PORT_INTERFACE(module_4A, module_4A_vreg_data, 6,
+DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_4A, evt1_5_module_4A_vreg_data, 6,
                               WD_4A_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_4A);
-DECLARE_MODULE_PORT_INTERFACE(module_4B, module_4B_vreg_data, 8,
+DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_4B, evt1_5_module_4B_vreg_data, 8,
                               WD_4B_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_4B);
-DECLARE_MODULE_PORT_INTERFACE(module_5_lcd, module_5_lcd_vreg_data, 10,
+DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_5_lcd,
+                              evt1_5_module_5_lcd_vreg_data, 10,
                               WD_5_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_5);
 
-static struct interface *evt1_interfaces[] = {
+static struct interface *evt1_5_interfaces[] = {
     &apb1_interface,
-    &module_1_interface,
-    &module_2_interface,
-    &module_3A_interface,
-    &module_3B_interface,
-    &module_4A_interface,
-    &module_4B_interface,
-    &module_5_lcd_interface,
+    &evt1_5_module_1_interface,
+    &evt1_5_module_2_interface,
+    &evt1_5_module_3A_interface,
+    &evt1_5_module_3B_interface,
+    &evt1_5_module_4A_interface,
+    &evt1_5_module_4B_interface,
+    &evt1_5_module_5_lcd_interface,
 };
 
 /*
@@ -345,33 +339,6 @@ static struct io_expander_info evt1_io_expanders[] = {
 /*
  * Board info, init, and exit
  */
-
-static struct ara_board_info evt1_board_info = {
-    .interfaces = evt1_interfaces,
-    .nr_interfaces = ARRAY_SIZE(evt1_interfaces),
-    .nr_spring_interfaces = 0,
-
-    .sw_data = {
-        .vreg            = &sw_vreg,
-        .gpio_reset      = SVC_RST_SW_GPIO,
-        .gpio_irq        = SW_TO_SVC_INT_GPIO,
-        .irq_rising_edge = false,
-        .rev             = SWITCH_REV_ES3,
-        .bus             = SW_SPI_PORT_2,
-        .spi_cs          = SVC_SW_SPI_CS_GPIO,
-    },
-
-    .io_expanders = evt1_io_expanders,
-    .nr_io_expanders = ARRAY_SIZE(evt1_io_expanders),
-
-    /* TODO pwrmon support */
-    .pwrmon               = NULL,
-
-    .ara_key_gpio         = ARA_KEY,
-    .ara_key_rising_edge  = true,
-    .ara_key_configured   = true,
-};
-
 static struct vreg_data refclk_main_vreg_data[] = {
     INIT_MODULE_CLK_DATA(REFCLK_REQ),
     INIT_MODULE_CLK_DATA(REFCLK_BUFFERS_EN),
@@ -379,48 +346,8 @@ static struct vreg_data refclk_main_vreg_data[] = {
 
 DECLARE_VREG(refclk_main, refclk_main_vreg_data);
 
-void board_exit(void);
-struct ara_board_info *board_init(void) {
-    int i;
+static int evt1_5_board_init(struct ara_board_info *board_info) {
     int rc;
-
-    /* Disable the I/O expanders for now. */
-    stm32_configgpio(SVC_RST_IOEXP1_GPIO);
-    stm32_configgpio(SVC_RST_IOEXP2_GPIO);
-    stm32_gpiowrite(SVC_RST_IOEXP1_GPIO, false);
-    stm32_gpiowrite(SVC_RST_IOEXP2_GPIO, false);
-
-    /*
-     * Register STM32 GPIOs to GPIO chip framework. This has to happen
-     * before the following configuration, which depends on STM32 GPIO
-     * pin numbers.
-     */
-    stm32_gpio_init();
-
-    /* Register the TCA64xx I/O Expanders to the gpio chip core. */
-    for (i = 0; i < evt1_board_info.nr_io_expanders; i++) {
-        struct io_expander_info *io_exp = &evt1_board_info.io_expanders[i];
-
-        io_exp->i2c_dev = up_i2cinitialize(io_exp->i2c_bus);
-        if (!io_exp->i2c_dev) {
-            dbg_error("%s(): Failed to get I/O Expander I2C bus %u\n",
-                      __func__, io_exp->i2c_bus);
-            board_exit();
-            return NULL;
-        }
-        if (tca64xx_init(&io_exp->io_exp_driver_data,
-                         io_exp->part,
-                         io_exp->i2c_dev,
-                         io_exp->i2c_addr,
-                         io_exp->reset,
-                         io_exp->irq,
-                         io_exp->gpio_base) < 0) {
-            dbg_error("%s(): Failed to register I/O Expander(0x%02x)\n",
-                      __func__, io_exp->i2c_addr);
-            board_exit();
-            return NULL;
-        }
-    }
 
     /*
      * VSYS and VCHG are active high with a pull-up.
@@ -446,18 +373,16 @@ struct ara_board_info *board_init(void) {
     rc = vreg_config(&refclk_main_vreg) || vreg_get(&refclk_main_vreg);
     if (rc) {
         dbg_error("%s: can't start REFCLK_MAIN: %d\n", __func__, rc);
-        board_exit();
-        return NULL;
+        return ERROR;
     }
 
     /* Configure the switch power supply lines. */
     rc = vreg_config(&sw_vreg);
     if (rc) {
         dbg_error("%s: can't configure switch regulators: %d\n", __func__, rc);
-        board_exit();
-        return NULL;
+        return ERROR;
     }
-    stm32_configgpio(evt1_board_info.sw_data.gpio_reset);
+    stm32_configgpio(evt1_5_board_info.sw_data.gpio_reset);
     up_udelay(POWER_SWITCH_OFF_STAB_TIME_US);
 
     /* Configure the wake/detect lines. */
@@ -487,32 +412,33 @@ struct ara_board_info *board_init(void) {
      * (Module hotplug pins unconfigured. TODO, part of SW-1942.)
      */
 
-    return &evt1_board_info;
+    return 0;
 }
 
-void board_exit(void) {
-    int i;
+struct ara_board_info evt1_5_board_info = {
+    .interfaces = evt1_5_interfaces,
+    .nr_interfaces = ARRAY_SIZE(evt1_5_interfaces),
+    .nr_spring_interfaces = 0,
 
-    /* If we were able to bringup the refclk, turn it off now. */
-    if (vreg_get_pwr_state(&refclk_main_vreg) == VREG_PWR_UP) {
-        vreg_put(&refclk_main_vreg);
-    }
+    .sw_data = {
+        .vreg            = &sw_vreg,
+        .gpio_reset      = SVC_RST_SW_GPIO,
+        .gpio_irq        = SW_TO_SVC_INT_GPIO,
+        .irq_rising_edge = false,
+        .rev             = SWITCH_REV_ES3,
+        .bus             = SW_SPI_PORT_2,
+        .spi_cs          = SVC_SW_SPI_CS_GPIO,
+    },
 
-    /*
-     * Unregister the TCA64xx I/O Expanders and associated I2C
-     * bus(ses).  Done in reverse order from registration to account
-     * for IRQ chaining between I/O Expander chips.
-     */
-    for (i = evt1_board_info.nr_io_expanders - 1; i >= 0; i--) {
-        struct io_expander_info *io_exp = &evt1_board_info.io_expanders[i];
+    .io_expanders = evt1_io_expanders,
+    .nr_io_expanders = ARRAY_SIZE(evt1_io_expanders),
 
-        if (io_exp->io_exp_driver_data)
-            tca64xx_deinit(io_exp->io_exp_driver_data);
+    /* TODO pwrmon support */
+    .pwrmon               = NULL,
 
-        if (io_exp->i2c_dev)
-            up_i2cuninitialize(io_exp->i2c_dev);
-    }
+    .board_init           = evt1_5_board_init,
 
-    /* Lastly unregister the GPIO Chip driver */
-    stm32_gpio_deinit();
-}
+    .ara_key_gpio         = ARA_KEY,
+    .ara_key_rising_edge  = true,
+    .ara_key_configured   = true,
+};

@@ -78,10 +78,7 @@ CSRCS		+= ara_key.c
 CSRCS		+= ara_board.c
 CSRCS		+= pwr_mon.c
 CSRCS		+= board-db3.c
-
-ifeq ($(CONFIG_ARCH_BOARD_ARA_EVT1_SVC),y)
 CSRCS		+= board-evt1.c
-endif
 
 ifeq ($(CONFIG_NSH_ARCHINIT),y)
 CSRCS		+= up_nsh.c
