@@ -96,7 +96,17 @@ static int tsb_dma_restart_chan(struct device *dev,
         *dma_op = list_entry(next_op, struct tsb_dma_op, list_node);
 
         if (dma_op->state == TSB_DMA_OP_STATE_QUEUED) {
+            uint32_t callback_events = dma_op->op.callback_events;
+
             dma_op->state = TSB_DMA_OP_STATE_STARTING;
+
+            if ((dma_op->op.callback != NULL) &&
+                (callback_events & DEVICE_DMA_CALLBACK_EVENT_START)) {
+                dma_op->op.callback(dev, dma_chan,
+                                    (void *) &dma_op->op,
+                                    DEVICE_DMA_CALLBACK_EVENT_START,
+                                    dma_op->op.callback_arg);
+            }
 
             irqrestore(flags);
 
