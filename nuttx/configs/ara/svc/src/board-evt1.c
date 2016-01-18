@@ -394,6 +394,7 @@ int pwrmon_do_i2c_sel(uint8_t dev)
     return -ENOSYS;
 }
 
+void board_exit(void);
 struct ara_board_info *board_init(void) {
     int i;
     int rc;
