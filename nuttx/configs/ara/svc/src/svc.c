@@ -821,7 +821,7 @@ static int svcd_startup(void) {
     /*
      * Board-specific initialization, all boards must define this.
      */
-    info = board_init();
+    info = ara_board_init();
     if (!info) {
         dbg_error("%s: No board information provided.\n", __func__);
         goto error0;
@@ -887,7 +887,7 @@ error2:
     switch_exit(sw);
     svc->sw = NULL;
 error1:
-    board_exit();
+    ara_board_exit();
 error0:
     return -1;
 }
@@ -902,7 +902,7 @@ static int svcd_cleanup(void) {
     switch_exit(svc->sw);
     svc->sw = NULL;
 
-    board_exit();
+    ara_board_exit();
     svc->board_info = NULL;
 
     list_foreach_safe(&svc_events, node, next) {

@@ -125,7 +125,7 @@ struct ara_board_info {
     bool ara_key_configured;
 };
 
-struct ara_board_info *board_init(void);
-void board_exit(void);
+struct ara_board_info *ara_board_init(void);
+void ara_board_exit(void);
 
 #endif
