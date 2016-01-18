@@ -215,6 +215,81 @@ DECLARE_MODULE_PORT_INTERFACE(apb1, apb1_vreg_data, 3,
  * directly control it via the VSYS_ENx GPIO pins.
  */
 
+/*
+ * EVT1 interface ports
+ */
+static struct vreg_data evt1_module_1_vreg_data[] = {
+    INIT_ACTIVE_LOW_VREG_DATA(VSYS_EN1_N, HOLD_TIME_MODULE),
+    INIT_MODULE_CLK_DATA(REFCLK_1_EN),
+};
+
+static struct vreg_data evt1_module_2_vreg_data[] = {
+    INIT_ACTIVE_LOW_VREG_DATA(VSYS_EN2_N, HOLD_TIME_MODULE),
+    INIT_MODULE_CLK_DATA(REFCLK_2_EN),
+};
+
+static struct vreg_data evt1_module_3A_vreg_data[] = {
+    INIT_ACTIVE_LOW_VREG_DATA(VSYS_EN3A_N, HOLD_TIME_MODULE),
+    INIT_MODULE_CLK_DATA(REFCLK_3A_EN),
+};
+
+static struct vreg_data evt1_module_3B_vreg_data[] = {
+    INIT_ACTIVE_LOW_VREG_DATA(VSYS_EN3B_N, HOLD_TIME_MODULE),
+    INIT_MODULE_CLK_DATA(REFCLK_3B_EN),
+};
+
+static struct vreg_data evt1_module_4A_vreg_data[] = {
+    INIT_ACTIVE_LOW_VREG_DATA(VSYS_EN4A_N, HOLD_TIME_MODULE),
+    INIT_MODULE_CLK_DATA(REFCLK_4A_EN),
+};
+
+static struct vreg_data evt1_module_4B_vreg_data[] = {
+    INIT_ACTIVE_LOW_VREG_DATA(VSYS_EN4B_N, HOLD_TIME_MODULE),
+    INIT_MODULE_CLK_DATA(REFCLK_4B_EN),
+};
+
+static struct vreg_data evt1_module_5_lcd_vreg_data[] = {
+    INIT_ACTIVE_LOW_VREG_DATA(VSYS_EN5_N, HOLD_TIME_MODULE),
+    INIT_MODULE_CLK_DATA(REFCLK_5_EN),
+};
+
+DECLARE_MODULE_PORT_INTERFACE(evt1_module_1, evt1_module_1_vreg_data, 13,
+                              WD_1_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
+                              true, MOD_RELEASE_1);
+DECLARE_MODULE_PORT_INTERFACE(evt1_module_2, evt1_module_2_vreg_data, 11,
+                              WD_2_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
+                              true, MOD_RELEASE_2);
+DECLARE_MODULE_PORT_INTERFACE(evt1_module_3A, evt1_module_3A_vreg_data, 4,
+                              WD_3A_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
+                              true, MOD_RELEASE_3A);
+DECLARE_MODULE_PORT_INTERFACE(evt1_module_3B, evt1_module_3B_vreg_data, 2,
+                              WD_3B_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
+                              true, MOD_RELEASE_3B);
+DECLARE_MODULE_PORT_INTERFACE(evt1_module_4A, evt1_module_4A_vreg_data, 6,
+                              WD_4A_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
+                              true, MOD_RELEASE_4A);
+DECLARE_MODULE_PORT_INTERFACE(evt1_module_4B, evt1_module_4B_vreg_data, 8,
+                              WD_4B_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
+                              true, MOD_RELEASE_4B);
+DECLARE_MODULE_PORT_INTERFACE(evt1_module_5_lcd,
+                              evt1_module_5_lcd_vreg_data, 10,
+                              WD_5_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
+                              true, MOD_RELEASE_5);
+
+static struct interface *evt1_interfaces[] = {
+    &apb1_interface,
+    &evt1_module_1_interface,
+    &evt1_module_2_interface,
+    &evt1_module_3A_interface,
+    &evt1_module_3B_interface,
+    &evt1_module_4A_interface,
+    &evt1_module_4B_interface,
+    &evt1_module_5_lcd_interface,
+};
+
+/*
+ * EVT1.5 interface ports
+ */
 static struct vreg_data evt1_5_module_1_vreg_data[] = {
     INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN1_N, HOLD_TIME_MODULE),
     INIT_MODULE_CLK_DATA(REFCLK_1_EN),
@@ -371,6 +446,85 @@ static struct vreg_data refclk_main_vreg_data[] = {
 
 DECLARE_VREG(refclk_main, refclk_main_vreg_data);
 
+/* EVT1 */
+static int evt1_board_init(struct ara_board_info *board_info) {
+    int rc;
+
+    /* For now, just always enable REFCLK_MAIN and the buffers. */
+    rc = vreg_config(&refclk_main_vreg) || vreg_get(&refclk_main_vreg);
+    if (rc) {
+        dbg_error("%s: can't start REFCLK_MAIN: %d\n", __func__, rc);
+        return ERROR;
+    }
+
+    /* Configure the switch power supply lines. */
+    rc = vreg_config(&sw_vreg);
+    if (rc) {
+        dbg_error("%s: can't configure switch regulators: %d\n", __func__, rc);
+        return ERROR;
+    }
+    stm32_configgpio(evt1_board_info.sw_data.gpio_reset);
+    up_udelay(POWER_SWITCH_OFF_STAB_TIME_US);
+
+    /* Configure the wake/detect lines. */
+    stm32_configgpio(WD_1_DET_IN_GPIO);
+    stm32_configgpio(WD_2_DET_IN_GPIO);
+    stm32_configgpio(WD_3A_DET_IN_GPIO);
+    stm32_configgpio(WD_3B_DET_IN_GPIO);
+    stm32_configgpio(WD_4A_DET_IN_GPIO);
+    stm32_configgpio(WD_4B_DET_IN_GPIO);
+    stm32_configgpio(WD_5_DET_IN_GPIO);
+    stm32_configgpio(WD_8A_DET_IN_GPIO);
+    stm32_configgpio(WD_8B_DET_IN_GPIO);
+
+    /* Configure the module release pins */
+    stm32_configgpio(MOD_RELEASE_1_CONFIG);
+    stm32_configgpio(MOD_RELEASE_2_CONFIG);
+    stm32_configgpio(MOD_RELEASE_3A_CONFIG);
+    stm32_configgpio(MOD_RELEASE_3B_CONFIG);
+    stm32_configgpio(MOD_RELEASE_4A_CONFIG);
+    stm32_configgpio(MOD_RELEASE_4B_CONFIG);
+    stm32_configgpio(MOD_RELEASE_5_CONFIG);
+
+    /* Configure ARA key input pin */
+    stm32_configgpio(ARA_KEY_CONFIG);
+
+    /*
+     * (Module hotplug pins unconfigured. TODO, part of SW-1942.)
+     */
+
+    return 0;
+}
+
+struct ara_board_info evt1_board_info = {
+    .interfaces = evt1_interfaces,
+    .nr_interfaces = ARRAY_SIZE(evt1_interfaces),
+    .nr_spring_interfaces = 0,
+
+    .sw_data = {
+        .vreg            = &sw_vreg,
+        .gpio_reset      = SVC_RST_SW_GPIO,
+        .gpio_irq        = SW_TO_SVC_INT_GPIO,
+        .irq_rising_edge = false,
+        .rev             = SWITCH_REV_ES2,
+        .bus             = SW_SPI_PORT_2,
+        .spi_cs          = SVC_SW_SPI_CS_GPIO,
+    },
+
+    .io_expanders = evt1_io_expanders,
+    .nr_io_expanders = ARRAY_SIZE(evt1_io_expanders),
+
+    /* TODO pwrmon support */
+    .pwrmon               = NULL,
+
+    .board_init           = evt1_board_init,
+
+    .ara_key_gpio         = ARA_KEY,
+    .ara_key_rising_edge  = true,
+    .ara_key_configured   = true,
+};
+
+/* EVT1.5 */
 static int evt1_5_board_init(struct ara_board_info *board_info) {
     int rc;
 
