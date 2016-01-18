@@ -127,6 +127,11 @@ struct ara_board_info *ara_board_init(void) {
         dbg_info("HWID found as DB3.2\n");
         break;
     case HWID_DB3_5:
+        /* EVT1.5 + DB3 pwrmon + specific mapping of physical interfaces */
+        board_info = &evt1_5_board_info;
+        board_info->pwrmon = &db3_pwrmon;
+        board_info->interfaces = db3_5_interfaces;
+        board_info->nr_interfaces = db3_5_nr_interfaces;
         dbg_info("HWID found as DB3.5\n");
         break;
     case HWID_EVT1:
