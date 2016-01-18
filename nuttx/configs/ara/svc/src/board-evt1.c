@@ -214,6 +214,7 @@ DECLARE_MODULE_PORT_INTERFACE(apb1, apb1_vreg_data, 3,
  * Take a shortcut until the relevant INA231-related support is in:
  * directly control it via the VSYS_ENx GPIO pins.
  */
+
 static struct vreg_data evt1_5_module_1_vreg_data[] = {
     INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN1_N, HOLD_TIME_MODULE),
     INIT_MODULE_CLK_DATA(REFCLK_1_EN),
@@ -284,9 +285,33 @@ static struct interface *evt1_5_interfaces[] = {
 };
 
 /*
+ * DB3.5 interface ports
+ * Similar to EVT1.5 interfaces, with different mapping of the physical ports
+ */
+DECLARE_MODULE_PORT_INTERFACE(db3_5_module_3B, evt1_5_module_3B_vreg_data, 10,
+                              WD_3B_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
+                              true, MOD_RELEASE_3B);
+DECLARE_MODULE_PORT_INTERFACE(db3_5_module_5_lcd,
+                              evt1_5_module_5_lcd_vreg_data, 9,
+                              WD_5_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
+                              true, MOD_RELEASE_5);
+
+/* Interfaces on DB3.5 */
+struct interface *db3_5_interfaces[] = {
+    &apb1_interface,
+    &evt1_5_module_1_interface,
+    &evt1_5_module_2_interface,
+    &evt1_5_module_3A_interface,
+    &db3_5_module_3B_interface,
+    &evt1_5_module_4A_interface,
+    &evt1_5_module_4B_interface,
+    &db3_5_module_5_lcd_interface,
+};
+size_t db3_5_nr_interfaces = ARRAY_SIZE(db3_5_interfaces);
+
+/*
  * UniPro Switch vreg
  */
-
 static struct vreg_data sw_vreg_data[] = {
     INIT_ACTIVE_HIGH_VREG_DATA(SW_1P1_EN, HOLD_TIME_SW_1P1),
 
