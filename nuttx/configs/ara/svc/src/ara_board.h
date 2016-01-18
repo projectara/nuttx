@@ -133,4 +133,9 @@ struct ara_board_info *ara_board_init(void);
 void ara_board_exit(void);
 pwrmon_board_info *board_get_pwrmon_info(void);
 
+ /*
+  * Board specific information, to be passed from the board files
+  */
+extern struct ara_board_info db3_board_info;
+
 #endif

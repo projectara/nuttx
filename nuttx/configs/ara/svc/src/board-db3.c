@@ -27,7 +27,7 @@
  */
 
 /**
- * @brief: Support for DB3.5 board (EVT-like).
+ * @brief: Support for DB3.0/3.1/3.2 boards
  *
  * @author: Jean Pihet
  */
@@ -391,75 +391,7 @@ static struct io_expander_info db3_io_expanders[] = {
         },
 };
 
-static struct ara_board_info db3_board_info = {
-    .interfaces = db3_interfaces,
-    .nr_interfaces = ARRAY_SIZE(db3_interfaces),
-    .nr_spring_interfaces = 0,
-
-    .sw_data = {
-        .vreg             = &sw_vreg,
-        .gpio_reset       = (GPIO_OUTPUT | GPIO_OUTPUT_CLEAR |
-                             GPIO_PORTD | GPIO_PIN11),
-        .gpio_irq         = (GPIO_INPUT | GPIO_FLOAT | GPIO_EXTI | \
-                             GPIO_PORTC | GPIO_PIN9),
-        .irq_rising_edge  = true,
-        .rev              = SWITCH_REV_ES2,
-        .bus              = SW_SPI_PORT_2,
-        .spi_cs           = (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_OUTPUT_SET | \
-                             GPIO_PORTB | GPIO_PIN12)
-    },
-
-    .io_expanders   = db3_io_expanders,
-    .nr_io_expanders = ARRAY_SIZE(db3_io_expanders),
-
-    .pwrmon               = &db3_pwrmon,
-
-    .ara_key_gpio         = ARA_KEY,
-    .ara_key_rising_edge  = true,
-    .ara_key_configured   = true,
-};
-
-struct ara_board_info *board_init(void) {
-    int i;
-
-    /* Disable the I/O Expanders for now */
-    stm32_configgpio(SVC_RST_IOEXP1);
-    stm32_gpiowrite(SVC_RST_IOEXP1, false);
-    stm32_configgpio(SVC_RST_IOEXP2);
-    stm32_gpiowrite(SVC_RST_IOEXP2, false);
-
-    /*
-     * Register the STM32 GPIOs to Gpio Chip
-     *
-     * This needs to happen before the I/O Expanders registration, which
-     * uses some STM32 pins
-     */
-    stm32_gpio_init();
-
-    /* Register the TCA64xx I/O Expanders GPIOs to Gpio Chip */
-    for (i = 0; i < db3_board_info.nr_io_expanders; i++) {
-        struct io_expander_info *io_exp = &db3_board_info.io_expanders[i];
-
-        io_exp->i2c_dev = up_i2cinitialize(io_exp->i2c_bus);
-        if (!io_exp->i2c_dev) {
-            dbg_error("%s(): Failed to get I/O Expander I2C bus %u\n",
-                      __func__, io_exp->i2c_bus);
-            goto err_deinit_gpio;
-        } else {
-            if (tca64xx_init(&io_exp->io_exp_driver_data,
-                             io_exp->part,
-                             io_exp->i2c_dev,
-                             io_exp->i2c_addr,
-                             io_exp->reset,
-                             io_exp->irq,
-                             io_exp->gpio_base) < 0) {
-                dbg_error("%s(): Failed to register I/O Expander(0x%02x)\n",
-                          __func__, io_exp->i2c_addr);
-                goto err_uninit_i2c;
-            }
-        }
-    }
-
+static int db3_board_init(struct ara_board_info *board_info) {
     /*
      * Turn on the global system clock and its buffered copy (which
      * goes to the modules and the switch).
@@ -524,39 +456,35 @@ struct ara_board_info *board_init(void) {
     /* Configure ARA key input pin */
     stm32_configgpio(ARA_KEY_CONFIG);
 
-    return &db3_board_info;
-
- err_uninit_i2c:
-    /* Done in reverse order to account for possible IRQ chaining. */
-    for (i = db3_board_info.nr_io_expanders - 1; i >= 0; i--) {
-        struct io_expander_info *io_exp = &db3_board_info.io_expanders[i];
-        if (io_exp->i2c_dev) {
-            up_i2cuninitialize(io_exp->i2c_dev);
-        }
-    }
- err_deinit_gpio:
-    stm32_gpio_deinit();
-    /* Leave the I/O expanders in reset here. */
-    return NULL;
+    return 0;
 }
 
-void board_exit(void) {
-    int i;
-    /*
-     * First unregister the TCA64xx I/O Expanders and associated I2C bus(ses).
-     * Done in reverse order from registration to account for IRQ chaining
-     * between I/O Expander chips.
-     */
-    for (i = db3_board_info.nr_io_expanders - 1; i >= 0; i--) {
-        struct io_expander_info *io_exp = &db3_board_info.io_expanders[i];
+struct ara_board_info db3_board_info = {
+    .interfaces = db3_interfaces,
+    .nr_interfaces = ARRAY_SIZE(db3_interfaces),
+    .nr_spring_interfaces = 0,
 
-        if (io_exp->io_exp_driver_data)
-            tca64xx_deinit(io_exp->io_exp_driver_data);
+    .sw_data = {
+        .vreg             = &sw_vreg,
+        .gpio_reset       = (GPIO_OUTPUT | GPIO_OUTPUT_CLEAR |
+                             GPIO_PORTD | GPIO_PIN11),
+        .gpio_irq         = (GPIO_INPUT | GPIO_FLOAT | GPIO_EXTI | \
+                             GPIO_PORTC | GPIO_PIN9),
+        .irq_rising_edge  = true,
+        .rev              = SWITCH_REV_ES2,
+        .bus              = SW_SPI_PORT_2,
+        .spi_cs           = (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_OUTPUT_SET | \
+                             GPIO_PORTB | GPIO_PIN12)
+    },
 
-        if (io_exp->i2c_dev)
-            up_i2cuninitialize(io_exp->i2c_dev);
-    }
+    .io_expanders         = db3_io_expanders,
+    .nr_io_expanders      = ARRAY_SIZE(db3_io_expanders),
 
-    /* Lastly unregister the GPIO Chip driver */
-    stm32_gpio_deinit();
-}
+    .pwrmon               = &db3_pwrmon,
+
+    .ara_key_gpio         = ARA_KEY,
+    .ara_key_rising_edge  = true,
+    .ara_key_configured   = true,
+
+    .board_init           = db3_board_init,
+};

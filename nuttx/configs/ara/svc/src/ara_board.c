@@ -117,9 +117,13 @@ struct ara_board_info *ara_board_init(void) {
     /* Check HWID, assign board_info struct and the Switch ES revision */
     switch (hwid) {
     case HWID_DB3_0_1:
+        board_info = &db3_board_info;
         dbg_info("HWID found as DB3.0/3.1\n");
         break;
     case HWID_DB3_2:
+        /* DB3.0/1 with ES3 Switch */
+        board_info = &db3_board_info;
+        board_info->sw_data.rev = SWITCH_REV_ES3;
         dbg_info("HWID found as DB3.2\n");
         break;
     case HWID_DB3_5:
