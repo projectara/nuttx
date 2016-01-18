@@ -34,6 +34,7 @@
 
 #include "vreg.h"
 #include "tsb_switch.h"
+#include "pwr_mon.h"
 
 /* HWID values */
 enum hwid {
@@ -115,6 +116,9 @@ struct ara_board_info {
     struct io_expander_info *io_expanders;
     size_t nr_io_expanders;
 
+    /* Power monitoring */
+    pwrmon_board_info *pwrmon;
+
     /*  Board specific init and exit code */
     int (*board_init)(struct ara_board_info *);
     int (*board_exit)(struct ara_board_info *);
@@ -127,5 +131,6 @@ struct ara_board_info {
 
 struct ara_board_info *ara_board_init(void);
 void ara_board_exit(void);
+pwrmon_board_info *board_get_pwrmon_info(void);
 
 #endif

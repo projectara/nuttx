@@ -100,6 +100,15 @@ enum hwid board_get_hwid(void) {
     return ERROR;
 }
 
+pwrmon_board_info *board_get_pwrmon_info(void)
+{
+    if (board_info) {
+        return board_info->pwrmon;
+    }
+
+    return NULL;
+}
+
 struct ara_board_info *ara_board_init(void) {
     int i;
     enum hwid hwid = board_get_hwid();

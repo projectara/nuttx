@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Google Inc.
+ * Copyright (c) 2016 Google Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -368,6 +368,9 @@ static struct ara_board_info evt1_board_info = {
     .io_expanders = evt1_io_expanders,
     .nr_io_expanders = ARRAY_SIZE(evt1_io_expanders),
 
+    /* TODO pwrmon support */
+    .pwrmon               = NULL,
+
     .ara_key_gpio         = ARA_KEY,
     .ara_key_rising_edge  = true,
     .ara_key_configured   = true,
@@ -379,24 +382,6 @@ static struct vreg_data refclk_main_vreg_data[] = {
 };
 
 DECLARE_VREG(refclk_main, refclk_main_vreg_data);
-
-/* TODO pwrmon support */
-const int pwrmon_i2c_bus = 1;
-const struct pwrmon_dev_ctx *pwrmon_devs = NULL;
-const size_t pwrmon_num_devs = 0;
-
-void pwrmon_reset_i2c_sel(void)
-{
-}
-
-void pwrmon_init_i2c_sel(void)
-{
-}
-
-int pwrmon_do_i2c_sel(uint8_t dev)
-{
-    return -ENOSYS;
-}
 
 void board_exit(void);
 struct ara_board_info *board_init(void) {

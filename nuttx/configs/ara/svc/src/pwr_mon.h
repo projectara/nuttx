@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Google Inc.
+ * Copyright (c) 2016 Google Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -70,13 +70,27 @@ typedef struct {
     const char *rail_name;
 } pwrmon_rail;
 
-extern const struct pwrmon_dev_ctx pwrmon_devs[];
-extern const size_t pwrmon_num_devs;
-extern const int pwrmon_i2c_bus;
+/*
+ * Board specific info for power monitoring.
+ * To be implemented in appropriate board files.
+ */
+typedef struct {
+    struct pwrmon_dev_ctx *devs;
+    size_t num_devs;
+    int i2c_bus;
+    /* Set the i2c selection gpios to their default values. */
+    void (*reset_i2c_sel)(void);
+    /* Set the i2c selection gpios' direction. */
+    void (*init_i2c_sel)(void);
+    /* Select given i2c line. */
+    int (*do_i2c_sel)(uint8_t dev);
+} pwrmon_board_info;
 
+/* Exported functions */
 int pwrmon_init(uint32_t current_lsb_uA,
                ina230_conversion_time ct,
-               ina230_avg_count avg_count);
+               ina230_avg_count avg_count,
+               size_t *num_devs);
 pwrmon_rail *pwrmon_init_rail(uint8_t dev, uint8_t rail);
 uint32_t pwrmon_get_sampling_time(pwrmon_rail *pwrmon_r);
 int pwrmon_measure_rail(pwrmon_rail *pwrmon_dev, ina230_sample *m);
@@ -87,17 +101,5 @@ int pwrmon_rail_id(const char *name, uint8_t *dev, uint8_t *rail);
 int pwrmon_dev_rail_count(uint8_t dev);
 void pwrmon_deinit_rail(pwrmon_rail *pwrmon_dev);
 void pwrmon_deinit(void);
-
-/*
- * These functions are board-specific and must be implemented
- * in appropriate board files.
- */
-
-/* Should set the i2c selection gpios to their default values. */
-extern void pwrmon_reset_i2c_sel(void);
-/* Should set the i2c selection gpios' direction. */
-extern void pwrmon_init_i2c_sel(void);
-/* Should select given i2c line. */
-extern int pwrmon_do_i2c_sel(uint8_t dev);
 
 #endif

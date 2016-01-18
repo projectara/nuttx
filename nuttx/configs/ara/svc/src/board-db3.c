@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Google Inc.
+ * Copyright (c) 2016 Google Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,6 +27,8 @@
  */
 
 /**
+ * @brief: Support for DB3.5 board (EVT-like).
+ *
  * @author: Jean Pihet
  */
 
@@ -227,16 +229,11 @@ enum {
 };
 
 /*
- * Global power monitoring I2C bus.
- */
-const int pwrmon_i2c_bus = 1;
-
-/*
  * Power rail groups definitions.
  *
  * If a bit is set in i2c_sel, then drive the GPIO low.
  */
-const struct pwrmon_dev_ctx pwrmon_devs[] = {
+static struct pwrmon_dev_ctx db3_pwrmon_devs[] = {
     {
         .name = "SWitch",
         .i2c_sel = I2C_SEL1_A | I2C_SEL1_B | I2C_SEL1_INH,
@@ -303,40 +300,47 @@ const struct pwrmon_dev_ctx pwrmon_devs[] = {
     },
 };
 
-const size_t pwrmon_num_devs = ARRAY_SIZE(pwrmon_devs);
-
-void pwrmon_reset_i2c_sel(void)
+static void db3_pwrmon_reset_i2c_sel(void)
 {
     gpio_set_value(I2C_INA230_SEL1_INH, 1);
     gpio_set_value(I2C_INA230_SEL1_A, 1);
     gpio_set_value(I2C_INA230_SEL1_B, 1);
 }
 
-void pwrmon_init_i2c_sel(void)
+static void db3_pwrmon_init_i2c_sel(void)
 {
     gpio_direction_out(I2C_INA230_SEL1_A, 1);
     gpio_direction_out(I2C_INA230_SEL1_B, 1);
     gpio_direction_out(I2C_INA230_SEL1_INH, 1);
 }
 
-int pwrmon_do_i2c_sel(uint8_t dev)
+static int db3_pwrmon_do_i2c_sel(uint8_t dev)
 {
-    if (dev >= ARRAY_SIZE(pwrmon_devs)) {
+    if (dev >= ARRAY_SIZE(db3_pwrmon_devs)) {
         return -EINVAL;
     }
 
     /* First inhibit all lines, to make sure there is no short/collision */
     gpio_set_value(I2C_INA230_SEL1_INH, 1);
 
-    gpio_set_value(I2C_INA230_SEL1_A, pwrmon_devs[dev].i2c_sel & I2C_SEL1_A ? 0 : 1);
-    gpio_set_value(I2C_INA230_SEL1_B, pwrmon_devs[dev].i2c_sel & I2C_SEL1_B ? 0 : 1);
+    gpio_set_value(I2C_INA230_SEL1_A, db3_pwrmon_devs[dev].i2c_sel & I2C_SEL1_A ? 0 : 1);
+    gpio_set_value(I2C_INA230_SEL1_B, db3_pwrmon_devs[dev].i2c_sel & I2C_SEL1_B ? 0 : 1);
 
-    if (pwrmon_devs[dev].i2c_sel & I2C_SEL1_INH) {
+    if (db3_pwrmon_devs[dev].i2c_sel & I2C_SEL1_INH) {
         gpio_set_value(I2C_INA230_SEL1_INH, 0);
     }
 
     return 0;
 }
+
+pwrmon_board_info db3_pwrmon = {
+        .i2c_bus        = 1,
+        .devs           = db3_pwrmon_devs,
+        .num_devs       = ARRAY_SIZE(db3_pwrmon_devs),
+        .reset_i2c_sel  = db3_pwrmon_reset_i2c_sel,
+        .init_i2c_sel   = db3_pwrmon_init_i2c_sel,
+        .do_i2c_sel     = db3_pwrmon_do_i2c_sel,
+};
 
 /*
  * Important note: Always declare the spring interfaces last.
@@ -407,6 +411,8 @@ static struct ara_board_info db3_board_info = {
 
     .io_expanders   = db3_io_expanders,
     .nr_io_expanders = ARRAY_SIZE(db3_io_expanders),
+
+    .pwrmon               = &db3_pwrmon,
 
     .ara_key_gpio         = ARA_KEY,
     .ara_key_rising_edge  = true,
