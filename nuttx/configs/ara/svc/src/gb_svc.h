@@ -194,7 +194,7 @@ struct gb_svc_intf_set_pwrm_response {
 
 struct gb_svc_key_event_request {
         __le16	key_code;
-#define GB_KEYCODE_ARA          0x01
+#define GB_KEYCODE_ARA          0x00
 
 	__u8	key_event;
 #define GB_SVC_KEY_RELEASED	0x00
