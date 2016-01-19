@@ -249,7 +249,6 @@ static int configure_connected_cport(unsigned int cportid) {
  * @param val pointer to value to either read or write
  * @param peer 0 for local access, 1 for peer
  * @param write 0 for read, 1 for write
- * @param result_code unipro return code, optional
  */
 int unipro_attr_access(uint16_t attr,
                        uint32_t *val,
