@@ -33,121 +33,16 @@
 #include <stdbool.h>
 #include <assert.h>
 
-#include <nuttx/list.h>
 #include <nuttx/util.h>
 #include <nuttx/device.h>
 #include <nuttx/greybus/types.h>
 
-#include <semaphore.h>
-
 #define DEVICE_TYPE_HID_HW          "hid"
-#define HID_DEVICE_NAME             "HID device module"
-#define HID_DRIVER_DESCRIPTION      "HID device module driver"
 
 /** HID Report type */
 #define HID_INPUT_REPORT            0
 #define HID_OUTPUT_REPORT           1
 #define HID_FEATURE_REPORT          2
-#define HID_REPORT_TYPE_NUM         3
-
-/**
- * @brief HID event callback function
- *
- * @param dev: pointer to structure of device data
- * @param report_type: HID report type
- * @param report: the data buffer that sent by HID device
- * @param len: the length of the data received
- * @return 0 on success, negative errno on error
- */
-typedef int (*hid_event_callback)(struct device *dev, uint8_t report_type,
-                                  uint8_t *report, uint16_t len);
-
-/**
- * HID report length structure
- */
-struct report_len {
-    /** input report length */
-    uint16_t input;
-    /** output report length */
-    uint16_t output;
-    /** feature report length */
-    uint16_t feature;
-} __packed;
-
-/**
- * HID Report Size Structure. Type define for a report item size
- * information structure, to retain the size of a device's reports by ID.
- */
-struct hid_size_info {
-    /** Report ID */
-    uint8_t id;
-
-    /**
-     * HID Report length array
-     *
-     * size[0] : Input Report length
-     * size[1] : Output Report length
-     * size[2] : Feature Report length
-     */
-    union {
-        uint16_t size[HID_REPORT_TYPE_NUM];
-        struct report_len len;
-    } reports;
-};
-
-/**
- * Private information for HID type device
- */
-struct hid_info {
-    /** Chain to device linking list. */
-    struct list_head device_list;
-
-    /** Driver module representation of the device */
-    struct device *dev;
-
-    struct hid_vendor_ops *hid_dev_ops;
-
-    /** HID device descriptor */
-    struct hid_descriptor *hdesc;
-
-    /** HID report descriptor */
-    uint8_t *rdesc;
-
-    /** Number of HID Report structure */
-    int num_ids;
-
-    /** Report length of each HID Report */
-    struct hid_size_info *sinfo;
-
-    /** HID device driver operation state*/
-    int state;
-
-    /** Hid input event callback function */
-    hid_event_callback event_callback;
-
-    /** Exclusive access for operation */
-    sem_t lock;
-};
-
-extern int hid_device_init(struct device *dev, struct hid_info *dev_info);
-
-/**
- * HID vendor device driver operations
- */
-struct hid_vendor_ops {
-    /** vendor hw initialize routine */
-    int (*hw_initialize)(struct device *dev, struct hid_info *dev_info);
-    /** vendor hw deinitialize routine */
-    int (*hw_deinitialize)(struct device *dev);
-    /** vendor hw power control routine */
-    int (*power_control)(struct device *dev, bool on);
-    /** Get HID Input / Feature report data */
-    int (*get_report)(struct device *dev, uint8_t report_type,
-                      uint8_t report_id, uint8_t *data, uint16_t len);
-    /** Set HID Output / Feature report data */
-    int (*set_report)(struct device *dev, uint8_t report_type,
-                      uint8_t report_id, uint8_t *data, uint16_t len);
-};
 
 /**
  * HID Device Descriptor
@@ -166,6 +61,18 @@ struct hid_descriptor {
     /** Country code of the localized hardware */
     uint8_t country_code;
 };
+
+/**
+ * @brief HID event callback function
+ *
+ * @param dev: pointer to structure of device data
+ * @param report_type: HID report type
+ * @param report: the data buffer that sent by HID device
+ * @param len: the length of the data received
+ * @return 0 on success, negative errno on error
+ */
+typedef int (*hid_event_callback)(struct device *dev, uint8_t report_type,
+                                  uint8_t *report, uint16_t len);
 
 /**
  * HID device driver operations

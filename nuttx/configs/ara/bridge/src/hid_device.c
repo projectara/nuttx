@@ -36,6 +36,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/device.h>
 #include <nuttx/device_hid.h>
+#include <nuttx/hid.h>
 
 #include <tsb_scm.h>
 
