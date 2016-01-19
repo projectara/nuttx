@@ -166,7 +166,7 @@ static void loopback_wakeup(void)
 int gb_loopback_service(void)
 {
     struct timeval tv_start, tv_end, tv_total;
-    useconds_t loop_time, sleep_time;
+    useconds_t loop_time, sleep_time, wait_time;
     struct loopback_context *ctx;
     struct list_head *iter;
     unsigned wait_min;
@@ -276,7 +276,13 @@ int gb_loopback_service(void)
                     loopback_running_late++;
                     loopback_ctx_list_unlock();
                 } else {
-                    usleep(sleep_time - loop_time);
+                    wait_time = sleep_time - loop_time;
+                    /* Don't sleep if wait time is too short */
+                    if (wait_time < USEC_PER_MSEC) {
+                        up_udelay(wait_time);
+                    } else {
+                        usleep(wait_time);
+                    }
                 }
             }
         }
