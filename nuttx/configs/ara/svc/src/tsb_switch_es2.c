@@ -1231,6 +1231,39 @@ static void es2_qos_attr_get_req(struct tsb_switch *sw,
     *req_size = sizeof(qos_attr_get);
 }
 
+static void es2_dev_id_mask_set_req(struct tsb_switch *sw,
+                                    uint8_t unipro_portid,
+                                    uint8_t *mask,
+                                    uint8_t *req, size_t *req_size) {
+    struct __attribute__ ((__packed__)) {
+        uint8_t dest_deviceid;
+        uint8_t portid;
+        uint8_t function_id;
+        uint8_t mask[ES2_DEV_ID_MASK_SIZE];
+    } dev_id_mask_set = {
+        SWITCH_DEVICE_ID,
+        unipro_portid,
+        NCP_SETDEVICEIDMASKREQ,
+    };
+    DEBUGASSERT(*req_size >= sizeof(dev_id_mask_set));
+    memcpy(&dev_id_mask_set.mask, mask, sizeof(dev_id_mask_set.mask));
+    memcpy(req, &dev_id_mask_set, sizeof(dev_id_mask_set));
+    *req_size = sizeof(dev_id_mask_set);
+}
+
+static void es2_dev_id_mask_get_req(struct tsb_switch *sw,
+                                    uint8_t unipro_portid,
+                                    uint8_t *req, size_t *req_size) {
+    uint8_t dev_id_mask_get[] = {
+        SWITCH_DEVICE_ID,
+        unipro_portid,
+        NCP_GETDEVICEIDMASKREQ,
+    };
+    DEBUGASSERT(*req_size >= sizeof(dev_id_mask_get));
+    memcpy(req, dev_id_mask_get, sizeof(dev_id_mask_get));
+    *req_size = sizeof(dev_id_mask_get);
+}
+
  /**
  * @brief Update the valid device bitmask for device_id on port_id
  */
@@ -1296,39 +1329,6 @@ static int es2_dump_routing_table(struct tsb_switch *sw) {
     dbg_info("======================================================\n");
 
     return 0;
-}
-
-static void es2_dev_id_mask_set_req(struct tsb_switch *sw,
-                                    uint8_t unipro_portid,
-                                    uint8_t *mask,
-                                    uint8_t *req, size_t *req_size) {
-    struct __attribute__ ((__packed__)) {
-        uint8_t dest_deviceid;
-        uint8_t portid;
-        uint8_t function_id;
-        uint8_t mask[ES2_DEV_ID_MASK_SIZE];
-    } dev_id_mask_set = {
-        SWITCH_DEVICE_ID,
-        unipro_portid,
-        NCP_SETDEVICEIDMASKREQ,
-    };
-    DEBUGASSERT(*req_size >= sizeof(dev_id_mask_set));
-    memcpy(&dev_id_mask_set.mask, mask, sizeof(dev_id_mask_set.mask));
-    memcpy(req, &dev_id_mask_set, sizeof(dev_id_mask_set));
-    *req_size = sizeof(dev_id_mask_set);
-}
-
-static void es2_dev_id_mask_get_req(struct tsb_switch *sw,
-                                    uint8_t unipro_portid,
-                                    uint8_t *req, size_t *req_size) {
-    uint8_t dev_id_mask_get[] = {
-        SWITCH_DEVICE_ID,
-        unipro_portid,
-        NCP_GETDEVICEIDMASKREQ,
-    };
-    DEBUGASSERT(*req_size >= sizeof(dev_id_mask_get));
-    memcpy(req, dev_id_mask_get, sizeof(dev_id_mask_get));
-    *req_size = sizeof(dev_id_mask_get);
 }
 
 static int es2_switch_id_set(struct tsb_switch *sw,
