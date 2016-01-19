@@ -35,9 +35,8 @@
  * @author Mark Greer
  */
 
-#include <stddef.h>
 #include <assert.h>
-#include <nuttx/ring_buf.h>
+#include <stdint.h>
 
 /** Device resource types */
 enum device_resource_type {
