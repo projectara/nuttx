@@ -40,9 +40,11 @@
 #define DEVICE_TYPE_HID_HW          "hid"
 
 /** HID Report type */
-#define HID_INPUT_REPORT            0
-#define HID_OUTPUT_REPORT           1
-#define HID_FEATURE_REPORT          2
+enum hid_report_type {
+    HID_INPUT_REPORT,
+    HID_OUTPUT_REPORT,
+    HID_FEATURE_REPORT,
+};
 
 /**
  * HID Device Descriptor
@@ -71,7 +73,8 @@ struct hid_descriptor {
  * @param len: the length of the data received
  * @return 0 on success, negative errno on error
  */
-typedef int (*hid_event_callback)(struct device *dev, uint8_t report_type,
+typedef int (*hid_event_callback)(struct device *dev,
+                                  enum hid_report_type report_type,
                                   uint8_t *report, uint16_t len);
 
 /**
@@ -87,15 +90,17 @@ struct device_hid_type_ops {
     /** Get HID Report Descriptor */
     int (*get_report_descriptor)(struct device *dev, uint8_t *desc);
     /** Get HID report length */
-    int (*get_report_length)(struct device *dev, uint8_t report_type,
+    int (*get_report_length)(struct device *dev,
+                             enum hid_report_type report_type,
                              uint8_t report_id);
     /** Get maximum report size in all Report ID for each Report type */
-    int (*get_maximum_report_length)(struct device *dev, uint8_t report_type);
+    int (*get_maximum_report_length)(struct device *dev,
+                                     enum hid_report_type report_type);
     /** Get HID Input / Feature report data */
-    int (*get_report)(struct device *dev, uint8_t report_type,
+    int (*get_report)(struct device *dev, enum hid_report_type report_type,
                       uint8_t report_id, uint8_t *data, uint16_t len);
     /** Set HID Output / Feature report data */
-    int (*set_report)(struct device *dev, uint8_t report_type,
+    int (*set_report)(struct device *dev, enum hid_report_type report_type,
                       uint8_t report_id, uint8_t *data, uint16_t len);
     /** Register HID Report notify event */
     int (*register_callback)(struct device *dev, hid_event_callback callback);
@@ -177,7 +182,7 @@ static inline int device_hid_get_descriptor(struct device *dev,
  * @return the report size on success, negative errno on error
  */
 static inline int device_hid_get_report_length(struct device *dev,
-                                               uint8_t report_type,
+                                               enum hid_report_type report_type,
                                                uint8_t report_id)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
@@ -202,7 +207,7 @@ static inline int device_hid_get_report_length(struct device *dev,
  * @return the report size on success, negative errno on error
  */
 static inline int device_hid_get_max_report_length(struct device *dev,
-                                                   uint8_t report_type)
+                                                   enum hid_report_type report_type)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -252,7 +257,7 @@ static inline int device_hid_get_report_descriptor(struct device *dev,
  * @return 0 on success, negative errno on error
  */
 static inline int device_hid_get_report(struct device *dev,
-                                        uint8_t report_type,
+                                        enum hid_report_type report_type,
                                         uint8_t report_id,
                                         uint8_t *data, uint32_t len)
 {
@@ -281,7 +286,7 @@ static inline int device_hid_get_report(struct device *dev,
  * @return 0 on success, negative errno on error
  */
 static inline int device_hid_set_report(struct device *dev,
-                                        uint8_t report_type,
+                                        enum hid_report_type report_type,
                                         uint8_t report_id,
                                         uint8_t *data, uint32_t len)
 {

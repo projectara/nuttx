@@ -54,7 +54,8 @@ static struct device *hid_dev;
  * @param report_id HID report id
  * @return 0 on success, negative errno on error
  */
-static int hid_dev_get_report_length(struct device *dev, uint8_t report_type,
+static int hid_dev_get_report_length(struct device *dev,
+                                     enum hid_report_type report_type,
                                      uint8_t report_id)
 {
     struct hid_info *info = NULL;
@@ -243,7 +244,7 @@ err_report_desc:
  * @return the report size on success, negative errno on error
  */
 static int hid_dev_get_maximum_report_length(struct device *dev,
-                                             uint8_t report_type)
+                                             enum hid_report_type report_type)
 {
     struct hid_info *info = NULL;
     int i = 0, maxlen = 0, id = 0;
@@ -283,7 +284,7 @@ static int hid_dev_get_maximum_report_length(struct device *dev,
  * @param len Report buffer size
  * @return 0 on success, negative errno on error
  */
-static int hid_dev_get_report(struct device *dev, uint8_t report_type,
+static int hid_dev_get_report(struct device *dev, enum hid_report_type report_type,
                               uint8_t report_id, uint8_t *data,
                               uint16_t len)
 {
@@ -330,7 +331,7 @@ err_getreport:
  * @param len - max output buffer size
  * @return 0 on success, negative errno on error
  */
-static int hid_dev_set_report(struct device *dev, uint8_t report_type,
+static int hid_dev_set_report(struct device *dev, enum hid_report_type report_type,
                               uint8_t report_id, uint8_t *data, uint16_t len)
 {
     struct hid_info *info = NULL;

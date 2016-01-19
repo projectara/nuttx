@@ -126,10 +126,10 @@ struct hid_vendor_ops {
     /** vendor hw power control routine */
     int (*power_control)(struct device *dev, bool on);
     /** Get HID Input / Feature report data */
-    int (*get_report)(struct device *dev, uint8_t report_type,
+    int (*get_report)(struct device *dev, enum hid_report_type report_type,
                       uint8_t report_id, uint8_t *data, uint16_t len);
     /** Set HID Output / Feature report data */
-    int (*set_report)(struct device *dev, uint8_t report_type,
+    int (*set_report)(struct device *dev, enum hid_report_type report_type,
                       uint8_t report_id, uint8_t *data, uint16_t len);
 };
 
