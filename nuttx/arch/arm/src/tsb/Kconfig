@@ -54,6 +54,11 @@ config ARCH_UNIPROTX_DMA_NUM_CHANNELS
 	default 1
 	depends on ARCH_UNIPROTX_USE_DMA
 
+config ARCH_UNIPROTX_DMA_WMB
+    bool "Use Write Memory Barrier in UniPro TX Channels program"
+    default y
+    depends on ARCH_UNIPROTX_USE_DMA
+
 choice
 	prompt "Toshiba PinShare1 conflict"
 	default ARCH_CHIP_PINSHARE1_NONE

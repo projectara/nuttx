@@ -482,8 +482,14 @@ int unipro_tx_init(void)
             uint32_t offset_value =
                 unipro_read(REG_TX_BUFFER_SPACE_OFFSET_REG(i));
 
+
+#ifdef CONFIG_ARCH_UNIPROTX_DMA_WMB
             unipro_write(REG_TX_BUFFER_SPACE_OFFSET_REG(i),
                         offset_value | (0x10 << 8));
+#else
+            unipro_write(REG_TX_BUFFER_SPACE_OFFSET_REG(i),
+                        offset_value | (0x20 << 8));
+#endif
         }
 
         /*
@@ -496,8 +502,6 @@ int unipro_tx_init(void)
             device_close(unipro_dma.dev);
             return -ENODEV;
         }
-
-        lldbg("Running on ES3.\n");
     }
 
     unipro_dma.max_channel = 0;

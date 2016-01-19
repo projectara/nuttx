@@ -249,13 +249,17 @@ struct __attribute__ ((__packed__)) mem2unipro_pl330_code {
     uint16_t burst_block_wait;
     uint8_t burst_block_load;
     uint16_t burst_block_store;
+#ifdef CONFIG_ARCH_UNIPROTX_DMA_WMB
     uint8_t wmb1[DMA_WMB_SIZE];
+#endif
     uint8_t pad1[DMA_LPEND_SIZE];
     GDMAC_INSTR_DMAMOV(postburst_block_chan_ctrl_reg);
     uint16_t postburst_block_wait;
     uint8_t postburst_block_load;
     uint16_t postburst_block_store;
+#ifdef CONFIG_ARCH_UNIPROTX_DMA_WMB
     uint8_t wmb2[DMA_WMB_SIZE];
+#endif
     GDMAC_INSTR_DMAMOV(final_chan_ctrl_reg);
     uint16_t final_burst__wait;
     uint8_t final__load;
@@ -468,14 +472,20 @@ static const uint8_t gdmac_mem2unipro_program[] = {
         DMAWFP(0, B),
         DMALD,
         DMASTPB(0),
+#ifdef CONFIG_ARCH_UNIPROTX_DMA_WMB
         DMAWMB,
         DMALPEND(lc0,
                  DMA_WFP_SIZE + DMA_LD_SIZE + DMA_STP_SIZE + DMA_WMB_SIZE),
+#else
+        DMALPEND(lc0, DMA_WFP_SIZE + DMA_LD_SIZE + DMA_STP_SIZE),
+#endif
         DMAMOV(ccr, 0),
         DMAWFP(0, B),
         DMALD,
         DMASTPB(0),
+#ifdef CONFIG_ARCH_UNIPROTX_DMA_WMB
         DMAWMB,
+#endif
         DMAMOV(ccr, 0),
         DMAWFP(0, B),
         DMALD,
