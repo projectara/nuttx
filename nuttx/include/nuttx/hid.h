@@ -37,6 +37,8 @@
 #include <nuttx/device.h>
 #include <nuttx/device_hid.h>
 
+#include <nuttx/greybus/types.h>
+
 #include <semaphore.h>
 
 /** HID device type */
