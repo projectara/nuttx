@@ -61,6 +61,8 @@
 #define ES2_IRQ_MAX    16
 /* Device ID mask set is the longest NCP request. */
 #define ES2_NCP_MAX_REQ_SIZE 19
+/* Device ID masks are per-port, with 16 bytes of mask for each port. */
+#define ES2_DEV_ID_MASK_SIZE 16
 /* 16-byte max delay + 5-byte header + 272-byte max payload + 2-byte footer */
 #define ES2_CPORT_RX_MAX_SIZE        (16 + 5 + 272 + 2)
 #define ES2_CPORT_NCP_MAX_PAYLOAD    (256)
@@ -1296,94 +1298,37 @@ static int es2_dump_routing_table(struct tsb_switch *sw) {
     return 0;
 }
 
-static int es2_dev_id_mask_set(struct tsb_switch *sw,
-                               uint8_t unipro_portid,
-                               uint8_t *mask)
-{
-    int rc;
-
-    struct __attribute__ ((__packed__)) req {
+static void es2_dev_id_mask_set_req(struct tsb_switch *sw,
+                                    uint8_t unipro_portid,
+                                    uint8_t *mask,
+                                    uint8_t *req, size_t *req_size) {
+    struct __attribute__ ((__packed__)) {
         uint8_t dest_deviceid;
         uint8_t portid;
         uint8_t function_id;
-        uint8_t mask[16];
-    } req = {
+        uint8_t mask[ES2_DEV_ID_MASK_SIZE];
+    } dev_id_mask_set = {
         SWITCH_DEVICE_ID,
         unipro_portid,
         NCP_SETDEVICEIDMASKREQ,
     };
-
-    struct __attribute__ ((__packed__)) cnf {
-        uint8_t rc;
-        uint8_t function_id;
-        uint8_t portid;
-        uint8_t reserved;
-    } cnf;
-
-    dbg_verbose("%s()\n", __func__);
-
-    memcpy(req.mask, mask, sizeof(req.mask));
-
-    rc = es2_ncp_transfer(sw, (uint8_t *) &req, sizeof(req),
-                         (uint8_t *) &cnf, sizeof(struct cnf));
-    if (rc) {
-        dbg_error("%s()failed: rc=%d\n", __func__, rc);
-        return rc;
-    }
-
-    if (cnf.function_id != NCP_SETDEVICEIDMASKCNF) {
-        dbg_error("%s(): unexpected CNF 0x%x\n", __func__, cnf.function_id);
-        return -EPROTO;
-    }
-
-    dbg_verbose("%s(): fid=0x%02x, rc=%u\n", __func__,
-                cnf.function_id, cnf.rc);
-
-    /* Return resultCode */
-    return cnf.rc;
+    DEBUGASSERT(*req_size >= sizeof(dev_id_mask_set));
+    memcpy(&dev_id_mask_set.mask, mask, sizeof(dev_id_mask_set.mask));
+    memcpy(req, &dev_id_mask_set, sizeof(dev_id_mask_set));
+    *req_size = sizeof(dev_id_mask_set);
 }
 
-static int es2_dev_id_mask_get(struct tsb_switch *sw,
-                               uint8_t unipro_portid,
-                               uint8_t *dst)
-{
-    int rc;
-
-    uint8_t req[] = {
+static void es2_dev_id_mask_get_req(struct tsb_switch *sw,
+                                    uint8_t unipro_portid,
+                                    uint8_t *req, size_t *req_size) {
+    uint8_t dev_id_mask_get[] = {
         SWITCH_DEVICE_ID,
         unipro_portid,
         NCP_GETDEVICEIDMASKREQ,
     };
-
-    struct __attribute__ ((__packed__)) cnf {
-        uint8_t rc;
-        uint8_t function_id;
-        uint8_t portid;
-        uint8_t reserved;
-        uint8_t mask[16];
-    } cnf;
-
-    dbg_verbose("%s(%d)\n", __func__, unipro_portid);
-
-    rc = es2_ncp_transfer(sw, req, sizeof(req), (uint8_t *) &cnf,
-                          sizeof(struct cnf));
-    if (rc) {
-        dbg_error("%s()failed: rc=%d\n", __func__, rc);
-        return rc;
-    }
-
-    if (cnf.function_id != NCP_GETDEVICEIDMASKCNF) {
-        dbg_error("%s(): unexpected CNF 0x%x\n", __func__, cnf.function_id);
-        return -EPROTO;
-    }
-
-    memcpy(dst, &cnf.mask, sizeof(cnf.mask));
-
-    dbg_verbose("%s(): fid=0x%02x, rc=%u\n", __func__,
-                cnf.function_id, cnf.rc);
-
-    /* Return resultCode */
-    return cnf.rc;
+    DEBUGASSERT(*req_size >= sizeof(dev_id_mask_get));
+    memcpy(req, dev_id_mask_get, sizeof(dev_id_mask_get));
+    *req_size = sizeof(dev_id_mask_get);
 }
 
 static int es2_switch_id_set(struct tsb_switch *sw,
@@ -1480,6 +1425,7 @@ static int es2_fct_enable(struct tsb_switch *sw) {
 
 static struct tsb_rev_data es2_rev_data = {
     .ncp_req_max_size       = ES2_NCP_MAX_REQ_SIZE,
+    .dev_id_mask_size       = ES2_DEV_ID_MASK_SIZE,
 };
 
 static struct tsb_switch_ops es2_ops = {
@@ -1503,11 +1449,11 @@ static struct tsb_switch_ops es2_ops = {
     .qos_attr_set_req      = es2_qos_attr_set_req,
     .qos_attr_get_req      = es2_qos_attr_get_req,
 
+    .dev_id_mask_get_req   = es2_dev_id_mask_get_req,
+    .dev_id_mask_set_req   = es2_dev_id_mask_set_req,
+
     .set_valid_device      = es2_set_valid_device,
     .dump_routing_table    = es2_dump_routing_table,
-
-    .dev_id_mask_get       = es2_dev_id_mask_get,
-    .dev_id_mask_set       = es2_dev_id_mask_set,
 
     .port_irq_enable       = es2_port_irq_enable,
 

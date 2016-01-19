@@ -343,6 +343,13 @@ struct tsb_switch_ops {
                              uint8_t portid,
                              uint8_t attrid,
                              uint8_t *req, size_t *req_size);
+    void (*dev_id_mask_get_req)(struct tsb_switch *sw,
+                                uint8_t unipro_portid,
+                                uint8_t *req, size_t *req_size);
+    void (*dev_id_mask_set_req)(struct tsb_switch *sw,
+                                uint8_t unipro_portid,
+                                uint8_t *mask,
+                                uint8_t *req, size_t *req_size);
 
     int (*port_irq_enable)(struct tsb_switch *sw,
                            uint8_t port_id,
@@ -358,12 +365,6 @@ struct tsb_switch_ops {
                          uint8_t peer_cportid,
                          uint8_t dis,
                          uint8_t irt);
-    int (*dev_id_mask_get)(struct tsb_switch *,
-                           uint8_t unipro_portid,
-                           uint8_t *dst);
-    int (*dev_id_mask_set)(struct tsb_switch *,
-                           uint8_t unipro_portid,
-                           uint8_t *mask);
     int (*fct_enable)(struct tsb_switch *);
     int (*switch_irq_enable)(struct tsb_switch *sw,
                              bool enable);
@@ -606,6 +607,12 @@ int switch_disable_test_traffic(struct tsb_switch *sw,
 struct tsb_rev_data {
     /* Max size in bytes of an NCP command request. */
     size_t ncp_req_max_size;
+
+    /*
+     * Number of entries in a device ID mask (for destination
+     * validation blocks)
+     */
+    size_t dev_id_mask_size;
 };
 
 /*

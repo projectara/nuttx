@@ -190,6 +190,21 @@ static void get_qos_attr_get_req(struct tsb_switch *sw,
     sw->ops->qos_attr_get_req(sw, portid, attrid, req, req_size);
 }
 
+static void get_dev_id_mask_get_req(struct tsb_switch *sw,
+                                    uint8_t unipro_portid,
+                                    uint8_t *req, size_t *req_size) {
+    DEBUGASSERT(sw->ops->dev_id_mask_get_req);
+    sw->ops->dev_id_mask_get_req(sw, unipro_portid, req, req_size);
+}
+
+static void get_dev_id_mask_set_req(struct tsb_switch *sw,
+                                    uint8_t unipro_portid,
+                                    uint8_t *mask,
+                                    uint8_t *req, size_t *req_size) {
+    DEBUGASSERT(sw->ops->dev_id_mask_set_req);
+    sw->ops->dev_id_mask_set_req(sw, unipro_portid, mask, req, req_size);
+}
+
 /*
  * Device ID helpers
  */
@@ -759,13 +774,78 @@ int switch_qos_attr_get(struct tsb_switch *sw,
     return cnf.rc;
 }
 
-int switch_port_irq_enable(struct tsb_switch *sw,
-                           uint8_t portid,
-                           bool enable) {
-    if (!sw->ops->port_irq_enable) {
-        return -EOPNOTSUPP;
+/*
+ * Device ID masking (for destination validation)
+ */
+
+int switch_dev_id_mask_get(struct tsb_switch *sw,
+                           uint8_t unipro_portid,
+                           uint8_t *dst) {
+    int rc;
+    size_t req_size = sw->rdata->ncp_req_max_size;
+    uint8_t req[req_size];
+    struct __attribute__ ((__packed__)) cnf {
+        uint8_t rc;
+        uint8_t function_id;
+        uint8_t portid;
+        uint8_t reserved;
+        uint8_t mask[sw->rdata->dev_id_mask_size];
+    } cnf;
+
+    dbg_verbose("%s(%d)\n", __func__, unipro_portid);
+
+    get_dev_id_mask_get_req(sw, unipro_portid, req, &req_size);
+    rc = ncp_transfer(sw, req, req_size, (uint8_t*)&cnf, sizeof(struct cnf));
+    if (rc) {
+        dbg_error("%s()failed: rc=%d\n", __func__, rc);
+        return rc;
     }
-    return sw->ops->port_irq_enable(sw, portid, enable);
+
+    if (cnf.function_id != NCP_GETDEVICEIDMASKCNF) {
+        dbg_error("%s(): unexpected CNF 0x%x\n", __func__, cnf.function_id);
+        return -EPROTO;
+    }
+
+    memcpy(dst, &cnf.mask, sizeof(cnf.mask));
+
+    dbg_verbose("%s(): fid=0x%02x, rc=%u\n", __func__,
+                cnf.function_id, cnf.rc);
+
+    /* Return resultCode */
+    return cnf.rc;
+}
+
+int switch_dev_id_mask_set(struct tsb_switch *sw,
+                           uint8_t unipro_portid,
+                           uint8_t *mask) {
+    int rc;
+    size_t req_size = sw->rdata->ncp_req_max_size;
+    uint8_t req[req_size];
+    struct __attribute__ ((__packed__)) cnf {
+        uint8_t rc;
+        uint8_t function_id;
+        uint8_t portid;
+        uint8_t reserved;
+    } cnf;
+
+    dbg_verbose("%s()\n", __func__);
+    get_dev_id_mask_set_req(sw, unipro_portid, mask, req, &req_size);
+    rc = ncp_transfer(sw, req, req_size, (uint8_t*)&cnf, sizeof(struct cnf));
+    if (rc) {
+        dbg_error("%s()failed: rc=%d\n", __func__, rc);
+        return rc;
+    }
+
+    if (cnf.function_id != NCP_SETDEVICEIDMASKCNF) {
+        dbg_error("%s(): unexpected CNF 0x%x\n", __func__, cnf.function_id);
+        return -EPROTO;
+    }
+
+    dbg_verbose("%s(): fid=0x%02x, rc=%u\n", __func__,
+                cnf.function_id, cnf.rc);
+
+    /* Return resultCode */
+    return cnf.rc;
 }
 
 int switch_set_valid_device(struct tsb_switch *sw,
@@ -783,6 +863,15 @@ int switch_dump_routing_table(struct tsb_switch *sw) {
         return -EOPNOTSUPP;
     }
     return sw->ops->dump_routing_table(sw);
+}
+
+int switch_port_irq_enable(struct tsb_switch *sw,
+                           uint8_t portid,
+                           bool enable) {
+    if (!sw->ops->port_irq_enable) {
+        return -EOPNOTSUPP;
+    }
+    return sw->ops->port_irq_enable(sw, portid, enable);
 }
 
 int switch_enable_test_traffic(struct tsb_switch *sw,
@@ -951,24 +1040,6 @@ int switch_disable_test_traffic(struct tsb_switch *sw,
     }
 
     return 0;
-}
-
-int switch_dev_id_mask_get(struct tsb_switch *sw,
-                           uint8_t unipro_portid,
-                           uint8_t *dst) {
-    if (!sw->ops->dev_id_mask_get) {
-        return -EOPNOTSUPP;
-    }
-    return sw->ops->dev_id_mask_get(sw, unipro_portid, dst);
-}
-
-int switch_dev_id_mask_set(struct tsb_switch *sw,
-                           uint8_t unipro_portid,
-                           uint8_t *mask) {
-    if (!sw->ops->dev_id_mask_set) {
-        return -EOPNOTSUPP;
-    }
-    return sw->ops->dev_id_mask_set(sw, unipro_portid, mask);
 }
 
 static int switch_internal_set_id(struct tsb_switch *sw,
