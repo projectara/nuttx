@@ -1,5 +1,5 @@
-/**
- * Copyright (c) 2015 Google Inc.
+/*
+ * Copyright (c) 2015-2016 Google Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,92 +24,165 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * @author Mark Greer
  */
 
 #ifndef __INCLUDE_NUTTX_DEVICE_H
 #define __INCLUDE_NUTTX_DEVICE_H
 
+/**
+ * @file nuttx/device.h
+ * @brief Device API
+ * @author Mark Greer
+ */
+
 #include <stddef.h>
 #include <assert.h>
 #include <nuttx/ring_buf.h>
 
+/** Device resource types */
 enum device_resource_type {
+    /** Invalid resource (forces device resources to define a type) */
     DEVICE_RESOURCE_TYPE_INVALID,
+    /** Address in a register map */
     DEVICE_RESOURCE_TYPE_REG,
+    /** IRQ number */
     DEVICE_RESOURCE_TYPE_IRQ,
+    /** GPIO number */
     DEVICE_RESOURCE_TYPE_GPIO,
+    /** I2C address */
     DEVICE_RESOURCE_TYPE_I2C_ADDR,
 };
 
+/** Device resource */
 struct device_resource {
-    char                        *name;
-    enum device_resource_type   type;
-    uint32_t                    start;
-    unsigned int                count;
+    /** Resource's name */
+    char *name;
+    /** Resource's type */
+    enum device_resource_type type;
+    /** Resource's start value */
+    uint32_t start;
+    /** Count of such resource */
+    unsigned int count;
 };
 
+/** Device states */
 enum device_state {
-    DEVICE_STATE_REMOVED,
-    DEVICE_STATE_PROBING,
-    DEVICE_STATE_PROBED,
-    DEVICE_STATE_OPENING,
-    DEVICE_STATE_OPEN,
-    DEVICE_STATE_CLOSING,
-    DEVICE_STATE_REMOVING,
+    DEVICE_STATE_REMOVED,   /**< Device is removed */
+    DEVICE_STATE_PROBING,   /**< Device is being probed */
+    DEVICE_STATE_PROBED,    /**< Device is probed */
+    DEVICE_STATE_OPENING,   /**< Device is being opened */
+    DEVICE_STATE_OPEN,      /**< Device is open */
+    DEVICE_STATE_CLOSING,   /**< Device is being closed */
+    DEVICE_STATE_REMOVING,  /**< Device is being removed */
 };
 
 struct device;
 
+/** Device driver operations */
 struct device_driver_ops {
-    int     (*probe)(struct device *dev);
-    void    (*remove)(struct device *dev);
-    int     (*open)(struct device *dev);
-    void    (*close)(struct device *dev);
-    void    *type_ops;
+    /** Probe the device ``dev``; Return 0 on success, !=0 on error */
+    int (*probe)(struct device *dev);
+    /** Remove the device ``dev`` */
+    void (*remove)(struct device *dev);
+    /** Open the device ``dev``; Return 0 on success, !=0 on error */
+    int (*open)(struct device *dev);
+    /** Close the device ``dev`` */
+    void (*close)(struct device *dev);
+    /** Device type operations */
+    void *type_ops;
 };
 
+/** Device driver structure */
 struct device_driver {
-    char                        *type;
-    char                        *name;
-    char                        *desc;
-    struct device_driver_ops    *ops;
-    void                        *priv;
+    /** Device driver's type */
+    char *type;
+    /** Device driver's name */
+    char *name;
+    /** Device driver's full description */
+    char *desc;
+    /** Device driver's operations */
+    struct device_driver_ops *ops;
+    /** Device driver's private data */
+    void *priv;
 };
 
+/** Device structure */
 struct device {
-    char                    *type;
-    char                    *name;
-    char                    *desc;
-    unsigned int            id;
-    struct device_resource  *resources;
-    unsigned int            resource_count;
-    void                    *init_data;
-    enum device_state       state;
-    struct device_driver    *driver;
-    void                    *priv;
+    /** Device's type */
+    char *type;
+    /** Device's name */
+    char *name;
+    /** Device's full description */
+    char *desc;
+    /** Device's identifier */
+    unsigned int id;
+    /** Array of resources associated to the device */
+    struct device_resource *resources;
+    /** Total number of the device's resources */
+    unsigned int resource_count;
+    /** Device's initialization data */
+    void *init_data;
+    /** Device's internal state device_state */
+    enum device_state state;
+    /** Attached device driver */
+    struct device_driver *driver;
+    /** Device's private data */
+    void *priv;
 };
 
-/* Called by device driver clients */
+/**
+ * @brief Open a device by its type and identifier
+ * @param type The type of the device to open
+ * @param id The identifier of the device to open
+ * @return The specified device on success, NULL on failure
+ */
 struct device *device_open(char *type, unsigned int id);
+
+/**
+ * @brief Close a device
+ * @param dev The device to close
+ */
 void device_close(struct device *dev);
 
-/* Called by device drivers */
+/**
+ * @brief Register a device driver
+ * @param driver The device driver to register
+ * @return 0 on success, !=0 on failure
+ */
 int device_register_driver(struct device_driver *driver);
+
+/**
+ * @brief Unregister a device driver
+ * @param driver The device driver to unregister
+ */
 void device_unregister_driver(struct device_driver *driver);
 
+/**
+ * @brief Get a device's resource by its type and number
+ * @param dev The device containing the requested resource
+ * @param type The device resource's type
+ * @param num The number of the device resource
+ * @return The specified resource on success, NULL on failure
+ */
 struct device_resource *device_resource_get(struct device *dev,
                                             enum device_resource_type type,
                                             unsigned int num);
+
+/**
+ * @brief Get a device's resource by its type and name
+ * @param dev The device containing the requested resource
+ * @param type The device resource's type
+ * @param name The name of the device resource
+ * @return The specified resource on success, NULL on failure
+ */
 struct device_resource *device_resource_get_by_name(
                                                  struct device *dev,
                                                  enum device_resource_type type,
                                                  char *name);
 /**
  * @brief Get the type of a device
- * @param dev Device whose type will be returned
- * @return Pointer to the device's type
+ * @param dev The device whose type to return
+ * @return The type of the specified device
  */
 static inline char *device_get_type(struct device *dev)
 {
@@ -118,8 +191,8 @@ static inline char *device_get_type(struct device *dev)
 
 /**
  * @brief Get the name of a device
- * @param dev Device whose name will be returned
- * @return Pointer to the device's name
+ * @param dev The device whose name to return
+ * @return The name of the specified device
  */
 static inline char *device_get_name(struct device *dev)
 {
@@ -128,8 +201,8 @@ static inline char *device_get_name(struct device *dev)
 
 /**
  * @brief Get the description of a device
- * @param dev Device whose description will be returned
- * @return Pointer to the device's description
+ * @param dev The device whose description to return
+ * @return The description of the specified device
  */
 static inline char *device_get_desc(struct device *dev)
 {
@@ -137,9 +210,9 @@ static inline char *device_get_desc(struct device *dev)
 }
 
 /**
- * @brief Get the ID of a device
- * @param dev Device whose ID will be returned
- * @return The device's ID
+ * @brief Get the identifier of a device
+ * @param dev The device whose identifier to return
+ * @return The identifier of the specified device
  */
 static inline unsigned int device_get_id(struct device *dev)
 {
@@ -147,9 +220,9 @@ static inline unsigned int device_get_id(struct device *dev)
 }
 
 /**
- * @brief Get the init_data of a device
- * @param dev Device whose init_data will be returned
- * @return The device's init_data
+ * @brief Get the initialization data of a device
+ * @param dev The device whose initialization data to return
+ * @return The initialization data of the specified device
  */
 static inline void *device_get_init_data(struct device *dev)
 {
@@ -157,9 +230,10 @@ static inline void *device_get_init_data(struct device *dev)
 }
 
 /**
- * @brief Set the init_data of a device
- * @param dev Device whose init_data will be set
- * @return The device's init_data
+ * @brief Set the initialization data of a device
+ * @param dev The device whose initialization data to set
+ * @param init_data The initialization data to associate with the specified
+ * device
  */
 static inline void device_set_init_data(struct device *dev, void *init_data)
 {
@@ -168,8 +242,8 @@ static inline void device_set_init_data(struct device *dev, void *init_data)
 
 /**
  * @brief Get the state of a device
- * @param dev Device whose state will be returned
- * @return The device's state
+ * @param dev The device whose internal state to return
+ * @return The state of the specified device
  */
 static inline enum device_state device_get_state(struct device *dev)
 {
@@ -177,9 +251,9 @@ static inline enum device_state device_get_state(struct device *dev)
 }
 
 /**
- * @brief Return whether the device is open or not
- * @param dev Device whose state will be tested
- * @return 0: Device is not open; 1: Device is open
+ * @brief Return whether a device is open or not
+ * @param dev The device whose state to test
+ * @return 1 if the specified device is open, 0 otherwise
  */
 static inline int device_is_open(struct device *dev)
 {
@@ -187,9 +261,9 @@ static inline int device_is_open(struct device *dev)
 }
 
 /**
- * @brief Get the resource count of a device
- * @param dev Device whose resource count will be returned
- * @return The number of resources associated with the device
+ * @brief Get the number of resources associate with a device
+ * @param dev The device whose resource count to return
+ * @return The number of resources of the specified device
  */
 static inline unsigned int device_get_resource_count(struct device *dev)
 {
@@ -198,8 +272,8 @@ static inline unsigned int device_get_resource_count(struct device *dev)
 
 /**
  * @brief Get the private data of a device
- * @param dev Device whose private data will be returned
- * @return The device's private data
+ * @param dev The device whose private data to return
+ * @return The private data of the specified device
  */
 static inline void *device_get_private(struct device *dev)
 {
@@ -208,8 +282,8 @@ static inline void *device_get_private(struct device *dev)
 
 /**
  * @brief Set the private data of a device
- * @param dev Device whose private data will be set
- * @param priv Device's private data
+ * @param dev The device whose private data to set
+ * @param priv The private data to associate with the specified device
  */
 static inline void device_set_private(struct device *dev, void *priv)
 {
@@ -217,9 +291,9 @@ static inline void device_set_private(struct device *dev, void *priv)
 }
 
 /**
- * @brief Return whether a driver is attached to the device
- * @param dev Device that will be examined
- * @return 0: Driver is not assigned to device; 1: Driver is assigned to device
+ * @brief Return whether a device driver is attached to the device
+ * @param dev The device whose device driver to test
+ * @return 1 if a device driver is attached to the specified device, 0 otherwise
  */
 static inline int device_driver_is_attached(struct device *dev)
 {
@@ -227,9 +301,9 @@ static inline int device_driver_is_attached(struct device *dev)
 }
 
 /**
- * @brief Get the type of the driver for a device
- * @param dev Device whose driver's type will be returned
- * @return Pointer to the device driver's type
+ * @brief Get the device driver's type of a device
+ * @param dev The device whose device driver's type to return
+ * @return The device driver's type of the specified device
  */
 static inline char *device_driver_get_type(struct device *dev)
 {
@@ -237,9 +311,9 @@ static inline char *device_driver_get_type(struct device *dev)
 }
 
 /**
- * @brief Get the name of the driver for a device
- * @param dev Device whose driver's name will be returned
- * @return Pointer to the device driver's name
+ * @brief Get the device driver's name of a device
+ * @param dev The device whose device driver's name to return
+ * @return The device driver's name of the specified device
  */
 static inline char *device_driver_get_name(struct device *dev)
 {
@@ -247,9 +321,9 @@ static inline char *device_driver_get_name(struct device *dev)
 }
 
 /**
- * @brief Get the description of the driver for a device
- * @param dev Device whose driver's description will be returned
- * @return Pointer to the device driver's description
+ * @brief Get the device driver's description of a device
+ * @param dev The device whose device driver's description to return
+ * @return The device driver's description of the specified device
  */
 static inline char *device_driver_get_desc(struct device *dev)
 {
@@ -257,32 +331,32 @@ static inline char *device_driver_get_desc(struct device *dev)
 }
 
 /**
- * @brief NULL check entire path from '_dev' to '_type'
+ * @brief Check the entire path from a device to the device type operations of
+ * its device driver
  *
- * Check the chain of pointers from the dev pointer to
- * the type_ops pointer to ensure none of them are NULL.
- * If one is NULL, ASSERT iff CONFIG_DEBUG is enabled.
+ * Check the chain of pointers from the dev pointer to the type_ops pointer to
+ * ensure none of them are NULL. If one is NULL, then raise ASSERT if
+ * CONFIG_DEBUG is enabled.
  *
- * @param dev Device whose dev structure will be checked
- * @param type Device type
+ * @param _dev The device on which to perform the check
  */
 #define DEVICE_DRIVER_ASSERT_OPS(_dev)                              \
     DEBUGASSERT((_dev) && (_dev)->driver && (_dev)->driver->ops &&  \
                 (_dev)->driver->ops->type_ops)
 
 /**
- * @brief Get the type ops of the driver for a device
- * @param dev Device whose driver's type ops will be returned
- * @param type Device type
- * @return Pointer to the device driver's type ops
+ * @brief Get the device type operations of a device's device driver
+ * @param _dev The device whose device type operations to return
+ * @param _type The device's type
+ * @return The device type operations of the specified device
  */
 #define DEVICE_DRIVER_GET_OPS(_dev, _type)  \
     ((struct device_##_type##_type_ops *)((_dev)->driver->ops->type_ops))
 
 /**
- * @brief Get the private data of the driver for a device
- * @param dev Device whose driver's private data will be returned
- * @return The device driver's private data
+ * @brief Get the device driver's private data of a device
+ * @param dev The device whose device driver's private data to return
+ * @return The device driver's private data of the specified device
  */
 static inline void *device_driver_get_private(struct device *dev)
 {
@@ -290,9 +364,9 @@ static inline void *device_driver_get_private(struct device *dev)
 }
 
 /**
- * @brief Set the private data of the driver for a device
- * @param dev Device whose driver's private data will be set
- * @param priv Device driver's private data
+ * @brief Set the device driver's private data of a device
+ * @param dev The device whose device driver's private data to set
+ * @param priv The device driver's private data of the specified device
  */
 static inline void device_driver_set_private(struct device *dev, void *priv)
 {
@@ -300,10 +374,10 @@ static inline void device_driver_set_private(struct device *dev, void *priv)
 }
 
 /**
- * @brief Get the name of the specified device resource
- * @param dev Device whose specified device resource will be returned
- * @param idx Index of the device resource to be returned
- * @return The device's device resource
+ * @brief Get the device resource's name of a device by its index
+ * @param dev The device whose device resource's name to return
+ * @param idx The index of the device resource
+ * @return The device resource's name
  */
 static inline char *device_resource_get_name(struct device *dev,
                                              unsigned int idx)
@@ -312,10 +386,10 @@ static inline char *device_resource_get_name(struct device *dev,
 }
 
 /**
- * @brief Get the type of the specified device resource
- * @param dev Device whose specified device resource will be returned
- * @param idx Index of the device resource to be returned
- * @return The device's device resource
+ * @brief Get the device resources's type of a device by its index
+ * @param dev The device whose device resource's type to return
+ * @param idx The index of the device resource
+ * @return The device resource's type
  */
 static inline enum device_resource_type device_resource_get_type(
                                         struct device *dev, unsigned int idx)
@@ -324,10 +398,10 @@ static inline enum device_resource_type device_resource_get_type(
 }
 
 /**
- * @brief Get the start of the specified device resource
- * @param dev Device whose specified device resource will be returned
- * @param idx Index of the device resource to be returned
- * @return The device's device resource
+ * @brief Get the device resource's start value of a device by its index
+ * @param dev The device whose device resource's start value to return
+ * @param idx The index of the device resource
+ * @return The device resource's start value
  */
 static inline uint32_t device_resource_get_start(struct device *dev,
                                                  unsigned int idx)
@@ -336,10 +410,10 @@ static inline uint32_t device_resource_get_start(struct device *dev,
 }
 
 /**
- * @brief Get the count of the specified device resource
- * @param dev Device whose specified device resource will be returned
- * @param idx Index of the device resource to be returned
- * @return The device's device resource
+ * @brief Get the device resource's count of a device by its index
+ * @param dev The device whose device resource's count to return
+ * @param idx The index of the device resource
+ * @return The device resource's count
  */
 static inline unsigned int device_resource_get_count(struct device *dev,
                                                      unsigned int idx)
