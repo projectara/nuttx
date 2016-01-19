@@ -203,6 +203,15 @@ int gb_loopback_service(void)
                             "%s: cport %d disconnected\n",
                             __FUNCTION__, ctx->cport);
                     ctx->active = 0;
+                } else if (status == -ENOMEM) {
+                    /*
+                     * Loopback operations allocated here are sent and
+                     * freed by another thread.
+                     * So, if we are running out of memory, sleep to let
+                     * the UniPro thread send and free operations.
+                     */
+                    usleep(1);
+                    continue;
                 } else {
                     ctx->err++;
                 }
