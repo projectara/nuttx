@@ -28,6 +28,7 @@ if ARCH_BOARD_ARA_BRIDGE
 
 config ARA_BRIDGE_HAVE_USB4624
 	bool
+	depends on ARA_BRIDGE_BOARD_ARA_DEVBOARD
 	depends on ARCH_CHIP_USB_HCD
 	depends on DEVICE_CORE
 	default y
