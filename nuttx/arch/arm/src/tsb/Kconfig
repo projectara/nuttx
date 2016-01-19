@@ -43,6 +43,14 @@ config ARCH_CHIP_DEVICE_GDMAC
 	---help---
 		TSB GDMAC Driver
 
+config ARCH_UNIPRO_MAX_CPORT_COUNT
+	int "UniPro max CPort count"
+	default 0
+	---help---
+		Maximum number of CPort supported. This option is used to reduced the
+		number of CPort supported by the UniPro IP. A value of <= 0 indicate
+		that the driver should use all the CPorts supported by the UniPro IP.
+
 config ARCH_UNIPROTX_USE_DMA
 	bool "Enable DMA for Unipro TX"
 	depends on ARCH_CHIP_DEVICE_GDMAC

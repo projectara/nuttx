@@ -72,6 +72,8 @@
 static struct cport *cporttable;
 static unipro_event_handler_t evt_handler;
 
+#define MAX_CPORT_COUNT        CONFIG_ARCH_UNIPRO_MAX_CPORT_COUNT
+
 #define ES2_APBRIDGE_CPORT_MAX 44 // number of CPorts available on the APBridges
 #define ES2_GPBRIDGE_CPORT_MAX 16 // number of CPorts available on the GPBridges
 #define ES2_INIT_STATUS(x) (x >> 24)
@@ -92,8 +94,9 @@ unsigned int unipro_cport_count(void) {
          * GPBridges, unless we can determine that we're running on an
          * APBridge.
          */
-        return ((tsb_get_product_id() == tsb_pid_apbridge) ?
-                ES2_APBRIDGE_CPORT_MAX : ES2_GPBRIDGE_CPORT_MAX);
+        num_cports = (tsb_get_product_id() == tsb_pid_apbridge) ?
+                ES2_APBRIDGE_CPORT_MAX : ES2_GPBRIDGE_CPORT_MAX;
+        goto out;
     }
 
     retval = unipro_attr_local_read(T_NUMCPORTS, &num_cports, 0);
@@ -102,7 +105,9 @@ unsigned int unipro_cport_count(void) {
         return 0;
     }
 
-    return num_cports;
+out:
+    return num_cports > MAX_CPORT_COUNT && MAX_CPORT_COUNT > 0 ?
+                MAX_CPORT_COUNT : num_cports;
 }
 
 struct cport *cport_handle(unsigned int cportid) {
