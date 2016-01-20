@@ -398,6 +398,78 @@ struct tsb_switch {
     struct list_head        listeners;
 };
 
+/*
+ * Low-level NCP support routines
+ */
+
+int switch_dme_set(struct tsb_switch *sw,
+                   uint8_t portid,
+                   uint16_t attrid,
+                   uint16_t select_index,
+                   uint32_t attr_value);
+
+int switch_dme_get(struct tsb_switch *sw,
+                   uint8_t portid,
+                   uint16_t attrid,
+                   uint16_t select_index,
+                   uint32_t *attr_value);
+
+int switch_dme_peer_set(struct tsb_switch *sw,
+                        uint8_t portid,
+                        uint16_t attrid,
+                        uint16_t select_index,
+                        uint32_t attr_value);
+
+int switch_dme_peer_get(struct tsb_switch *sw,
+                        uint8_t portid,
+                        uint16_t attrid,
+                        uint16_t select_index,
+                        uint32_t *attr_value);
+
+int switch_lut_get(struct tsb_switch *sw,
+                   uint8_t unipro_portid,
+                   uint8_t addr,
+                   uint8_t *dst_portid);
+
+int switch_lut_set(struct tsb_switch *sw,
+                   uint8_t unipro_portid,
+                   uint8_t addr,
+                   uint8_t dst_portid);
+
+int switch_internal_getattr(struct tsb_switch *sw,
+                            uint16_t attrid,
+                            uint32_t *val);
+
+int switch_internal_setattr(struct tsb_switch *sw,
+                            uint16_t attrid,
+                            uint32_t val);
+
+int switch_sys_ctrl_set(struct tsb_switch *sw,
+                        uint16_t sc_addr,
+                        uint32_t val);
+
+int switch_sys_ctrl_get(struct tsb_switch *sw,
+                        uint16_t sc_addr,
+                        uint32_t *val);
+
+int switch_qos_attr_set(struct tsb_switch *sw, uint8_t portid, uint8_t attrid,
+                        uint32_t attr_val);
+
+int switch_qos_attr_get(struct tsb_switch *sw, uint8_t portid, uint8_t attrid,
+                        uint32_t *val);
+
+int switch_dev_id_mask_get(struct tsb_switch *sw,
+                           uint8_t unipro_portid,
+                           uint8_t *dst);
+
+int switch_dev_id_mask_set(struct tsb_switch *sw,
+                           uint8_t unipro_portid,
+                           uint8_t *mask);
+
+/*
+ * Switch events
+ */
+
 enum tsb_switch_event_type {
     TSB_SWITCH_EVENT_MAILBOX,
 };
@@ -502,32 +574,6 @@ static inline int switch_configure_link_pwm(struct tsb_switch *sw,
     };
     return switch_configure_link(sw, port_id, &lcfg, NULL);
 }
-
-int switch_lut_get(struct tsb_switch *sw,
-                   uint8_t unipro_portid,
-                   uint8_t addr,
-                   uint8_t *dst_portid);
-
-int switch_lut_set(struct tsb_switch *sw,
-                   uint8_t unipro_portid,
-                   uint8_t addr,
-                   uint8_t dst_portid);
-
-int switch_sys_ctrl_set(struct tsb_switch *sw,
-                        uint16_t sc_addr,
-                        uint32_t val);
-
-int switch_sys_ctrl_get(struct tsb_switch *sw,
-                        uint16_t sc_addr,
-                        uint32_t *val);
-
-int switch_dev_id_mask_get(struct tsb_switch *sw,
-                           uint8_t unipro_portid,
-                           uint8_t *dst);
-
-int switch_dev_id_mask_set(struct tsb_switch *sw,
-                           uint8_t unipro_portid,
-                           uint8_t *mask);
 
 int switch_setup_routing_table(struct tsb_switch *sw,
                                uint8_t device_id_0,
@@ -642,50 +688,10 @@ void switch_exit(struct tsb_switch*);
 int switch_enable_port(struct tsb_switch *,
                        uint8_t portid);
 
-/*
- * Low-level DME access
- */
-
-int switch_dme_set(struct tsb_switch *sw,
-                   uint8_t portid,
-                   uint16_t attrid,
-                   uint16_t select_index,
-                   uint32_t attr_value);
-
-int switch_dme_get(struct tsb_switch *sw,
-                   uint8_t portid,
-                   uint16_t attrid,
-                   uint16_t select_index,
-                   uint32_t *attr_value);
-
-int switch_dme_peer_set(struct tsb_switch *sw,
-                        uint8_t portid,
-                        uint16_t attrid,
-                        uint16_t select_index,
-                        uint32_t attr_value);
-
-int switch_dme_peer_get(struct tsb_switch *sw,
-                        uint8_t portid,
-                        uint16_t attrid,
-                        uint16_t select_index,
-                        uint32_t *attr_value);
-
 int switch_port_irq_enable(struct tsb_switch *sw,
                            uint8_t portid,
                            bool enable);
 
-int switch_internal_getattr(struct tsb_switch *sw,
-                            uint16_t attrid,
-                            uint32_t *val);
-
-int switch_internal_setattr(struct tsb_switch *sw,
-                            uint16_t attrid,
-                            uint32_t val);
-
-int switch_qos_attr_set(struct tsb_switch *sw, uint8_t portid, uint8_t attrid,
-                        uint32_t attr_val);
-int switch_qos_attr_get(struct tsb_switch *sw, uint8_t portid, uint8_t attrid,
-                        uint32_t *val);
 int switch_qos_band_reset(struct tsb_switch *sw, uint8_t portid);
 int switch_qos_bwctrl_enabled(struct tsb_switch *sw, uint8_t portid, uint8_t tc,
                               uint8_t *val);
