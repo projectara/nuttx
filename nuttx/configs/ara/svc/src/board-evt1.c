@@ -274,7 +274,7 @@ DECLARE_MODULE_PORT_INTERFACE(evt1_module_4B, evt1_module_4B_vreg_data, 8,
 DECLARE_MODULE_PORT_INTERFACE(evt1_module_5_lcd,
                               evt1_module_5_lcd_vreg_data, 10,
                               WD_5_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
-                              true, MOD_RELEASE_5);
+                              false, MOD_RELEASE_5);
 
 static struct interface *evt1_interfaces[] = {
     &apb1_interface,
