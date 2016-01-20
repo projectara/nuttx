@@ -631,6 +631,7 @@ int svc_hot_plug(uint8_t portid)
         return retval;
     }
 
+    switch_port_irq_enable(svc->sw, portid, true);
     if (!svc->ap_initialized) {
         /* If AP is not ready yet, store the state for later retrieval */
         interface_store_hotplug_state(portid, HOTPLUG_ST_PLUGGED);
@@ -658,6 +659,7 @@ int svc_hot_unplug(uint8_t portid)
         return rc;
     }
 
+    switch_port_irq_enable(svc->sw, portid, false);
     if (svc->ap_initialized) {
         /*
          * If AP is ready, generate an event to send
