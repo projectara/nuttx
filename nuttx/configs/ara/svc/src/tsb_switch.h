@@ -700,6 +700,7 @@ void switch_exit(struct tsb_switch*);
 int switch_enable_port(struct tsb_switch *,
                        uint8_t portid);
 
+int _switch_irq_pending_worker(int argc, char *argv[]);
 int switch_port_irq_enable(struct tsb_switch *sw,
                            uint8_t portid,
                            bool enable);
