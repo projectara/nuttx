@@ -87,6 +87,16 @@ static int ncp_transfer(struct tsb_switch *sw,
     return sw->ops->__ncp_transfer(sw, tx_buf, tx_size, rx_buf, rx_size);
 }
 
+static void get_switch_id_set_req(struct tsb_switch *sw,
+                                  uint8_t cportid,
+                                  uint8_t peer_cportid,
+                                  uint8_t dis,
+                                  uint8_t irt,
+                                  uint8_t *req, size_t *req_size) {
+    DEBUGASSERT(sw->ops->switch_id_set_req);
+    sw->ops->switch_id_set_req(sw, cportid, peer_cportid, dis, irt, req, req_size);
+}
+
 static void get_dme_set_req(struct tsb_switch *sw,
                             uint8_t port_id,
                             uint16_t attrid,
@@ -278,6 +288,52 @@ int switch_enable_port(struct tsb_switch *sw,
         return -EOPNOTSUPP;
     }
     return sw->ops->enable_port(sw, portid);
+}
+
+/*
+ * Switch initialization NCP primitive
+ */
+
+static int switch_internal_set_id(struct tsb_switch *sw,
+                                  uint8_t cportid,
+                                  uint8_t peer_cportid,
+                                  uint8_t dis,
+                                  uint8_t irt) {
+    int rc;
+    size_t req_size = sw->rdata->ncp_req_max_size;
+    uint8_t req[req_size];
+    struct __attribute__ ((__packed__)) cnf {
+        uint8_t rc;
+        uint8_t function_id;
+    } cnf;
+
+    dbg_verbose("%s: cportid: %u peer_cportid: %u dis: %u irt: %u\n",
+                __func__,
+                cportid,
+                peer_cportid,
+                dis,
+                irt);
+
+    get_switch_id_set_req(sw, cportid, peer_cportid, dis, irt, req, &req_size);
+    rc = ncp_transfer(sw, req, req_size, (uint8_t*)&cnf, sizeof(struct cnf));
+    if (rc) {
+        dbg_error("%s() failed: rc=%d\n", __func__, rc);
+        return rc;
+    }
+
+    if (cnf.function_id != NCP_SWITCHIDSETCNF) {
+        dbg_error("%s(): unexpected CNF 0x%x\n", __func__, cnf.function_id);
+        return -EPROTO;
+    }
+
+    dbg_verbose("%s(): ret=0x%02x, switchDeviceId=0x%01x, cPortId=0x%01x -> peerCPortId=0x%01x\n",
+                __func__,
+                cnf.rc,
+                SWITCH_DEVICE_ID,
+                cportid,
+                peer_cportid);
+
+    return cnf.rc;
 }
 
 /*
@@ -1040,17 +1096,6 @@ int switch_disable_test_traffic(struct tsb_switch *sw,
     }
 
     return 0;
-}
-
-static int switch_internal_set_id(struct tsb_switch *sw,
-                                  uint8_t cportid,
-                                  uint8_t peercportid,
-                                  uint8_t dis,
-                                  uint8_t irt) {
-    if (!sw->ops->switch_id_set) {
-        return -EOPNOTSUPP;
-    }
-    return sw->ops->switch_id_set(sw, cportid, peercportid, dis, irt);
 }
 
 int switch_qos_band_reset(struct tsb_switch *sw, uint8_t portid) {

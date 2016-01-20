@@ -1331,15 +1331,13 @@ static int es2_dump_routing_table(struct tsb_switch *sw) {
     return 0;
 }
 
-static int es2_switch_id_set(struct tsb_switch *sw,
-                             uint8_t cportid,
-                             uint8_t peer_cportid,
-                             uint8_t dis,
-                             uint8_t irt)
-{
-    int rc;
-
-    uint8_t req[] = {
+static void es2_switch_id_set_req(struct tsb_switch *sw,
+                                  uint8_t cportid,
+                                  uint8_t peer_cportid,
+                                  uint8_t dis,
+                                  uint8_t irt,
+                                  uint8_t *req, size_t *req_size) {
+    uint8_t switch_id_set[] = {
         SWITCH_DEVICE_ID,
         (dis << 2) | (irt << 0),
         NCP_SWITCHIDSETREQ,
@@ -1350,38 +1348,9 @@ static int es2_switch_id_set(struct tsb_switch *sw,
         NCP_RESERVED,
         SWITCH_PORT_ID      // Source portID
     };
-
-    struct __attribute__ ((__packed__)) cnf {
-        uint8_t rc;
-        uint8_t function_id;
-    } cnf;
-
-    dbg_verbose("%s: cportid: %u peer_cportid: %u dis: %u irt: %u\n",
-                __func__,
-                cportid,
-                peer_cportid,
-                dis,
-                irt);
-
-    rc = es2_ncp_transfer(sw, req, sizeof(req), (uint8_t*)&cnf, sizeof(cnf));
-    if (rc) {
-        dbg_error("%s() failed: rc=%d\n", __func__, rc);
-        return rc;
-    }
-
-    if (cnf.function_id != NCP_SWITCHIDSETCNF) {
-        dbg_error("%s(): unexpected CNF 0x%x\n", __func__, cnf.function_id);
-        return -EPROTO;
-    }
-
-    dbg_verbose("%s(): ret=0x%02x, switchDeviceId=0x%01x, cPortId=0x%01x -> peerCPortId=0x%01x\n",
-                __func__,
-                cnf.rc,
-                SWITCH_DEVICE_ID,
-                cportid,
-                peer_cportid);
-
-    return cnf.rc;
+    DEBUGASSERT(*req_size >= sizeof(switch_id_set));
+    memcpy(req, switch_id_set, sizeof(switch_id_set));
+    *req_size = sizeof(switch_id_set);
 }
 
 /**
@@ -1431,6 +1400,8 @@ static struct tsb_rev_data es2_rev_data = {
 static struct tsb_switch_ops es2_ops = {
     .init_comm             = es2_init_seq,
 
+    .switch_id_set_req     = es2_switch_id_set_req,
+
     .set_req               = es2_dme_set_req,
     .get_req               = es2_dme_get_req,
 
@@ -1456,8 +1427,6 @@ static struct tsb_switch_ops es2_ops = {
     .dump_routing_table    = es2_dump_routing_table,
 
     .port_irq_enable       = es2_port_irq_enable,
-
-    .switch_id_set         = es2_switch_id_set,
 
     .fct_enable            = es2_fct_enable,
 

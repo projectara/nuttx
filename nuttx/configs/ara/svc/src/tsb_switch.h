@@ -289,6 +289,12 @@ struct tsb_switch_ops {
      * The caller must ensure a safe maximum buffer size. A minimum
      * value safe for all requests is in sw->rdata->ncp_req_max_size.
      */
+    void (*switch_id_set_req)(struct tsb_switch *sw,
+                              uint8_t cportid,
+                              uint8_t peer_cportid,
+                              uint8_t dis,
+                              uint8_t irt,
+                              uint8_t *req, size_t *req_size);
     void (*set_req)(struct tsb_switch *sw,
                     uint8_t portid,
                     uint16_t attrid,
@@ -360,11 +366,6 @@ struct tsb_switch_ops {
                             uint8_t device_id,
                             bool valid);
     int (*dump_routing_table)(struct tsb_switch*);
-    int (*switch_id_set)(struct tsb_switch *,
-                         uint8_t cportid,
-                         uint8_t peer_cportid,
-                         uint8_t dis,
-                         uint8_t irt);
     int (*fct_enable)(struct tsb_switch *);
     int (*switch_irq_enable)(struct tsb_switch *sw,
                              bool enable);
