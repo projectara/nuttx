@@ -58,7 +58,10 @@
  * later switch increases SWITCH_UNIPORT_MAX */
 #define ES2_SWITCH_NUM_UNIPORTS 14
 
-#define ES2_IRQ_MAX    16
+/* Interrupt enable bits */
+#define ES2_SPICEE_ENABLE_ALL        (0x3)
+#define ES2_SPI3EE_ENABLE_ALL        (0x6F)
+#define ES2_SPI45EE_ENABLE_ALL       (0xFE00006F)
 /* Device ID mask set is the longest NCP request. */
 #define ES2_NCP_MAX_REQ_SIZE 19
 /* Device ID masks are per-port, with 16 bytes of mask for each port. */
@@ -107,53 +110,6 @@ struct sw_es2_priv {
 #define WSTATUS3_LENERR_MASK           (0x40)
 #define WSTATUS3_TXENTFIFOFULL_MASK    (0x02)
 #define WSTATUS3_TXDATAFIFOFULL_MASK   (0x01)
-
-#define IRQ_STATUS_ENDPOINTRESETIND     (0x0)
-#define IRQ_STATUS_LINKSTARTUPIND       (0x1)
-#define IRQ_STATUS_LINKLOSTIND          (0x2)
-#define IRQ_STATUS_HIBERNATEENTERIND    (0x3)
-#define IRQ_STATUS_HIBERNATEEXITIND     (0x4)
-#define IRQ_STATUS_POWERMODEIND         (0x5)
-#define IRQ_STATUS_TESTMODEIND          (0x6)
-#define IRQ_STATUS_ERRORPHYIND          (0x7)
-#define IRQ_STATUS_ERRORPAIND           (0x8)
-#define IRQ_STATUS_ERRORDIND            (0x9)
-#define IRQ_STATUS_ERRORNIND            (0xa)
-#define IRQ_STATUS_ERRORTIND            (0xb)
-#define IRQ_STATUS_PAINITERROR          (0xc)
-#define IRQ_STATUS_DEBUGCOUNTEROVERFLOW (0xd)
-#define IRQ_STATUS_LINKSTARTUPCNF       (0xe)
-#define IRQ_STATUS_MAILBOX              (0xf)
-
-/* Attributes as sources of interrupts from the Unipro ports */
-static uint16_t unipro_irq_attr[ES2_IRQ_MAX] = {
-    [IRQ_STATUS_ENDPOINTRESETIND]     = TSB_DME_ENDPOINTRESETIND,
-    [IRQ_STATUS_LINKSTARTUPIND]       = TSB_DME_LINKSTARTUPIND,
-    [IRQ_STATUS_LINKLOSTIND]          = TSB_DME_LINKLOSTIND,
-    [IRQ_STATUS_HIBERNATEENTERIND]    = TSB_DME_HIBERNATEENTERIND,
-    [IRQ_STATUS_HIBERNATEEXITIND]     = TSB_DME_HIBERNATEEXITIND,
-
-    /*
-     * FIXME: hackaround until SW-1237 is implemented.
-     *
-     * The proper attribute is TSB_DME_POWERMODEIND, but that's
-     * currently polled by switch_apply_power_mode() to determine when
-     * a power mode change is done, after writing PA_PWRMODE. We would
-     * race with that thread if we read it in the IRQ worker.
-     */
-    [IRQ_STATUS_POWERMODEIND]         = 0, /* TSB_DME_POWERMODEIND */
-
-    [IRQ_STATUS_TESTMODEIND]          = TSB_DME_TESTMODEIND,
-    [IRQ_STATUS_ERRORPHYIND]          = TSB_DME_ERRORPHYIND,
-    [IRQ_STATUS_ERRORPAIND]           = TSB_DME_ERRORPAIND,
-    [IRQ_STATUS_ERRORDIND]            = TSB_DME_ERRORDIND,
-    [IRQ_STATUS_ERRORNIND]            = 0, /* Not recommended to read */
-    [IRQ_STATUS_ERRORTIND]            = TSB_DME_ERRORTIND,
-    [IRQ_STATUS_PAINITERROR]          = TSB_DME_ERRORDIND,
-    [IRQ_STATUS_DEBUGCOUNTEROVERFLOW] = TSB_DEBUGCOUNTEROVERFLOW,
-    [IRQ_STATUS_LINKSTARTUPCNF]       = TSB_DME_LINKSTARTUPCNF,
-    [IRQ_STATUS_MAILBOX]              = TSB_MAILBOX
-};
 
 static inline uint8_t *cport_to_rxbuf(struct sw_es2_priv *priv, unsigned int cportid) {
     switch (cportid) {
@@ -792,213 +748,6 @@ int es2_init_seq(struct tsb_switch *sw)
     return rc;
 }
 
-/* ES2 specific interrupt handler. Clears the source of interrupt */
-int es2_switch_irq_handler(struct tsb_switch *sw)
-{
-    uint32_t swint, swins, port_irq_status, attr_value;
-    int i, j;
-
-    if (!sw) {
-        dbg_error("%s: no Switch context\n", __func__);
-        return -EINVAL;
-    }
-
-    do {
-        // Read Switch Interrupt Status register
-        if (switch_internal_getattr(sw, SWINT, &swint)) {
-            dbg_error("IRQ: SWINT register read failed\n");
-            return -EIO;
-        }
-        dbg_insane("IRQ: SWINT=0x%x\n", swint);
-
-        // Handle the Switch internal interrupts
-        if (swint & TSB_INTERRUPT_SWINTERNAL) {
-            if (switch_internal_getattr(sw, SWINS, &swins)) {
-                dbg_error("IRQ: SWINS register read failed\n");
-            }
-            dbg_insane("IRQ: Switch internal irq, SWINS=0x%04x\n", swins);
-
-            if (swins & TSB_INTERRUPT_SPICES) {
-                if (switch_internal_getattr(sw, SPICES, &attr_value)) {
-                    dbg_error("IRQ: SPICES register read failed\n");
-                }
-                dbg_insane("IRQ: Switch internal irq, SPICES=0x%04x\n",
-                           attr_value);
-            }
-            if (swins & TSB_INTERRUPT_SPI3ES) {
-                if (switch_internal_getattr(sw, SPI3ES, &attr_value)) {
-                    dbg_error("IRQ: SPI3ES register read failed\n");
-                }
-                dbg_insane("IRQ: Switch internal irq, SPI3ES=0x%04x\n",
-                           attr_value);
-            }
-            if (swins & TSB_INTERRUPT_SPI4ES) {
-                if (switch_internal_getattr(sw, SPI4ES, &attr_value)) {
-                    dbg_error("IRQ: SPI4ES register read failed\n");
-                }
-                dbg_insane("IRQ: Switch internal irq, SPI4ES=0x%04x\n",
-                           attr_value);
-            }
-            if (swins & TSB_INTERRUPT_SPI5ES) {
-                if (switch_internal_getattr(sw, SPI5ES, &attr_value)) {
-                    dbg_error("IRQ: SPI5ES register read failed\n");
-                }
-                dbg_insane("IRQ: Switch internal irq, SPI5ES=0x%04x\n",
-                           attr_value);
-            }
-        }
-
-        // Handle external interrupts: CPorts 4 & 5
-        if (swint & TSB_INTERRUPT_SPIPORT4_RX) {
-            dbg_insane("IRQ: Switch SPI port 4 RX irq\n");
-            es2_irq_fifo_rx(sw, 4);
-        }
-        if (swint & TSB_INTERRUPT_SPIPORT5_RX) {
-            dbg_insane("IRQ: Switch SPI port 5 RX irq\n");
-            es2_irq_fifo_rx(sw, 5);
-        }
-
-        // Handle Unipro interrupts: read the Unipro ports interrupt status
-        for (i = 0; i < SWITCH_PORT_MAX; i++) {
-            // If Unipro interrupt pending, read the interrupt status attribute
-            if (swint & (1 << i)) {
-                if (switch_dme_get(sw, i, TSB_INTERRUPTSTATUS, 0x0,
-                                   &port_irq_status)) {
-                    dbg_error("IRQ: TSB_INTERRUPTSTATUS(%d) register read failed\n",
-                              i);
-                    break;
-                }
-                dbg_insane("IRQ: TSB_INTERRUPTSTATUS(%d)=0x%04x\n",
-                           i, port_irq_status);
-
-                // Read the attributes associated to the interrupt sources
-                for (j = 0; j < ES2_IRQ_MAX; j++) {
-                    if ((port_irq_status & (1 << j)) && unipro_irq_attr[j]) {
-                        if (switch_dme_get(sw, i, unipro_irq_attr[j], 0x0,
-                                           &attr_value)) {
-                            dbg_error("IRQ: Port %d line %d attr(0x%04x) read failed\n",
-                                      i, j, unipro_irq_attr[j]);
-                        } else {
-                            dbg_insane("IRQ: Port %d line %d asserted, attr(0x%04x)=0x%04x\n",
-                                       i, j, unipro_irq_attr[j], attr_value);
-                        }
-
-                        uint32_t irq_type = j;
-                        uint32_t port = i;
-                        switch (irq_type) {
-                        case IRQ_STATUS_MAILBOX: {
-                            struct tsb_switch_event e;
-                            e.type = TSB_SWITCH_EVENT_MAILBOX;
-                            e.mbox.port = port;
-                            e.mbox.val = attr_value;
-                            tsb_switch_event_notify(sw, &e);
-                            break;
-                        }
-                        default:
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-    } while (swint);
-
-    return 0;
-}
-
-/* Low level switch IRQ handler
- *
- * Posts a message in a list in order to defer the work to perform
- */
-static int switch_irq_handler(int irq, void *context, void *priv)
-{
-    struct tsb_switch *sw = priv;
-
-    if (!sw) {
-        dbg_error("%s: no Switch context\n", __func__);
-        return -EINVAL;
-    }
-
-    switch_post_irq(sw);
-
-    return 0;
-}
-
-/* Switch interrupt enable/disable */
-static int es2_switch_irq_enable(struct tsb_switch *sw, bool enable)
-{
-    if (enable) {
-        // Enable switch interrupt sources and install handler
-        if (!sw->pdata->gpio_irq) {
-            dbg_error("%s: no Switch context\n", __func__);
-            return -EINVAL;
-        }
-
-        /*
-         * Configure switch IRQ line: parameters from pdata, install
-         * handler, and pass the tsb_switch struct to the handler.
-         */
-        stm32_gpiosetevent_priv(sw->pdata->gpio_irq,
-                                sw->pdata->irq_rising_edge,
-                                !sw->pdata->irq_rising_edge,
-                                true, switch_irq_handler, sw);
-
-        // Enable the switch internal interrupt sources
-        if (switch_internal_setattr(sw, SWINE, SWINE_ENABLE_ALL)) {
-            dbg_error("Switch SWINE register write failed\n");
-            return -EIO;
-        }
-
-        // Enable the L4 interrupts
-        if (switch_dme_set(sw, SWITCH_PORT_ID, TSB_INTERRUPTENABLE, 0x0,
-                       TSB_L4_INTERRUPTENABLE_ALL)) {
-            dbg_error("Switch INTERRUPTENABLE register write failed\n");
-            return -EIO;
-        }
-
-        // Enable the SPI interrupts
-        if (switch_internal_setattr(sw, SPIINTE, SPIINTE_ENABLE_ALL)) {
-            dbg_error("Switch SPIINTE register write failed\n");
-            return -EIO;
-        }
-        if (switch_internal_setattr(sw, SPICEE, SPICEE_ENABLE_ALL)) {
-            dbg_error("Switch SPICEE register write failed\n");
-            return -EIO;
-        }
-        if (switch_internal_setattr(sw, SPI3EE, SPI3EE_ENABLE_ALL)) {
-            dbg_error("Switch SPI3EE register write failed\n");
-            return -EIO;
-        }
-        if (switch_internal_setattr(sw, SPI4EE, SPI45EE_ENABLE_ALL)) {
-            dbg_error("Switch SPI4EE register write failed\n");
-            return -EIO;
-        }
-        if (switch_internal_setattr(sw, SPI5EE, SPI45EE_ENABLE_ALL)) {
-            dbg_error("Switch SPI5EE register write failed\n");
-            return -EIO;
-        }
-    } else {
-        // Disable switch interrupt
-        stm32_gpiosetevent_priv(sw->pdata->gpio_irq, false, false, false, NULL, NULL);
-    }
-
-    return OK;
-}
-
-/* Enable/disable the interrupts for the port */
-static int es2_port_irq_enable(struct tsb_switch *sw, uint8_t port_id,
-                               bool enable)
-{
-    if (switch_dme_set(sw, port_id, TSB_INTERRUPTENABLE, 0x0,
-                       enable ? TSB_INTERRUPTENABLE_ALL : 0)) {
-        dbg_error("Port %d INTERRUPTENABLE register write failed\n", port_id);
-        return -EIO;
-    }
-
-    return OK;
-}
-
 /*
  * NCP command request helpers.
  */
@@ -1395,6 +1144,9 @@ static int es2_fct_enable(struct tsb_switch *sw) {
 static struct tsb_rev_data es2_rev_data = {
     .ncp_req_max_size       = ES2_NCP_MAX_REQ_SIZE,
     .dev_id_mask_size       = ES2_DEV_ID_MASK_SIZE,
+    .spicee_enable_all      = ES2_SPICEE_ENABLE_ALL,
+    .spi3ee_enable_all      = ES2_SPI3EE_ENABLE_ALL,
+    .spi45ee_enable_all     = ES2_SPI45EE_ENABLE_ALL,
 };
 
 static struct tsb_switch_ops es2_ops = {
@@ -1426,15 +1178,11 @@ static struct tsb_switch_ops es2_ops = {
     .set_valid_device      = es2_set_valid_device,
     .dump_routing_table    = es2_dump_routing_table,
 
-    .port_irq_enable       = es2_port_irq_enable,
-
     .fct_enable            = es2_fct_enable,
-
-    .switch_irq_enable     = es2_switch_irq_enable,
-    .switch_irq_handler    = es2_switch_irq_handler,
 
     .switch_data_send      = es2_data_send,
 
+    .__irq_fifo_rx         = es2_irq_fifo_rx,
     .__ncp_transfer        = es2_ncp_transfer,
 };
 

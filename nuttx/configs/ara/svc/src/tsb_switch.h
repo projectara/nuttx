@@ -51,6 +51,18 @@
 #define SWVER                       (0x0000)
 #define SWSTA                       (0x0003)
 #define SWINT                       (0x0010)
+#define SWINE                       (0x0015)
+#define SWINS                       (0x0016)
+#define SPICTLB                     (0x0041)
+#define SPIINTE                     (0x0042)
+#define SPICEE                      (0x0043)
+#define SPICES                      (0x0044)
+#define SPI3EE                      (0x0045)
+#define SPI3ES                      (0x0046)
+#define SPI4EE                      (0x0047)
+#define SPI4ES                      (0x0048)
+#define SPI5EE                      (0x0049)
+#define SPI5ES                      (0x004a)
 
 /* NCP commands */
 #define NCP_SETREQ                  (0x00)
@@ -357,20 +369,12 @@ struct tsb_switch_ops {
                                 uint8_t *mask,
                                 uint8_t *req, size_t *req_size);
 
-    int (*port_irq_enable)(struct tsb_switch *sw,
-                           uint8_t port_id,
-                           bool enable);
-
     int (*set_valid_device)(struct tsb_switch *sw,
                             uint8_t port_id,
                             uint8_t device_id,
                             bool valid);
     int (*dump_routing_table)(struct tsb_switch*);
     int (*fct_enable)(struct tsb_switch *);
-    int (*switch_irq_enable)(struct tsb_switch *sw,
-                             bool enable);
-    int (*switch_irq_handler)(struct tsb_switch *sw);
-
     int (*switch_data_send)(struct tsb_switch *, void *, size_t);
 
     /*
@@ -382,6 +386,7 @@ struct tsb_switch_ops {
     int (*__ncp_transfer)(struct tsb_switch *sw,
                           uint8_t *tx_buf, size_t tx_size,
                           uint8_t *rx_buf, size_t rx_size);
+    int (*__irq_fifo_rx)(struct tsb_switch *sw, unsigned int spi_fifo);
 };
 
 struct tsb_switch {
@@ -660,6 +665,13 @@ struct tsb_rev_data {
      * validation blocks)
      */
     size_t dev_id_mask_size;
+
+    /*
+     * Switch internal attribute values used during IRQ enable
+     */
+    uint32_t spicee_enable_all;
+    uint32_t spi3ee_enable_all;
+    uint32_t spi45ee_enable_all;
 };
 
 /*
