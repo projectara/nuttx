@@ -56,6 +56,7 @@
 #define GB_SVC_TYPE_INTF_SET_PWRM       0x10
 #define GB_SVC_TYPE_INTF_EJECT          0x11
 #define GB_SVC_TYPE_KEY_EVENT           0x12
+#define GB_SVC_TYPE_PING                0x13
 
 struct gb_svc_protocol_version_request {
 	__u8	major;
