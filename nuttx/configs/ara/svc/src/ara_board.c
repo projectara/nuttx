@@ -92,6 +92,8 @@ enum hwid board_get_hwid(void) {
         return HWID_EVT1;
     case 0b0011:
         return HWID_EVT1_5;
+    case 0b0100:
+        return HWID_EVT1_6;
     default:
         break;
     }
@@ -140,6 +142,11 @@ struct ara_board_info *ara_board_init(void) {
     case HWID_EVT1_5:
         board_info = &evt1_5_board_info;
         dbg_info("HWID found as EVT1.5\n");
+        break;
+    case HWID_EVT1_6:
+        evt1_5_board_info.sw_data.rev = SWITCH_REV_ES2;
+        board_info = &evt1_5_board_info;
+        dbg_info("HWID found as EVT1.6\n");
         break;
     default:
         dbg_error("Unknonw HWID 0x%x, aborting\n", __func__, hwid);
