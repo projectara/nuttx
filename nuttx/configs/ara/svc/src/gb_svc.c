@@ -221,6 +221,14 @@ static uint8_t gb_svc_intf_eject(struct gb_operation *op) {
     return gb_errno_to_op_result(rc);
 }
 
+static uint8_t gb_svc_ping(struct gb_operation *op) {
+    /*
+     * Perhaps in the future we might want to do some sort of "health" check
+     * before responding, but for now, a simple ACK is all we need.
+     */
+    return 0;
+}
+
 static uint8_t gb_svc_connection_create(struct gb_operation *op) {
     struct gb_svc_conn_create_request *req;
     int rc;
@@ -456,6 +464,7 @@ static struct gb_operation_handler gb_svc_handlers[] = {
     GB_HANDLER(GB_SVC_TYPE_DME_PEER_GET, gb_svc_dme_peer_get),
     GB_HANDLER(GB_SVC_TYPE_DME_PEER_SET, gb_svc_dme_peer_set),
     GB_HANDLER(GB_SVC_TYPE_INTF_SET_PWRM, gb_svc_intf_set_power_mode),
+    GB_HANDLER(GB_SVC_TYPE_PING, gb_svc_ping),
 };
 
 struct gb_driver svc_driver = {
