@@ -235,6 +235,11 @@ void __start(void)
   const uint32_t *src;
   uint32_t *dest;
 
+  uint32_t rcc_csr;
+
+  rcc_csr = getreg32(0x40023874);
+  putreg32(rcc_csr | (1 << 24), 0x40023874);
+
   /* Configure the uart so that we can get debug output as soon as possible */
 
   stm32_clockconfig();
@@ -273,6 +278,8 @@ void __start(void)
   up_earlyserialinit();
 #endif
   showprogress('D');
+
+    lowsyslog("Reset Reason: %X\n", rcc_csr);
 
   /* For the case of the separate user-/kernel-space build, perform whatever
    * platform specific initialization of the user memory is required.
