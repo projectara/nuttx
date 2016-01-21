@@ -67,7 +67,6 @@
 SUBDIRS  = apbridge
 SUBDIRS += battery
 SUBDIRS += arapm
-SUBDIRS += bringup_entry
 SUBDIRS += debug
 SUBDIRS += dev_info
 SUBDIRS += etm
@@ -98,7 +97,6 @@ ifeq ($(CONFIG_NSH_BUILTIN_APPS),y)
 # Keep this list sorted alphabetically, adding new apps in the right place.
 CNTXTDIRS += battery
 CNTXTDIRS += arapm
-CNTXTDIRS += bringup_entry
 CNTXTDIRS += debug
 CNTXTDIRS += dev_info
 CNTXTDIRS += etm
