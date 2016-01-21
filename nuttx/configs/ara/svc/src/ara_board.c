@@ -144,8 +144,8 @@ struct ara_board_info *ara_board_init(void) {
         dbg_info("HWID found as EVT1.5\n");
         break;
     case HWID_EVT1_6:
-        evt1_5_board_info.sw_data.rev = SWITCH_REV_ES2;
         board_info = &evt1_5_board_info;
+        board_info->sw_data.rev = SWITCH_REV_ES2;
         dbg_info("HWID found as EVT1.6\n");
         break;
     default:
