@@ -32,9 +32,11 @@
 #define __INCLUDE_NUTTX_DEVICE_I2S_H
 
 #include <errno.h>
+#include <stdint.h>
 
 #include <nuttx/util.h>
 #include <nuttx/device.h>
+#include <nuttx/ring_buf.h>
 
 #define DEVICE_TYPE_I2S_HW                      "i2s"
 
