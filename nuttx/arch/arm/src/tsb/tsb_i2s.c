@@ -44,6 +44,7 @@
 #include <nuttx/device.h>
 #include <nuttx/device_pll.h>
 #include <nuttx/device_i2s.h>
+#include <nuttx/ring_buf.h>
 
 #include <arch/byteorder.h>
 

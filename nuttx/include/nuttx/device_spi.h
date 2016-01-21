@@ -31,6 +31,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <sys/types.h>
 
 #define DEVICE_TYPE_SPI_HW          "spi"
 

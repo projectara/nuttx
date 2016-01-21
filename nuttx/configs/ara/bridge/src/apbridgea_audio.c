@@ -36,6 +36,7 @@
 #include <nuttx/sched.h>
 #include <nuttx/unipro/unipro.h>
 #include <nuttx/greybus/greybus.h>
+#include <nuttx/ring_buf.h>
 #include <arch/byteorder.h>
 
 #include <arch/board/audio_apbridgea.h>
