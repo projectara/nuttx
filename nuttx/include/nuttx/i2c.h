@@ -83,10 +83,19 @@
 
 /* Bit definitions for the flags field in struct i2c_msg_s */
 
-#define I2C_M_READ           0x0001 /* Read data, from slave to master */
-#define I2C_M_TEN            0x0002 /* Ten bit address */
-#define I2C_M_NORESTART      0x0080 /* Message should not begin with
-                                     * (re-)start of transfer */
+/** @defgroup I2C_FLAGS I2C flags
+ *
+ * Defines a set of flags that can be associated to an I2C message.
+ * @{
+ */
+/** Read data from slave to master (the absence of this flag defaults to a write
+ * operation) */
+#define I2C_M_READ           0x0001
+/** Ten bit addressing */
+#define I2C_M_TEN            0x0002
+/** Do not start a transfer with a (re-)start message */
+#define I2C_M_NORESTART      0x0080
+/** @} */
 
 /* Access macros ************************************************************/
 
@@ -236,6 +245,13 @@
  *
  ****************************************************************************/
 
+/**
+ * @brief Perform I2C transfers
+ * @param d A pointer to the I2C device performing the transfers
+ * @param m The array of messages to transfer
+ * @param c The number of messages to transfer
+ * @return 0 on success, !=0 on failure
+ */
 #define I2C_TRANSFER(d,m,c) ((d)->ops->transfer(d,m,c))
 
 /****************************************************************************
@@ -270,11 +286,16 @@ struct i2c_ops_s
  * to an I2C slave device.
  */
 
+/** I2C message structure */
 struct i2c_msg_s
 {
-  uint16_t  addr;                  /* Slave address */
-  uint16_t  flags;                 /* See I2C_M_* definitions */
+  /** Address of the slave target */
+  uint16_t  addr;
+  /** \ref I2C_FLAGS */
+  uint16_t  flags;
+  /** Content of the message */
   uint8_t  *buffer;
+  /** Length of the message (in bytes) */
   int       length;
 };
 
@@ -317,7 +338,12 @@ extern "C" {
  *
  ****************************************************************************/
 
-EXTERN FAR struct i2c_dev_s *up_i2cinitialize(int port);
+/**
+ * @brief Initialize an I2C device
+ * @param port The port number where the I2C device is located
+ * @return A pointer to the I2C device on success, NULL on failure
+ */
+struct i2c_dev_s *up_i2cinitialize(int port);
 
 /****************************************************************************
  * Name: up_i2cuninitialize
@@ -334,7 +360,12 @@ EXTERN FAR struct i2c_dev_s *up_i2cinitialize(int port);
  *
  ****************************************************************************/
 
-EXTERN int up_i2cuninitialize(FAR struct i2c_dev_s *dev);
+/**
+ * @brief Uninitialize an I2C device
+ * @param dev A pointer to the I2C device to uninitialize
+ * @return 0 on success, !=0 on failure
+ */
+int up_i2cuninitialize(struct i2c_dev_s *dev);
 
 /************************************************************************************
  * Name: up_i2creset
