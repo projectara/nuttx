@@ -88,8 +88,8 @@ static void stm32_gpio_set_direction_in(void *driver_data, uint8_t pin)
         return;
     }
 
-    // Configure pin as input, floating
-    cfgset |= GPIO_INPUT | GPIO_FLOAT;
+    // Configure pin as input, preserve pull up/pull down
+    cfgset |= GPIO_INPUT | stm32_get_pupd(cfgset);
     lldbg("cfgset=0x%x\n", cfgset);
 
     ret = stm32_configgpio(cfgset);
@@ -116,6 +116,9 @@ static void stm32_gpio_set_direction_out(void *driver_data, uint8_t pin,
         cfgset |= GPIO_OUTPUT | GPIO_OUTPUT_SET;
     else
         cfgset |= GPIO_OUTPUT | GPIO_OUTPUT_CLEAR;
+
+    // preserve pull up/pull down
+    cfgset |= stm32_get_pupd(cfgset);
 
     lldbg("cfgset=0x%x\n", cfgset);
 
@@ -186,6 +189,9 @@ static int stm32_gpio_deactivate(void *driver_data, uint8_t pin)
         return -EINVAL;
     }
 
+    // preserve pull up/pull down
+    cfgset |= stm32_get_pupd(cfgset);
+
     stm32_unconfiggpio(cfgset);
     return 0;
 }
@@ -203,6 +209,9 @@ static int stm32_gpio_irqattach(void *driver_data, uint8_t pin, xcpt_t isr,
         lldbg("%s: Invalid pin %hhu\n", pin);
         return ret;
     }
+
+    // preserve pull up/pull down
+    cfgset |= stm32_get_pupd(cfgset);
 
     /*
      * Install the handler for the pin.
@@ -234,6 +243,9 @@ static int stm32_gpio_set_triggering(void *driver_data, uint8_t pin,
         lldbg("%s: Invalid pin %hhu\n", pin);
         return ret;
     }
+
+    // preserve pull up/pull down
+    cfgset |= stm32_get_pupd(cfgset);
 
     switch(trigger) {
     case IRQ_TYPE_NONE:
@@ -283,6 +295,9 @@ static int stm32_gpio_mask_irq(void *driver_data, uint8_t pin)
         return ret;
     }
 
+    // preserve pull up/pull down
+    cfgset |= stm32_get_pupd(cfgset);
+
     /* Mask interrupt */
     stm32_gpiosetevent_priv(cfgset,
                             false,
@@ -306,6 +321,9 @@ static int stm32_gpio_unmask_irq(void *driver_data, uint8_t pin)
         lldbg("%s: Invalid pin %hhu\n", pin);
         return ret;
     }
+
+    // preserve pull up/pull down
+    cfgset |= stm32_get_pupd(cfgset);
 
     /* Re-install handler */
     stm32_gpiosetevent_priv(cfgset,

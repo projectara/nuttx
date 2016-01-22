@@ -438,6 +438,22 @@ EXTERN const uint32_t g_gpiobase[STM32_NGPIO_PORTS];
 EXTERN int stm32_configgpio(uint32_t cfgset);
 
 /************************************************************************************
+ * Name: stm32_get_pupd
+ *
+ * Description:
+ *   Retrieves the state of the PUPDR (pull up/pull down) register of
+ *   the pin described by cfgset.
+ *
+ * Returns:
+ *   One of GPIO_PULLUP, GPIO_PULLDOWN, GPIO_FLOAT.
+ *   Errors (i.e. specified pin out of range) are indistinguishable from
+ *   GPIO_FLOAT.
+ *
+ ************************************************************************************/
+
+EXTERN uint32_t stm32_get_pupd(uint32_t cfgset);
+
+/************************************************************************************
  * Name: stm32_unconfiggpio
  *
  * Description:
