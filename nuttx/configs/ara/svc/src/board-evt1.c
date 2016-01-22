@@ -135,7 +135,8 @@
 #define SW_1P1_EN          STM32_GPIO_PIN(GPIO_PORTB | GPIO_PIN0)
 #define SW_1P8_IO_EN       STM32_GPIO_PIN(GPIO_PORTB | GPIO_PIN1)
 #define SW_1P8_UNIPRO_EN   STM32_GPIO_PIN(GPIO_PORTE | GPIO_PIN8)
-#define SW_STANDBY_N       STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN8)
+#define SW_STANDBY_N       (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_OUTPUT_SET | \
+                            GPIO_PORTA | GPIO_PIN8)
 #define SVC_RST_SW         STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN11)
 #define SVC_RST_SW_GPIO    (GPIO_OUTPUT | GPIO_OUTPUT_CLEAR | \
                             GPIO_PORTD | GPIO_PIN11)
@@ -572,6 +573,9 @@ static int evt1_5_board_init(struct ara_board_info *board_info) {
         dbg_error("%s: can't start REFCLK_MAIN: %d\n", __func__, rc);
         return ERROR;
     }
+
+    /* Configure Switch Standby Boot line */
+    stm32_configgpio(SW_STANDBY_N);
 
     /* Configure the switch power supply lines. */
     rc = vreg_config(&sw_vreg);
