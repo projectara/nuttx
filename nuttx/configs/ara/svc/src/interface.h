@@ -59,8 +59,15 @@ enum wd_debounce_state {
     WD_ST_ACTIVE_STABLE,            /* Stable active */
 };
 
-/* Wake & Detect debounce time */
-#define WD_DEBOUNCE_TIME_MS         300
+/*
+ * Wake & Detect debounce times
+ *
+ * The X-->active timer is longer than the X-->inactive timer because
+ * transitioning to active will cause the SVC to apply power. That
+ * makes us want to be more sure there is really something "there".
+ */
+#define WD_ACTIVATION_DEBOUNCE_TIME_MS         300
+#define WD_INACTIVATION_DEBOUNCE_TIME_MS       30
 
 /* Hotplug state */
 enum hotplug_state {

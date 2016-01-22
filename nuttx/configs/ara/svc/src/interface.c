@@ -624,7 +624,7 @@ static void interface_wd_delayed_handler(void *data)
 }
 
 /* Delayed debounce check */
-static int interface_wd_delay_check(struct wd_data *wd)
+static int interface_wd_delay_check(struct wd_data *wd, uint32_t delay)
 {
     /*
      * If the work is already scheduled, do not schedule another one now.
@@ -636,7 +636,7 @@ static int interface_wd_delay_check(struct wd_data *wd)
 
     /* Schedule the work to run after the debounce timeout */
     return work_queue(HPWORK, &wd->work, interface_wd_delayed_handler, wd,
-                      MSEC2TICK(WD_DEBOUNCE_TIME_MS));
+                      MSEC2TICK(delay));
 }
 
 /*
@@ -648,7 +648,7 @@ static int interface_debounce_wd(struct interface *iface,
                                  struct wd_data *wd,
                                  bool active)
 {
-    struct timeval now, diff, timeout_tv = { 0, WD_DEBOUNCE_TIME_MS * 1000 };
+    struct timeval now, diff, timeout_tv = { 0, 0 };
     irqstate_t flags;
 
     flags = irqsave();
@@ -656,7 +656,7 @@ static int interface_debounce_wd(struct interface *iface,
     /* Debounce WD signal to act as detection, which will trigger
      * the power on/off of the interface and hotplug notifications to
      * the AP.
-     * Short pulses (< WD_DEBOUNCE_TIME_MS = 30ms) are filtered out.
+     * Short pulses are filtered out.
      */
     switch (wd->db_state) {
     case WD_ST_INVALID:
@@ -664,10 +664,13 @@ static int interface_debounce_wd(struct interface *iface,
         gettimeofday(&wd->debounce_tv, NULL);
         wd->db_state = active ?
                        WD_ST_ACTIVE_DEBOUNCE : WD_ST_INACTIVE_DEBOUNCE;
-        interface_wd_delay_check(wd);
+        interface_wd_delay_check(wd, (active ?
+                                      WD_ACTIVATION_DEBOUNCE_TIME_MS :
+                                      WD_INACTIVATION_DEBOUNCE_TIME_MS));
         break;
     case WD_ST_ACTIVE_DEBOUNCE:
         if (active) {
+            timeout_tv.tv_usec = WD_ACTIVATION_DEBOUNCE_TIME_MS * 1000;
             /* Signal did not change ... for how long ? */
             gettimeofday(&now, NULL);
             timersub(&now, &wd->debounce_tv, &diff);
@@ -700,18 +703,19 @@ static int interface_debounce_wd(struct interface *iface,
                 wd->last_state = wd->db_state;
             } else {
                 /* Check for a stable signal after the debounce timeout */
-                interface_wd_delay_check(wd);
+                interface_wd_delay_check(wd, WD_ACTIVATION_DEBOUNCE_TIME_MS);
             }
         } else {
             /* Signal did change, reset the debounce timer */
             gettimeofday(&wd->debounce_tv, NULL);
             wd->db_state = WD_ST_INACTIVE_DEBOUNCE;
-            interface_wd_delay_check(wd);
+            interface_wd_delay_check(wd, WD_INACTIVATION_DEBOUNCE_TIME_MS);
         }
         break;
     case WD_ST_INACTIVE_DEBOUNCE:
         if (!active) {
             /* Signal did not change ... for how long ? */
+            timeout_tv.tv_usec = WD_INACTIVATION_DEBOUNCE_TIME_MS;
             gettimeofday(&now, NULL);
             timersub(&now, &wd->debounce_tv, &diff);
             if (timercmp(&diff, &timeout_tv, >=)) {
@@ -735,13 +739,13 @@ static int interface_debounce_wd(struct interface *iface,
                 wd->last_state = wd->db_state;
             } else {
                 /* Check for a stable signal after the debounce timeout */
-                interface_wd_delay_check(wd);
+                interface_wd_delay_check(wd, WD_INACTIVATION_DEBOUNCE_TIME_MS);
             }
         } else {
             /* Signal did change, reset the debounce timer */
             gettimeofday(&wd->debounce_tv, NULL);
             wd->db_state = WD_ST_ACTIVE_DEBOUNCE;
-            interface_wd_delay_check(wd);
+            interface_wd_delay_check(wd, WD_ACTIVATION_DEBOUNCE_TIME_MS);
         }
         break;
     case WD_ST_ACTIVE_STABLE:
@@ -749,7 +753,7 @@ static int interface_debounce_wd(struct interface *iface,
             /* Signal did change, reset the debounce timer */
             gettimeofday(&wd->debounce_tv, NULL);
             wd->db_state = WD_ST_INACTIVE_DEBOUNCE;
-            interface_wd_delay_check(wd);
+            interface_wd_delay_check(wd, WD_INACTIVATION_DEBOUNCE_TIME_MS);
         }
         break;
     case WD_ST_INACTIVE_STABLE:
@@ -757,7 +761,7 @@ static int interface_debounce_wd(struct interface *iface,
             /* Signal did change, reset the debounce timer */
             gettimeofday(&wd->debounce_tv, NULL);
             wd->db_state = WD_ST_ACTIVE_DEBOUNCE;
-            interface_wd_delay_check(wd);
+            interface_wd_delay_check(wd, WD_ACTIVATION_DEBOUNCE_TIME_MS);
         }
         break;
     }
