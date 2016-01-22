@@ -655,8 +655,9 @@ static void stm32_stdclockconfig(void)
         {
         }
 
+/* Ara SVC uses STM32F446 at 1.8V where over-drive is forbidden */
+#if !defined(CONFIG_ARCH_BOARD_ARA_SVC) || !defined(CONFIG_STM32_STM32F446)
       /* Enable the Over-drive to extend the clock frequency to 180 Mhz */
-
       regval  = getreg32(STM32_PWR_CR);
       regval |= PWR_CR_ODEN;
       putreg32(regval, STM32_PWR_CR);
@@ -670,6 +671,7 @@ static void stm32_stdclockconfig(void)
       while ((getreg32(STM32_PWR_CSR) & PWR_CSR_ODSWRDY) == 0)
         {
         }
+#endif
 
       /* Enable FLASH prefetch, instruction cache, data cache, and 5 wait states */
 
