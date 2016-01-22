@@ -58,6 +58,16 @@
 #define IRQ_TYPE_LEVEL_LOW      0x00000008
 /** @} */
 
+/** GPIO internal pull resistor types */
+enum gpio_pull_type {
+    /** Internal pull down resistor */
+    GPIO_PULL_TYPE_PULL_DOWN,
+    /** Internal pull up resistor */
+    GPIO_PULL_TYPE_PULL_UP,
+    /** No internal pull resistor */
+    GPIO_PULL_TYPE_PULL_NONE,
+};
+
 /**
  * @brief Set the interrupt trigger type corresponding to a GPIO line
  * @param which The number of the GPIO line
