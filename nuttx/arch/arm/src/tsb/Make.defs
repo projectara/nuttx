@@ -109,6 +109,7 @@ endif
 
 ifeq ($(CONFIG_ARCH_CHIP_TSB_I2S),y)
 CHIP_CSRCS += tsb_i2s.c
+CHIP_CSRCS += tsb_i2s_xfer.c
 endif
 
 CMN_CSRCS += tsb_unipro.c
