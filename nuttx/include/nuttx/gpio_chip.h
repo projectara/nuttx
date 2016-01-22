@@ -48,6 +48,8 @@ struct gpio_ops_s
     int (*mask_irq)(void *driver_data, uint8_t which);
     int (*unmask_irq)(void *driver_data, uint8_t which);
     int (*clear_interrupt)(void *driver_data, uint8_t which);
+    int (*set_pull)(void *driver_data, uint8_t which,
+                    enum gpio_pull_type pull_type);
 };
 
 int register_gpio_chip(struct gpio_ops_s *ops, int base, void *driver_data);
