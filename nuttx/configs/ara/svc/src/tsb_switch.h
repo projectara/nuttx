@@ -766,7 +766,10 @@ int switch_data_send(struct tsb_switch *sw, void *data, size_t len);
  * Switch specific init/exit routines, called to init the
  * communication and register the Switch ops
  */
-int tsb_switch_es2_init(struct tsb_switch *, unsigned int spi_bus);
+int tsb_switch_es2_init(struct tsb_switch *, struct spi_dev_s *spi_dev);
 void tsb_switch_es2_exit(struct tsb_switch *);
+
+/* Internal SPI select routine. */
+void _switch_spi_select(struct tsb_switch *sw, int select);
 
 #endif

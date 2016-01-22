@@ -48,6 +48,8 @@
 #include "tsb_switch.h"
 #include "vreg.h"
 
+#define SWITCH_SPI_FREQUENCY 13000000
+
 #define IRQ_WORKER_DEFPRIO          50
 #define IRQ_WORKER_STACKSIZE        2048
 
@@ -77,6 +79,25 @@
 
 extern int _switch_internal_set_id(struct tsb_switch *,
                                    uint8_t, uint8_t, uint8_t, uint8_t);
+
+
+/*
+ * Actual SPI select routine
+ */
+void _switch_spi_select(struct tsb_switch *sw, int select) {
+    /*
+     * SW-472: The STM32 SPI peripheral does not delay until the last
+     * falling edge of SCK, instead dropping RXNE as soon as the rising
+     * edge is clocked out.
+     * Manually add a hacked delay in these cases...
+     */
+    if ((!select) && (SWITCH_SPI_FREQUENCY < 8000000))
+        up_udelay(2);
+
+    /* Set the GPIO low to select and high to de-select */
+    stm32_gpiowrite(sw->pdata->spi_cs, !select);
+}
+
 
 /*
  * Device ID helpers
@@ -2348,6 +2369,7 @@ uint8_t stm32_spi2status(struct spi_dev_s *dev,
  */
 struct tsb_switch *switch_init(struct tsb_switch_data *pdata) {
     struct tsb_switch *sw ;
+    struct spi_dev_s *spi_dev;
     unsigned int attr_value;
     int rc, i;
 
@@ -2370,10 +2392,19 @@ struct tsb_switch *switch_init(struct tsb_switch_data *pdata) {
 
     switch_power_on_reset(sw);
 
+    stm32_configgpio(sw->pdata->spi_cs);
+    stm32_gpiowrite(sw->pdata->spi_cs, true);
+
+    spi_dev = up_spiinitialize(sw->pdata->bus);
+    if (!spi_dev) {
+        dbg_error("%s: Failed to initialize spi device\n", __func__);
+        rc = -ENODEV;
+        goto error;
+    }
+
     switch (sw->pdata->rev) {
     case SWITCH_REV_ES2:
-        // Initialize the SPI port
-        if (tsb_switch_es2_init(sw, sw->pdata->bus)) {
+        if (tsb_switch_es2_init(sw, spi_dev)) {
             goto error;
         }
         break;
@@ -2381,6 +2412,11 @@ struct tsb_switch *switch_init(struct tsb_switch_data *pdata) {
         dbg_error("Unsupported switch revision: %u\n", sw->pdata->rev);
         goto error;
     };
+
+    /* Configure the SPI1 bus in Mode0, 8bits, 13MHz clock */
+    SPI_SETMODE(spi_dev, SPIDEV_MODE0);
+    SPI_SETBITS(spi_dev, 8);
+    SPI_SETFREQUENCY(spi_dev, SWITCH_SPI_FREQUENCY);
 
     rc = switch_init_comm(sw);
     if (rc && (rc != -EOPNOTSUPP)) {

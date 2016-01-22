@@ -214,23 +214,6 @@ static int es2_transfer_check_write_status(uint8_t *status_block,
     return 0;
 }
 
-/*
- * Actual SPI select routine
- */
-static inline void es2_spi_select(struct tsb_switch *sw, int select) {
-    /*
-     * SW-472: The STM32 SPI peripheral does not delay until the last
-     * falling edge of SCK, instead dropping RXNE as soon as the rising
-     * edge is clocked out.
-     * Manually add a hacked delay in these cases...
-     */
-    if ((!select) && (SWITCH_SPI_FREQUENCY < 8000000))
-        up_udelay(2);
-
-    /* Set the GPIO low to select and high to de-select */
-    stm32_gpiowrite(sw->pdata->spi_cs, !select);
-}
-
 /* 19 bytes for entire report (7+12) and max 16 bytes of delay */
 #define SRPT_SIZE           (19 + 16)
 #define SRPT_REPORT_SIZE    (12)
@@ -256,10 +239,10 @@ static int es2_read_status(struct tsb_switch *sw,
     const char srpt_cmd[] = {HNUL, SRPT, cport, 0, 0, ENDP, HNUL};
     const char srpt_report_header[] = {HNUL, SRPT, cport, 0x00, 0xC};
 
-    es2_spi_select(sw, true);
+    _switch_spi_select(sw, true);
     SPI_SNDBLOCK(spi_dev, srpt_cmd, sizeof srpt_cmd);
     SPI_EXCHANGE(spi_dev, NULL, rxbuf, SRPT_SIZE);
-    es2_spi_select(sw, false);
+    _switch_spi_select(sw, false);
 
     /* Find the header */
     for (offset = 0; offset < (SRPT_SIZE - SRPT_REPORT_SIZE); offset++) {
@@ -355,7 +338,7 @@ static int es2_write(struct tsb_switch *sw,
         return -EINVAL;
     }
 
-    es2_spi_select(sw, true);
+    _switch_spi_select(sw, true);
     /* Write */
     SPI_SNDBLOCK(spi_dev, write_header, sizeof write_header);
     SPI_SNDBLOCK(spi_dev, tx_buf, tx_size);
@@ -383,7 +366,7 @@ static int es2_write(struct tsb_switch *sw,
     }
 
 out:
-    es2_spi_select(sw, false);
+    _switch_spi_select(sw, false);
     return ret;
 }
 
@@ -409,7 +392,7 @@ static int es2_read(struct tsb_switch *sw,
         LNUL
     };
 
-    es2_spi_select(sw, true);
+    _switch_spi_select(sw, true);
 
     // Read CNF and retry if NACK received
     do {
@@ -468,7 +451,7 @@ static int es2_read(struct tsb_switch *sw,
 
     } while (!rcv_done && !null_rxbuf);
 
-    es2_spi_select(sw, false);
+    _switch_spi_select(sw, false);
 
     return ret;
 }
@@ -710,9 +693,9 @@ int es2_init_seq(struct tsb_switch *sw)
     uint8_t *rxbuf = cport_to_rxbuf(priv, CPORT_NCP);
     int i, rc = -1;
 
-
+    dbg_info("Initializing ES2 switch...\n");
     SPI_LOCK(spi_dev, true);
-    es2_spi_select(sw, true);
+    _switch_spi_select(sw, true);
 
     // Delay needed before the switch is ready on the SPI bus
     up_udelay(SWITCH_SPI_INIT_DELAY);
@@ -730,7 +713,7 @@ int es2_init_seq(struct tsb_switch *sw)
             rc = 0;
     }
 
-    es2_spi_select(sw, false);
+    _switch_spi_select(sw, false);
     SPI_LOCK(spi_dev, false);
 
     if (rc) {
@@ -738,6 +721,7 @@ int es2_init_seq(struct tsb_switch *sw)
                   __func__);
         return rc;
     }
+    dbg_info("... Done!\n");
 
     rc = es2_fixup_mphy(sw);
     if (rc) {
@@ -1186,22 +1170,10 @@ static struct tsb_switch_ops es2_ops = {
     .__ncp_transfer        = es2_ncp_transfer,
 };
 
-int tsb_switch_es2_init(struct tsb_switch *sw, unsigned int spi_bus)
+int tsb_switch_es2_init(struct tsb_switch *sw, struct spi_dev_s *spi_dev)
 {
-    struct spi_dev_s *spi_dev;
     struct sw_es2_priv *priv;
     int rc = 0;
-
-    dbg_info("Initializing ES2 switch...\n");
-
-    stm32_configgpio(sw->pdata->spi_cs);
-    stm32_gpiowrite(sw->pdata->spi_cs, true);
-
-    spi_dev = up_spiinitialize(spi_bus);
-    if (!spi_dev) {
-        dbg_error("%s: Failed to initialize spi device\n", __func__);
-        return -ENODEV;
-    }
 
     priv = malloc(sizeof(struct sw_es2_priv));
     if (!priv) {
@@ -1218,13 +1190,6 @@ int tsb_switch_es2_init(struct tsb_switch *sw, unsigned int spi_bus)
     sw->priv = priv;
     sw->ops = &es2_ops;
     sw->rdata = &es2_rev_data;
-
-    /* Configure the SPI1 bus in Mode0, 8bits, 13MHz clock */
-    SPI_SETMODE(spi_dev, SPIDEV_MODE0);
-    SPI_SETBITS(spi_dev, 8);
-    SPI_SETFREQUENCY(spi_dev, SWITCH_SPI_FREQUENCY);
-
-    dbg_info("... Done!\n");
 
     return rc;
 

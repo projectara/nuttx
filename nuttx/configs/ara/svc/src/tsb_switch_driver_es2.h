@@ -33,8 +33,6 @@
 #ifndef  _TSB_SWITCH_DRIVER_ES2_H_
 #define  _TSB_SWITCH_DRIVER_ES2_H_
 
-#define SWITCH_SPI_FREQUENCY 13000000
-
 // Max NULL frames to wait for a reply from the switch
 #define SWITCH_WAIT_REPLY_LEN   (16)
 // Write status reply length
