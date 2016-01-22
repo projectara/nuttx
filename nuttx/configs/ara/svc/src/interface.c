@@ -646,13 +646,10 @@ static void interface_wd_delay_notify_svc(struct interface *iface)
     int rc;
     struct wd_data *wd = &iface->detect_in;
     /*
-     * There shouldn't be any already scheduled work (we are called
-     * from the work handler after it's decided the line is stable),
-     * but just cancel it if there is.
+     * Just cancel anything left in the queue -- we've already decided
+     * the line is stable.
      */
     if (!work_available(&wd->work)) {
-        dbg_warn("%s: unexpected work in the queue for interface %s\n",
-                 __func__, iface->name);
         rc = work_cancel(HPWORK, &wd->work);
         /*
          * work_cancel() doesn't fail in the current
@@ -662,8 +659,8 @@ static void interface_wd_delay_notify_svc(struct interface *iface)
         DEBUGASSERT(!rc);
     }
     /*
-     * Queue the work right away. The signal is stable; there's no
-     * point in waiting.
+     * Run the work right away. The signal is stable; there's no point
+     * in waiting.
      */
     rc = work_queue(HPWORK, &wd->work, interface_wd_delayed_handler, wd, 0);
     DEBUGASSERT(!rc);
