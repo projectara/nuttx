@@ -194,15 +194,31 @@
  * This should get cleaned up (modules including the REFCLK_REQ in
  * their vreg_data, no separate refclk_main_vreg_data, and NULL APB
  * vreg_data) during bringup when we can test on real HW.
+ *
+ * Only APB1 is in use, and WD8B is reserved for time sync.
+ *
+ * ----------------------------------------------------------------------
+ *
+ * HOWEVER, we still rely on APB2 during the QA and factory line
+ * testing process, so DO NOT DELETE IT. We'll use just one WD line
+ * for both bridges.
+ *
+ * ----------------------------------------------------------------------
  */
 
 static struct vreg_data apb1_vreg_data[] = {
 };
 
-/* Only APB1 is in use. WD8B is reserved for time sync */
 DECLARE_MODULE_PORT_INTERFACE(apb1, apb1_vreg_data, 3,
                               WD_8A_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_HIGH,
 			                  false, 0);
+
+static struct vreg_data apb2_vreg_data[] = {
+};
+
+DECLARE_MODULE_PORT_INTERFACE(apb2, apb2_vreg_data, 1,
+                              WD_8B_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_HIGH,
+                              false, 0);
 
 /*
  * Modules voltage regulator list and interface declarations.
@@ -278,6 +294,7 @@ DECLARE_MODULE_PORT_INTERFACE(evt1_module_5_lcd,
 
 static struct interface *evt1_interfaces[] = {
     &apb1_interface,
+    &apb2_interface,
     &evt1_module_1_interface,
     &evt1_module_2_interface,
     &evt1_module_3A_interface,
