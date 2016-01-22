@@ -67,6 +67,10 @@
 #define GPIO_INTCTRL2       (GPIO_BASE + 0x38)
 #define GPIO_INTCTRL3       (GPIO_BASE + 0x3c)
 
+#define TSB_IO_PULL_UPDOWN0         0x40000A10
+#define TSB_IO_PULL_UPDOWN_ENABLE0  0x40000A20
+#define TSB_IO_PULL_UPDOWN_GPIO(x)  BIT(x)
+
 /* A table of handlers for each GPIO interrupt */
 static xcpt_t *tsb_gpio_irq_vector;
 static uint8_t *tsb_gpio_irq_gpio_base;
