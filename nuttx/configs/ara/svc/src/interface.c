@@ -640,6 +640,103 @@ static int interface_wd_delay_check(struct wd_data *wd, uint32_t delay)
                       MSEC2TICK(delay));
 }
 
+/* Defer notifying the SVC about a finished debounce process until
+ * we're out of IRQ context. */
+static void interface_wd_delay_notify_svc(struct interface *iface)
+{
+    int rc;
+    struct wd_data *wd = &iface->detect_in;
+    /*
+     * Just cancel anything left in the queue -- we've already decided
+     * the line is stable.
+     */
+    if (!work_available(&wd->work)) {
+        rc = work_cancel(HPWORK, &wd->work);
+        /*
+         * work_cancel() doesn't fail in the current
+         * implementation. And if it did, we'd be dead in the water
+         * anyway.
+         */
+        DEBUGASSERT(!rc);
+    }
+    /*
+     * Run the work right away. The signal is stable; there's no point
+     * in waiting.
+     */
+    rc = work_queue(HPWORK, &wd->work, interface_wd_delayed_handler, wd, 0);
+    DEBUGASSERT(!rc);
+}
+
+/*
+ * Handle an active stable signal as on DB3. The fact that there's
+ * only one wake/detect pin to debounce there is assumed.
+ *
+ * WD as DETECT_IN transition to active
+ *
+ * - Power ON the interface
+ *   Note: If coming back to the active stable state from
+ *         the same last stable state after an unstable
+ *         transition, power cycle (OFF/ON) the interface.
+ *         In that case consecutive hotplug events are
+ *         sent to the AP.
+ * - Signal HOTPLUG state to the higher layer
+ */
+static void interface_wd_handle_active_stable(struct interface *iface)
+{
+    struct wd_data *wd = &iface->detect_in;
+
+    if (up_interrupt_context()) {
+        /* Delay handling this transition to work queue context. */
+        interface_wd_delay_notify_svc(iface);
+        return;
+    }
+
+    wd->db_state = WD_ST_ACTIVE_STABLE;
+    dbg_verbose("W&D: got stable %s_WD Act (gpio %d)\n",
+                iface->name, wd->gpio);
+
+    if (wd->last_state == WD_ST_ACTIVE_STABLE) {
+        interface_power_off(iface);
+    }
+    interface_power_on(iface);
+    if (iface->switch_portid != INVALID_PORT) {
+        svc_hot_plug(iface->switch_portid);
+    }
+    /* Save last stable state for power ON/OFF handling */
+    wd->last_state = wd->db_state;
+}
+
+/*
+ * Handle an inactive stable signal as on DB3. The fact that theres
+ * only one wake/detect pin to debounce there is assumed.
+ *
+ * WD as DETECT_IN transition to inactive
+ *
+ * Power OFF the interface
+ * Signal HOTPLUG state to the higher layer
+ *
+ */
+static void interface_wd_handle_inactive_stable(struct interface *iface)
+{
+    struct wd_data *wd = &iface->detect_in;
+
+    if (up_interrupt_context()) {
+        /* Delay handling this transition to work queue context. */
+        interface_wd_delay_notify_svc(iface);
+        return;
+    }
+
+    wd->db_state = WD_ST_INACTIVE_STABLE;
+    dbg_verbose("W&D: got stable %s_WD Ina (gpio %d)\n",
+                iface->name, wd->gpio);
+    interface_power_off(iface);
+    if (iface->switch_portid != INVALID_PORT) {
+        svc_hot_unplug(iface->switch_portid);
+    }
+    /* Save last stable state for power ON/OFF handling */
+    wd->last_state = wd->db_state;
+}
+
 /*
  * Debounce the single WD signal, as on DB3.
  * This handler is also handling the low power mode transitions and
@@ -677,31 +774,7 @@ static int interface_debounce_wd(struct interface *iface,
             timersub(&now, &wd->debounce_tv, &diff);
             if (timercmp(&diff, &timeout_tv, >=)) {
                 /* We have a stable signal */
-                wd->db_state = WD_ST_ACTIVE_STABLE;
-                dbg_verbose("W&D: got stable %s_WD %s (gpio %d)\n",
-                            iface->name,
-                            active ? "Act" : "Ina",
-                            wd->gpio);
-                /*
-                 * WD as DETECT_IN transition to active
-                 *
-                 * - Power ON the interface
-                 *   Note: If coming back to the active stable state from
-                 *         the same last stable state after an unstable
-                 *         transition, power cycle (OFF/ON) the interface.
-                 *         In that case consecutive hotplug events are
-                 *         sent to the AP.
-                 * - Signal HOTPLUG state to the higher layer
-                 */
-                if (wd->last_state == WD_ST_ACTIVE_STABLE) {
-                    interface_power_off(iface);
-                }
-                interface_power_on(iface);
-                if (iface->switch_portid != INVALID_PORT) {
-                    svc_hot_plug(iface->switch_portid);
-                }
-                /* Save last stable state for power ON/OFF handling */
-                wd->last_state = wd->db_state;
+                interface_wd_handle_active_stable(iface);
             } else {
                 /* Check for a stable signal after the debounce timeout */
                 interface_wd_delay_check(wd, WD_ACTIVATION_DEBOUNCE_TIME_MS);
@@ -721,23 +794,7 @@ static int interface_debounce_wd(struct interface *iface,
             timersub(&now, &wd->debounce_tv, &diff);
             if (timercmp(&diff, &timeout_tv, >=)) {
                 /* We have a stable signal */
-                wd->db_state = WD_ST_INACTIVE_STABLE;
-                dbg_verbose("W&D: got stable %s_WD %s (gpio %d)\n",
-                            iface->name,
-                            active ? "Act" : "Ina",
-                            wd->gpio);
-                /*
-                 * WD as DETECT_IN transition to inactive
-                 *
-                 * Power OFF the interface
-                 * Signal HOTPLUG state to the higher layer
-                 */
-                interface_power_off(iface);
-                if (iface->switch_portid != INVALID_PORT) {
-                    svc_hot_unplug(iface->switch_portid);
-                }
-                /* Save last stable state for power ON/OFF handling */
-                wd->last_state = wd->db_state;
+                interface_wd_handle_inactive_stable(iface);
             } else {
                 /* Check for a stable signal after the debounce timeout */
                 interface_wd_delay_check(wd, WD_INACTIVATION_DEBOUNCE_TIME_MS);
