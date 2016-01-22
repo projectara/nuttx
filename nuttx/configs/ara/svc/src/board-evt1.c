@@ -367,6 +367,7 @@ DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_5_lcd,
 
 static struct interface *evt1_5_interfaces[] = {
     &apb1_interface,
+    &apb2_interface,
     &evt1_5_module_1_interface,
     &evt1_5_module_2_interface,
     &evt1_5_module_3A_interface,
@@ -391,6 +392,7 @@ DECLARE_MODULE_PORT_INTERFACE(db3_5_module_5_lcd,
 /* Interfaces on DB3.5 */
 struct interface *db3_5_interfaces[] = {
     &apb1_interface,
+    &apb2_interface,
     &evt1_5_module_1_interface,
     &evt1_5_module_2_interface,
     &evt1_5_module_3A_interface,
