@@ -122,9 +122,24 @@ static int event_cb(struct tsb_switch_event *ev) {
 
 static int event_linkup(struct tsb_switch_event *ev) {
     int rc = 0;
+    char *linkup_result;
 
-    dbg_info("event received: type: %u (LINKUP) port: %u val: %u\n",
-             ev->type, ev->linkup.port, ev->linkup.val);
+    switch (ev->linkup.val) {
+    case SW_LINKUP_INITIATE:
+        linkup_result = "initiate";
+        break;
+    case TSB_LINKUP_FAIL:
+        linkup_result = "fail";
+        break;
+    case TSB_LINKUP_SUCCESS:
+        linkup_result = "success";
+        break;
+    default:
+        linkup_result = "unknown";
+        break;
+    }
+    dbg_info("event received: type: %u (LINKUP) port: %u val: %u (%s)\n",
+             ev->type, ev->linkup.port, ev->linkup.val, linkup_result);
 
     pthread_mutex_lock(&svc->lock);
 
