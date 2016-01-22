@@ -226,6 +226,48 @@ uint8_t tsb_gpio_line_count(void *driver_data)
     }
 }
 
+static int tsb_gpio_set_pull(void *driver_data, uint8_t which,
+                             enum gpio_pull_type pull_type)
+{
+    if ( which == 21 || which == 22 ) {
+        return -EINVAL; // no pull resistors availabe for GPIO21 or GPIO22
+    }
+
+    if ( which >= tsb_gpio_line_count(NULL) ) {
+        return -EINVAL; // GPIO line number out of range
+    }
+
+    if ( which >= 3 && which <= 8) {
+        switch (pull_type) {
+            case GPIO_PULL_TYPE_PULL_DOWN:
+                return -EINVAL; // no pulldown resistors for GPIO3:GPIO8
+            case GPIO_PULL_TYPE_PULL_UP:
+                modifyreg32(TSB_IO_PULL_UP_ENABLE0, 0, 1 << which);
+                return 0;
+            case GPIO_PULL_TYPE_PULL_NONE:
+                modifyreg32(TSB_IO_PULL_UP_ENABLE0, 1 << which, 0);
+                return 0;
+            default:
+                return -EINVAL;
+        }
+    }
+
+    switch (pull_type) {
+        case GPIO_PULL_TYPE_PULL_DOWN:
+            modifyreg32(TSB_IO_PULL_UPDOWN0, 1 << which, 0);
+            modifyreg32(TSB_IO_PULL_UPDOWN_ENABLE0, 1 << which, 0);
+            return 0;
+        case GPIO_PULL_TYPE_PULL_UP:
+            modifyreg32(TSB_IO_PULL_UPDOWN0, 0, 1 << which);
+            modifyreg32(TSB_IO_PULL_UPDOWN_ENABLE0, 1 << which, 0);
+            return 0;
+        case GPIO_PULL_TYPE_PULL_NONE:
+            modifyreg32(TSB_IO_PULL_UPDOWN_ENABLE0, 0, 1 << which);
+        default:
+            return -EINVAL;
+    }
+}
+
 static int tsb_gpio_mask_irq(void *driver_data, uint8_t which)
 {
     putreg32(1 << which, GPIO_INTMASKSET);
@@ -493,6 +535,7 @@ static struct gpio_ops_s tsb_gpio_ops = {
     .mask_irq = tsb_gpio_mask_irq,
     .unmask_irq = tsb_gpio_unmask_irq,
     .clear_interrupt = tsb_gpio_clear_interrupt,
+    .set_pull = tsb_gpio_set_pull,
 };
 
 int tsb_gpio_register(void *driver_data)
