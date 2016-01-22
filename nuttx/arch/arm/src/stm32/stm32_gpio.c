@@ -415,6 +415,49 @@ int stm32_configgpio(uint32_t cfgset)
 }
 #endif
 
+#if defined(CONFIG_STM32_STM32L15XX) || defined(CONFIG_STM32_STM32F20XX) || \
+    defined(CONFIG_STM32_STM32F30XX) || defined(CONFIG_STM32_STM32F40XX)
+uint32_t stm32_get_pupd(uint32_t cfgset)
+{
+  uintptr_t base;
+  uint32_t regval;
+  unsigned int port;
+  unsigned int pin;
+
+  port = (cfgset & GPIO_PORT_MASK) >> GPIO_PORT_SHIFT;
+  if (port >= STM32_NGPIO_PORTS)
+    {
+      return 0; /* error is indistinguishable from GPIO_FLOAT, oh well */
+    }
+
+  /* Get the port base address */
+
+  base = g_gpiobase[port];
+
+  /* Get the pin number and select the port configuration register for that
+   * pin
+   */
+
+  pin = (cfgset & GPIO_PIN_MASK) >> GPIO_PIN_SHIFT;
+
+  regval = getreg32(base + STM32_GPIO_PUPDR_OFFSET);
+  regval &= GPIO_PUPDR_MASK(pin);
+  regval >>= GPIO_PUPDR_SHIFT(pin);
+
+  switch (regval)
+    {
+      case GPIO_PUPDR_PULLUP:
+	return GPIO_PULLUP;
+
+      case GPIO_PUPDR_PULLDOWN:
+	return GPIO_PULLDOWN;
+
+      default:
+	return GPIO_FLOAT;
+    }
+}
+#endif
+
 /****************************************************************************
  * Name: stm32_configgpio (for the STM32L15xxx, STM32F20xxx and STM32F40xxx family)
  ****************************************************************************/
