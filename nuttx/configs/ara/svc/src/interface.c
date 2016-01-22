@@ -694,8 +694,7 @@ static void interface_wd_handle_active_stable(struct interface *iface)
     }
 
     wd->db_state = WD_ST_ACTIVE_STABLE;
-    dbg_verbose("W&D: got stable %s_WD Act (gpio %d)\n",
-                iface->name, wd->gpio);
+    dbg_info("W&D: got stable %s_WD Act (gpio %d)\n", iface->name, wd->gpio);
 
     if (wd->last_state == WD_ST_ACTIVE_STABLE) {
         interface_power_off(iface);
@@ -729,8 +728,7 @@ static void interface_wd_handle_inactive_stable(struct interface *iface)
     }
 
     wd->db_state = WD_ST_INACTIVE_STABLE;
-    dbg_verbose("W&D: got stable %s_WD Ina (gpio %d)\n",
-                iface->name, wd->gpio);
+    dbg_info("W&D: got stable %s_WD Ina (gpio %d)\n", iface->name, wd->gpio);
     interface_power_off(iface);
     if (iface->switch_portid != INVALID_PORT) {
         svc_hot_unplug(iface->switch_portid);
@@ -852,10 +850,10 @@ static int interface_wd_handler(int irq, void *context)
                true : false;
     active = (gpio_get_value(irq) == polarity);
 
-    dbg_insane("W&D: got %s DETECT_IN %s (gpio %d)\n",
-               iface->name,
-               active ? "Act" : "Ina",
-               irq);
+    dbg_info("W&D: got %s DETECT_IN %s (gpio %d)\n",
+             iface->name,
+             active ? "Act" : "Ina",
+             irq);
 
     /* Debounce and handle state changes */
     ret = interface_debounce_wd(iface, wd, active);
