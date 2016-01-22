@@ -195,6 +195,15 @@
  * This should get cleaned up (modules including the REFCLK_REQ in
  * their vreg_data, no separate refclk_main_vreg_data, and NULL APB
  * vreg_data) during bringup when we can test on real HW.
+ *
+ * Only APB1 is in use, and WD8B is reserved for time sync.
+ *
+ ** ----------------------------------------------------------------------
+ *
+ * HOWEVER, we still rely on APB2 during the QA and factory line
+ * testing process, so DO NOT DELETE IT.
+ *
+ * ----------------------------------------------------------------------
  */
 
 static struct vreg_data apb1_vreg_data[] = {
@@ -284,6 +293,7 @@ DECLARE_MODULE_PORT_INTERFACE(evt1_module_5_lcd,
 
 static struct interface *evt1_interfaces[] = {
     &apb1_interface,
+    &apb2_interface,
     &evt1_module_1_interface,
     &evt1_module_2_interface,
     &evt1_module_3A_interface,
@@ -381,6 +391,7 @@ DECLARE_MODULE_PORT_INTERFACE(db3_5_module_5_lcd,
 /* Interfaces on DB3.5 */
 struct interface *db3_5_interfaces[] = {
     &apb1_interface,
+    &apb2_interface,
     &evt1_5_module_1_interface,
     &evt1_5_module_2_interface,
     &evt1_5_module_3A_interface,
