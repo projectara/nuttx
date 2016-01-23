@@ -456,6 +456,59 @@ uint32_t stm32_get_pupd(uint32_t cfgset)
 	return GPIO_FLOAT;
     }
 }
+
+int stm32_set_pupd(uint32_t cfgset, uint32_t pull_type)
+{
+  uintptr_t base;
+  uint32_t regval;
+  uint32_t setting;
+  unsigned int port;
+  unsigned int pin;
+  irqstate_t flags;
+
+  port = (cfgset & GPIO_PORT_MASK) >> GPIO_PORT_SHIFT;
+  if (port >= STM32_NGPIO_PORTS)
+    {
+       return -EINVAL;
+    }
+
+  /* Get the port base address */
+
+  base = g_gpiobase[port];
+
+  /* Get the pin number and select the port configuration register for that
+   * pin
+   */
+
+  pin = (cfgset & GPIO_PIN_MASK) >> GPIO_PIN_SHIFT;
+
+  switch (pull_type)
+    {
+      case GPIO_PULLUP:
+	setting = GPIO_PUPDR_PULLUP;
+	break;
+
+      case GPIO_PULLDOWN:
+	setting = GPIO_PUPDR_PULLDOWN;
+	break;
+
+      case GPIO_FLOAT:
+      default:
+	setting = GPIO_PUPDR_NONE;
+	break;
+    }
+
+  flags = irqsave();
+
+  regval = getreg32(base + STM32_GPIO_PUPDR_OFFSET);
+  regval &= ~GPIO_PUPDR_MASK(pin);
+  regval |= (setting << GPIO_PUPDR_SHIFT(pin));
+  putreg32(regval, base + STM32_GPIO_PUPDR_OFFSET);
+
+  irqrestore(flags);
+
+  return OK;
+}
 #endif
 
 /****************************************************************************

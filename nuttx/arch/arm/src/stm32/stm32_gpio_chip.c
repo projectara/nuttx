@@ -342,6 +342,40 @@ static int stm32_gpio_clear_interrupt(void *driver_data, uint8_t which)
     return 0;
 }
 
+static int stm32_gpio_set_pull(void *driver_data, uint8_t pin, int pull_type)
+{
+    uint32_t setting;
+    uint32_t cfgset;
+    int ret;
+
+    lldbg("%s: pin=%hhu, val=%d\n", __func__, pin, val);
+
+    ret = map_pin_nr_to_cfgset(pin, &cfgset);
+    if (ret) {
+        lldbg("%s: Invalid pin %hhu\n", pin);
+        return -EINVAL;
+    }
+
+    switch (pull_type)
+    {
+	case GPIO_PULL_TYPE_PULL_DOWN:
+	    setting = GPIO_PULLDOWN;
+	    break;
+
+	case GPIO_PULL_TYPE_PULL_UP:
+	    setting = GPIO_PULLUP;
+	    break;
+
+	case GPIO_PULL_TYPE_PULL_NONE:
+	    setting = GPIO_FLOAT;
+	    break;
+    }
+ 
+    stm32_set_pupd(cfgset, setting);
+
+    return 0;
+}
+
 static struct gpio_ops_s stm32_gpio_ops = {
     .direction_in =     stm32_gpio_set_direction_in,
     .direction_out =    stm32_gpio_set_direction_out,
@@ -356,6 +390,7 @@ static struct gpio_ops_s stm32_gpio_ops = {
     .mask_irq =         stm32_gpio_mask_irq,
     .unmask_irq =       stm32_gpio_unmask_irq,
     .clear_interrupt =  stm32_gpio_clear_interrupt,
+    .set_pull =		stm32_gpio_set_pull,
 };
 
 /* Public functions */

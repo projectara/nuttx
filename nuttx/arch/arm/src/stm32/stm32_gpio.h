@@ -454,6 +454,22 @@ EXTERN int stm32_configgpio(uint32_t cfgset);
 EXTERN uint32_t stm32_get_pupd(uint32_t cfgset);
 
 /************************************************************************************
+ * Name: stm32_set_pupd
+ *
+ * Description:
+ *   Extracts the port and pin from cfgset and then adjusts the pull up/pull
+ *   down register PUPDR based on the value of pull_type. pull_type should be
+ *   one of GPIO_PULLUP, GPIO_PULLDOWN, or GPIO_FLOAT.
+ *
+ * Returns:
+ *   OK on success
+ *   Negated errno value on error.
+ *
+ ************************************************************************************/
+
+EXTERN int stm32_set_pupd(uint32_t cfgset, uint32_t pull_type);
+
+/************************************************************************************
  * Name: stm32_unconfiggpio
  *
  * Description:
