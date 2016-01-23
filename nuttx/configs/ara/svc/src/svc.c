@@ -845,23 +845,25 @@ static int svcd_startup(void) {
         goto error2;
     }
 
+    /*
+     * Initialize event system
+     * Done before the interfaces bring-up, so that events can be handled
+     */
+    rc = svc_event_init();
+    if (rc) {
+        goto error2;
+    }
+
     /* Power on all provided interfaces */
     if (!info->interfaces) {
         dbg_error("%s: No interface information provided\n", __func__);
         goto error2;
     }
-
     rc = interface_init(info->interfaces,
                         info->nr_interfaces, info->nr_spring_interfaces);
     if (rc < 0) {
         dbg_error("%s: Failed to initialize interfaces\n", __func__);
         goto error2;
-    }
-
-    /* Initialize event system */
-    rc = svc_event_init();
-    if (rc) {
-        goto error3;
     }
 
     /* Register svc protocol greybus driver*/
