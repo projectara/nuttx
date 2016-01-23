@@ -199,14 +199,67 @@ static int stm32_gpio_deactivate(void *driver_data, uint8_t pin)
 static int stm32_gpio_set_pull(void *driver_data, uint8_t pin,
                              enum gpio_pull_type pull_type)
 {
-    //TODO implement function
-    return -ENOSYS;
+    uint32_t setting;
+    uint32_t cfgset;
+    int ret;
+
+    lldbg("%s: pin=%hhu, val=%d\n", __func__, pin, pull_type);
+
+    ret = map_pin_nr_to_cfgset(pin, &cfgset);
+    if (ret) {
+        lldbg("%s: Invalid pin %hhu\n", pin);
+        return -EINVAL;
+    }
+
+    switch (pull_type)
+    {
+	case GPIO_PULL_TYPE_PULL_DOWN:
+	    setting = GPIO_PULLDOWN;
+	    break;
+
+	case GPIO_PULL_TYPE_PULL_UP:
+	    setting = GPIO_PULLUP;
+	    break;
+
+	case GPIO_PULL_TYPE_PULL_NONE:
+	    setting = GPIO_FLOAT;
+	    break;
+
+	default:
+	    lldbg("%s: unsupported pull up/pull down type: %d\n",
+		    __func__, pull_type);
+	    return -EINVAL;
+    }
+
+    stm32_set_pupd(cfgset, setting);
+
+    return 0;
 }
 
 static enum gpio_pull_type stm32_gpio_get_pull(void *driver_data, uint8_t pin)
 {
-    //TODO implement function
-    return GPIO_PULL_TYPE_PULL_NONE;
+    uint32_t cfgset, pupd;
+    int ret = 0;
+
+    lldbg("%s: pin=%hhu\n", __func__, pin);
+
+    ret = map_pin_nr_to_cfgset(pin, &cfgset);
+    if (ret) {
+        lldbg("%s: Invalid pin %hhu\n", pin);
+        return ret;
+    }
+
+    pupd = stm32_get_pupd(cfgset);
+
+    switch (pupd) {
+    case GPIO_PULLDOWN:
+	return GPIO_PULL_TYPE_PULL_DOWN;
+    case GPIO_PULLUP:
+	return GPIO_PULL_TYPE_PULL_UP;
+    case GPIO_FLOAT:
+    default:
+	return GPIO_PULL_TYPE_PULL_NONE;
+    }
 }
 
 static int stm32_gpio_irqattach(void *driver_data, uint8_t pin, xcpt_t isr,
