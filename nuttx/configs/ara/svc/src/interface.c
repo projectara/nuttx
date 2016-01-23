@@ -59,7 +59,7 @@ static unsigned int nr_interfaces;
 static unsigned int nr_spring_interfaces;
 
 static void interface_uninstall_wd_handler(struct wd_data *wd);
-static int interface_install_wd_handler(struct wd_data *wd);
+static int interface_install_wd_handler(struct interface *iface, bool);
 
 /**
  * @brief Configure all the voltage regulators associated with an interface
@@ -223,7 +223,7 @@ int interface_generate_wakeout(struct interface *iface, bool assert,
         up_udelay(pulse_len);
 
         /* Finally re-install the interrupt handler on the pin */
-        rc = interface_install_wd_handler(&iface->detect_in);
+        rc = interface_install_wd_handler(iface, true);
         if (rc) {
             return rc;
         }
@@ -840,13 +840,54 @@ static void interface_uninstall_wd_handler(struct wd_data *wd)
     }
 }
 
+static void interface_check_unplug_during_wake_out(struct interface *iface)
+{
+    enum hotplug_state hs = interface_get_hotplug_state(iface);
+    switch (hs) {
+    case HOTPLUG_ST_PLUGGED:
+        return;
+    case HOTPLUG_ST_UNKNOWN:
+        /* fall through */
+    default:
+        dbg_warn("%s: %s: invalid or unknown hotplug state %u (gpio %u)\n",
+                 __func__, iface->name, hs, iface->detect_in.gpio);
+        /* fall through */
+    case HOTPLUG_ST_UNPLUGGED:
+        /*
+         * The interface hotplug state is either invalid (in which
+         * case we need to figure out what's going on) or it now reads
+         * as unplugged, despite having been plugged before (or we
+         * wouldn't have sent wake out).
+         *
+         * We'd better debounce the interface again. A full debounce
+         * is needed to disambiguate the interface being unplugged
+         * from something sending a wake out pulse to the SVC when we
+         * checked the hotplug state.
+         */
+        dbg_warn("Possible unplug during wake out!\n");
+        iface->detect_in.db_state = WD_ST_INVALID;
+        interface_debounce_wd(iface, &iface->detect_in, false);
+    }
+}
+
 /*
  * Install handler for Wake & Detect pin
+ *
+ * Other than being called during initialization, it's called again
+ * after wake out pulses are performed. However, if the module was
+ * forcibly removed during the wake out pulse itself, we'll have
+ * missed the interrupt. The check_for_unplug parameter determines
+ * whether we need to check for that case here.
  */
-static int interface_install_wd_handler(struct wd_data *wd)
+static int interface_install_wd_handler(struct interface *iface,
+                                        bool check_for_unplug)
 {
+    struct wd_data *wd = &iface->detect_in;
     if (wd->gpio) {
         gpio_direction_in(wd->gpio);
+        if (check_for_unplug) {
+            interface_check_unplug_during_wake_out(iface);
+        }
         if (gpio_irq_settriggering(wd->gpio, IRQ_TYPE_EDGE_BOTH) ||
             gpio_irq_attach(wd->gpio, interface_wd_handler) ||
             gpio_irq_unmask(wd->gpio)) {
@@ -1002,7 +1043,7 @@ int interface_init(struct interface **ints,
         /* Install handlers for DETECT_IN signal */
         ifc->detect_in.db_state = WD_ST_INVALID;
         ifc->detect_in.last_state = WD_ST_INVALID;
-        rc = interface_install_wd_handler(&ifc->detect_in);
+        rc = interface_install_wd_handler(ifc, false);
         if (rc) {
             return rc;
         }
