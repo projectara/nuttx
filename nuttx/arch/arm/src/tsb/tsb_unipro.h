@@ -51,7 +51,6 @@ struct cport {
     uint8_t *tx_buf;                // TX region for this CPort
     uint8_t *rx_buf;                // RX region for this CPort
     unsigned int cportid;
-    int connected;
 
     volatile bool pending_reset;
     cport_reset_completion_cb_t reset_completion_cb;
@@ -71,6 +70,7 @@ int _unipro_reset_cport(unsigned int cportid);
 void unipro_reset_notify(unsigned int cportid);
 void unipro_switch_rxbuf(unsigned int cportid, void *buffer);
 int unipro_unpause_rx(unsigned int cportid);
+bool cport_is_connected(unsigned int cportid);
 
 #endif /* __TSB_UNIPRO_H__ */
 

@@ -163,6 +163,12 @@ static uint32_t cport_get_status(struct cport *cport) {
     return (val & (0x3));
 }
 
+bool cport_is_connected(unsigned int cportid)
+{
+    struct cport *cport = cport_handle(cportid);
+    return cport && cport_get_status(cport) == CPORT_STATUS_CONNECTED;
+}
+
 /**
  * @brief Clear and disable UniPro interrupt
  */
@@ -217,10 +223,6 @@ static int unipro_init_cport(unsigned int cportid)
 
     if (!cport) {
         return -EINVAL;
-    }
-
-    if (cport->connected) {
-        return 0;
     }
 
     atomic_init(&cport->inflight_buf_count, 0);
@@ -278,8 +280,6 @@ static int configure_connected_cport(unsigned int cportid) {
                       cportid, ret);
             break;
         }
-
-        cport->connected = 1;
 
         /*
          * Clear any pending EOM interrupts, then enable them.
@@ -551,7 +551,7 @@ int unipro_unpause_rx(unsigned int cportid)
     struct cport *cport;
 
     cport = cport_handle(cportid);
-    if (!cport || !cport->connected) {
+    if (!cport || !cport_is_connected(cportid)) {
         return -EINVAL;
     }
 
@@ -795,7 +795,6 @@ void unipro_init(void)
         cport = &cporttable[i];
         cport->tx_buf = CPORT_TX_BUF(i);
         cport->cportid = i;
-        cport->connected = 0;
         list_init(&cport->tx_fifo);
 
         _unipro_reset_cport(i);
@@ -967,7 +966,7 @@ int unipro_driver_register(struct unipro_driver *driver, unsigned int cportid)
     cport->driver = driver;
 
     lldbg("Registered driver %s on %sconnected CP%u\n",
-          cport->driver->name, cport->connected ? "" : "un",
+          cport->driver->name, cport_is_connected(cport->cportid) ? "" : "un",
           cport->cportid);
 
     return 0;

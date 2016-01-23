@@ -248,7 +248,7 @@ int unipro_send_async(unsigned int cportid, const void *buf, size_t len,
         return -EPIPE;
     }
 
-    if (!cport->connected) {
+    if (!cport_is_connected(cportid)) {
         lldbg("CP%u unconnected\n", cport->cportid);
         return -EPIPE;
     }
@@ -340,7 +340,7 @@ static int unipro_send_sync(unsigned int cportid,
         return -EINVAL;
     }
 
-    if (!cport->connected) {
+    if (!cport_is_connected(cportid)) {
         lldbg("CP%d unconnected\n", cport->cportid);
         return -EPIPE;
     }
