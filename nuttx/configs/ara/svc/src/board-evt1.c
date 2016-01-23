@@ -88,6 +88,16 @@
 #define WD_8A_DET_IN_GPIO   (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN11)
 #define WD_8B_DET_IN_GPIO   (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN12)
 
+#define WD_1_DET    STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN1)
+#define WD_2_DET    STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN2)
+#define WD_3A_DET   STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN3)
+#define WD_3B_DET   STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN4)
+#define WD_4A_DET   STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN5)
+#define WD_4B_DET   STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN6)
+#define WD_5_DET    STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN7) /* LCD */
+#define WD_8A_DET   STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN11)
+#define WD_8B_DET   STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN12)
+
 /*
  * MOD_ACT_SW lines connected to SVC.
  *
@@ -211,14 +221,14 @@ static struct vreg_data apb1_vreg_data[] = {
 };
 
 DECLARE_MODULE_PORT_INTERFACE(apb1, apb1_vreg_data, 3,
-                              WD_8A_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_HIGH,
+                              WD_8A_DET, ARA_IFACE_WD_ACTIVE_HIGH,
 			                  false, 0);
 
 static struct vreg_data apb2_vreg_data[] = {
 };
 
 DECLARE_MODULE_PORT_INTERFACE(apb2, apb2_vreg_data, 1,
-                              WD_8B_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_HIGH,
+                              WD_8B_DET, ARA_IFACE_WD_ACTIVE_HIGH,
                               false, 0);
 
 /*
@@ -271,26 +281,26 @@ static struct vreg_data evt1_module_5_lcd_vreg_data[] = {
 };
 
 DECLARE_MODULE_PORT_INTERFACE(evt1_module_1, evt1_module_1_vreg_data, 13,
-                              WD_1_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
+                              WD_1_DET, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_1);
 DECLARE_MODULE_PORT_INTERFACE(evt1_module_2, evt1_module_2_vreg_data, 11,
-                              WD_2_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
+                              WD_2_DET, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_2);
 DECLARE_MODULE_PORT_INTERFACE(evt1_module_3A, evt1_module_3A_vreg_data, 4,
-                              WD_3A_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
+                              WD_3A_DET, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_3A);
 DECLARE_MODULE_PORT_INTERFACE(evt1_module_3B, evt1_module_3B_vreg_data, 2,
-                              WD_3B_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
+                              WD_3B_DET, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_3B);
 DECLARE_MODULE_PORT_INTERFACE(evt1_module_4A, evt1_module_4A_vreg_data, 6,
-                              WD_4A_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
+                              WD_4A_DET, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_4A);
 DECLARE_MODULE_PORT_INTERFACE(evt1_module_4B, evt1_module_4B_vreg_data, 8,
-                              WD_4B_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
+                              WD_4B_DET, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_4B);
 DECLARE_MODULE_PORT_INTERFACE(evt1_module_5_lcd,
                               evt1_module_5_lcd_vreg_data, 10,
-                              WD_5_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
+                              WD_5_DET, ARA_IFACE_WD_ACTIVE_LOW,
                               false, MOD_RELEASE_5);
 
 static struct interface *evt1_interfaces[] = {
@@ -344,26 +354,26 @@ static struct vreg_data evt1_5_module_5_lcd_vreg_data[] = {
 };
 
 DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_1, evt1_5_module_1_vreg_data, 13,
-                              WD_1_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
+                              WD_1_DET, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_1);
 DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_2, evt1_5_module_2_vreg_data, 11,
-                              WD_2_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
+                              WD_2_DET, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_2);
 DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_3A, evt1_5_module_3A_vreg_data, 4,
-                              WD_3A_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
+                              WD_3A_DET, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_3A);
 DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_3B, evt1_5_module_3B_vreg_data, 2,
-                              WD_3B_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
+                              WD_3B_DET, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_3B);
 DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_4A, evt1_5_module_4A_vreg_data, 6,
-                              WD_4A_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
+                              WD_4A_DET, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_4A);
 DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_4B, evt1_5_module_4B_vreg_data, 8,
-                              WD_4B_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
+                              WD_4B_DET, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_4B);
 DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_5_lcd,
                               evt1_5_module_5_lcd_vreg_data, 10,
-                              WD_5_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
+                              WD_5_DET, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_5);
 
 static struct interface *evt1_5_interfaces[] = {
@@ -383,11 +393,11 @@ static struct interface *evt1_5_interfaces[] = {
  * Similar to EVT1.5 interfaces, with different mapping of the physical ports
  */
 DECLARE_MODULE_PORT_INTERFACE(db3_5_module_3B, evt1_5_module_3B_vreg_data, 10,
-                              WD_3B_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
+                              WD_3B_DET, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_3B);
 DECLARE_MODULE_PORT_INTERFACE(db3_5_module_5_lcd,
                               evt1_5_module_5_lcd_vreg_data, 9,
-                              WD_5_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
+                              WD_5_DET, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_5);
 
 /* Interfaces on DB3.5 */
