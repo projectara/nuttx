@@ -1108,23 +1108,6 @@ done:
     return rc;
 }
 
-/**
- * @brief Start the transmission of FCTs on CPort 4.
- *        Other CPorts not tested/unsupported.
- */
-static int es2_fct_enable(struct tsb_switch *sw) {
-    uint32_t spictlb = 0xC;
-    int rc;
-
-    rc = switch_internal_setattr(sw, SPICTLB, spictlb);
-
-    if (rc) {
-        dbg_error("Failed to set spictlb\n");
-    }
-
-    return rc;
-}
-
 static struct tsb_rev_data es2_rev_data = {
     .ncp_req_max_size       = ES2_NCP_MAX_REQ_SIZE,
     .dev_id_mask_size       = ES2_DEV_ID_MASK_SIZE,
@@ -1161,8 +1144,6 @@ static struct tsb_switch_ops es2_ops = {
 
     .set_valid_device      = es2_set_valid_device,
     .dump_routing_table    = es2_dump_routing_table,
-
-    .fct_enable            = es2_fct_enable,
 
     .switch_data_send      = es2_data_send,
 

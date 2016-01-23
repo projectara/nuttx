@@ -2292,12 +2292,21 @@ int switch_data_send(struct tsb_switch *sw, void *data, size_t len) {
     return sw->ops->switch_data_send(sw, data, len);
 }
 
-/* Enable data reception on CPort 4 */
+/**
+ * @brief Start the transmission of FCTs on CPort 4.
+ *        Other CPorts not tested/unsupported.
+ */
 int switch_fct_enable(struct tsb_switch *sw) {
-    if (!sw->ops->fct_enable) {
-        return -EOPNOTSUPP;
+    uint32_t spictlb = 0xC;
+    int rc;
+
+    rc = switch_internal_setattr(sw, SPICTLB, spictlb);
+
+    if (rc) {
+        dbg_error("Failed to set spictlb\n");
     }
-    return sw->ops->fct_enable(sw);
+
+    return rc;
 }
 
 /* IRQ worker creation */

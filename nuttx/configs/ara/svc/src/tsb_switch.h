@@ -374,7 +374,6 @@ struct tsb_switch_ops {
                             uint8_t device_id,
                             bool valid);
     int (*dump_routing_table)(struct tsb_switch*);
-    int (*fct_enable)(struct tsb_switch *);
     int (*switch_data_send)(struct tsb_switch *, void *, size_t);
 
     /*
