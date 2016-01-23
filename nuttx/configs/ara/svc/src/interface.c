@@ -155,6 +155,10 @@ int interface_pwr_disable(struct interface *iface)
         return -ENODEV;
     }
 
+    struct timeval now;
+    gettimeofday(&now, NULL);
+    dbg_info("interface %s: (%u sec, %u msec) turning off interface\n",
+             iface->name, now.tv_sec, now.tv_usec / 1000);
     rc = vreg_put(iface->vreg);
     if (rc) {
         dbg_error("Can't disable interface %s: %d\n",
@@ -628,8 +632,13 @@ static int interface_wd_delay_check(struct wd_data *wd, uint32_t delay)
      * A new one will be scheduled if more debounce is needed.
      */
     if (!work_available(&wd->work)) {
+        dbg_info("%s: ------------ WORK IN QUEUE!\n", __func__);
         return 0;
     }
+    struct timeval now;
+    gettimeofday(&now, NULL);
+    dbg_info("%s: (%u sec, %u msec) ---------------- delaying %u msec -----------------------\n",
+             __func__, now.tv_sec, now.tv_usec / 1000, delay);
 
     /* Schedule the work to run after the debounce timeout */
     return work_queue(HPWORK, &wd->work, interface_wd_delayed_handler, wd,
@@ -688,7 +697,10 @@ static void interface_wd_handle_stable(struct interface *iface, bool active)
     }
 
     wd->db_state = active ? WD_ST_ACTIVE_STABLE : WD_ST_INACTIVE_STABLE;
-    dbg_info("W&D: got stable %s_WD %s (gpio %d)\n",
+    struct timeval now;
+    gettimeofday(&now, NULL);
+    dbg_info("W&D: (%u sec, %u msec) got stable %s_WD %s (gpio %d)\n",
+             now.tv_sec, now.tv_usec / 1000,
              iface->name, active ? "Act" : "Ina", wd->gpio);
     if (active) {
         interface_power_on(iface);
@@ -801,6 +813,7 @@ static int interface_debounce_wd(struct interface *iface,
 /* Interface Wake & Detect handler */
 static int interface_wd_handler(int irq, void *context)
 {
+    struct timeval now;
     struct interface *iface = NULL;
     struct wd_data *wd;
     bool polarity, active;
@@ -818,7 +831,9 @@ static int interface_wd_handler(int irq, void *context)
     polarity = iface->detect_in.polarity;
     active = (gpio_get_value(irq) == polarity);
 
-    dbg_info("W&D: got %s DETECT_IN %s (gpio %d)\n",
+    gettimeofday(&now, NULL);
+    dbg_info("W&D: (%u sec, %u msec) got %s DETECT_IN %s (gpio %d)\n",
+             now.tv_sec, now.tv_usec / 1000,
              iface->name,
              active ? "Act" : "Ina",
              irq);
