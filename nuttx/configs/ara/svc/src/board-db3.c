@@ -195,26 +195,26 @@ static struct vreg_data module_5_vreg_data[] = {
 /*
  * Interfaces on this board
  */
-DECLARE_MODULE_PORT_INTERFACE(apb1, apb1_vreg_data, 3,
+DECLARE_MODULE_PORT_INTERFACE(apb1, "apb1", apb1_vreg_data, 3,
                               WD8A_DET_IN, ARA_IFACE_WD_ACTIVE_HIGH, false, 0);
-DECLARE_MODULE_PORT_INTERFACE(apb2, apb2_vreg_data, 1,
+DECLARE_MODULE_PORT_INTERFACE(apb2, "apb2", apb2_vreg_data, 1,
                               WD8B_DET_IN, ARA_IFACE_WD_ACTIVE_HIGH, false, 0);
-DECLARE_MODULE_PORT_INTERFACE(module_1, module_1_vreg_data, 13,
+DECLARE_MODULE_PORT_INTERFACE(module_1, "module_1", module_1_vreg_data, 13,
                               WD_1_DET_IN, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_1);
-DECLARE_MODULE_PORT_INTERFACE(module_2, module_2_vreg_data, 11,
+DECLARE_MODULE_PORT_INTERFACE(module_2, "module_2", module_2_vreg_data, 11,
                               WD_2_DET_IN, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_2);
-DECLARE_MODULE_PORT_INTERFACE(module_3, module_3_vreg_data, 4,
+DECLARE_MODULE_PORT_INTERFACE(module_3, "module_3", module_3_vreg_data, 4,
                               WD_3_DET_IN, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_3);
-DECLARE_MODULE_PORT_INTERFACE(module_4a, module_4a_vreg_data, 8,
+DECLARE_MODULE_PORT_INTERFACE(module_4a, "module_4a", module_4a_vreg_data, 8,
                               WD_4A_DET_IN, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_4);
-DECLARE_MODULE_PORT_INTERFACE(module_4b, module_4b_vreg_data, 6,
+DECLARE_MODULE_PORT_INTERFACE(module_4b, "module_4b", module_4b_vreg_data, 6,
                               WD_4B_DET_IN, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_4);
-DECLARE_MODULE_PORT_INTERFACE(module_5, module_5_vreg_data, 10,
+DECLARE_MODULE_PORT_INTERFACE(module_5, "module_5", module_5_vreg_data, 10,
                               WD_5_DET_IN, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_5);
 

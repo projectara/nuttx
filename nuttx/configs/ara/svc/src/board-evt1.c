@@ -213,10 +213,10 @@ static struct vreg_data apb1_vreg_data[] = {
 static struct vreg_data apb2_vreg_data[] = {
 };
 
-DECLARE_MODULE_PORT_INTERFACE(apb1, apb1_vreg_data, 3,
+DECLARE_MODULE_PORT_INTERFACE(apb1, "apb1", apb1_vreg_data, 3,
                               WD_8A_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_HIGH,
 			                  false, 0);
-DECLARE_MODULE_PORT_INTERFACE(apb2, apb2_vreg_data, 1,
+DECLARE_MODULE_PORT_INTERFACE(apb2, "apb2", apb2_vreg_data, 1,
                               WD_8B_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_HIGH,
 			                  false, 0);
 
@@ -269,25 +269,31 @@ static struct vreg_data evt1_module_5_lcd_vreg_data[] = {
     INIT_MODULE_CLK_DATA(REFCLK_5_EN),
 };
 
-DECLARE_MODULE_PORT_INTERFACE(evt1_module_1, evt1_module_1_vreg_data, 13,
+DECLARE_MODULE_PORT_INTERFACE(evt1_module_1, "module_1",
+                              evt1_module_1_vreg_data, 13,
                               WD_1_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_1);
-DECLARE_MODULE_PORT_INTERFACE(evt1_module_2, evt1_module_2_vreg_data, 11,
+DECLARE_MODULE_PORT_INTERFACE(evt1_module_2, "module_2",
+                              evt1_module_2_vreg_data, 11,
                               WD_2_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_2);
-DECLARE_MODULE_PORT_INTERFACE(evt1_module_3A, evt1_module_3A_vreg_data, 4,
+DECLARE_MODULE_PORT_INTERFACE(evt1_module_3A, "module_3a",
+                              evt1_module_3A_vreg_data, 4,
                               WD_3A_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_3A);
-DECLARE_MODULE_PORT_INTERFACE(evt1_module_3B, evt1_module_3B_vreg_data, 2,
+DECLARE_MODULE_PORT_INTERFACE(evt1_module_3B, "module_3b",
+                              evt1_module_3B_vreg_data, 2,
                               WD_3B_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_3B);
-DECLARE_MODULE_PORT_INTERFACE(evt1_module_4A, evt1_module_4A_vreg_data, 6,
+DECLARE_MODULE_PORT_INTERFACE(evt1_module_4A, "module_4a",
+                              evt1_module_4A_vreg_data, 6,
                               WD_4A_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_4A);
-DECLARE_MODULE_PORT_INTERFACE(evt1_module_4B, evt1_module_4B_vreg_data, 8,
+DECLARE_MODULE_PORT_INTERFACE(evt1_module_4B, "module_4b",
+                              evt1_module_4B_vreg_data, 8,
                               WD_4B_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_4B);
-DECLARE_MODULE_PORT_INTERFACE(evt1_module_5_lcd,
+DECLARE_MODULE_PORT_INTERFACE(evt1_module_5_lcd, "module_5",
                               evt1_module_5_lcd_vreg_data, 10,
                               WD_5_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
                               false, MOD_RELEASE_5);
@@ -342,25 +348,31 @@ static struct vreg_data evt1_5_module_5_lcd_vreg_data[] = {
     INIT_MODULE_CLK_DATA(REFCLK_5_EN),
 };
 
-DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_1, evt1_5_module_1_vreg_data, 13,
+DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_1, "module_1",
+                              evt1_5_module_1_vreg_data, 13,
                               WD_1_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_1);
-DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_2, evt1_5_module_2_vreg_data, 11,
+DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_2, "module_2",
+                              evt1_5_module_2_vreg_data, 11,
                               WD_2_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_2);
-DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_3A, evt1_5_module_3A_vreg_data, 4,
+DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_3A, "module_3a",
+                              evt1_5_module_3A_vreg_data, 4,
                               WD_3A_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_3A);
-DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_3B, evt1_5_module_3B_vreg_data, 2,
+DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_3B, "module_3b",
+                              evt1_5_module_3B_vreg_data, 2,
                               WD_3B_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_3B);
-DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_4A, evt1_5_module_4A_vreg_data, 6,
+DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_4A, "module_4a",
+                              evt1_5_module_4A_vreg_data, 6,
                               WD_4A_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_4A);
-DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_4B, evt1_5_module_4B_vreg_data, 8,
+DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_4B, "module_4b",
+                              evt1_5_module_4B_vreg_data, 8,
                               WD_4B_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_4B);
-DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_5_lcd,
+DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_5_lcd, "module_5",
                               evt1_5_module_5_lcd_vreg_data, 10,
                               WD_5_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_5);
@@ -381,10 +393,11 @@ static struct interface *evt1_5_interfaces[] = {
  * DB3.5 interface ports
  * Similar to EVT1.5 interfaces, with different mapping of the physical ports
  */
-DECLARE_MODULE_PORT_INTERFACE(db3_5_module_3B, evt1_5_module_3B_vreg_data, 10,
+DECLARE_MODULE_PORT_INTERFACE(db3_5_module_3B, "module_3b",
+                              evt1_5_module_3B_vreg_data, 10,
                               WD_3B_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_3B);
-DECLARE_MODULE_PORT_INTERFACE(db3_5_module_5_lcd,
+DECLARE_MODULE_PORT_INTERFACE(db3_5_module_5_lcd, "module_5",
                               evt1_5_module_5_lcd_vreg_data, 9,
                               WD_5_DET_IN_GPIO, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_5);

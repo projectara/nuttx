@@ -209,20 +209,21 @@ uint32_t interface_pm_get_spin(struct interface *iface);
  * If there is no Unipro port connected to the interface, portid
  * is INVALID_PORT.
  */
-#define DECLARE_MODULE_PORT_INTERFACE(_name, vreg_data,        \
+#define DECLARE_MODULE_PORT_INTERFACE(_var_name, _name,        \
+                                      vreg_data,               \
                                       portid,                  \
                                       wake_detect_gpio,        \
                                       detect_in_pol,           \
                                       _ejectable,              \
                                       _rg)                     \
-    DECLARE_VREG(_name, vreg_data)                             \
-    static struct interface MAKE_INTERFACE(_name) = {          \
-        .name = #_name,                                        \
+    DECLARE_VREG(_var_name, vreg_data)                         \
+    static struct interface MAKE_INTERFACE(_var_name) = {      \
+        .name = _name,                                         \
         .if_type = ARA_IFACE_TYPE_MODULE_PORT,                 \
         .flags = (detect_in_pol ?                              \
                     ARA_IFACE_FLAG_DETECT_IN_ACTIVE_HIGH :     \
                     ARA_IFACE_FLAG_DETECT_IN_ACTIVE_LOW),      \
-        .vreg = &MAKE_VREG(_name),                             \
+        .vreg = &MAKE_VREG(_var_name),                         \
         .switch_portid = portid,                               \
         .pm = NULL,                                            \
         .detect_in = INIT_WD_DATA(wake_detect_gpio),           \
