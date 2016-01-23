@@ -117,7 +117,7 @@ static int tsb_i2s_fill_fifo(struct tsb_i2s_info *info,
     return ret;
 }
 
-int tsb_i2s_rx_data(struct tsb_i2s_info *info)
+static int tsb_i2s_rx_data(struct tsb_i2s_info *info)
 {
     enum device_i2s_event event = DEVICE_I2S_EVENT_NONE;
     int ret = 0;
@@ -168,7 +168,7 @@ int tsb_i2s_rx_data(struct tsb_i2s_info *info)
     return ret;
 }
 
-int tsb_i2s_tx_data(struct tsb_i2s_info *info)
+static int tsb_i2s_tx_data(struct tsb_i2s_info *info)
 {
     enum device_i2s_event event = DEVICE_I2S_EVENT_NONE;
     int ret = 0;
@@ -218,6 +218,117 @@ int tsb_i2s_tx_data(struct tsb_i2s_info *info)
     tsb_i2s_mask_irqs(info, TSB_I2S_BLOCK_SO, TSB_I2S_REG_INT_INT);
 
     return ret;
+}
+
+int tsb_i2s_start_receiver(struct tsb_i2s_info *info)
+{
+    irqstate_t flags;
+    int ret;
+
+    flags = irqsave();
+
+    if (tsb_i2s_rx_is_active(info)) {
+        ret = tsb_i2s_rx_data(info);
+        if (ret)
+            goto err_irqrestore;
+    }
+
+    tsb_i2s_clear_irqs(info, TSB_I2S_BLOCK_SI,
+                       TSB_I2S_REG_INT_LRCK | TSB_I2S_REG_INT_UR |
+                       TSB_I2S_REG_INT_OR | TSB_I2S_REG_INT_INT);
+    tsb_i2s_unmask_irqs(info, TSB_I2S_BLOCK_SI,
+                        TSB_I2S_REG_INT_LRCK | TSB_I2S_REG_INT_UR |
+                        TSB_I2S_REG_INT_OR | TSB_I2S_REG_INT_INT);
+
+    ret = tsb_i2s_start(info, TSB_I2S_BLOCK_SI);
+    if (ret)
+        goto err_mask_irqs;
+
+    info->flags |= TSB_I2S_FLAG_RX_ACTIVE;
+
+    irqrestore(flags);
+
+    return 0;
+
+err_mask_irqs:
+    tsb_i2s_mask_irqs(info, TSB_I2S_BLOCK_SI,
+                      TSB_I2S_REG_INT_LRCK | TSB_I2S_REG_INT_UR |
+                      TSB_I2S_REG_INT_OR | TSB_I2S_REG_INT_INT);
+err_irqrestore:
+    irqrestore(flags);
+
+    return ret;
+}
+
+void tsb_i2s_stop_receiver(struct tsb_i2s_info *info, int is_err)
+{
+    irqstate_t flags;
+
+    flags = irqsave();
+
+    tsb_i2s_stop(info, TSB_I2S_BLOCK_SI, is_err);
+
+    tsb_i2s_mask_irqs(info, TSB_I2S_BLOCK_SI,
+                      TSB_I2S_REG_INT_LRCK | TSB_I2S_REG_INT_UR |
+                      TSB_I2S_REG_INT_OR | TSB_I2S_REG_INT_INT);
+    tsb_i2s_clear_irqs(info, TSB_I2S_BLOCK_SI,
+                       TSB_I2S_REG_INT_LRCK | TSB_I2S_REG_INT_UR |
+                       TSB_I2S_REG_INT_OR | TSB_I2S_REG_INT_INT);
+
+    info->flags &= ~TSB_I2S_FLAG_RX_ACTIVE;
+
+    irqrestore(flags);
+}
+
+int tsb_i2s_start_transmitter(struct tsb_i2s_info *info)
+{
+    irqstate_t flags;
+    int ret;
+
+    flags = irqsave();
+
+    if (!tsb_i2s_tx_is_active(info)) {
+        tsb_i2s_clear_irqs(info, TSB_I2S_BLOCK_SO,
+                           TSB_I2S_REG_INT_LRCK | TSB_I2S_REG_INT_UR |
+                           TSB_I2S_REG_INT_OR | TSB_I2S_REG_INT_INT);
+        /* TSB_I2S_REG_INT_INT is unmasked in tsb_i2s_tx_data() */
+        tsb_i2s_unmask_irqs(info, TSB_I2S_BLOCK_SO,
+                            TSB_I2S_REG_INT_LRCK | TSB_I2S_REG_INT_UR |
+                            TSB_I2S_REG_INT_OR);
+
+        ret = tsb_i2s_start(info, TSB_I2S_BLOCK_SO);
+        if (ret)
+            goto err_irqrestore;
+
+        info->flags |= TSB_I2S_FLAG_TX_ACTIVE;
+    }
+
+    ret = tsb_i2s_tx_data(info);
+
+err_irqrestore:
+    irqrestore(flags);
+
+    return ret;
+}
+
+void tsb_i2s_stop_transmitter(struct tsb_i2s_info *info, int is_err)
+{
+    irqstate_t flags;
+
+    flags = irqsave();
+
+    tsb_i2s_stop(info, TSB_I2S_BLOCK_SO, is_err);
+
+    tsb_i2s_mask_irqs(info, TSB_I2S_BLOCK_SO,
+                      TSB_I2S_REG_INT_LRCK | TSB_I2S_REG_INT_UR |
+                      TSB_I2S_REG_INT_OR | TSB_I2S_REG_INT_INT);
+    tsb_i2s_clear_irqs(info, TSB_I2S_BLOCK_SO,
+                       TSB_I2S_REG_INT_LRCK | TSB_I2S_REG_INT_UR |
+                       TSB_I2S_REG_INT_OR | TSB_I2S_REG_INT_INT);
+
+    info->flags &= ~TSB_I2S_FLAG_TX_ACTIVE;
+
+    irqrestore(flags);
 }
 
 static int tsb_i2s_irq_so_handler(int irq, void *context)

@@ -221,6 +221,12 @@ void tsb_i2s_unmask_irqs(struct tsb_i2s_info *info,
 
 enum device_i2s_event tsb_i2s_intstat2event(uint32_t intstat);
 
+int tsb_i2s_rx_is_active(struct tsb_i2s_info *info);
+int tsb_i2s_tx_is_active(struct tsb_i2s_info *info);
+int tsb_i2s_start(struct tsb_i2s_info *info, enum tsb_i2s_block block);
+void tsb_i2s_stop(struct tsb_i2s_info *info, enum tsb_i2s_block block,
+                  int is_err);
+
 void tsb_i2s_stop_receiver(struct tsb_i2s_info *info, int is_err);
 void tsb_i2s_stop_transmitter(struct tsb_i2s_info *info, int is_err);
 

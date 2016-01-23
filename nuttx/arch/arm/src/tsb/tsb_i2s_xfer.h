@@ -37,10 +37,12 @@
 /*
  * Data movement routines provided by tsb_i2s_xfer,c or tsb_i2s_xfer_dma.c
  */
-int tsb_i2s_rx_data(struct tsb_i2s_info *info);
-int tsb_i2s_tx_data(struct tsb_i2s_info *info);
-
 int tsb_i2s_xfer_irq_attach(struct tsb_i2s_info *info);
 int tsb_i2s_xfer_irq_detach(struct tsb_i2s_info *info);
+
+int tsb_i2s_start_receiver(struct tsb_i2s_info *info);
+void tsb_i2s_stop_receiver(struct tsb_i2s_info *info, int is_err);
+int tsb_i2s_start_transmitter(struct tsb_i2s_info *info);
+void tsb_i2s_stop_transmitter(struct tsb_i2s_info *info, int is_err);
 
 #endif /* __TSB_I2S_XFER_H */
