@@ -220,6 +220,7 @@ static void enable_int(unsigned int cportid) {
 static int unipro_init_cport(unsigned int cportid)
 {
     struct cport *cport = cport_handle(cportid);
+    irqstate_t flags;
 
     if (!cport) {
         return -EINVAL;
@@ -242,64 +243,22 @@ static int unipro_init_cport(unsigned int cportid)
 
     unipro_switch_rxbuf(cportid, cport->rx_buf);
 
+    /*
+     * Clear any pending EOM interrupts, then enable them.
+     */
+    flags = irqsave();
+    clear_int(cportid);
+    enable_int(cportid);
+    irqrestore(flags);
+
+    /* Start the flow of received data */
+    unipro_unpause_rx(cportid);
+
 #ifdef UNIPRO_DEBUG
     unipro_info();
 #endif
 
     return 0;
-}
-
-/**
- * @brief Enable a CPort that has a connected connection.
- */
-static int configure_connected_cport(unsigned int cportid) {
-    int ret = 0;
-    struct cport *cport;
-    unsigned int rc;
-    irqstate_t flags;
-
-    cport = cport_handle(cportid);
-    if (!cport) {
-        return -EINVAL;
-    }
-    rc = cport_get_status(cport);
-    switch (rc) {
-    case CPORT_STATUS_CONNECTED:
-        /*
-         * Disabling the interrupt here is not useful but it is a reminder that
-         * this code is ran from interrupt context and that the unipro interrupt
-         * should be disabled if this code is ever called outside of
-         * interrupt context.
-         */
-        unipro_write(UNIPRO_INT_EN, 0);
-        ret = unipro_init_cport(cportid);
-        unipro_write(UNIPRO_INT_EN, 1);
-
-        if (ret) {
-            lowsyslog("%s(): failed to initialize CP%u (%d)\n", __func__,
-                      cportid, ret);
-            break;
-        }
-
-        /*
-         * Clear any pending EOM interrupts, then enable them.
-         */
-        flags = irqsave();
-        clear_int(cportid);
-        enable_int(cportid);
-        irqrestore(flags);
-
-        /* Start the flow of received data */
-        unipro_unpause_rx(cportid);
-        break;
-    case CPORT_STATUS_UNCONNECTED:
-        ret = -ENOTCONN;
-        break;
-    default:
-        lldbg("Unexpected status: CP%u: status: 0x%u\n", cportid, rc);
-        ret = -EIO;
-    }
-    return ret;
 }
 
 /**
@@ -465,8 +424,6 @@ static int mailbox_evt(void)
         }
     }
 
-    configure_connected_cport(cportid);
-
     /* Acknowledge the mailbox write */
     rc = tsb_unipro_mbox_ack(cportid + 1);
     if (rc) {
@@ -551,7 +508,7 @@ int unipro_unpause_rx(unsigned int cportid)
     struct cport *cport;
 
     cport = cport_handle(cportid);
-    if (!cport || !cport_is_connected(cportid)) {
+    if (!cport) {
         return -EINVAL;
     }
 
@@ -952,6 +909,7 @@ int unipro_reset_cport(unsigned int cportid, cport_reset_completion_cb_t cb,
 int unipro_driver_register(struct unipro_driver *driver, unsigned int cportid)
 {
     struct cport *cport = cport_handle(cportid);
+    int retval;
 
     if (!cport) {
         return -ENODEV;
@@ -961,6 +919,15 @@ int unipro_driver_register(struct unipro_driver *driver, unsigned int cportid)
         lldbg("ERROR: Already registered by: %s\n",
               cport->driver->name);
         return -EEXIST;
+    }
+
+    unipro_write(UNIPRO_INT_EN, 0);
+    retval = unipro_init_cport(cportid);
+    unipro_write(UNIPRO_INT_EN, 1);
+
+    if (retval) {
+        lowsyslog("unipro: couldn't initialize CP%u (%d)\n", cportid, retval);
+        return retval;
     }
 
     cport->driver = driver;
