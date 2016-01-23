@@ -41,7 +41,6 @@
 #include <sys/time.h>
 #include <errno.h>
 
-#include "stm32.h"
 #include <ara_debug.h>
 #include "interface.h"
 #include "vreg.h"
@@ -207,21 +206,13 @@ int interface_generate_wakeout(struct interface *iface, bool assert,
      */
     if (iface->detect_in.gpio) {
         bool polarity = iface->detect_in.polarity;
-        uint32_t pulse_cfg =
-            (iface->detect_in.gpio & ~GPIO_MODE_MASK) | GPIO_OUTPUT |
-            (polarity ? GPIO_OUTPUT_CLEAR : GPIO_OUTPUT_SET);
         int pulse_len = (length > 0) ?
                         length : MODULE_PORT_WAKEOUT_PULSE_DURATION_IN_US;
 
         /* First uninstall the interrupt handler on the pin */
         interface_uninstall_wd_handler(&iface->detect_in);
         /* Then configure the pin as output and assert it */
-        rc = stm32_configgpio(pulse_cfg);
-        if (rc < 0) {
-            dbg_error("Failed to assert WAKEOUT pin for interface %s\n",
-                      iface->name ? iface->name : "unknown");
-            return rc;
-        }
+	gpio_direction_out(iface->detect_in.gpio, polarity ? 0 : 1);
 
         /* Keep the line asserted for the given duration */
         up_udelay(pulse_len);
@@ -900,6 +891,7 @@ static int interface_install_wd_handler(struct interface *iface,
     struct wd_data *wd = &iface->detect_in;
     if (wd->gpio) {
         gpio_direction_in(wd->gpio);
+	gpio_set_pull(wd->gpio, GPIO_PULL_TYPE_PULL_NONE);
         if (check_for_unplug) {
             interface_check_unplug_during_wake_out(iface);
         }

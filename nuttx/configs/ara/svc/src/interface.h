@@ -80,7 +80,7 @@ enum hotplug_state {
  * Wake & Detect signals information
  */
 struct wd_data {
-    uint16_t gpio;                      /* GPIO number */
+    uint8_t gpio;                       /* GPIO number */
     bool polarity;                      /* Polarity of 'active' state for gpio (active high == true) */
     enum wd_debounce_state db_state;    /* Debounce state */
     enum wd_debounce_state last_state;  /* Last stable debounce state */
