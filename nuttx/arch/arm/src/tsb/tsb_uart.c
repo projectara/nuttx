@@ -757,7 +757,17 @@ static int tsb_uart_set_modem_ctrl(struct device *dev, uint8_t *modem_ctrl)
 
     uart_info = device_get_private(dev);
 
-    ua_putreg(uart_info->reg_base, UA_MCR, *modem_ctrl);
+    if (*modem_ctrl & MCR_DTR) {
+        ua_reg_bit_set(uart_info->reg_base, UA_MCR, MCR_DTR);
+    } else {
+        ua_reg_bit_clr(uart_info->reg_base, UA_MCR, MCR_DTR);
+    }
+
+    if (*modem_ctrl & MCR_RTS) {
+        ua_reg_bit_set(uart_info->reg_base, UA_MCR, MCR_RTS);
+    } else {
+        ua_reg_bit_clr(uart_info->reg_base, UA_MCR, MCR_RTS);
+    }
 
     return 0;
 }
