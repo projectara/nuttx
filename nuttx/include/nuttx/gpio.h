@@ -59,6 +59,21 @@
 /** @} */
 
 /**
+ * @defgroup GPIO_PULL_TYPE
+ *
+ * Defines an internal pullup or pulldown resistor for GPIO input pin.
+ * GPIO input can also be free-floating with no pull resistor.
+ * @{
+ */
+/** Internal pulldown resistor */
+#define GPIO_PULL_TYPE_PULL_DOWN    0x0
+/** Internal pullup resistor */
+#define GPIO_PULL_TYPE_PULL_UP      0x1
+/** No internal pull resistor */
+#define GPIO_PULL_TYPE_PULL_NONE    0x2
+/** @} */
+
+/**
  * @brief Set the interrupt trigger type corresponding to a GPIO line
  * @param which The number of the GPIO line
  * @param trigger \ref IRQ_TYPE
@@ -162,4 +177,3 @@ int gpio_activate(uint8_t which);
 int gpio_deactivate(uint8_t which);
 
 #endif
-
