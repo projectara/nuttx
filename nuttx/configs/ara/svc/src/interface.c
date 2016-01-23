@@ -202,9 +202,7 @@ int interface_generate_wakeout(struct interface *iface, bool assert,
      * from the DETECT_IN polarity.
      */
     if (iface->detect_in.gpio) {
-        bool polarity =
-            (iface->flags & ARA_IFACE_FLAG_DETECT_IN_ACTIVE_HIGH) ?
-            true : false;
+        bool polarity = iface->detect_in.polarity;
         uint32_t pulse_cfg =
             (iface->detect_in.gpio & ~GPIO_MODE_MASK) | GPIO_OUTPUT |
             (polarity ? GPIO_OUTPUT_CLEAR : GPIO_OUTPUT_SET);
@@ -582,8 +580,7 @@ enum hotplug_state interface_get_hotplug_state(struct interface *iface)
     flags = irqsave();
 
     if (iface->detect_in.gpio) {
-        polarity = (iface->flags & ARA_IFACE_FLAG_DETECT_IN_ACTIVE_HIGH) ?
-                   true : false;
+        polarity = iface->detect_in.polarity;
         active = (gpio_get_value(iface->detect_in.gpio) == polarity);
         if (active) {
             hs = HOTPLUG_ST_PLUGGED;
@@ -846,8 +843,7 @@ static int interface_wd_handler(int irq, void *context)
 
     /* Get signal type, polarity, active state etc. */
     wd = &iface->detect_in;
-    polarity = (iface->flags & ARA_IFACE_FLAG_DETECT_IN_ACTIVE_HIGH) ?
-               true : false;
+    polarity = iface->detect_in.polarity;
     active = (gpio_get_value(irq) == polarity);
 
     dbg_insane("W&D: got %s DETECT_IN %s (gpio %d)\n",

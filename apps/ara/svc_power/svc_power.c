@@ -317,8 +317,7 @@ static int dumpstate_func(struct interface *iface, void *context)
     if (interface_is_module_port(iface)) {
         enum wd_debounce_state db_state = iface->detect_in.db_state;
         enum wd_debounce_state last_state = iface->detect_in.last_state;
-        unsigned int detect_in_pol =
-            iface->flags & ARA_IFACE_FLAG_DETECT_IN_ACTIVE_HIGH;
+        unsigned int detect_in_pol = iface->detect_in.polarity;
 
         printf("\tdetect in polarity: %s\n", detect_in_pol ? "high" : "low");
 
