@@ -115,16 +115,7 @@ static int sdio_board_get_cd_pin_number(struct device *dev,
 static int sdio_board_config_power_enable(struct device *dev, bool power)
 {
     struct sdio_board_info *info = device_get_private(dev);
-    int retval;
 
-    retval = tsb_request_pinshare(TSB_PIN_GPIO9);
-    if (retval) {
-        lowsyslog("SDIO: cannot get ownership of GPIO9 pin\n");
-        return retval;
-    }
-
-    /* Switch the pin share mode for GPB2_SD_POWER_EN pin */
-    tsb_set_pinshare(TSB_PIN_GPIO9);
     gpio_activate(info->sdio_gpio_power);
     if (power) {
         /* Pin high for GPB2_SD_POWER_EN pin */
@@ -146,16 +137,7 @@ static int sdio_board_config_power_enable(struct device *dev, bool power)
 static int sdio_board_config_card_detect(struct device *dev)
 {
     struct sdio_board_info *info = device_get_private(dev);
-    int retval;
 
-    retval = tsb_request_pinshare(TSB_PIN_GPIO22);
-    if (retval) {
-        lowsyslog("SDIO: cannot get ownership of GPIO22 pin\n");
-        return retval;
-    }
-
-    /* Switch the pin share mode for card detect pin */
-    tsb_set_pinshare(TSB_PIN_GPIO22);
     gpio_activate(info->sdio_gpio_cd);
     gpio_direction_in(info->sdio_gpio_cd);
     gpio_irq_settriggering(info->sdio_gpio_cd, IRQ_TYPE_EDGE_BOTH);
