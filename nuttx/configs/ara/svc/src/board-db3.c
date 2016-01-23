@@ -85,15 +85,25 @@
  * WAKE_DETECT lines directly connected to the SVC.
  * Configured by default as input floating without pull-up.
  */
-#define WD_1_DET_IN     (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN1)
-#define WD_2_DET_IN     (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN2)
-#define WD_3_DET_IN     (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN3)
-#define WD_4A_DET_IN    (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN4)
-#define WD_4B_DET_IN    (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN5)
-#define WD_5_DET_IN     (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN6)
-#define WD_6_DET_IN     (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN7)
-#define WD8A_DET_IN     (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN11)
-#define WD8B_DET_IN     (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN12)
+#define WD_1_DET_IN_GPIO     (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN1)
+#define WD_2_DET_IN_GPIO     (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN2)
+#define WD_3_DET_IN_GPIO     (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN3)
+#define WD_4A_DET_IN_GPIO    (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN4)
+#define WD_4B_DET_IN_GPIO    (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN5)
+#define WD_5_DET_IN_GPIO     (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN6)
+#define WD_6_DET_IN_GPIO     (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN7)
+#define WD8A_DET_IN_GPIO     (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN11)
+#define WD8B_DET_IN_GPIO     (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN12)
+
+#define WD_1_DET     STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN1)
+#define WD_2_DET     STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN2)
+#define WD_3_DET     STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN3)
+#define WD_4A_DET    STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN4)
+#define WD_4B_DET    STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN5)
+#define WD_5_DET     STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN6)
+#define WD_6_DET     STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN7)
+#define WD8A_DET     STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN11)
+#define WD8B_DET     STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN12)
 
 /*
  * MOD_ACT_SW lines connected to SVC.
@@ -196,26 +206,26 @@ static struct vreg_data module_5_vreg_data[] = {
  * Interfaces on this board
  */
 DECLARE_MODULE_PORT_INTERFACE(apb1, "apb1", apb1_vreg_data, 3,
-                              WD8A_DET_IN, ARA_IFACE_WD_ACTIVE_HIGH, false, 0);
+                              WD8A_DET, ARA_IFACE_WD_ACTIVE_HIGH, false, 0);
 DECLARE_MODULE_PORT_INTERFACE(apb2, "apb2", apb2_vreg_data, 1,
-                              WD8B_DET_IN, ARA_IFACE_WD_ACTIVE_HIGH, false, 0);
+                              WD8B_DET, ARA_IFACE_WD_ACTIVE_HIGH, false, 0);
 DECLARE_MODULE_PORT_INTERFACE(module_1, "module_1", module_1_vreg_data, 13,
-                              WD_1_DET_IN, ARA_IFACE_WD_ACTIVE_LOW,
+                              WD_1_DET, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_1);
 DECLARE_MODULE_PORT_INTERFACE(module_2, "module_2", module_2_vreg_data, 11,
-                              WD_2_DET_IN, ARA_IFACE_WD_ACTIVE_LOW,
+                              WD_2_DET, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_2);
 DECLARE_MODULE_PORT_INTERFACE(module_3, "module_3", module_3_vreg_data, 4,
-                              WD_3_DET_IN, ARA_IFACE_WD_ACTIVE_LOW,
+                              WD_3_DET, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_3);
 DECLARE_MODULE_PORT_INTERFACE(module_4a, "module_4a", module_4a_vreg_data, 8,
-                              WD_4A_DET_IN, ARA_IFACE_WD_ACTIVE_LOW,
+                              WD_4A_DET, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_4);
 DECLARE_MODULE_PORT_INTERFACE(module_4b, "module_4b", module_4b_vreg_data, 6,
-                              WD_4B_DET_IN, ARA_IFACE_WD_ACTIVE_LOW,
+                              WD_4B_DET, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_4);
 DECLARE_MODULE_PORT_INTERFACE(module_5, "module_5", module_5_vreg_data, 10,
-                              WD_5_DET_IN, ARA_IFACE_WD_ACTIVE_LOW,
+                              WD_5_DET, ARA_IFACE_WD_ACTIVE_LOW,
                               true, MOD_RELEASE_5);
 
 #define I2C_SEL1_A      BIT(0)
@@ -422,15 +432,15 @@ static int db3_board_init(struct ara_board_info *board_info) {
     /*
      * Configure the SVC WAKE_DETECT pins
      */
-    stm32_configgpio(WD_1_DET_IN);
-    stm32_configgpio(WD_2_DET_IN);
-    stm32_configgpio(WD_3_DET_IN);
-    stm32_configgpio(WD_4A_DET_IN);
-    stm32_configgpio(WD_4B_DET_IN);
-    stm32_configgpio(WD_5_DET_IN);
-    stm32_configgpio(WD_6_DET_IN);
-    stm32_configgpio(WD8A_DET_IN);
-    stm32_configgpio(WD8B_DET_IN);
+    stm32_configgpio(WD_1_DET_IN_GPIO);
+    stm32_configgpio(WD_2_DET_IN_GPIO);
+    stm32_configgpio(WD_3_DET_IN_GPIO);
+    stm32_configgpio(WD_4A_DET_IN_GPIO);
+    stm32_configgpio(WD_4B_DET_IN_GPIO);
+    stm32_configgpio(WD_5_DET_IN_GPIO);
+    stm32_configgpio(WD_6_DET_IN_GPIO);
+    stm32_configgpio(WD8A_DET_IN_GPIO);
+    stm32_configgpio(WD8B_DET_IN_GPIO);
 
     /*
      * Configure the MOD_ACT_SW pins.
