@@ -57,6 +57,7 @@
 static bool own_pinshare;
 
 void tsb_lowsetup(void) {
+#ifndef CONFIG_16550_NO_SERIAL_CONSOLE
     int retval;
     int i;
 
@@ -100,6 +101,7 @@ void tsb_lowsetup(void) {
         putreg32(UART_FCR_IIR_IID0_FIFOE | UART_FCR_IIR_IID1_RFIFOR |
                  UART_FCR_IIR_IID1_XFIFOR, UART_FCR_IIR);
     }
+#endif
 }
 
 void up_lowputc(int c){
