@@ -81,6 +81,7 @@ enum hotplug_state {
  */
 struct wd_data {
     uint16_t gpio;                      /* GPIO number */
+    bool polarity;                      /* Polarity of 'active' state for gpio (active high == true) */
     enum wd_debounce_state db_state;    /* Debounce state */
     enum wd_debounce_state last_state;  /* Last stable debounce state */
     struct timeval debounce_tv;         /* Last time of signal debounce check */
@@ -98,11 +99,6 @@ enum ara_iface_type {
     ARA_IFACE_TYPE_MODULE_PORT,
 };
 
-/* Interface flags */
-/*  Detect In active low or high signal */
-#define ARA_IFACE_FLAG_DETECT_IN_ACTIVE_LOW     (0U << 1)
-#define ARA_IFACE_FLAG_DETECT_IN_ACTIVE_HIGH    (1U << 1)
-
 /* Interface power states */
 enum ara_iface_pwr_state {
     ARA_IFACE_PWR_ERROR = -1,
@@ -115,7 +111,6 @@ struct interface {
     unsigned int switch_portid;
     uint8_t dev_id;
     enum ara_iface_type if_type;
-    unsigned int flags;
     struct vreg *vreg;
     enum ara_iface_pwr_state power_state;
     struct pm_data *pm;
@@ -190,9 +185,10 @@ uint32_t interface_pm_get_spin(struct interface *iface);
         .spin = _spin,                                         \
     }
 
-#define INIT_WD_DATA(_gpio)                                    \
+#define INIT_WD_DATA(_gpio, _polarity)                         \
     {                                                          \
         .gpio = _gpio,                                         \
+        .polarity = _polarity,                                 \
         .db_state = WD_ST_INVALID,                             \
         .debounce_tv = { 0, 0 },                               \
     }
@@ -219,13 +215,11 @@ uint32_t interface_pm_get_spin(struct interface *iface);
     static struct interface MAKE_INTERFACE(_name) = {          \
         .name = #_name,                                        \
         .if_type = ARA_IFACE_TYPE_MODULE_PORT,                 \
-        .flags = (detect_in_pol ?                              \
-                    ARA_IFACE_FLAG_DETECT_IN_ACTIVE_HIGH :     \
-                    ARA_IFACE_FLAG_DETECT_IN_ACTIVE_LOW),      \
         .vreg = &MAKE_VREG(_name),                             \
         .switch_portid = portid,                               \
         .pm = NULL,                                            \
-        .detect_in = INIT_WD_DATA(wake_detect_gpio),           \
+        .detect_in = INIT_WD_DATA(wake_detect_gpio,            \
+                                  !!detect_in_pol),            \
         .ejectable = _ejectable,                               \
         .release_gpio = _rg,                                   \
     };
