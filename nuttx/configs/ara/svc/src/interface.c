@@ -1701,7 +1701,7 @@ int interface_early_init(struct interface **ints, size_t nr_ints,
     }
 
     if (fail) {
-        return -1;
+        return -EPERM;
     }
 
     /* Let everything settle for a good long while.*/
