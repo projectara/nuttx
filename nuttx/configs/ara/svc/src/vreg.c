@@ -71,7 +71,7 @@ int vreg_config(struct vreg *vreg) {
 
     /* Configure the regulator control pins */
     for (i = 0; i < vreg->nr_vregs; i++) {
-        dbg_insane("%s: %s vreg, gpio %d\n", __func__,
+        dbg_insane("%s: %s vreg, gpio %u\n", __func__,
                    vreg->name, vreg->vregs[i].gpio);
         // First set default value then switch line to output mode
         gpio_set_value(vreg->vregs[i].gpio, vreg->vregs[i].def_val);
@@ -111,7 +111,7 @@ int vreg_get(struct vreg *vreg) {
     /* Enable the regulator on the first use; Update use count */
     if (atomic_inc(&vreg->use_count) == 1) {
         for (i = 0; i < vreg->nr_vregs; i++) {
-            dbg_insane("%s: %s vreg, gpio %d to %d, hold %dus\n",
+            dbg_insane("%s: %s vreg, gpio %u to %u, hold %uus\n",
                        __func__, vreg->name,
                        vreg->vregs[i].gpio, !!vreg->vregs[i].active_high,
                        vreg->vregs[i].hold_time);
@@ -158,7 +158,7 @@ int vreg_put(struct vreg *vreg) {
     /* Disable the regulator on the last use; Update use count */
     if (!atomic_dec(&vreg->use_count)) {
         for (i = 0; i < vreg->nr_vregs; i++) {
-            dbg_insane("%s: %s vreg, gpio %d to %d\n", __func__, vreg->name,
+            dbg_insane("%s: %s vreg, gpio %u to %u\n", __func__, vreg->name,
                        vreg->vregs[i].gpio, !vreg->vregs[i].active_high);
             gpio_set_value(vreg->vregs[i].gpio, !vreg->vregs[i].active_high);
         }
