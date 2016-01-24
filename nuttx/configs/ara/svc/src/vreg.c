@@ -70,11 +70,6 @@ int vreg_config(struct vreg *vreg) {
 
     /* Configure the regulator control pins */
     for (i = 0; i < vreg->nr_vregs; i++) {
-        if (!&vreg->vregs[i]) {
-            dbg_error("%s: invalid vreg_data for %s\n", __func__, name);
-            rc = -EINVAL;
-            break;
-        }
         dbg_insane("%s: %s vreg, gpio %d\n", __func__,
                    vreg->name ? vreg->name : "unknown",
                    vreg->vregs[i].gpio);
@@ -116,10 +111,6 @@ int vreg_get(struct vreg *vreg) {
     /* Enable the regulator on the first use; Update use count */
     if (atomic_inc(&vreg->use_count) == 1) {
         for (i = 0; i < vreg->nr_vregs; i++) {
-            if (!&vreg->vregs[i]) {
-                rc = -EINVAL;
-                break;
-            }
             dbg_insane("%s: %s vreg, gpio %d to %d, hold %dus\n", __func__,
                        vreg->name ? vreg->name : "unknown",
                        vreg->vregs[i].gpio, !!vreg->vregs[i].active_high,
@@ -166,10 +157,6 @@ int vreg_put(struct vreg *vreg) {
     /* Disable the regulator on the last use; Update use count */
     if (!atomic_dec(&vreg->use_count)) {
         for (i = 0; i < vreg->nr_vregs; i++) {
-            if (!&vreg->vregs[i]) {
-                rc = -EINVAL;
-                break;
-            }
             dbg_insane("%s: %s vreg, gpio %d to %d\n", __func__,
                        vreg->name ? vreg->name : "unknown",
                        vreg->vregs[i].gpio, !vreg->vregs[i].active_high);
