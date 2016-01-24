@@ -87,7 +87,7 @@
 #ifndef CONFIG_SPI_OWNBUS
 #  define SPI_LOCK(d,l) (d)->ops->lock(d,l)
 #else
-#  define SPI_LOCK(d,l) 0
+#  define SPI_LOCK(d,l) ((void)0)
 #endif
 
 /****************************************************************************
