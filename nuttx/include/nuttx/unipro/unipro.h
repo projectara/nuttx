@@ -79,7 +79,12 @@ void unipro_rxbuf_free(unsigned int cportid, void *ptr);
 /*
  * "Don't care" selector index
  */
-#define UNIPRO_SELINDEX_NULL 0xffff
+#define UNIPRO_SELINDEX_NULL 0  // FIXME: put this back to 0xffff when we're
+                                // out of demo land.
+                                //
+                                // It's causing SW-2431, apparently by
+                                // exposing a bug elsewhere in the SVC
+                                // usage of DME attributes.
 
 /*
  * Result codes for UniPro DME accesses
