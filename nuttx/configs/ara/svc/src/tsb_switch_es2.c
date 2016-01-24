@@ -90,7 +90,7 @@ static inline uint8_t *cport_to_rxbuf(struct sw_es2_priv *priv, unsigned int cpo
         return priv->data_cport4.rxbuf;
     case SWITCH_FIFO_DATA5:
         return priv->data_cport5.rxbuf;
-    };
+    }
     return NULL;
 }
 

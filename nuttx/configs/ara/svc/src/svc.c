@@ -1325,7 +1325,7 @@ static int svcd_main(int argc, char **argv) {
         if (svc->ap_initialized) {
             svc_handle_events();
         }
-    };
+    }
 
     rc = svcd_cleanup();
 

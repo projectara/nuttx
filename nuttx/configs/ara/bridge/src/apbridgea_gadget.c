@@ -1066,7 +1066,7 @@ static void usbclass_rdcomplete(struct usbdev_ep_s *ep,
         usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_RDUNEXPECTED),
                  (uint16_t) - req->result);
         break;
-    };
+    }
     /*
      * We got an error before the UniPro transfer completion so
      * we have to give back the request to USB.

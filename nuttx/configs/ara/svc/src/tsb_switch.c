@@ -2603,7 +2603,7 @@ struct tsb_switch *switch_init(struct tsb_switch_data *pdata) {
     default:
         dbg_error("Unsupported switch revision: %u\n", sw->pdata->rev);
         goto error;
-    };
+    }
 
     /* Configure the SPI1 bus in Mode0, 8bits, 13MHz clock */
     SPI_SETMODE(spi_dev, SPIDEV_MODE0);
@@ -2638,7 +2638,7 @@ struct tsb_switch *switch_init(struct tsb_switch_data *pdata) {
         break;
     default:
         break;
-    };
+    }
 
     // Init port <-> deviceID mapping table
     dev_ids_destroy(sw);
@@ -2704,7 +2704,7 @@ void switch_exit(struct tsb_switch *sw)
     default:
         dbg_error("Unsupported switch revision: %u\n", sw->pdata->rev);
         break;
-    };
+    }
 
     switch_power_off(sw);
     free(sw);
