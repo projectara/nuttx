@@ -1711,36 +1711,22 @@ int interface_early_init(struct interface **ints, size_t nr_ints,
 }
 
 /**
- * @brief Given a table of interfaces, initialize and enable all associated
- *        power supplies
- * @param interfaces table of interfaces to initialize
- * @param nr_ints number of interfaces to initialize
- * @param nr_spring_ints number of spring interfaces
- * @param vlatch VLATCH step down voltage regulator
- * @param latch_curlim Latch current limiter
- * @param mod_sense_gpio GPIO to sense the order of an interface
+ * @brief Initialize and enable power supplies for interfaces with
+ *        modules present.  Assumes interface_early_init() has
+ *        previously been called.
  * @return 0 on success, <0 on error
  * @sideeffects: leaves interfaces powered off on error.
  */
-int interface_init(struct interface **ints, size_t nr_ints,
-                   size_t nr_spring_ints, struct vreg *vlatch,
-                   struct vreg *latch_curlim, uint8_t mod_sense_gpio) {
+int interface_init(void) {
     unsigned int i;
     int rc;
     struct interface *ifc;
 
     dbg_info("Initializing all interfaces\n");
 
-    if (!ints) {
+    if (!interfaces) {
         return -ENODEV;
     }
-
-    interfaces = ints;
-    nr_interfaces = nr_ints;
-    nr_spring_interfaces = nr_spring_ints;
-    vlatch_vdd = vlatch;
-    latch_ilim = latch_curlim;
-    mod_sense = mod_sense_gpio;
 
     interface_foreach(ifc, i) {
         pthread_mutex_init(&ifc->mutex, NULL);
