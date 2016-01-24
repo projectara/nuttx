@@ -49,7 +49,6 @@
  */
 int vreg_config(struct vreg *vreg) {
     unsigned int i;
-    int rc = 0;
     const char *name;
 
     if (!vreg) {
@@ -65,8 +64,9 @@ int vreg_config(struct vreg *vreg) {
      * This happens in the case the interface has been declared with a NULL
      * in vreg_data.
      */
-    if (!vreg->vregs)
+    if (!vreg->vregs) {
         goto out;
+    }
 
     /* Configure the regulator control pins */
     for (i = 0; i < vreg->nr_vregs; i++) {
@@ -80,9 +80,9 @@ int vreg_config(struct vreg *vreg) {
 
 out:
     atomic_init(&vreg->use_count, 0);
-    atomic_init(&vreg->power_state, rc ? VREG_PWR_ERROR : VREG_PWR_DOWN);
+    atomic_init(&vreg->power_state, VREG_PWR_DOWN);
 
-    return rc;
+    return 0;
 }
 
 /**
@@ -91,7 +91,6 @@ out:
  */
 int vreg_get(struct vreg *vreg) {
     unsigned int i;
-    int rc = 0;
 
     if (!vreg) {
         return -ENODEV;
@@ -105,8 +104,9 @@ int vreg_get(struct vreg *vreg) {
      * This happens in the case the interface has been declared with a NULL
      * in vreg_data.
      */
-    if (!vreg->vregs)
-        return rc;
+    if (!vreg->vregs) {
+        return 0;
+    }
 
     /* Enable the regulator on the first use; Update use count */
     if (atomic_inc(&vreg->use_count) == 1) {
@@ -121,9 +121,9 @@ int vreg_get(struct vreg *vreg) {
     }
 
     /* Update state */
-    atomic_init(&vreg->power_state, rc ? VREG_PWR_ERROR : VREG_PWR_UP);
+    atomic_init(&vreg->power_state, VREG_PWR_UP);
 
-    return rc;
+    return 0;
 }
 
 
@@ -133,7 +133,6 @@ int vreg_get(struct vreg *vreg) {
  */
 int vreg_put(struct vreg *vreg) {
     unsigned int i;
-    int rc = 0;
 
     if (!vreg) {
         return -ENODEV;
@@ -147,12 +146,14 @@ int vreg_put(struct vreg *vreg) {
      * This happens in the case the interface has been declared with a NULL
      * in vreg_data.
      */
-    if (!vreg->vregs)
-        return rc;
+    if (!vreg->vregs) {
+        return 0;
+    }
 
     /* If already disabled, do nothing */
-    if (!atomic_get(&vreg->use_count))
-        return rc;
+    if (!atomic_get(&vreg->use_count)) {
+        return 0;
+    }
 
     /* Disable the regulator on the last use; Update use count */
     if (!atomic_dec(&vreg->use_count)) {
@@ -164,10 +165,10 @@ int vreg_put(struct vreg *vreg) {
         }
 
         /* Update state */
-        atomic_init(&vreg->power_state, rc ? VREG_PWR_ERROR : VREG_PWR_DOWN);
+        atomic_init(&vreg->power_state, VREG_PWR_DOWN);
     }
 
-    return rc;
+    return 0;
 }
 
 /**
