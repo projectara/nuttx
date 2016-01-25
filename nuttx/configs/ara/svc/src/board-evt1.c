@@ -303,6 +303,83 @@ DECLARE_MODULE_PORT_INTERFACE(evt1_module_5_lcd,
                               WD_5_DET, ARA_IFACE_WD_ACTIVE_LOW,
                               false, MOD_RELEASE_5);
 
+/*
+ * Power rail groups definitions.
+ */
+static struct pwrmon_dev_ctx evt1_pwrmon_devs[] = {
+    {
+        .name = "Port 1",
+        .rails = {
+            DEFINE_PWR_RAIL("MOD_PORT1_VSYS",       0x40),
+        },
+        .num_rails = 1,
+    },
+    {
+        .name = "Port 2",
+        .rails = {
+            DEFINE_PWR_RAIL("MOD_PORT2_VSYS",       0x41),
+        },
+        .num_rails = 1,
+    },
+    {
+        .name = "Port 3A",
+        .rails = {
+            DEFINE_PWR_RAIL("MOD_PORT3A_VSYS",      0x42),
+        },
+        .num_rails = 1,
+    },
+    {
+        .name = "Port 3B",
+        .rails = {
+            DEFINE_PWR_RAIL("MOD_PORT3B_VSYS",      0x43),
+        },
+        .num_rails = 1,
+    },
+    {
+        .name = "Port 4A",
+        .rails = {
+            DEFINE_PWR_RAIL("MOD_PORT4A_VSYS",      0x44),
+        },
+        .num_rails = 1,
+    },
+    {
+        .name = "Port 4B",
+        .rails = {
+            DEFINE_PWR_RAIL("MOD_PORT4B_VSYS",      0x45),
+        },
+        .num_rails = 1,
+    },
+    {
+        .name = "Display",
+        .rails = {
+            DEFINE_PWR_RAIL("DISPLAY_VSYS",         0x46),
+        },
+        .num_rails = 1,
+    },
+};
+
+static void evt1_pwrmon_reset_i2c_sel(void)
+{
+}
+
+static void evt1_pwrmon_init_i2c_sel(void)
+{
+}
+
+static int evt1_pwrmon_do_i2c_sel(uint8_t dev)
+{
+    return 0;
+}
+
+pwrmon_board_info evt1_pwrmon = {
+        .i2c_bus        = 2,
+        .devs           = evt1_pwrmon_devs,
+        .num_devs       = ARRAY_SIZE(evt1_pwrmon_devs),
+        .reset_i2c_sel  = evt1_pwrmon_reset_i2c_sel,
+        .init_i2c_sel   = evt1_pwrmon_init_i2c_sel,
+        .do_i2c_sel     = evt1_pwrmon_do_i2c_sel,
+};
+
 static struct interface *evt1_interfaces[] = {
     &apb1_interface,
     &apb2_interface,
@@ -545,7 +622,7 @@ struct ara_board_info evt1_board_info = {
     .nr_io_expanders = ARRAY_SIZE(evt1_io_expanders),
 
     /* TODO pwrmon support */
-    .pwrmon               = NULL,
+    .pwrmon               = &evt1_pwrmon,
 
     .board_init           = evt1_board_init,
 
