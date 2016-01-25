@@ -2378,7 +2378,7 @@ static int switch_apply_power_mode(struct tsb_switch *sw,
     rc = switch_dme_peer_get(sw,
                              port_id,
                              T_CONNECTIONSTATE,
-                             UNIPRO_SELINDEX_NULL,
+                             0,
                              &val);
 
  out:
