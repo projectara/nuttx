@@ -612,6 +612,47 @@ static int svc_handle_hot_unplug(uint8_t portid) {
     return gb_svc_intf_hot_unplug(intf_id);
 }
 
+static int svc_get_module_id(uint32_t portid, uint32_t ddbl1_prod_id,
+                             uint32_t *ara_vend_id, uint32_t *ara_prod_id)
+{
+    int rc;
+
+    switch (ddbl1_prod_id) {
+    case PRODUCT_ES2_TSB_BRIDGE:
+        /*
+         * Module serial number, Ara vendor id and product ID attributes don't
+         * exist on ES2 silicon.
+         */
+        *ara_vend_id = 0;
+        *ara_prod_id = 0;
+        break;
+
+    case PRODUCT_ES3_TSB_APBRIDGE:
+    case PRODUCT_ES3_TSB_GPBRIDGE:
+        rc = switch_dme_peer_get(svc->sw, portid, TSB_ARA_VID, 0,
+                                 ara_vend_id);
+        if (rc) {
+            dbg_error("Failed to read vid: %d\n", rc);
+            return rc;
+        }
+
+        rc = switch_dme_peer_get(svc->sw, portid, TSB_ARA_PID, 0,
+                                 ara_prod_id);
+        if (rc) {
+            dbg_error("Failed to read pid: %d\n", rc);
+            return rc;
+        }
+        break;
+
+    default:
+        *ara_vend_id = 0;
+        *ara_prod_id = 0;
+        break;
+    }
+
+    return 0;
+}
+
 static int svc_handle_module_ready(uint8_t portid) {
     int rc, intf_id;
     uint32_t ddbl1_mfr_id, ddbl1_prod_id, ara_vend_id, ara_prod_id;
@@ -637,12 +678,10 @@ static int svc_handle_module_ready(uint8_t portid) {
         return rc;
     }
 
-    /*
-     * Module serial number, Ara vendor id and product ID attributes don't exist
-     * on ES2 silicon. These are unused for now.
-     */
-    ara_vend_id = 0x0000;
-    ara_prod_id = 0x0000;
+    rc = svc_get_module_id(portid, ddbl1_prod_id, &ara_vend_id, &ara_prod_id);
+    if (rc) {
+        return rc;
+    }
     serial_number = 0x0000000000000000;
 
     return gb_svc_intf_hotplug(intf_id, ddbl1_mfr_id, ddbl1_prod_id,
