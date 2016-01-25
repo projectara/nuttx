@@ -190,6 +190,19 @@ static int stm32_gpio_deactivate(void *driver_data, uint8_t pin)
     return 0;
 }
 
+static int stm32_gpio_set_pull(void *driver_data, uint8_t pin,
+                             enum gpio_pull_type pull_type)
+{
+    //TODO implement function
+    return -ENOSYS;
+}
+
+static enum gpio_pull_type stm32_gpio_get_pull(void *driver_data, uint8_t pin)
+{
+    //TODO implement function
+    return GPIO_PULL_TYPE_PULL_NONE;
+}
+
 static int stm32_gpio_irqattach(void *driver_data, uint8_t pin, xcpt_t isr,
                                 uint8_t base)
 {
@@ -338,6 +351,8 @@ static struct gpio_ops_s stm32_gpio_ops = {
     .mask_irq =         stm32_gpio_mask_irq,
     .unmask_irq =       stm32_gpio_unmask_irq,
     .clear_interrupt =  stm32_gpio_clear_interrupt,
+    .set_pull =         stm32_gpio_set_pull,
+    .get_pull =         stm32_gpio_get_pull,
 };
 
 /* Public functions */
