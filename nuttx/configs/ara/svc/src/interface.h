@@ -67,7 +67,7 @@ enum wd_debounce_state {
  * makes us want to be more sure there is really something "there".
  */
 #define WD_ACTIVATION_DEBOUNCE_TIME_MS         300
-#define WD_INACTIVATION_DEBOUNCE_TIME_MS       300
+#define WD_INACTIVATION_DEBOUNCE_TIME_MS       30
 
 /* Hotplug state */
 enum hotplug_state {
