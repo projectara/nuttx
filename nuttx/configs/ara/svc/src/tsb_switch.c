@@ -2404,11 +2404,17 @@ static int switch_apply_power_mode(struct tsb_switch *sw,
         goto out;
     }
 
+    /*
+     * Read a random DME attribute (in this case, the connection state
+     * of CPort 0) to see if the link is actually working after the
+     * power mode change, or if it apparently succeeded but actually
+     * went off and died.
+     */
     dbg_insane("%s(): testing link state with peer DME access\n", __func__);
     rc = switch_dme_peer_get(sw,
                              port_id,
                              T_CONNECTIONSTATE,
-                             UNIPRO_SELINDEX_NULL,
+                             0,
                              &val);
 
  out:
