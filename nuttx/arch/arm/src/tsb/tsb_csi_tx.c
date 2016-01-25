@@ -37,6 +37,7 @@
 #include <arch/tsb/csi.h>
 
 #define CDSI_TX_START_TIMEOUT           10
+#define CDSI_TX_STOP_TIMEOUT            10
 
 /**
  * @brief Set the registers in CSI controller to start transfer.
@@ -410,43 +411,106 @@ int csi_tx_start(struct cdsi_dev *dev, struct csi_tx_config *cfg)
  */
 int csi_tx_stop(struct cdsi_dev *dev)
 {
-    /* Stop the Pixel I/F of CDSITX */
+    unsigned int timeout;
 
-    /* Wait the stop of Pixel I/F */
+    /* Stop the Pixel I/F of CDSITX and wait for it to stop. */
+    cdsi_write(dev, CDSI0_AL_TX_BRG_PIC_COM_START_OFFS, 0);
+
+    for (timeout = CDSI_TX_STOP_TIMEOUT; timeout != 0; --timeout) {
+        uint32_t val;
+
+        val = cdsi_read(dev, CDSI0_CDSITX_SIDEBAND_STATUS_05_OFFS);
+        if (!(val & CDSI0_CDSITX_SIDEBAND_STATUS_05_SBO_APF_VHIF_BUSY_MASK))
+            break;
+
+        usleep(10);
+    }
+
+    if (timeout == 0) {
+        printf("cdsi: Pixel I/F stop timeout\n");
+    } else {
+        printf("cdsi: Pixel I/F stop complete (%u us)\n",
+               (CDSI_TX_STOP_TIMEOUT - timeout) * 10);
+    }
 
     /* Wait until the transmission from UniPro to CDSITX is stopped */
 
     /* Disable the Tx bridge */
+    cdsi_write(dev, CDSI0_AL_TX_BRG_MODE_OFFS,
+               CDSI0_AL_TX_BRG_MODE_AL_TX_BRG_WAIT_INTERVAL_MODE_MASK |
+               CDSI0_AL_TX_BRG_MODE_AL_TX_BRG_MASTER_SYNC_MODE_MASK);
 
     /* Assert the Tx bridge reset */
+    cdsi_write(dev, CDSI0_AL_TX_BRG_SOFT_RESET_OFFS, 1);
 
     /* Stop the APF function */
+    cdsi_write(dev, CDSI0_CDSITX_SIDEBAND_INIT_CONTROL_04_OFFS, 0);
 
     /* Disable the PPI function */
+    cdsi_write(dev, CDSI0_CDSITX_SIDEBAND_INIT_CONTROL_03_OFFS, 0);
 
     /* Disable the clock distribution for LINK and APF */
+    cdsi_write(dev, CDSI0_CDSITX_SIDEBAND_INIT_CONTROL_02_OFFS, 0);
 
     /* Assert the APF reset */
+    cdsi_write(dev, CDSI0_CDSITX_APF_RESET_OFFS, 0);
 
     /* Assert the LINK reset */
+    cdsi_write(dev, CDSI0_CDSITX_LINK_RESET_OFFS, 0);
 
     /* Initialize the PPI */
+    cdsi_write(dev, CDSI0_CDSITX_SIDEBAND_CONTROL_00_OFFS,
+               CDSI0_CDSITX_SIDEBAND_INIT_CONTROL_00_SBD_DPHY_MPM_CKEN_MASK);
 
-    /* Enable the clock distribution to stop the clock lane of D-PHY */
+    /* Enable clock distribution to stop the D-PHY clock lane */
+    cdsi_write(dev, CDSI0_CDSITX_SIDEBAND_INIT_CONTROL_02_OFFS,
+               CDSI0_CDSITX_SIDEBAND_INIT_CONTROL_02_SBD_DPHY_HSTXCLKENABLE_MASK);
 
-    /* Wait for stop the clock lane of D-PHY */
+    /* Wait for the D-PHY clock lane to stop */
+    for (timeout = CDSI_TX_STOP_TIMEOUT; timeout != 0; --timeout) {
+        uint32_t val;
 
-    /* Disable the clock destribuiton to stop the clock lane of D-PHY */
+        val = cdsi_read(dev, CDSI0_CDSITX_SIDEBAND_STATUS_07_OFFS);
+        if (val & CDSI0_CDSITX_SIDEBAND_STATUS_07_SBO_PPIIF_CLM_STOPSTATE_MASK)
+            break;
+
+        usleep(10);
+    }
+
+    if (timeout == 0) {
+        printf("cdsi: D-PHY clock lane stop timeout\n");
+        return -ETIMEDOUT;
+    }
+
+    printf("cdsi: D-PHY clock lane stop complete (%u us)\n",
+           (CDSI_TX_STOP_TIMEOUT - timeout) * 10);
+
+    /* Disable the clock distribution to stop the D-PHY clock lane */
+    cdsi_write(dev, CDSI0_CDSITX_SIDEBAND_INIT_CONTROL_02_OFFS, 0);
 
     /* Disable the voltage requlator for D-PHY */
+    cdsi_write(dev, CDSI0_CDSITX_VREG_CONTROL_OFFS, 0);
 
     /* Disable D-PHY functions */
+    cdsi_write(dev, CDSI0_CDSITX_LPRX_CALIB_CONTROL_OFFS, 0);
 
     /* Disable PLL for CDSI */
+    cdsi_write(dev, CDSI0_CDSITX_SIDEBAND_INIT_CONTROL_00_OFFS, 0);
+    cdsi_write(dev, CDSI0_CDSITX_PLL_CONTROL_01_OFFS, 0);
 
     /* Clear the interrupt statuses */
+    cdsi_write(dev, CDSI0_CDSITX_INTERRUPT_STATUS_00_OFFS, 0xffffffff);
+    cdsi_write(dev, CDSI0_CDSITX_INTERRUPT_STATUS_01_OFFS, 0xffffffff);
+    cdsi_write(dev, CDSI0_CDSITX_INTERRUPT_STATUS_02_OFFS, 0xffffffff);
+    cdsi_write(dev, CDSI0_CDSITX_INTERRUPT_STATUS_03_OFFS, 0xffffffff);
+    cdsi_write(dev, CDSI0_CDSITX_INTERRUPT_STATUS_04_OFFS, 0xffffffff);
+    cdsi_write(dev, CDSI0_CDSITX_INTERRUPT_STATUS_05_OFFS, 0xffffffff);
+    cdsi_write(dev, CDSI0_CDSITX_INTERRUPT_STATUS_06_OFFS, 0xffffffff);
+    cdsi_write(dev, CDSI0_AL_TX_BRG_STATUS_OFFS, 0xffffffff);
 
     /* Release the Initialization signal for the PPI */
+    cdsi_write(dev, CDSI0_CDSITX_SIDEBAND_CONTROL_00_OFFS,
+               CDSI0_CDSITX_SIDEBAND_INIT_CONTROL_00_SBD_DPHY_MPM_CKEN_MASK);
 
     return 0;
 }
