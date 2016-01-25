@@ -804,6 +804,8 @@ config STM32_STM32F40XX
 	bool
 	default n
 	select STM32_HAVE_OTGFS
+	select STM32_HAVE_TIM5
+	select ARCH_HAVE_TICKLESS
 
 config STM32_STM32F401
 	bool
