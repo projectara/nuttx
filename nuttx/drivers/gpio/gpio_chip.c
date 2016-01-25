@@ -185,6 +185,15 @@ int gpio_set_pull(uint8_t which, enum gpio_pull_type pull_type)
     return chip->ops->set_pull(chip->driver_data, which, pull_type);
 }
 
+enum gpio_pull_type gpio_get_pull(uint8_t which)
+{
+    struct gpio_chip_s *chip = get_gpio_chip(&which);
+
+    DEBUGASSERT(chip);
+    DEBUGASSERT(chip->ops->get_pull);
+    return chip->ops->get_pull(chip->driver_data, which);
+}
+
 int gpio_deactivate(uint8_t which)
 {
     struct gpio_chip_s *chip = get_gpio_chip(&which);
