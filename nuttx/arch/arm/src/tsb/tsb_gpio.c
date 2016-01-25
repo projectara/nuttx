@@ -268,6 +268,32 @@ static int tsb_gpio_set_pull(void *driver_data, uint8_t which,
     }
 }
 
+static enum gpio_pull_type tsb_gpio_get_pull(void *driver_data, uint8_t which)
+{
+    uint32_t pull_type = 0;
+
+    if ( which == 21 || which == 22 ) {
+        return GPIO_PULL_TYPE_PULL_NONE;    // no pull resistors for GPIO21:22
+    }
+
+    if ( which >= tsb_gpio_line_count(NULL) ) {
+        return GPIO_PULL_TYPE_PULL_NONE;    // gpio line number out of bounds
+    }
+
+    if ( which >= 3 && which <= 8 ) {
+        pull_type = getreg32(TSB_IO_PULL_UP_ENABLE0) & (1 << which);
+        return pull_type ? GPIO_PULL_TYPE_PULL_UP : GPIO_PULL_TYPE_PULL_NONE;
+    }
+
+    pull_type = getreg32(TSB_IO_PULL_UPDOWN_ENABLE0) & (1 << which);
+    if (pull_type) {
+        return GPIO_PULL_TYPE_PULL_NONE;
+    }
+
+    pull_type = getreg32(TSB_IO_PULL_UPDOWN0) & (1 << which);
+    return pull_type ? GPIO_PULL_TYPE_PULL_UP : GPIO_PULL_TYPE_PULL_DOWN;
+}
+
 static int tsb_gpio_mask_irq(void *driver_data, uint8_t which)
 {
     putreg32(1 << which, GPIO_INTMASKSET);
@@ -536,6 +562,7 @@ static struct gpio_ops_s tsb_gpio_ops = {
     .unmask_irq = tsb_gpio_unmask_irq,
     .clear_interrupt = tsb_gpio_clear_interrupt,
     .set_pull = tsb_gpio_set_pull,
+    .get_pull = tsb_gpio_get_pull,
 };
 
 int tsb_gpio_register(void *driver_data)
