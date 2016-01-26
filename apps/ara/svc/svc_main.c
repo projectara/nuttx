@@ -864,7 +864,7 @@ static int dme_io(int argc, char *argv[]) {
     if (read) {
         int rc = 0;
         int i;
-        const struct attr_name_group *attr_name_groups[8] = {0};
+        const struct attr_name_group *attr_name_groups[10] = {0};
         int n_attr_name_groups;
         uint16_t sel = UNIPRO_SELINDEX_NULL;
         uint16_t nlanes = 1;
@@ -883,9 +883,11 @@ static int dme_io(int argc, char *argv[]) {
             attr_name_groups[4] = &unipro_l3_attr_group;
             if (peer) {
                 attr_name_groups[5] = &unipro_l4_attr_group;
-                attr_name_groups[6] = &unipro_dme_attr_group;
-                attr_name_groups[7] = &unipro_tsb_attr_group;
-                n_attr_name_groups = 8;
+                attr_name_groups[6] = &unipro_cport_attr_group;
+                attr_name_groups[7] = &unipro_testfeature_attr_group;
+                attr_name_groups[8] = &unipro_dme_attr_group;
+                attr_name_groups[9] = &unipro_tsb_attr_group;
+                n_attr_name_groups = 10;
             } else {
                 attr_name_groups[5] = &unipro_dme_attr_group;
                 attr_name_groups[6] = &unipro_tsb_attr_group;
@@ -911,7 +913,9 @@ static int dme_io(int argc, char *argv[]) {
             break;
         case L4:
             attr_name_groups[0] = &unipro_l4_attr_group;
-            n_attr_name_groups = 1;
+            attr_name_groups[1] = &unipro_cport_attr_group;
+            attr_name_groups[2] = &unipro_testfeature_attr_group;
+            n_attr_name_groups = 3;
             break;
         case CP:
         case ALLCPORTS:
