@@ -33,6 +33,7 @@
  */
 
 #include <nuttx/config.h>
+#include <ara_debug.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -693,6 +694,8 @@ int arapm_main(int argc, char *argv[])
 #endif
 {
     int ret;
+    uint32_t dbg_comp;
+    uint32_t dbg_level;
 
     ret = arapm_main_get_user_options(argc, argv);
     if (ret) {
@@ -710,6 +713,11 @@ int arapm_main(int argc, char *argv[])
     if ((!csv_export) && ((continuous) || (loopcount > 1))) {
          /* Clear terminal */
         printf("\033[2J\033[1;1H");
+    }
+
+    if (continuous) {
+        dbg_get_config(&dbg_comp, &dbg_level);
+        dbg_set_config(~0, ~0);
     }
 
     do {
@@ -735,6 +743,10 @@ int arapm_main(int argc, char *argv[])
         }
     } while (loopcount != 0);
     printf("\n");
+
+    if (continuous) {
+        dbg_set_config(dbg_comp, dbg_level);
+    }
 
     arapm_main_deinit();
 
