@@ -98,6 +98,7 @@ const char *pwrmon_dev_name(uint8_t dev);
 const char *pwrmon_rail_name(uint8_t dev, uint8_t rail);
 int pwrmon_device_id(const char *name, uint8_t *dev);
 int pwrmon_rail_id(const char *name, uint8_t *dev, uint8_t *rail);
+int pwrmon_dev_count(void);
 int pwrmon_dev_rail_count(uint8_t dev);
 void pwrmon_deinit_rail(pwrmon_rail *pwrmon_dev);
 void pwrmon_deinit(void);
