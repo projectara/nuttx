@@ -205,6 +205,20 @@ int pwrmon_dev_rail_count(uint8_t dev)
     return board_info->devs[dev].num_rails;
 }
 
+int pwrmon_dev_count(void)
+{
+    pwrmon_board_info *info;
+
+    /* Retrieve board specific info */
+    info = board_get_pwrmon_info();
+    if (!info) {
+        dbg_error("%s(): No pwrmon board info found, aborting\n", __func__);
+        return 0;
+    }
+
+    return info->num_devs;
+}
+
 /**
  * @brief           Initialize the power measurement HW and SW library.
  *                  To be called once, before any other call to the library.

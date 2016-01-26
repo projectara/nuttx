@@ -262,7 +262,7 @@ static int arapm_main_get_user_options(int argc, char **argv)
     refresh_rate = DEFAULT_REFRESH_RATE;
     loopcount = DEFAULT_LOOPCOUNT;
     continuous = DEFAULT_CONTINUOUS;
-    user_dev_id = pwrmon_num_devs;
+    user_dev_id = pwrmon_dev_count();
     user_rail_id = INA230_MAX_DEVS;
     current_lsb = DEFAULT_CURRENT_LSB;
     conversion_time = DEFAULT_CONVERSION_TIME;
@@ -694,16 +694,16 @@ int arapm_main(int argc, char *argv[])
 {
     int ret;
 
-    ret = arapm_main_init();
-    if (ret) {
-        arapm_main_deinit();
-        exit(ret);
-    }
-
     ret = arapm_main_get_user_options(argc, argv);
     if (ret) {
         usage();
         exit(-EINVAL);
+    }
+
+    ret = arapm_main_init();
+    if (ret) {
+        arapm_main_deinit();
+        exit(ret);
     }
 
     printf("\nGetting power measurements...\n\n");
