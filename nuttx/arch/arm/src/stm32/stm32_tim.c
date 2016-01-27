@@ -430,6 +430,153 @@ static int stm32_tim_setisr(FAR struct stm32_tim_dev_s *dev,
   return vectorno;
 }
 
+static void stm32_tim_setmaster_mode(FAR struct stm32_tim_dev_s *dev,
+                                     stm32_tim_clock_master_mode_t mode)
+{
+    uint16_t val;
+
+    /*
+     * Validate timer id.
+     * See STM32 DocID018909 Rev 10 sections 17, 18
+     */
+    switch(((struct stm32_tim_priv_s*)dev)->id)
+      {
+        case 1:
+        case 2:
+        case 3:
+        case 4:
+        case 5:
+        case 6:
+        case 7:
+        case 8:
+          break;
+        default:
+          PANIC();
+          return;
+      }
+
+    val = stm32_getreg16(dev, STM32_BTIM_CR2_OFFSET);
+    val &= ~ATIM_CR2_MMS_MASK;
+    switch (mode)
+      {
+        case STM32_TIM_MASTER_MODE_RESET:
+          val |= ATIM_CR2_MMS_RESET;
+          break;
+        case STM32_TIM_MASTER_MODE_ENABLE:
+          val |= ATIM_CR2_MMS_ENABLE;
+          break;
+        case STM32_TIM_MASTER_MODE_UPDATE:
+          val |= ATIM_CR2_MMS_UPDATE;
+          break;
+        case STM32_TIM_MASTER_MODE_COMPARE_PULSE:
+          val |= ATIM_CR2_MMS_COMPP;
+          break;
+        case STM32_TIM_MASTER_MODE_COMPARE_OC1REF:
+          val |= ATIM_CR2_MMS_OC1REF;
+          break;
+        case STM32_TIM_MASTER_MODE_COMPARE_OC2REF:
+          val |= ATIM_CR2_MMS_OC2REF;
+          break;
+        case STM32_TIM_MASTER_MODE_COMPARE_OC3REF:
+          val |= ATIM_CR2_MMS_OC3REF;
+          break;
+        case STM32_TIM_MASTER_MODE_COMPARE_OC4REF:
+          val |= ATIM_CR2_MMS_OC4REF;
+          break;
+      }
+    stm32_putreg16(dev, STM32_BTIM_CR2_OFFSET, val);
+}
+
+static void stm32_tim_setslave_mode(FAR struct stm32_tim_dev_s *dev,
+                                    stm32_tim_clock_slave_mode_t mode,
+                                    stm32_tim_clock_slave_trigger_t trigger)
+{
+    uint16_t val;
+
+    /*
+     * Validate timer id.
+     * See STM32 DocID018909 Rev 10 sections 17, 18
+     */
+    switch(((struct stm32_tim_priv_s*)dev)->id)
+      {
+        case 1:
+        case 2:
+        case 3:
+        case 4:
+        case 5:
+        case 8:
+          break;
+        default:
+          PANIC();
+          return;
+      }
+
+    val = stm32_getreg16(dev, STM32_GTIM_SMCR_OFFSET);
+    val &= ~(GTIM_SMCR_SMS_MASK | GTIM_SMCR_TS_MASK);
+    switch (mode)
+      {
+        case STM32_TIM_SLAVE_MODE_DISABLE:
+          val |= GTIM_SMCR_DISAB;
+          break;
+        case STM32_TIM_SLAVE_ENCODER_MODE1:
+          val |= GTIM_SMCR_ENCMD1;
+          break;
+        case STM32_TIM_SLAVE_ENCODER_MODE2:
+          val |= GTIM_SMCR_ENCMD2;
+          break;
+        case STM32_TIM_SLAVE_ENCODER_MODE3:
+          val |= GTIM_SMCR_ENCMD3;
+          break;
+        case STM32_TIM_SLAVE_RESET_MODE:
+          val |= GTIM_SMCR_RESET;
+          break;
+        case STM32_TIM_SLAVE_GATED_MODE:
+          val |= GTIM_SMCR_GATED;
+          break;
+        case STM32_TIM_SLAVE_TRIGGER_MODE:
+          val |= GTIM_SMCR_TRIGGER;
+          break;
+        case STM32_TIM_SLAVE_EXTERNAL_MODE:
+          val |= GTIM_SMCR_EXTCLK1;
+          break;
+        default:
+          ASSERT(0);
+          break;
+      }
+
+      switch(trigger)
+      {
+        case STM32_TIM_SLAVE_INTERNAL_TRIGGER0:
+          val |= GTIM_SMCR_ITR0;
+          break;
+        case STM32_TIM_SLAVE_INTERNAL_TRIGGER1:
+          val |= GTIM_SMCR_ITR1;
+          break;
+        case STM32_TIM_SLAVE_INTERNAL_TRIGGER2:
+          val |= GTIM_SMCR_ITR2;
+          break;
+        case STM32_TIM_SLAVE_INTERNAL_TRIGGER3:
+          val |= GTIM_SMCR_ITR3;
+          break;
+        case STM32_TIM_SLAVE_TI1_EDGE_DETECTOR:
+          val |= GTIM_SMCR_TI1FED;
+          break;
+        case STM32_TIM_SLAVE_FILTERED_TIMER_INPUT1:
+          val |= GTIM_SMCR_TI1FP1;
+          break;
+        case STM32_TIM_SLAVE_FILTERED_TIMER_INPUT2:
+          val |= GTIM_SMCR_TI2FP2;
+          break;
+        case STM32_TIM_SLAVE_EXTERNAL_TRIGGER_INPUT:
+          val |= GTIM_SMCR_ETRF;
+          break;
+        default:
+          ASSERT(0);
+          break;
+      }
+    stm32_putreg16(dev, STM32_GTIM_SMCR_OFFSET, val);
+}
+
 static void stm32_tim_enableint(FAR struct stm32_tim_dev_s *dev, int source)
 {
   ASSERT(dev);
@@ -858,6 +1005,8 @@ struct stm32_tim_ops_s stm32_tim_ops =
   .setcompare     = &stm32_tim_setcompare,
   .getcapture     = &stm32_tim_getcapture,
   .setisr         = &stm32_tim_setisr,
+  .setmaster_mode = &stm32_tim_setmaster_mode,
+  .setslave_mode  = &stm32_tim_setslave_mode,
   .enableint      = &stm32_tim_enableint,
   .disableint     = &stm32_tim_disableint,
   .ackint         = &stm32_tim_ackint
@@ -938,6 +1087,15 @@ struct stm32_tim_priv_s stm32_tim8_priv =
   .ops        = &stm32_tim_ops,
   .mode       = STM32_TIM_MODE_UNUSED,
   .base       = STM32_TIM8_BASE,
+};
+#endif
+
+#if CONFIG_STM32_TIM9
+struct stm32_tim_priv_s stm32_tim9_priv =
+{
+  .ops        = &stm32_tim_ops,
+  .mode       = STM32_TIM_MODE_UNUSED,
+  .base       = STM32_TIM9_BASE,
 };
 #endif
 

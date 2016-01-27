@@ -93,6 +93,8 @@
 #define STM32_TIM_ENABLEINT(d,s)        ((d)->ops->enableint(d,s))
 #define STM32_TIM_DISABLEINT(d,s)       ((d)->ops->disableint(d,s))
 #define STM32_TIM_ACKINT(d,s)           ((d)->ops->ackint(d,s))
+#define STM32_TIM_SETMASTER_MODE(d,m)   ((d)->ops->setmaster_mode(d,m))
+#define STM32_TIM_SETSLAVE_MODE(d,m,t)  ((d)->ops->setslave_mode(d,m,t))
 
 /************************************************************************************
  * Public Types
@@ -177,6 +179,40 @@ typedef enum
 
 } stm32_tim_channel_t;
 
+typedef enum
+{
+  STM32_TIM_MASTER_MODE_RESET           = 0x00,
+  STM32_TIM_MASTER_MODE_ENABLE          = 0x01,
+  STM32_TIM_MASTER_MODE_UPDATE          = 0x02,
+  STM32_TIM_MASTER_MODE_COMPARE_PULSE   = 0x03,
+  STM32_TIM_MASTER_MODE_COMPARE_OC1REF  = 0x04,
+  STM32_TIM_MASTER_MODE_COMPARE_OC2REF  = 0x05,
+  STM32_TIM_MASTER_MODE_COMPARE_OC3REF  = 0x06,
+  STM32_TIM_MASTER_MODE_COMPARE_OC4REF  = 0x07,
+} stm32_tim_clock_master_mode_t;
+
+typedef enum {
+  STM32_TIM_SLAVE_MODE_DISABLE      = 0x00,
+  STM32_TIM_SLAVE_ENCODER_MODE1     = 0x01,
+  STM32_TIM_SLAVE_ENCODER_MODE2     = 0x02,
+  STM32_TIM_SLAVE_ENCODER_MODE3     = 0x03,
+  STM32_TIM_SLAVE_RESET_MODE        = 0x04,
+  STM32_TIM_SLAVE_GATED_MODE        = 0x05,
+  STM32_TIM_SLAVE_TRIGGER_MODE      = 0x06,
+  STM32_TIM_SLAVE_EXTERNAL_MODE     = 0x07,
+} stm32_tim_clock_slave_mode_t;
+
+typedef enum {
+  STM32_TIM_SLAVE_INTERNAL_TRIGGER0         = 0x00,
+  STM32_TIM_SLAVE_INTERNAL_TRIGGER1         = 0x01,
+  STM32_TIM_SLAVE_INTERNAL_TRIGGER2         = 0x02,
+  STM32_TIM_SLAVE_INTERNAL_TRIGGER3         = 0x03,
+  STM32_TIM_SLAVE_TI1_EDGE_DETECTOR         = 0x04,
+  STM32_TIM_SLAVE_FILTERED_TIMER_INPUT1     = 0x05,
+  STM32_TIM_SLAVE_FILTERED_TIMER_INPUT2     = 0x06,
+  STM32_TIM_SLAVE_EXTERNAL_TRIGGER_INPUT    = 0x07,
+} stm32_tim_clock_slave_trigger_t;
+
 /* TIM Operations */
 
 struct stm32_tim_ops_s
@@ -206,6 +242,12 @@ struct stm32_tim_ops_s
   void (*enableint)(FAR struct stm32_tim_dev_s *dev, int source);
   void (*disableint)(FAR struct stm32_tim_dev_s *dev, int source);
   void (*ackint)(FAR struct stm32_tim_dev_s *dev, int source);
+
+  /* Timer mode master/slave configuration */
+  void (*setmaster_mode)(FAR struct stm32_tim_dev_s *dev, stm32_tim_clock_master_mode_t mode);
+  void (*setslave_mode)(FAR struct stm32_tim_dev_s *dev,
+                        stm32_tim_clock_slave_mode_t mode,
+                        stm32_tim_clock_slave_trigger_t trigger);
 };
 
 /************************************************************************************
