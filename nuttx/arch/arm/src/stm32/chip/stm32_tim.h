@@ -479,7 +479,7 @@
 #define ATIM_CR2_CCDS             (1 << 3)  /* Bit 3:  Capture/Compare DMA Selection */
 #define ATIM_CR2_MMS_SHIFT        (4)       /* Bits 6-4: Master Mode Selection */
 #define ATIM_CR2_MMS_MASK         (7 << ATIM_CR2_MMS_SHIFT)
-#ifdef CONFIG_STM32_STM32F30XX
+#if defined(CONFIG_STM32_STM32F30XX) || defined(CONFIG_STM32_STM32F40XX)
 #  define ATIM_CR2_MMS_RESET      (0 << ATIM_CR2_MMS_SHIFT) /* 000: Reset - TIMx_EGR UG bit is TRG9 */
 #  define ATIM_CR2_MMS_ENABLE     (1 << ATIM_CR2_MMS_SHIFT) /* 001: Enable - CNT_EN is TRGO */
 #  define ATIM_CR2_MMS_UPDATE     (2 << ATIM_CR2_MMS_SHIFT) /* 010: Update event is TRGH0*/
