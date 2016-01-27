@@ -66,8 +66,7 @@
 /* input control lines and line errors */
 #define GB_UART_CTRL_DCD            0x01
 #define GB_UART_CTRL_DSR            0x02
-#define GB_UART_CTRL_BRK            0x04
-#define GB_UART_CTRL_RI             0x08
+#define GB_UART_CTRL_RI             0x04
 
 #define GB_UART_CTRL_FRAMING        0x10
 #define GB_UART_CTRL_PARITY         0x20
@@ -98,7 +97,7 @@ struct gb_serial_line_coding_request {
 } __packed;
 
 struct gb_uart_set_control_line_state_request {
-    __le16  control;
+    __u8    control;
 } __packed;
 
 struct gb_uart_set_break_request {
@@ -106,8 +105,7 @@ struct gb_uart_set_break_request {
 } __packed;
 
 struct gb_uart_serial_state_request {
-    __le16  control;
-    __le16  data;
+    __u8    control;
 } __packed;
 
 #endif /* _GREYBUS_UART_H_ */

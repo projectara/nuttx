@@ -351,7 +351,7 @@ static void uart_rx_callback(uint8_t *buffer, int length, int error)
  * @param data The regular thread data.
  * @return The parsed value of protocol serial state bitmask.
  */
-static uint16_t parse_ms_ls_registers(uint8_t modem_status, uint8_t line_status)
+static uint8_t parse_ms_ls_registers(uint8_t modem_status, uint8_t line_status)
 {
     uint16_t status = 0;
 
@@ -363,18 +363,6 @@ static uint16_t parse_ms_ls_registers(uint8_t modem_status, uint8_t line_status)
     }
     if (modem_status & MSR_RI) {
         status |= GB_UART_CTRL_RI;
-    }
-    if (line_status & LSR_BI) {
-        status |= GB_UART_CTRL_BRK;
-    }
-    if (line_status & LSR_FE) {
-        status |= GB_UART_CTRL_FRAMING;
-    }
-    if (line_status & LSR_PE) {
-        status |= GB_UART_CTRL_PARITY;
-    }
-    if (line_status & LSR_OE) {
-        status |= GB_UART_CTRL_OVERRUN;
     }
 
     return status;
@@ -411,8 +399,7 @@ static void *uart_status_thread(void *data)
         if (info->last_serial_state ^ updated_status) {
             info->last_serial_state = updated_status;
             request = gb_operation_get_request_payload(info->ms_ls_operation);
-            request->control = 0; /* spec doesn't define what's in this field */
-            request->data = cpu_to_le16(updated_status);
+            request->control = updated_status;
             ret = gb_operation_send_request(info->ms_ls_operation, NULL, false);
             if (ret) {
                 uart_report_error(GB_UART_EVENT_PROTOCOL_ERROR, __func__);
