@@ -322,6 +322,63 @@ static void interface_wakeout_timeout_atomic(void *data)
 }
 
 /*
+ * @brief Called by the timesync layer when timesync operations are commencing
+ *
+ * For the duration of timesync all specified interfaces will be reserved.
+ */
+uint32_t interfaces_timesync_init(uint32_t strobe_mask)
+{
+    int intf_id;
+    uint32_t pin_strobe_mask = 0;
+    struct interface *iface;
+
+    for (intf_id = 0; intf_id < nr_interfaces; intf_id++) {
+
+        iface = interfaces[intf_id];
+        if (iface->dev_id && strobe_mask & (1 << iface->dev_id)) {
+            /* Wait - release the interface in fini() */
+            pthread_mutex_lock(&iface->mutex);
+
+            /* Uninstall the WD handler for input */
+            interface_uninstall_wd_handler(iface, &iface->detect_in);
+
+            /* Set interface state */
+            iface->state = ARA_IFACE_STATE_WD_TIMESYNC;
+
+            /* Set initial state to low */
+            gpio_direction_out(iface->detect_in.gpio, 0);
+
+            /* Add the pin to the return mask */
+            pin_strobe_mask |= 1 << iface->detect_in.gpio;
+        }
+    }
+    return pin_strobe_mask;
+}
+
+/*
+ * @brief Release interfaces from timesync
+ *
+ */
+void interfaces_timesync_fini(void)
+{
+    int intf_id;
+    struct interface *iface;
+
+    for (intf_id = 0; intf_id < nr_interfaces; intf_id++) {
+
+        iface = interfaces[intf_id];
+        if (iface->state == ARA_IFACE_STATE_WD_TIMESYNC) {
+
+            /* Reinstall the WD handler for input */
+            interface_install_wd_handler(iface, true);
+
+            /* Post - release the interface taken in timesync_init() */
+            pthread_mutex_unlock(&iface->mutex);
+        }
+    }
+}
+
+/*
  * @brief Generate a WAKEOUT signal to wake-up/power-up modules.
  * If assert is true, keep the WAKEOUT lines asserted.
  *
@@ -1248,7 +1305,7 @@ static void interface_wd_delayed_handler(void *data)
     pthread_mutex_lock_debug(&iface->mutex);
 
     /* Verify state */
-    if (!iface->handler_active)
+    if (iface->state != ARA_IFACE_STATE_WD_HANDLER_ACTIVE)
         goto done;
 
     /* Get signal type, polarity, active state etc. */
@@ -1299,7 +1356,7 @@ static int interface_wd_irq_handler(int irq, void *context)
  */
 static void interface_uninstall_wd_handler(struct interface *iface, struct wd_data *wd)
 {
-    iface->handler_active = false;
+    iface->state = ARA_IFACE_STATE_WD_HANDLER_INACTIVE;
     if (wd->gpio) {
         gpio_irq_mask(wd->gpio);
         gpio_irq_attach(wd->gpio, NULL);
@@ -1361,7 +1418,7 @@ static int interface_install_wd_handler(struct interface *iface,
         if (check_for_unplug) {
             interface_check_unplug_during_wake_out(iface);
         }
-        iface->handler_active = true;
+        iface->state = ARA_IFACE_STATE_WD_HANDLER_ACTIVE;
         if (gpio_irq_settriggering(wd->gpio, IRQ_TYPE_EDGE_BOTH) ||
             gpio_irq_attach(wd->gpio, interface_wd_irq_handler) ||
             gpio_irq_unmask(wd->gpio)) {
@@ -1664,7 +1721,7 @@ int interface_init(struct interface **ints, size_t nr_ints,
         ifc->detect_in.db_state = WD_ST_INVALID;
         ifc->detect_in.last_state = WD_ST_INVALID;
         rc = interface_install_wd_handler(ifc, false);
-        ifc->handler_active = false;
+        ifc->state = ARA_IFACE_STATE_WD_HANDLER_INACTIVE;
 
         /* Power on/off the interface based on the DETECT_IN signal state */
         switch (interface_get_hotplug_state(ifc)) {

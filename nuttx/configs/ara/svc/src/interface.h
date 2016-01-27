@@ -116,6 +116,13 @@ enum ara_iface_order {
     ARA_IFACE_ORDER_SECONDARY,
 };
 
+/* Handler state */
+enum ara_iface_state {
+    ARA_IFACE_STATE_WD_HANDLER_INACTIVE = 0,
+    ARA_IFACE_STATE_WD_HANDLER_ACTIVE,
+    ARA_IFACE_STATE_WD_TIMESYNC,
+};
+
 /* Max number of LinkUp retries before the interface is shut down */
 #define INTERFACE_MAX_LINKUP_TRIES  3
 
@@ -140,10 +147,10 @@ struct interface {
     struct wdog_s linkup_wd;
     enum ara_iface_order if_order;
     pthread_mutex_t mutex;
-    bool handler_active;
     struct work_s wakeout_work; /* WAKEOUT pulse completion work */
     struct work_s eject_work;   /* Module ejection completion work */
     atomic_t dme_powermodeind;
+    enum ara_iface_state state;
 };
 
 #define interface_foreach(iface, idx)                       \
@@ -213,6 +220,10 @@ int interface_generate_wakeout_atomic(struct interface *, bool assert,
                                       int length);
 int interface_cancel_wakeout_atomic(struct interface *iface);
 enum hotplug_state interface_get_hotplug_state_atomic(struct interface *iface);
+
+/* Timesync init/fini */
+uint32_t interfaces_timesync_init(uint32_t strobe_mask);
+void interfaces_timesync_fini(void);
 
 /*
  * Macro magic.
