@@ -86,7 +86,8 @@
 /* Clocking *************************************************************************/
 
 /*
- * Different sets of settings are defined for SYSCLK of 104 and 168MHz:
+ * Different sets of settings are defined for SYSCLK of 96MHz, 104MHz and 168MHz:
+ *  ARA_BOARD_STM32_96MHZ
  *  ARA_BOARD_STM32_104MHZ
  *  ARA_BOARD_STM32_168MHZ
  * Only one shall be defined here. If needed this could become a Kconfig
@@ -97,7 +98,7 @@
  * cannot be used at higher frequencies.
  * Cf. CONFIG_STM32_STM32F446_VOLTAGE_SCALING_3 option
  */
-#define ARA_BOARD_STM32_104MHZ
+#define ARA_BOARD_STM32_96MHZ
 
 /* Four clock sources are available on STM3240G-EVAL evaluation board for
  * STM32F407IGH6 and RTC embedded:
@@ -130,20 +131,128 @@
  *   SDIO and RNG clock
  */
 
-/* HSI - 16 MHz RC factory-trimmed
+/*
+ * HSI - 16 MHz RC factory-trimmed
  * LSI - 32 KHz RC
  * HSE - On-board crystal frequency is 25MHz
+ * HSE - ARA + Qualcomm PMIC::REFCLK @ 19.2MHz
  * LSE - 32.768 kHz
  */
 
-#define STM32_BOARD_XTAL        25000000ul
 
 #define STM32_HSI_FREQUENCY     16000000ul
 #define STM32_LSI_FREQUENCY     32000
-#define STM32_HSE_FREQUENCY     STM32_BOARD_XTAL
 #define STM32_LSE_FREQUENCY     32768
 
+
+#ifdef ARA_BOARD_STM32_96MHZ
+
+/* Main PLL Configuration.
+ * Based on HSI supplied 16MHz reference clock.
+ * PMIC supplies a 19.2MHz reference clock which we switch to later.
+ *
+ * We provide a 96MHz HSI PLL config and a 96MHz HSE (PMIC) PLL config and have
+ * some custom code to switch PLL configurations driven by ara_board.c.
+ *
+ * Since the HSI derived PLL is 96MHz and the HSE derived PLL is 96MHz this
+ * means that when we switch PLL configurations (required on EVT 2.0 and above)
+ * STM32_SYSCLK_FREQUENCY will remain the same and hence all of the BAUD and
+ * timer rate derivations will be correct.
+ *
+ * Formula:
+ *
+ *   VCO input frequency        = PLL input clock frequency / PLLM, 2 <= PLLM <= 63
+ *   VCO output frequency       = VCO input frequency × PLLN,       1 <= PLLN <= 432
+ *   PLL output clock frequency = VCO frequency / PLLP,             PLLP = 2, 4, 6, or 8
+ *   USB OTG FS clock frequency = VCO frequency / PLLQ,             2 <= PLLQ <= 15
+ *
+ *   A 96MHz basic clock divides down trivially to the 48MHz required for USB
+ *   and handily down to the 19.2MHz we run the frame-time at.
+ *
+ * HSI
+ * PLLQ=4 PLLP=2 PLLN=96 PLLM=8 PLLR=2
+ *
+ * HSE
+ * PLLQ=4 PLLP=2 PLLN=200 PLLM=20 PLLR=2
+ *
+ * We will configure like this
+ *
+ *   When PLL source is HSI
+ *   PLL_VCO = (STM32_HSI_FREQUENCY / PLLM) * PLLN
+ *           = (16,000,000 / 8) * 96
+ *           = 192,000,000
+ *   SYSCLK  = PLL_VCO / PLLP
+ *           = 192,000,000 / 2 = 96,000,000
+ *   USB OTG FS and SDIO Clock
+ *           = PLL_VCO / PLLQ
+ *           = 192,000,000 / 4 = 48,000,000
+ *   HCK     = 96,000,000
+ *   PCLK1   = HCLK / APB1 Prescaler (4)
+ *           = PCLK1 = 96,000,000 / 4 = 24,000,000
+ *   APB1 Timer Clocks
+ *           = PCLK1 * 2
+ *           = 24,000,000 * 2 = 48,000,000
+ *   PCLK2   = HCLK / APB2 Prescaler (2)
+ *           = PCLK2 = 96,000,000 / 2 = 48,000,000
+ *   APB2 Timer Clocks
+ *           = PCLK2 * 2
+ *           = 96,000,000
+ *   TimeSync APB2 Clock
+ *           = APB2 Timer Clock / 5
+ *           = 96,000,000 / 5 = 19,200,000
+ *
+ *   When PLL source is HSE
+ *   PLL_VCO = (STM32_HSI_FREQUENCY / PLLM) * PLLN
+ *           = (19,200,000 / 20) * 200
+ *           = 192,000,000
+ *   SYSCLK  = PLL_VCO / PLLP
+ *           = 192,000,000 / 2 = 96,000,000
+ *   USB OTG FS and SDIO Clock
+ *           = PLL_VCO / PLLQ
+ *           = 192,000,000 / 4 = 48,000,000
+ *   HCK     = 96,000,000
+ *   PCLK1   = HCLK / APB1 Prescaler (4)
+ *           = PCLK1 = 96,000,000 / 4 = 24,000,000
+ *   APB1 Timer Clocks
+ *           = PCLK1 * 2
+ *           = 24,000,000 * 2 = 48,000,000
+ *   PCLK2   = HCLK / APB2 Prescaler (2)
+ *           = PCLK2 = 96,000,000 / 2 = 48,000,000
+ *   APB2 Timer Clocks
+ *           = PCLK2 * 2
+ *           = 96,000,000
+ *   TimeSync APB2 Clock
+ *           = APB2 Timer Clock / 5
+ *           = 96,000,000 / 5 = 19,200,000
+
+ *   MSM8994 TimeSync Clock = 19.2MHz
+ *   SVC TimeSync Clock = 19.2MHz
+ */
+
+/* HSI Standard NuttX PLL config @ 96 MHz */
 #define STM32_BOARD_USEHSI      1
+#define STM32_BOARD_XTAL        19200000ul
+#define STM32_HSE_FREQUENCY     STM32_BOARD_XTAL
+
+#define STM32_PLLCFG_PLLM       RCC_PLLCFG_PLLM(8)
+#define STM32_PLLCFG_PLLN       RCC_PLLCFG_PLLN(96)
+#define STM32_PLLCFG_PLLP       RCC_PLLCFG_PLLP_2
+#define STM32_PLLCFG_PLLQ       RCC_PLLCFG_PLLQ(4)
+#define STM32_PLLCFG_PLLR       RCC_PLLCFG_PLLR(2)
+
+/* HSE ARA extended PLL config @ 96 MHz */
+#define ARA_BOARD_USEHSE_PLLSWITCH
+#define ARA_HSE_PLLCFG_PLLM       RCC_PLLCFG_PLLM(20)
+#define ARA_HSE_PLLCFG_PLLN       RCC_PLLCFG_PLLN(200)
+#define ARA_HSE_PLLCFG_PLLP       RCC_PLLCFG_PLLP_2
+#define ARA_HSE_PLLCFG_PLLQ       RCC_PLLCFG_PLLQ(4)
+#define ARA_HSE_PLLCFG_PLLR       RCC_PLLCFG_PLLR(2)
+void rcc_switch_ara_pll(void);
+
+/* Either way the PLL frequency is the same */
+#define STM32_SYSCLK_FREQUENCY  96000000ul
+
+#endif
 
 #ifdef ARA_BOARD_STM32_168MHZ
 /* Main PLL Configuration.
@@ -158,6 +267,9 @@
  *         =  PLL_VCO / PLLQ
  *         = 48,000,000
  */
+#define STM32_BOARD_USEHSI      1
+#define STM32_BOARD_XTAL        25000000ul
+#define STM32_HSE_FREQUENCY     STM32_BOARD_XTAL
 
 #define STM32_PLLCFG_PLLM       RCC_PLLCFG_PLLM(25)
 #define STM32_PLLCFG_PLLN       RCC_PLLCFG_PLLN(336)
@@ -199,6 +311,9 @@
  *
  * REVISIT: Trimming of the HSI is not yet supported.
  */
+#define STM32_BOARD_USEHSI      1
+#define STM32_BOARD_XTAL        25000000ul
+#define STM32_HSE_FREQUENCY     STM32_BOARD_XTAL
 
 #define STM32_PLLCFG_PLLM       RCC_PLLCFG_PLLM(10)
 #define STM32_PLLCFG_PLLN       RCC_PLLCFG_PLLN(390)

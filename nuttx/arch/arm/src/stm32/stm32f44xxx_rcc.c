@@ -789,6 +789,91 @@ static void stm32_stdclockconfig(void)
 }
 #endif
 
+/*
+ * @brief - Switch from HSI PLL to HSE PLL using HSI as clock while PLL is off
+ *
+ * Enable HSE
+ * Switch to HSI as sysclk
+ * Stop the PLL which was previously clocked by HSI
+ * Configure PLL to use HSE
+ * Start PLL and lock
+ * Disable HSI
+ * Switch to PLL (driven by HSE now) as sysclk
+ * Successful swtich from HSI PLL to HSE PLL :)
+ */
+void rcc_switch_ara_pll(void)
+{
+  uint32_t regval;
+  volatile int32_t timeout;
+
+  /* Enable External High-Speed Clock (HSE) */
+  regval  = getreg32(STM32_RCC_CR);
+  regval |= RCC_CR_HSEON;           /* Enable HSE */
+  putreg32(regval, STM32_RCC_CR);
+
+  /* Wait until the HSE is ready (or until a timeout elapsed) */
+  for (timeout = HSERDY_TIMEOUT; timeout > 0; timeout--)
+    {
+      /* Check if the HSERDY flag is the set in the CR */
+
+      if ((getreg32(STM32_RCC_CR) & RCC_CR_HSERDY) != 0)
+        {
+            break;
+        }
+    }
+  if (!timeout)
+    {
+      /* Cannot continue */
+      return;
+    }
+
+  /* Switch clock to the HSI */
+  regval  = getreg32(STM32_RCC_CFGR);
+  regval &= ~RCC_CFGR_SW_MASK;
+  regval |= RCC_CFGR_SW_HSI;
+  putreg32(regval, STM32_RCC_CFGR);
+
+  /* Stop PLL */
+  regval = getreg32(STM32_RCC_CR);
+  regval &= ~RCC_CR_PLLON;
+  putreg32(regval, STM32_RCC_CR);
+
+  /* HSE_PLL output and HSI_PLL output (HCLK) must are required to be equal so,
+   * we only re-program the PLL not the dividors.
+   */
+  regval = (ARA_HSE_PLLCFG_PLLM | ARA_HSE_PLLCFG_PLLN | ARA_HSE_PLLCFG_PLLP |
+            RCC_PLLCFG_PLLSRC_HSE | ARA_HSE_PLLCFG_PLLQ | ARA_HSE_PLLCFG_PLLR);
+  putreg32(regval, STM32_RCC_PLLCFG);
+
+  /* Enable the main PLL */
+  regval = getreg32(STM32_RCC_CR);
+  regval |= RCC_CR_PLLON;
+  putreg32(regval, STM32_RCC_CR);
+
+  /* Wait until the PLL is ready */
+  while ((getreg32(STM32_RCC_CR) & RCC_CR_PLLRDY) == 0)
+    {
+    }
+
+  /* Select the main PLL as system clock source */
+
+  regval  = getreg32(STM32_RCC_CFGR);
+  regval &= ~RCC_CFGR_SW_MASK;
+  regval |= RCC_CFGR_SW_PLL;
+  putreg32(regval, STM32_RCC_CFGR);
+
+  /* Wait until the PLL source is used as the system clock source */
+  while ((getreg32(STM32_RCC_CFGR) & RCC_CFGR_SWS_MASK) != RCC_CFGR_SWS_PLL)
+    {
+    }
+
+  /* Kill the HSI */
+  regval  = getreg32(STM32_RCC_CR);
+  regval &= ~RCC_CR_HSION;
+  putreg32(regval, STM32_RCC_CR);
+
+}
+
 /****************************************************************************
  * Name: rcc_enableperiphals
  ****************************************************************************/

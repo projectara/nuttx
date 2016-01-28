@@ -46,6 +46,7 @@
 #include <ara_debug.h>
 #include <ara_board.h>
 #include "vreg.h"
+#include <arch/board/board.h>
 
 static struct ara_board_info *board_info;
 
@@ -206,6 +207,15 @@ struct ara_board_info *ara_board_init(void) {
             goto err_uninit_i2c;
         }
     }
+
+    /* Switch PLL if directed to do so */
+    #ifdef ARA_BOARD_USEHSE_PLLSWITCH
+
+    dbg_info("Switching PLL from HSI to HSE\n");
+    rcc_switch_ara_pll();
+    dbg_info("PLL switch success\n");
+
+    #endif
 
     /* Return the board specific info */
     return board_info;
