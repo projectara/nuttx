@@ -41,86 +41,6 @@
 #include <arch/tsb/cdsi0_reg_def.h>
 #include <arch/tsb/csi.h>
 
-    /*
-     * BIT4: Clock Lane
-     * 0: Lane operation disabled
-     * 1: Lane operation enabled
-     *
-     * BIT0-BIT2: Data Lane
-     * In order to receive data, at least Data Lane 0 shall be enabled.
-     * 000: All data lane is disabled.
-     * 001: Data Lane 0 is enabled.
-     * 010: Data Lane 0 and 1 are enabled.
-     * 011: Data Lane 0, 1 and 2 are enabled.
-     * 100: Data Lane 0, 1, 2 and 3 are enabled
-     */
-
-#define AL_RX_BRG_MODE_VAL                              0x00000003
-#define AL_RX_BRG_CSI_INFO_VAL                          0x00000000
-#define AL_RX_BRG_CSI_DT0_VAL                           0x00000000
-#define AL_RX_BRG_CSI_DT1_VAL                           0x00000000
-#define AL_RX_BRG_CSI_DT2_VAL                           0x00000000
-#define AL_RX_BRG_CSI_DT3_VAL                           0x00000000
-
-#define CDSIRX_CLKEN_VAL                                0x00000001
-#define CDSIRX_CLKSEL_VAL                               0x00000101
-#define CDSIRX_MODE_CONFIG_VAL                          0x00000001
-#define CDSIRX_LANE_ENABLE_VAL                          0x00000012
-#define CDSIRX_VC_ENABLE_VAL                            0x0000000F
-#define CDSIRX_LINE_INIT_COUNT_VAL                      0x000012C0
-#define CDSIRX_HSRXTO_COUNT_VAL                         0xFFFFFFFF
-#define CDSIRX_FUNC_ENABLE_VAL                          0x00070701
-#define CDSIRX_DSI_LPTX_MODE_VAL                        0x00000001
-#define CDSIRX_DSI_TATO_COUNT_VAL                       0xFFFFFFFF
-#define CDSIRX_DSI_LPTXTO_COUNT_VAL                     0xFFFFFFFF
-#define CDSIRX_FUNC_MODE_VAL                            0x00000000
-#define CDSIRX_PPI_HSRX_CNTRL_VAL                       0x40000000
-#define CDSIRX_PPI_HSRX_COUNT_VAL                       0x0400000A
-#define CDSI0_CDSIRX_PPI_DPHY_POWERCNTRL_VAL            0x00000003
-#define CDSIRX_PPI_DPHY_DLYCNTRL_VAL                    0x00000000
-#define CDSIRX_PPI_DPHY_LPRX_THSLD_VAL                  0x000002AA
-#define CDSI0_CDSIRX_PPI_DPHY_LPRXAUTOCALST_VAL         0x00000001
-#define CDSIRX_PPI_DPHY_LPTXTIMECNT_VAL                 0x00000FFF
-#define CDSIRX_PPI_DSI_BTA_COUNT_VAL                    0x000407FF
-#define CDSIRX_PPI_DSI_DPHYTX_ADJUST_VAL                0x00000002
-#define CDSIRX_PPI_DPHY_HSRX_ADJUST_VAL                 0x000002AA
-#define CDSIRX_PPI_DPHY_LPRXCALCNTRL_VAL                0x00190040
-#define CDSIRX_LPRX_STATE_INT_MASK_VAL                  0x1F1F1F1D
-
-#define CDSI0_CDSIRX_DSI_RXTRIG_INT_MASK_VAL            0x00000000
-#define CDSI0_CDSIRX_RXERR_INT_MASK_VAL                 0x00000000
-#define CDSI0_CDSIRX_TXERR_INT_MASK_VAL                 0x00000000
-#define CDSI0_CDSIRX_DSI_VC0_SH_INT_MASK_VAL            0x00000000
-#define CDSI0_CDSIRX_DSI_VC1_SH_INT_MASK_VAL            0x00000000
-#define CDSI0_CDSIRX_DSI_VC2_SH_INT_MASK_VAL            0x00000000
-#define CDSI0_CDSIRX_DSI_VC3_SH_INT_MASK_VAL            0x00000000
-#define CDSI0_CDSIRX_DSI_VC0_LN_INT_MASK_VAL            0x00000000
-#define CDSI0_CDSIRX_DSI_VC1_LN_INT_MASK_VAL            0x00000000
-#define CDSI0_CDSIRX_DSI_VC2_LN_INT_MASK_VAL            0x00000000
-#define CDSI0_CDSIRX_DSI_VC3_LN_INT_MASK_VAL            0x00000000
-#define CDSI0_CDSIRX_CSI2_VC0_SH_INT_MASK_VAL           0x00000000
-#define CDSI0_CDSIRX_CSI2_VC1_SH_INT_MASK_VAL           0x00000000
-#define CDSI0_CDSIRX_CSI2_VC2_SH_INT_MASK_VAL           0x00000000
-#define CDSI0_CDSIRX_CSI2_VC3_SH_INT_MASK_VAL           0x00000000
-#define CDSI0_CDSIRX_CSI2_VC0_LN0_INT_MASK_VAL          0x00000000
-#define CDSI0_CDSIRX_CSI2_VC0_LN1_INT_MASK_VAL          0x00000000
-#define CDSI0_CDSIRX_CSI2_VC1_LN0_INT_MASK_VAL          0x00000000
-#define CDSI0_CDSIRX_CSI2_VC1_LN1_INT_MASK_VAL          0x00000000
-#define CDSI0_CDSIRX_CSI2_VC2_LN0_INT_MASK_VAL          0x00000000
-#define CDSI0_CDSIRX_CSI2_VC2_LN1_INT_MASK_VAL          0x00000000
-#define CDSI0_CDSIRX_CSI2_VC3_LN0_INT_MASK_VAL          0x00000000
-#define CDSI0_CDSIRX_CSI2_VC3_LN1_INT_MASK_VAL          0x00000000
-
-#define CDSI0_CDSIRX_DSI_WAITBTA_COUNT_VAL              0x10000010
-#define CDSI0_CDSIRX_START_VAL                          0x00000001
-#define CDSI0_CDSIRX_LPRX_STATE_INT_STAT_VAL            0x00000001
-#define CDSI0_CDSIRX_ADDRESS_CONFIG_VAL                 0x00000000
-
-#define CDSI0_CDSIRX_STOP                               0x00000000
-#define CDSI0_CDSIRX_SYSTEM_CLEAR_VAL                   0x00000001
-#define CDSI0_CDSIRX_CLKDISABLE_VAL                     0x00000000
-#define CDSI0_AL_RX_BRG_DISABLE_VAL                     0x00000000
-
 /**
  * @brief Initialize the CSI receiver
  * @param dev dev pointer to structure of cdsi_dev device data
@@ -142,115 +62,132 @@ int csi_rx_init(struct cdsi_dev *dev, const struct csi_rx_config *cfg)
     unsigned int timeout;
 
     /* Enable the Rx bridge and set to CSI mode */
-    cdsi_write(dev, CDSI0_AL_RX_BRG_MODE_OFFS, AL_RX_BRG_MODE_VAL);
-    cdsi_write(dev, CDSI0_AL_RX_BRG_CSI_INFO_OFFS, AL_RX_BRG_CSI_INFO_VAL);
-    cdsi_write(dev, CDSI0_AL_RX_BRG_CSI_DT0_OFFS, AL_RX_BRG_CSI_DT0_VAL);
-    cdsi_write(dev, CDSI0_AL_RX_BRG_CSI_DT1_OFFS, AL_RX_BRG_CSI_DT1_VAL);
-    cdsi_write(dev, CDSI0_AL_RX_BRG_CSI_DT2_OFFS, AL_RX_BRG_CSI_DT2_VAL);
-    cdsi_write(dev, CDSI0_AL_RX_BRG_CSI_DT3_OFFS, AL_RX_BRG_CSI_DT3_VAL);
+    cdsi_write(dev, CDSI0_AL_RX_BRG_MODE_OFFS,
+               CDSI0_AL_RX_BRG_MODE_CSI2_MODE_MASK |
+               CDSI0_AL_RX_BRG_MODE_BRG_EN_MASK);
+    cdsi_write(dev, CDSI0_AL_RX_BRG_CSI_INFO_OFFS, 0);
+    cdsi_write(dev, CDSI0_AL_RX_BRG_CSI_DT0_OFFS, 0);
+    cdsi_write(dev, CDSI0_AL_RX_BRG_CSI_DT1_OFFS, 0);
+    cdsi_write(dev, CDSI0_AL_RX_BRG_CSI_DT2_OFFS, 0);
+    cdsi_write(dev, CDSI0_AL_RX_BRG_CSI_DT3_OFFS, 0);
 
     /* Enable CDSIRX */
-    cdsi_write(dev, CDSI0_CDSIRX_CLKEN_OFFS, CDSIRX_CLKEN_VAL);
+    cdsi_write(dev, CDSI0_CDSIRX_CLKEN_OFFS, CDSI0_CDSIRX_CLKEN_CDSIRXEN_MASK);
 
     /* Set CDSIRX functions enable */
-    cdsi_write(dev, CDSI0_CDSIRX_FUNC_ENABLE_OFFS, CDSIRX_FUNC_ENABLE_VAL);
-    cdsi_write(dev, CDSI0_CDSIRX_ADDRESS_CONFIG_OFFS,
-               CDSI0_CDSIRX_ADDRESS_CONFIG_VAL);
+    cdsi_write(dev, CDSI0_CDSIRX_FUNC_ENABLE_OFFS,
+               CDSI0_CDSIRX_FUNC_ENABLE_RXERRINTEN_MASK |
+               CDSI0_CDSIRX_FUNC_ENABLE_DSIRXTRGINTEN_MASK |
+               CDSI0_CDSIRX_FUNC_ENABLE_LPRXSTATEEN_MASK |
+               CDSI0_CDSIRX_FUNC_ENABLE_RXERRINTSTATEEN_MASK |
+               CDSI0_CDSIRX_FUNC_ENABLE_DSIRXTRIGINTSTATEN_MASK |
+               CDSI0_CDSIRX_FUNC_ENABLE_LPRXSTATEINTSTATEEN_MASK |
+               CDSI0_CDSIRX_FUNC_ENABLE_HSTOCNTEN_MASK);
+    cdsi_write(dev, CDSI0_CDSIRX_ADDRESS_CONFIG_OFFS, 0);
 
     /* Set LPRX calibration */
     cdsi_write(dev, CDSI0_CDSIRX_PPI_DPHY_LPRXCALCNTRL_OFFS,
-               CDSIRX_PPI_DPHY_LPRXCALCNTRL_VAL);
+              (25 << CDSI0_CDSIRX_PPI_DPHY_LPRXCALCNTRL_AUTOCALCNT_SHIFT) |
+              (4 << CDSI0_CDSIRX_PPI_DPHY_LPRXCALCNTRL_LPRXCALTRIM_SHIFT));
     cdsi_write(dev, CDSI0_CDSIRX_PPI_DPHY_LPRX_THSLD_OFFS,
-               CDSIRX_PPI_DPHY_LPRX_THSLD_VAL);
+               CDSI0_CDSIRX_PPI_DPHY_LPRX_THSLD_CLS_CUTRSEL_MASK |
+               CDSI0_CDSIRX_PPI_DPHY_LPRX_THSLD_D3S_CUTRSEL_MASK |
+               CDSI0_CDSIRX_PPI_DPHY_LPRX_THSLD_D2S_CUTRSEL_MASK |
+               CDSI0_CDSIRX_PPI_DPHY_LPRX_THSLD_D1S_CUTRSEL_MASK |
+               CDSI0_CDSIRX_PPI_DPHY_LPRX_THSLD_D0S_CUTRSEL_MASK);
 
     /* Clear the LPRX calibration status and start LPRX calibration. */
     cdsi_write(dev, CDSI0_CDSIRX_LPRX_STATE_INT_STAT_OFFS,
                CDSI0_CDSIRX_LPRX_STATE_INT_STAT_AUTOCALDONE_MASK);
     cdsi_write(dev, CDSI0_CDSIRX_PPI_DPHY_LPRXAUTOCALST_OFFS,
-               CDSI0_CDSIRX_PPI_DPHY_LPRXAUTOCALST_VAL);
+               CDSI0_CDSIRX_PPI_DPHY_LPRXAUTOCALST_AUTOCALSTRT_MASK);
 
     /* CDSIRX configuration */
-    cdsi_write(dev, CDSI0_CDSIRX_CLKSEL_OFFS, CDSIRX_CLKSEL_VAL);
-    cdsi_write(dev, CDSI0_CDSIRX_MODE_CONFIG_OFFS, CDSIRX_MODE_CONFIG_VAL);
-    cdsi_write(dev, CDSI0_CDSIRX_LANE_ENABLE_OFFS, CDSIRX_LANE_ENABLE_VAL); /* Update with lane count */
-    cdsi_write(dev, CDSI0_CDSIRX_VC_ENABLE_OFFS, CDSIRX_VC_ENABLE_VAL); /* Update with VC mask */
-    cdsi_write(dev, CDSI0_CDSIRX_LINE_INIT_COUNT_OFFS,
-               CDSIRX_LINE_INIT_COUNT_VAL);
-    cdsi_write(dev, CDSI0_CDSIRX_HSRXTO_COUNT_OFFS,
-               CDSIRX_HSRXTO_COUNT_VAL);
-    cdsi_write(dev, CDSI0_CDSIRX_FUNC_MODE_OFFS, CDSIRX_FUNC_MODE_VAL);
-    cdsi_write(dev, CDSI0_CDSIRX_PPI_DPHY_LPTXTIMECNT_OFFS,
-               CDSIRX_PPI_DPHY_LPTXTIMECNT_VAL);
+    cdsi_write(dev, CDSI0_CDSIRX_CLKSEL_OFFS,
+               (1 << CDSI0_CDSIRX_CLKSEL_PPIHSRXCLKSEL_SHIFT) |
+               CDSI0_CDSIRX_CLKSEL_PPIHSRXCLKEN_MASK);
+    cdsi_write(dev, CDSI0_CDSIRX_MODE_CONFIG_OFFS,
+               CDSI0_CDSIRX_MODE_CONFIG_CSI2MODE_MASK);
+    cdsi_write(dev, CDSI0_CDSIRX_LANE_ENABLE_OFFS,
+               CDSI0_CDSIRX_LANE_ENABLE_CLANEEN_MASK |
+               (2 << CDSI0_CDSIRX_LANE_ENABLE_DTLANEEN_SHIFT)); /* Update with lane count */
+    cdsi_write(dev, CDSI0_CDSIRX_VC_ENABLE_OFFS,
+               CDSI0_CDSIRX_VC_ENABLE_VC3EN_MASK |
+               CDSI0_CDSIRX_VC_ENABLE_VC2EN_MASK |
+               CDSI0_CDSIRX_VC_ENABLE_VC1EN_MASK |
+               CDSI0_CDSIRX_VC_ENABLE_VC0EN_MASK);
+    cdsi_write(dev, CDSI0_CDSIRX_LINE_INIT_COUNT_OFFS, 4800);
+    cdsi_write(dev, CDSI0_CDSIRX_HSRXTO_COUNT_OFFS, 0xffffffff);
+    cdsi_write(dev, CDSI0_CDSIRX_FUNC_MODE_OFFS, 0);
+    cdsi_write(dev, CDSI0_CDSIRX_PPI_DPHY_LPTXTIMECNT_OFFS, 0xfff);
     cdsi_write(dev, CDSI0_CDSIRX_DSI_LPTX_MODE_OFFS,
-               CDSIRX_DSI_LPTX_MODE_VAL);
+               CDSI0_CDSIRX_DSI_LPTX_MODE_TURNDISABLE_MASK);
     cdsi_write(dev, CDSI0_CDSIRX_PPI_DSI_BTA_COUNT_OFFS,
-               CDSIRX_PPI_DSI_BTA_COUNT_VAL);
+               (4 << CDSI0_CDSIRX_PPI_DSI_BTA_COUNT_TXTAGO_SHIFT) |
+               (2047 << CDSI0_CDSIRX_PPI_DSI_BTA_COUNT_RXTASURECNT_SHIFT));
     cdsi_write(dev, CDSI0_CDSIRX_PPI_HSRX_CNTRL_OFFS,
-               CDSIRX_PPI_HSRX_CNTRL_VAL);
+               CDSI0_CDSIRX_PPI_HSRX_CNTRL_CLHSRXENFCTRL_MASK);
     cdsi_write(dev, CDSI0_CDSIRX_PPI_HSRX_COUNT_OFFS,
-               CDSIRX_PPI_HSRX_COUNT_VAL);
+               (4 << CDSI0_CDSIRX_PPI_HSRX_COUNT_CLSETTLECNT_SHIFT) |
+               (10 << CDSI0_CDSIRX_PPI_HSRX_COUNT_DTCLRSIPOCNT_SHIFT));
     cdsi_write(dev, CDSI0_CDSIRX_PPI_DPHY_POWERCNTRL_OFFS,
-               CDSI0_CDSIRX_PPI_DPHY_POWERCNTRL_VAL);
+               CDSI0_CDSIRX_PPI_DPHY_POWERCNTRL_EN_ZEMIPIV12_MASK |
+               CDSI0_CDSIRX_PPI_DPHY_POWERCNTRL_V12EN_MASK);
     cdsi_write(dev, CDSI0_CDSIRX_PPI_DSI_DPHYTX_ADJUST_OFFS,
-               CDSIRX_PPI_DSI_DPHYTX_ADJUST_VAL);
+               2 << CDSI0_CDSIRX_PPI_DSI_DPHYTX_ADJUST_D0S_LPTXCURREN_SHIFT);
     cdsi_write(dev, CDSI0_CDSIRX_PPI_DPHY_HSRX_ADJUST_OFFS,
-               CDSIRX_PPI_DPHY_HSRX_ADJUST_VAL);
-    cdsi_write(dev, CDSI0_CDSIRX_PPI_DPHY_DLYCNTRL_OFFS,
-               CDSIRX_PPI_DPHY_DLYCNTRL_VAL);
+               (2 << CDSI0_CDSIRX_PPI_DPHY_HSRX_ADJUST_CLS_HSRXTUNE_SHIFT) |
+               (2 << CDSI0_CDSIRX_PPI_DPHY_HSRX_ADJUST_D3S_HSRXTUNE_SHIFT) |
+               (2 << CDSI0_CDSIRX_PPI_DPHY_HSRX_ADJUST_D2S_HSRXTUNE_SHIFT) |
+               (2 << CDSI0_CDSIRX_PPI_DPHY_HSRX_ADJUST_D1S_HSRXTUNE_SHIFT) |
+               (2 << CDSI0_CDSIRX_PPI_DPHY_HSRX_ADJUST_D0S_HSRXTUNE_SHIFT));
+    cdsi_write(dev, CDSI0_CDSIRX_PPI_DPHY_DLYCNTRL_OFFS, 0);
     cdsi_write(dev, CDSI0_CDSIRX_LPRX_STATE_INT_MASK_OFFS,
-               CDSIRX_LPRX_STATE_INT_MASK_VAL);
-    cdsi_write(dev, CDSI0_CDSIRX_DSI_RXTRIG_INT_MASK_OFFS,
-               CDSI0_CDSIRX_DSI_RXTRIG_INT_MASK_VAL);
-    cdsi_write(dev, CDSI0_CDSIRX_RXERR_INT_MASK_OFFS,
-               CDSI0_CDSIRX_RXERR_INT_MASK_VAL);
-    cdsi_write(dev, CDSI0_CDSIRX_TXERR_INT_MASK_OFFS,
-               CDSI0_CDSIRX_TXERR_INT_MASK_VAL);
-    cdsi_write(dev, CDSI0_CDSIRX_DSI_VC0_SH_INT_MASK_OFFS,
-               CDSI0_CDSIRX_DSI_VC0_SH_INT_MASK_VAL);
-    cdsi_write(dev, CDSI0_CDSIRX_DSI_VC1_SH_INT_MASK_OFFS,
-               CDSI0_CDSIRX_DSI_VC1_SH_INT_MASK_VAL);
-    cdsi_write(dev, CDSI0_CDSIRX_DSI_VC2_SH_INT_MASK_OFFS,
-               CDSI0_CDSIRX_DSI_VC2_SH_INT_MASK_VAL);
-    cdsi_write(dev, CDSI0_CDSIRX_DSI_VC3_SH_INT_MASK_OFFS,
-               CDSI0_CDSIRX_DSI_VC3_SH_INT_MASK_VAL);
-    cdsi_write(dev, CDSI0_CDSIRX_DSI_VC0_LN_INT_MASK_OFFS,
-               CDSI0_CDSIRX_DSI_VC0_LN_INT_MASK_VAL);
-    cdsi_write(dev, CDSI0_CDSIRX_DSI_VC1_LN_INT_MASK_OFFS,
-               CDSI0_CDSIRX_DSI_VC1_LN_INT_MASK_VAL);
-    cdsi_write(dev, CDSI0_CDSIRX_DSI_VC2_LN_INT_MASK_OFFS,
-               CDSI0_CDSIRX_DSI_VC2_LN_INT_MASK_VAL);
-    cdsi_write(dev, CDSI0_CDSIRX_DSI_VC3_LN_INT_MASK_OFFS,
-               CDSI0_CDSIRX_DSI_VC3_LN_INT_MASK_VAL);
-    cdsi_write(dev, CDSI0_CDSIRX_CSI2_VC0_SH_INT_MASK_OFFS,
-               CDSI0_CDSIRX_CSI2_VC0_SH_INT_MASK_VAL);
-    cdsi_write(dev, CDSI0_CDSIRX_CSI2_VC1_SH_INT_MASK_OFFS,
-               CDSI0_CDSIRX_CSI2_VC1_SH_INT_MASK_VAL);
-    cdsi_write(dev, CDSI0_CDSIRX_CSI2_VC2_SH_INT_MASK_OFFS,
-               CDSI0_CDSIRX_CSI2_VC2_SH_INT_MASK_VAL);
-    cdsi_write(dev, CDSI0_CDSIRX_CSI2_VC3_SH_INT_MASK_OFFS,
-               CDSI0_CDSIRX_CSI2_VC3_SH_INT_MASK_VAL);
-    cdsi_write(dev, CDSI0_CDSIRX_CSI2_VC0_LN0_INT_MASK_OFFS,
-               CDSI0_CDSIRX_CSI2_VC0_LN0_INT_MASK_VAL);
-    cdsi_write(dev, CDSI0_CDSIRX_CSI2_VC0_LN1_INT_MASK_OFFS,
-               CDSI0_CDSIRX_CSI2_VC0_LN1_INT_MASK_VAL);
-    cdsi_write(dev, CDSI0_CDSIRX_CSI2_VC1_LN0_INT_MASK_OFFS,
-               CDSI0_CDSIRX_CSI2_VC1_LN0_INT_MASK_VAL);
-    cdsi_write(dev, CDSI0_CDSIRX_CSI2_VC1_LN1_INT_MASK_OFFS,
-               CDSI0_CDSIRX_CSI2_VC1_LN1_INT_MASK_VAL);
-    cdsi_write(dev, CDSI0_CDSIRX_CSI2_VC2_LN0_INT_MASK_OFFS,
-               CDSI0_CDSIRX_CSI2_VC2_LN0_INT_MASK_VAL);
-    cdsi_write(dev, CDSI0_CDSIRX_CSI2_VC2_LN1_INT_MASK_OFFS,
-               CDSI0_CDSIRX_CSI2_VC2_LN1_INT_MASK_VAL);
-    cdsi_write(dev, CDSI0_CDSIRX_CSI2_VC3_LN0_INT_MASK_OFFS,
-               CDSI0_CDSIRX_CSI2_VC3_LN0_INT_MASK_VAL);
-    cdsi_write(dev, CDSI0_CDSIRX_CSI2_VC3_LN1_INT_MASK_OFFS,
-               CDSI0_CDSIRX_CSI2_VC3_LN1_INT_MASK_VAL);
-    cdsi_write(dev, CDSI0_CDSIRX_DSI_LPTXTO_COUNT_OFFS,
-               CDSIRX_DSI_LPTXTO_COUNT_VAL);
-    cdsi_write(dev, CDSI0_CDSIRX_DSI_TATO_COUNT_OFFS,
-               CDSIRX_DSI_TATO_COUNT_VAL);
-    cdsi_write(dev, CDSI0_CDSIRX_DSI_WAITBTA_COUNT_OFFS,
-               CDSI0_CDSIRX_DSI_WAITBTA_COUNT_VAL);
+               CDSI0_CDSIRX_LPRX_STATE_INT_MASK_MASKCLULPSEXIT_MASK |
+               CDSI0_CDSIRX_LPRX_STATE_INT_MASK_MASKD3ULPSEXIT_MASK |
+               CDSI0_CDSIRX_LPRX_STATE_INT_MASK_MASKD2ULPSEXIT_MASK |
+               CDSI0_CDSIRX_LPRX_STATE_INT_MASK_MASKD1ULPSEXIT_MASK |
+               CDSI0_CDSIRX_LPRX_STATE_INT_MASK_MASKD0ULPSEXIT_MASK |
+               CDSI0_CDSIRX_LPRX_STATE_INT_MASK_MASKCLULPSENTER_MASK |
+               CDSI0_CDSIRX_LPRX_STATE_INT_MASK_MASKD3ULPSENTER_MASK |
+               CDSI0_CDSIRX_LPRX_STATE_INT_MASK_MASKD2ULPSENTER_MASK |
+               CDSI0_CDSIRX_LPRX_STATE_INT_MASK_MASKD1ULPSENTER_MASK |
+               CDSI0_CDSIRX_LPRX_STATE_INT_MASK_MASKD0ULPSENTER_MASK |
+               CDSI0_CDSIRX_LPRX_STATE_INT_MASK_MASKCLSTOPRISE_MASK |
+               CDSI0_CDSIRX_LPRX_STATE_INT_MASK_MASKD3STOPRISE_MASK |
+               CDSI0_CDSIRX_LPRX_STATE_INT_MASK_MASKD2STOPRISE_MASK |
+               CDSI0_CDSIRX_LPRX_STATE_INT_MASK_MASKD1STOPRISE_MASK |
+               CDSI0_CDSIRX_LPRX_STATE_INT_MASK_MASKD0STOPRISE_MASK |
+               CDSI0_CDSIRX_LPRX_STATE_INT_MASK_MASKAUTOCALDONE_MASK |
+               CDSI0_CDSIRX_LPRX_STATE_INT_MASK_MASKDIRECTIONFALL_MASK |
+               CDSI0_CDSIRX_LPRX_STATE_INT_MASK_MASKDIRECTIONRISE_MASK |
+               CDSI0_CDSIRX_LPRX_STATE_INT_MASK_MASKLINEINITDONE_MASK);
+    cdsi_write(dev, CDSI0_CDSIRX_DSI_RXTRIG_INT_MASK_OFFS, 0);
+    cdsi_write(dev, CDSI0_CDSIRX_RXERR_INT_MASK_OFFS, 0);
+    cdsi_write(dev, CDSI0_CDSIRX_TXERR_INT_MASK_OFFS, 0);
+    cdsi_write(dev, CDSI0_CDSIRX_DSI_VC0_SH_INT_MASK_OFFS, 0);
+    cdsi_write(dev, CDSI0_CDSIRX_DSI_VC1_SH_INT_MASK_OFFS, 0);
+    cdsi_write(dev, CDSI0_CDSIRX_DSI_VC2_SH_INT_MASK_OFFS, 0);
+    cdsi_write(dev, CDSI0_CDSIRX_DSI_VC3_SH_INT_MASK_OFFS, 0);
+    cdsi_write(dev, CDSI0_CDSIRX_DSI_VC0_LN_INT_MASK_OFFS, 0);
+    cdsi_write(dev, CDSI0_CDSIRX_DSI_VC1_LN_INT_MASK_OFFS, 0);
+    cdsi_write(dev, CDSI0_CDSIRX_DSI_VC2_LN_INT_MASK_OFFS, 0);
+    cdsi_write(dev, CDSI0_CDSIRX_DSI_VC3_LN_INT_MASK_OFFS, 0);
+    cdsi_write(dev, CDSI0_CDSIRX_CSI2_VC0_SH_INT_MASK_OFFS, 0);
+    cdsi_write(dev, CDSI0_CDSIRX_CSI2_VC1_SH_INT_MASK_OFFS, 0);
+    cdsi_write(dev, CDSI0_CDSIRX_CSI2_VC2_SH_INT_MASK_OFFS, 0);
+    cdsi_write(dev, CDSI0_CDSIRX_CSI2_VC3_SH_INT_MASK_OFFS, 0);
+    cdsi_write(dev, CDSI0_CDSIRX_CSI2_VC0_LN0_INT_MASK_OFFS, 0);
+    cdsi_write(dev, CDSI0_CDSIRX_CSI2_VC0_LN1_INT_MASK_OFFS, 0);
+    cdsi_write(dev, CDSI0_CDSIRX_CSI2_VC1_LN0_INT_MASK_OFFS, 0);
+    cdsi_write(dev, CDSI0_CDSIRX_CSI2_VC1_LN1_INT_MASK_OFFS, 0);
+    cdsi_write(dev, CDSI0_CDSIRX_CSI2_VC2_LN0_INT_MASK_OFFS, 0);
+    cdsi_write(dev, CDSI0_CDSIRX_CSI2_VC2_LN1_INT_MASK_OFFS, 0);
+    cdsi_write(dev, CDSI0_CDSIRX_CSI2_VC3_LN0_INT_MASK_OFFS, 0);
+    cdsi_write(dev, CDSI0_CDSIRX_CSI2_VC3_LN1_INT_MASK_OFFS, 0);
+    cdsi_write(dev, CDSI0_CDSIRX_DSI_LPTXTO_COUNT_OFFS, 0xffffffff);
+    cdsi_write(dev, CDSI0_CDSIRX_DSI_TATO_COUNT_OFFS, 0xffffffff);
+    cdsi_write(dev, CDSI0_CDSIRX_DSI_WAITBTA_COUNT_OFFS, 0x10000010);
 
     /* Wait for LPRX calibration to complete. */
     for (timeout = 50; timeout != 0; --timeout) {
@@ -292,8 +229,8 @@ int csi_rx_uninit(struct cdsi_dev *dev)
      * Disable CDSIRX and the RX bridge and verify that the bridge became
      * idle.
      */
-    cdsi_write(dev, CDSI0_CDSIRX_CLKEN_OFFS, CDSI0_CDSIRX_CLKDISABLE_VAL);
-    cdsi_write(dev, CDSI0_AL_RX_BRG_MODE_OFFS, CDSI0_AL_RX_BRG_DISABLE_VAL);
+    cdsi_write(dev, CDSI0_CDSIRX_CLKEN_OFFS, 0);
+    cdsi_write(dev, CDSI0_AL_RX_BRG_MODE_OFFS, 0);
 
     usleep(10);
 
@@ -331,7 +268,8 @@ int csi_rx_start(struct cdsi_dev *dev)
                CDSI0_CDSIRX_LPRX_STATE_INT_STAT_LINEINITDONE_MASK);
 
     /* Start CDSIRX */
-    cdsi_write(dev, CDSI0_CDSIRX_START_OFFS, CDSI0_CDSIRX_START_VAL);
+    cdsi_write(dev, CDSI0_CDSIRX_START_OFFS,
+               CDSI0_CDSIRX_START_CDSIRXSTART_MASK);
 
     /* Wait for line initialization to complete. */
     for (timeout = 50; timeout != 0; --timeout) {
@@ -431,9 +369,9 @@ int csi_rx_stop(struct cdsi_dev *dev)
         printf("cdsi: CDSIRX became idle (%u us)\n", timeout * 10);
 
     /* Stop CDSIRX and clear its internal state. */
-    cdsi_write(dev, CDSI0_CDSIRX_START_OFFS, CDSI0_CDSIRX_STOP);
+    cdsi_write(dev, CDSI0_CDSIRX_START_OFFS, 0);
     cdsi_write(dev, CDSI0_CDSIRX_SYSTEM_INIT_OFFS,
-               CDSI0_CDSIRX_SYSTEM_CLEAR_VAL);
+               CDSI0_CDSIRX_SYSTEM_INIT_SYSINIT_MASK);
 
     return 0;
 }
