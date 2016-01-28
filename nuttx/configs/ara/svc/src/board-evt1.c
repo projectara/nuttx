@@ -45,7 +45,6 @@
 #include <ara_debug.h>
 #include "ara_board.h"
 #include "interface.h"
-#include "tsb_switch_driver_es2.h"
 #include "stm32.h"
 
 #define HOLD_TIME_SW_CLK_US     10000
