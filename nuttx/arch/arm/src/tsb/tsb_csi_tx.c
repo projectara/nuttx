@@ -36,6 +36,8 @@
 #include <arch/tsb/cdsi0_reg_def.h>
 #include <arch/tsb/csi.h>
 
+#define CDSI_TX_START_TIMEOUT           10
+
 /**
  * @brief Set the registers in CSI controller to start transfer.
  * @param dev Pointer to the CDSI device
@@ -45,7 +47,8 @@
  */
 int csi_tx_start(struct cdsi_dev *dev, struct csi_tx_config *cfg)
 {
-    uint32_t rdata;
+    unsigned int timeout;
+    uint32_t val;
 
     /* Set to Tx mode for CDSI */
     cdsi_write(dev, CDSI0_AL_TX_BRG_CDSITX_MODE_OFFS,
@@ -308,20 +311,29 @@ int csi_tx_start(struct cdsi_dev *dev, struct csi_tx_config *cfg)
     cdsi_write(dev, CDSI0_CDSITX_SIDEBAND_CONFIG_14_OFFS, 0);
     cdsi_write(dev, CDSI0_CDSITX_SIDEBAND_CONFIG_15_OFFS, 6144);
 
+    /* Wait for PLL lock and D-PHY Vreg startup. */
+    for (timeout = CDSI_TX_START_TIMEOUT; timeout != 0; --timeout) {
+        const uint32_t mask = CDSI0_CDSITX_INTERRUPT_STATUS_00_INT_DPHY_LOCKUPDONE_MASK
+                            | CDSI0_CDSITX_INTERRUPT_STATUS_00_INT_DPHY_HSTXVREGRDY_MASK;
 
-    /* Wait PLL lockup time */
-    rdata = cdsi_read(dev, CDSI0_CDSITX_INTERRUPT_STATUS_00_OFFS);
-    while((rdata &
-           CDSI0_CDSITX_INTERRUPT_STATUS_00_INT_DPHY_LOCKUPDONE_MASK) == 0x0) {
-        rdata = cdsi_read(dev, CDSI0_CDSITX_INTERRUPT_STATUS_00_OFFS);
+        val = cdsi_read(dev, CDSI0_CDSITX_INTERRUPT_STATUS_00_OFFS);
+        if ((val & mask) == mask)
+            break;
+
+        usleep(10);
     }
 
-    /* Wait D-PHY Vreg startup */
-    while((rdata &
-           CDSI0_CDSITX_INTERRUPT_STATUS_00_INT_DPHY_HSTXVREGRDY_MASK) == 0x0) {
-        rdata = cdsi_read(dev, CDSI0_CDSITX_INTERRUPT_STATUS_00_OFFS);
+    if (timeout == 0) {
+        if (!(val & CDSI0_CDSITX_INTERRUPT_STATUS_00_INT_DPHY_LOCKUPDONE_MASK))
+            printf("cdsi: PLL lock timeout\n");
+        if (!(val & CDSI0_CDSITX_INTERRUPT_STATUS_00_INT_DPHY_HSTXVREGRDY_MASK))
+            printf("cdsi: D-PHY Vreg startup timeout\n");
+
+        return -ETIMEDOUT;
     }
 
+    printf("cdsi: PLL lock and D-PHY Vreg startup complete (%u us)\n",
+           (CDSI_TX_START_TIMEOUT - timeout) * 10);
 
     cdsi_write(dev, CDSI0_CDSITX_PISO_ENABLE_OFFS,
                CDSI0_CDSITX_PISO_ENABLE_SBS_DPHY_CLM_PISOEN_MASK |
@@ -338,12 +350,22 @@ int csi_tx_start(struct cdsi_dev *dev, struct csi_tx_config *cfg)
     cdsi_write(dev, CDSI0_CDSITX_SIDEBAND_INIT_CONTROL_03_OFFS,
                CDSI0_CDSITX_SIDEBAND_INIT_CONTROL_03_SBD_DPHY_STARTPPI_MASK);
 
-    /* Wait D-PHY line initialization */
-    while ((rdata &
-            CDSI0_CDSITX_INTERRUPT_STATUS_00_INT_DPHY_LINEINITDONE_MASK) ==
-           0x0) {
-        rdata = cdsi_read(dev, CDSI0_CDSITX_INTERRUPT_STATUS_00_OFFS);
+    /* Wait for D-PHY line initialization. */
+    for (timeout = CDSI_TX_START_TIMEOUT; timeout != 0; --timeout) {
+        val = cdsi_read(dev, CDSI0_CDSITX_INTERRUPT_STATUS_00_OFFS);
+        if (val & CDSI0_CDSITX_INTERRUPT_STATUS_00_INT_DPHY_LINEINITDONE_MASK)
+            break;
+
+        usleep(10);
     }
+
+    if (timeout == 0) {
+        printf("cdsi: D-PHY line initialization timeout\n");
+        return -ETIMEDOUT;
+    }
+
+    printf("cdsi: D-PHY line initialization complete (%u us)\n",
+           (CDSI_TX_START_TIMEOUT - timeout) * 10);
 
     /* Clear all interrupt statuses */
     cdsi_write(dev, CDSI0_CDSITX_INTERRUPT_STATUS_00_OFFS, 0xffffffff);
