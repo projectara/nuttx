@@ -344,9 +344,6 @@ int csi_tx_start(struct cdsi_dev *dev, struct csi_tx_config *cfg)
            0x0) {
         rdata = cdsi_read(dev, CDSI0_CDSITX_INTERRUPT_STATUS_00_OFFS);
     }
-    cdsi_write(dev, CDSI0_AL_RX_BRG_MODE_OFFS,
-               CDSI0_AL_RX_BRG_MODE_CSI2_MODE_MASK |
-               CDSI0_AL_RX_BRG_MODE_BRG_EN_MASK);
 
     /* Clear all interrupt statuses */
     cdsi_write(dev, CDSI0_CDSITX_INTERRUPT_STATUS_00_OFFS, 0xffffffff);
@@ -379,11 +376,6 @@ int csi_tx_start(struct cdsi_dev *dev, struct csi_tx_config *cfg)
                CDSI0_AL_TX_BRG_VPARAM_UPDATE_AL_TX_BRG_COM_UPDATE_EN_MASK);
     cdsi_write(dev, CDSI0_AL_TX_BRG_PIC_COM_START_OFFS,
                CDSI0_AL_TX_BRG_PIC_COM_START_AL_TX_BRG_REG_COM_START_A_MASK);
-
-    cdsi_write(dev, CDSI0_AL_RX_BRG_CSI_INFO_OFFS, 3);
-    cdsi_write(dev, CDSI0_AL_RX_BRG_CSI_DT0_OFFS,
-               (42 << CDSI0_AL_RX_BRG_CSI_DT0_CSI_DTYPE0_SHIFT) |
-               (1 << CDSI0_AL_RX_BRG_CSI_DT0_CSI_LINECOUNT0_SHIFT));
 
     return 0;
 }
