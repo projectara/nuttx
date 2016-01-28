@@ -142,6 +142,9 @@ int csi_tx_start(struct cdsi_dev *dev, struct csi_tx_config *cfg)
                CDSI0_CDSITX_INTERRUPT_FUNC_ENABLE_02_SBS_LINK_HS_TO_EN_MASK);
     cdsi_write(dev, CDSI0_CDSITX_INTERRUPT_FUNC_ENABLE_03_OFFS, 0);
 
+    cdsi_write(dev, CDSI0_CDSITX_INTERRUPT_MASK_00_OFFS, 0);
+    cdsi_write(dev, CDSI0_CDSITX_INTERRUPT_STATUS_00_OFFS, 0xffffffff);
+
     cdsi_write(dev, CDSI0_CDSITX_POWER_SW_OFFS,
                CDSI0_CDSITX_POWER_SW_SBD_DPHY_COM_EN_ZEMIPIV12_MASK |
                CDSI0_CDSITX_POWER_SW_SBD_DPHY_COM_V12PEN_MASK |
@@ -305,9 +308,6 @@ int csi_tx_start(struct cdsi_dev *dev, struct csi_tx_config *cfg)
     cdsi_write(dev, CDSI0_CDSITX_SIDEBAND_CONFIG_14_OFFS, 0);
     cdsi_write(dev, CDSI0_CDSITX_SIDEBAND_CONFIG_15_OFFS, 6144);
 
-    rdata = cdsi_read(dev, CDSI0_CDSITX_INTERRUPT_MASK_00_OFFS);
-    cdsi_write(dev, CDSI0_CDSITX_INTERRUPT_MASK_00_OFFS,
-               rdata & ~CDSI0_CDSITX_INTERRUPT_MASK_00_INT_MASK_DPHY_LOCKUPDONE_MASK);
 
     /* Wait PLL lockup time */
     rdata = cdsi_read(dev, CDSI0_CDSITX_INTERRUPT_STATUS_00_OFFS);
@@ -322,9 +322,6 @@ int csi_tx_start(struct cdsi_dev *dev, struct csi_tx_config *cfg)
         rdata = cdsi_read(dev, CDSI0_CDSITX_INTERRUPT_STATUS_00_OFFS);
     }
 
-    cdsi_write(dev, CDSI0_CDSITX_INTERRUPT_STATUS_00_OFFS,
-               CDSI0_CDSITX_INTERRUPT_STATUS_00_INT_DPHY_LOCKUPDONE_MASK |
-               CDSI0_CDSITX_INTERRUPT_STATUS_00_INT_DPHY_HSTXVREGRDY_MASK);
 
     cdsi_write(dev, CDSI0_CDSITX_PISO_ENABLE_OFFS,
                CDSI0_CDSITX_PISO_ENABLE_SBS_DPHY_CLM_PISOEN_MASK |
@@ -338,14 +335,6 @@ int csi_tx_start(struct cdsi_dev *dev, struct csi_tx_config *cfg)
                CDSI0_CDSITX_SIDEBAND_INIT_CONTROL_01_SBD_DPHY_MPM_PLLINTCKEN_MASK);
     cdsi_write(dev, CDSI0_CDSITX_SIDEBAND_INIT_CONTROL_02_OFFS,
                CDSI0_CDSITX_SIDEBAND_INIT_CONTROL_02_SBD_DPHY_HSTXCLKENABLE_MASK);
-
-    cdsi_write(dev, CDSI0_CDSITX_INTERRUPT_STATUS_00_OFFS,
-               CDSI0_CDSITX_INTERRUPT_STATUS_00_INT_DPHY_LINEINITDONE_MASK);
-    rdata = cdsi_read(dev, CDSI0_CDSITX_INTERRUPT_MASK_00_OFFS);
-    cdsi_write(dev, CDSI0_CDSITX_INTERRUPT_MASK_00_OFFS,
-               rdata & ~CDSI0_CDSITX_INTERRUPT_MASK_00_INT_MASK_DPHY_LINEINITDONE_MASK);
-    rdata = cdsi_read(dev, CDSI0_CDSITX_INTERRUPT_STATUS_00_OFFS);
-
     cdsi_write(dev, CDSI0_CDSITX_SIDEBAND_INIT_CONTROL_03_OFFS,
                CDSI0_CDSITX_SIDEBAND_INIT_CONTROL_03_SBD_DPHY_STARTPPI_MASK);
 
@@ -355,8 +344,6 @@ int csi_tx_start(struct cdsi_dev *dev, struct csi_tx_config *cfg)
            0x0) {
         rdata = cdsi_read(dev, CDSI0_CDSITX_INTERRUPT_STATUS_00_OFFS);
     }
-    cdsi_write(dev, CDSI0_CDSITX_INTERRUPT_STATUS_00_OFFS,
-               CDSI0_CDSITX_INTERRUPT_STATUS_00_INT_DPHY_LINEINITDONE_MASK);
     cdsi_write(dev, CDSI0_AL_RX_BRG_MODE_OFFS,
                CDSI0_AL_RX_BRG_MODE_CSI2_MODE_MASK |
                CDSI0_AL_RX_BRG_MODE_BRG_EN_MASK);
