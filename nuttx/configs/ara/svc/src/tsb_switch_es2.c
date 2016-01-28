@@ -47,12 +47,18 @@
 #include "stm32.h"
 #include <ara_debug.h>
 #include "tsb_switch.h"
-#include "tsb_switch_driver_es2.h"
 #include "tsb_switch_event.h"
 #include "tsb_es2_mphy_fixups.h"
 
 #define SWITCH_SPI_INIT_DELAY   (700)   // us
 
+/* Max NULL frames to wait for a reply from the switch */
+#define ES2_SWITCH_WAIT_REPLY_LEN   (16)
+/* Write status reply length */
+#define ES2_SWITCH_WRITE_STATUS_LEN (11)
+/* Total number of NULLs to clock out to ensure a write status is read */
+#define ES2_SWITCH_WRITE_STATUS_NNULL (ES2_SWITCH_WAIT_REPLY_LEN + \
+                                       ES2_SWITCH_WRITE_STATUS_LEN)
 
 /* This is provided to apply port-dependent M-PHY fixups, in case a
  * later switch increases SWITCH_UNIPORT_MAX */
@@ -237,23 +243,23 @@ static int es2_write(struct tsb_switch *sw,
     SPI_SNDBLOCK(spi_dev, tx_buf, tx_size);
     SPI_SNDBLOCK(spi_dev, write_trailer, sizeof write_trailer);
     // Wait write status, send NULL frames while waiting
-    SPI_EXCHANGE(spi_dev, NULL, rxbuf, SWITCH_WRITE_STATUS_NNULL);
+    SPI_EXCHANGE(spi_dev, NULL, rxbuf, ES2_SWITCH_WRITE_STATUS_NNULL);
 
     dbg_insane("Write payload:\n");
     dbg_print_buf(ARADBG_INSANE, tx_buf, tx_size);
     dbg_insane("Write status:\n");
-    dbg_print_buf(ARADBG_INSANE, rxbuf, SWITCH_WRITE_STATUS_NNULL);
+    dbg_print_buf(ARADBG_INSANE, rxbuf, ES2_SWITCH_WRITE_STATUS_NNULL);
 
     // Make sure we use 16-bit frames
     size = sizeof write_header + tx_size + sizeof write_trailer
-           + SWITCH_WRITE_STATUS_NNULL;
+           + ES2_SWITCH_WRITE_STATUS_NNULL;
     if (size % 2) {
         SPI_SEND(spi_dev, LNUL);
     }
 
     // Parse the write status and bail on error.
     ret = _switch_transfer_check_write_status(rxbuf,
-                                              SWITCH_WRITE_STATUS_NNULL);
+                                              ES2_SWITCH_WRITE_STATUS_NNULL);
     if (ret) {
         goto out;
     }
@@ -290,7 +296,7 @@ static int es2_read(struct tsb_switch *sw,
     // Read CNF and retry if NACK received
     do {
         // Read the CNF
-        size = SWITCH_WAIT_REPLY_LEN + rx_size + sizeof read_header;
+        size = ES2_SWITCH_WAIT_REPLY_LEN + rx_size + sizeof read_header;
         SPI_SNDBLOCK(spi_dev, read_header, sizeof read_header);
         SPI_EXCHANGE(spi_dev, NULL, rxbuf, size - sizeof read_header);
         /* Make sure we use 16-bit frames */
@@ -595,13 +601,13 @@ int es2_init_seq(struct tsb_switch *sw)
 
     SPI_SEND(spi_dev, INIT);
     SPI_SEND(spi_dev, INIT);
-    SPI_EXCHANGE(spi_dev, NULL, rxbuf, SWITCH_WAIT_REPLY_LEN);
+    SPI_EXCHANGE(spi_dev, NULL, rxbuf, ES2_SWITCH_WAIT_REPLY_LEN);
 
     dbg_insane("Init RX Data:\n");
-    dbg_print_buf(ARADBG_INSANE, rxbuf, SWITCH_WAIT_REPLY_LEN);
+    dbg_print_buf(ARADBG_INSANE, rxbuf, ES2_SWITCH_WAIT_REPLY_LEN);
 
     // Check for the transition from INIT to LNUL after sending INITs
-    for (i = 0; i < SWITCH_WAIT_REPLY_LEN - 1; i++) {
+    for (i = 0; i < ES2_SWITCH_WAIT_REPLY_LEN - 1; i++) {
         if (!memcmp(rxbuf + i, init_reply, sizeof(init_reply)))
             rc = 0;
     }
