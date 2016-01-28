@@ -41,12 +41,5 @@
 #define SWITCH_WRITE_STATUS_NNULL (SWITCH_WAIT_REPLY_LEN + \
                                    SWITCH_WRITE_STATUS_LEN)
 
-/* Routing table: MaskId table helpers */
-#define SET_VALID_ENTRY(entry) \
-    id_mask[15 - ((entry) / 8)] |= (1 << ((entry)) % 8)
-#define SET_INVALID_ENTRY(entry) \
-    id_mask[15 - ((entry) / 8)] &= ~(1 << ((entry)) % 8)
-#define CHECK_VALID_ENTRY(entry) \
-    (id_mask[15 - ((entry) / 8)] & (1 << ((entry)) % 8))
 
 #endif

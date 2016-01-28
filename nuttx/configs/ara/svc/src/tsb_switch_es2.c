@@ -890,6 +890,18 @@ static void es2_dev_id_mask_get_req(struct tsb_switch *sw,
     *req_size = sizeof(dev_id_mask_get);
 }
 
+static void es2_set_valid_entry(uint8_t *table, int entry, bool valid) {
+    if (valid) {
+        table[15 - ((entry) / 8)] |= (1 << ((entry)) % 8);
+    } else {
+        table[15 - ((entry) / 8)] &= ~(1 << ((entry)) % 8);
+    }
+}
+
+static bool es2_check_valid_entry(uint8_t *table, int entry) {
+    return table[15 - ((entry) / 8)] & (1 << ((entry)) % 8);
+}
+
  /**
  * @brief Update the valid device bitmask for device_id on port_id
  */
@@ -907,11 +919,7 @@ static int es2_set_valid_device(struct tsb_switch *sw,
         return rc;
     }
 
-    if (valid) {
-        SET_VALID_ENTRY(device_id);
-    } else {
-        SET_INVALID_ENTRY(device_id);
-    }
+    es2_set_valid_entry(id_mask, device_id, valid);
 
     rc = switch_dev_id_mask_set(sw, port_id, id_mask);
     if (rc) {
@@ -944,7 +952,7 @@ static int es2_dump_routing_table(struct tsb_switch *sw) {
         for (i = 0; i < 8; i++) {
             for (j = 0; j < 16; j++) {
                 devid = i * 16 + j;
-                if (CHECK_VALID_ENTRY(devid)) {
+                if (es2_check_valid_entry(id_mask, devid)) {
                     switch_lut_get(sw, unipro_portid, devid, &p);
                     dbg_info(" [%2u,%2u] -> %2u\n", unipro_portid, devid, p);
                }
