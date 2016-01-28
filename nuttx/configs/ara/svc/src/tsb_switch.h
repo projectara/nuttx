@@ -218,6 +218,16 @@
 #define RT_STATUS_WDT_A_TC1                 (1 << 5)
 #define RT_WDT_WDT_COUNT                    ((1 << 24) - 1)
 
+/* SPI framing bytes */
+#define LNUL        (0x00)
+#define STRW        (0x01)
+#define STRR        (0x02)
+#define SRPT        (0x03)
+#define NACK        (0x04)
+#define ENDP        (0x06)
+#define INIT        (0x08)
+#define HNUL        (0xff)
+
 /*
  * @brief Switch QoS cycle rate is 166 MHz.  Convert back and forth.
  */
@@ -768,7 +778,8 @@ int switch_data_send(struct tsb_switch *sw, void *data, size_t len);
 int tsb_switch_es2_init(struct tsb_switch *, struct spi_dev_s *spi_dev);
 void tsb_switch_es2_exit(struct tsb_switch *);
 
-/* Internal SPI select routine. */
+/* Internal SPI communication helpers. */
 void _switch_spi_select(struct tsb_switch *sw, int select);
+int _switch_transfer_check_write_status(uint8_t *status_block, size_t size);
 
 #endif

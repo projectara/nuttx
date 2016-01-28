@@ -35,6 +35,7 @@
 #include <nuttx/config.h>
 #include <nuttx/arch.h>
 #include <nuttx/unipro/unipro.h>
+#include <arch/byteorder.h>
 #include <errno.h>
 #include <string.h>
 #include <sys/wait.h>
@@ -77,13 +78,22 @@
 #define CPORT_DEFAULT_T_PROTOCOLID         0
 #define CPORT_DEFAULT_TSB_MAXSEGMENTCONFIG 0x118
 
+/* Switch write status */
+#define WSTATUS0_TXENTFIFOREMAIN_MASK  (0x03)
+#define WSTATUS1_TXENTFIFOREMAIN_MASK  (0xff)
+#define WSTATUS2_TXDATAFIFOREMAIN_MASK (0x7f)
+#define WSTATUS3_LENERR_MASK           (0x40)
+#define WSTATUS3_TXENTFIFOFULL_MASK    (0x02)
+#define WSTATUS3_TXDATAFIFOFULL_MASK   (0x01)
+
 extern int _switch_internal_set_id(struct tsb_switch *,
                                    uint8_t, uint8_t, uint8_t, uint8_t);
 
 
 /*
- * Actual SPI select routine
+ * Common internal switch communication helpers
  */
+
 void _switch_spi_select(struct tsb_switch *sw, int select) {
     /*
      * SW-472: The STM32 SPI peripheral does not delay until the last
@@ -96,6 +106,96 @@ void _switch_spi_select(struct tsb_switch *sw, int select) {
 
     /* Set the GPIO low to select and high to de-select */
     stm32_gpiowrite(sw->pdata->spi_cs, !select);
+}
+
+int _switch_transfer_check_write_status(uint8_t *status_block, size_t size)
+{
+    size_t i;
+    struct __attribute__((__packed__)) write_status {
+        uint8_t strw;
+        uint8_t cport;
+        uint16_t len;
+        uint8_t status[4];
+        uint8_t endp;
+    };
+    struct write_status *w_status;
+    uint16_t tx_ent_remain;
+    uint8_t tx_data_remain;
+    int len_err, tx_ent_full, tx_data_full;
+
+    /*
+     * Find the status report within the block.
+     */
+    for (i = 0; i < size; i++) {
+        switch (status_block[i]) {
+        case STRW:
+            w_status = (struct write_status*)&status_block[i];
+            goto block_found;
+        case HNUL: /* fall through */
+        case LNUL:
+            continue;
+        default:
+            dbg_error("%s: invalid byte 0x%x in status block\n",
+                      __func__, status_block[i]);
+            dbg_print_buf(ARADBG_ERROR, status_block, size);
+            return -EPROTO;
+        }
+    }
+    dbg_error("%s: no STRW found in write status block:\n", __func__);
+    dbg_print_buf(ARADBG_ERROR, status_block, size);
+    return -EPROTO;
+
+ block_found:
+    /*
+     * Sanity check the header and footer.
+     */
+    if (be16_to_cpu(w_status->len) != sizeof(w_status->status)) {
+        dbg_error("%s: unexpected write status length %u (expected %u)\n",
+                  __func__, be16_to_cpu(w_status->len),
+                  (unsigned int)sizeof(w_status->status));
+        return -EPROTO;
+    } else if (w_status->endp != ENDP) {
+        dbg_error("%s: unexpected write status byte 0x%02x in ENDP position (expected 0x02%x)\n",
+                  __func__, w_status->endp, ENDP);
+        return -EPROTO;
+    }
+
+    /*
+     * Parse the status report itself.
+     */
+    tx_ent_remain =
+        (((w_status->status[0] & WSTATUS0_TXENTFIFOREMAIN_MASK) << 8) |
+         (w_status->status[1] & WSTATUS1_TXENTFIFOREMAIN_MASK));
+    tx_data_remain = (w_status->status[2] & WSTATUS2_TXDATAFIFOREMAIN_MASK) *
+                     8;
+    len_err = !!(w_status->status[3] & WSTATUS3_LENERR_MASK);
+    tx_ent_full = !!(w_status->status[3] & WSTATUS3_TXENTFIFOFULL_MASK);
+    tx_data_full = !!(w_status->status[3] & WSTATUS3_TXDATAFIFOFULL_MASK);
+    if (tx_ent_remain == 0 && !tx_ent_full) {
+        dbg_error("%s: TXENTFIFOREMAIN=0, but TXENTFIFOFULL is not set.\n",
+                  __func__);
+        return -EPROTO;
+    }
+    if (tx_data_remain == 0 && !tx_data_full) {
+        dbg_error("%s: TXDATAFIFOREMAIN=0, but TXDATAFIFOFULL is not set.\n",
+                  __func__);
+        return -EPROTO;
+    }
+    if (len_err) {
+        dbg_error("%s: payload length error.\n", __func__);
+        return -EIO;
+    }
+    if (tx_ent_full) {
+        dbg_warn("%s: TX entry FIFO is full; write data was discarded.\n",
+                 __func__);
+        return -EAGAIN;
+    }
+    if (tx_data_full) {
+        dbg_warn("%s: TX data FIFO is full; write data was discarded.\n",
+                 __func__);
+        return -EAGAIN;
+    }
+    return 0;
 }
 
 
