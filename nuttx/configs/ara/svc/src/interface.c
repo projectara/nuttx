@@ -40,6 +40,7 @@
 #include <time.h>
 #include <sys/time.h>
 #include <errno.h>
+#include <pthread.h>
 
 #include <ara_debug.h>
 #include "interface.h"
@@ -952,17 +953,22 @@ void interface_forcibly_eject_all(uint32_t delay)
 
 int interface_forcibly_eject(struct interface *ifc, uint32_t delay)
 {
+    static pthread_mutex_t eject_lock = PTHREAD_MUTEX_INITIALIZER;
     uint8_t gpio = ifc->release_gpio;
 
     if (!ifc->ejectable) {
         return -ENOTTY;
     }
 
+    pthread_mutex_lock(&eject_lock);
+
     dbg_info("Module %s ejecting: using gpio 0x%02X\n", ifc->name, gpio);
 
     gpio_set_value(gpio, 1);
     usleep(delay * 1000);
     gpio_set_value(gpio, 0);
+
+    pthread_mutex_unlock(&eject_lock);
 
     return 0;
 }
