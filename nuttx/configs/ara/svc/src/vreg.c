@@ -118,10 +118,10 @@ int vreg_get(struct vreg *vreg) {
             gpio_set_value(vreg->vregs[i].gpio, vreg->vregs[i].active_high);
             up_udelay(vreg->vregs[i].hold_time);
         }
-    }
 
-    /* Update state */
-    atomic_init(&vreg->power_state, VREG_PWR_UP);
+        /* Update state */
+        atomic_init(&vreg->power_state, VREG_PWR_UP);
+    }
 
     return 0;
 }
