@@ -57,7 +57,7 @@ int vreg_config(struct vreg *vreg) {
     /* If no name was supplied, supply one */
     if (!vreg->name)
         vreg->name = "(unnamed)";
-    dbg_verbose("%s %s\n", __func__, vreg->name);
+    dbg_verbose("%s: %s vreg\n", __func__, vreg->name);
 
     /*
      * If there is no vreg control, do nothing.
@@ -96,7 +96,7 @@ int vreg_get(struct vreg *vreg) {
         return -ENODEV;
     }
 
-    dbg_verbose("%s %s\n", __func__, vreg->name);
+    dbg_verbose("%s: %s vreg\n", __func__, vreg->name);
 
     /*
      * If there is no vreg control, do nothing.
@@ -138,7 +138,7 @@ int vreg_put(struct vreg *vreg) {
         return -ENODEV;
     }
 
-    dbg_verbose("%s %s\n", __func__, vreg->name);
+    dbg_verbose("%s: %s vreg\n", __func__, vreg->name);
 
     /*
      * If there is no vreg control, do nothing.
