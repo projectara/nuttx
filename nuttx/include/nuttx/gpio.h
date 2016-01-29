@@ -125,7 +125,7 @@ int gpio_set_debounce(uint8_t which, uint16_t delay);
 /**
  * @brief Set the internal pull resistor for a GPIO input line
  * @param which The number of the GPIO line
- * @param pull_type /ref GPIO_PULL_TYPE
+ * @param pull_type The type of internal pull resistor
  * @return 0 on success, !=0 on failure
  */
 int gpio_set_pull(uint8_t which, enum gpio_pull_type pull_type);
@@ -133,7 +133,7 @@ int gpio_set_pull(uint8_t which, enum gpio_pull_type pull_type);
 /**
  * @brief Get the current internal pull configuration for a GPIO input line
  * @param which The number of the GPIO line
- * @return /ref GPIO_PULL_TYPE
+ * @return The type of the internal pull resistor
  */
 enum gpio_pull_type gpio_get_pull(uint8_t which);
 
