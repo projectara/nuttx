@@ -80,7 +80,7 @@ int vreg_config(struct vreg *vreg) {
 
 out:
     atomic_init(&vreg->use_count, 0);
-    atomic_init(&vreg->power_state, VREG_PWR_DOWN);
+    vreg->power_enabled = false;
 
     return 0;
 }
@@ -120,7 +120,7 @@ int vreg_get(struct vreg *vreg) {
         }
 
         /* Update state */
-        atomic_init(&vreg->power_state, VREG_PWR_UP);
+        vreg->power_enabled = true;
     }
 
     return 0;
@@ -164,7 +164,7 @@ int vreg_put(struct vreg *vreg) {
         }
 
         /* Update state */
-        atomic_init(&vreg->power_state, VREG_PWR_DOWN);
+        vreg->power_enabled = false;
     }
 
     return 0;

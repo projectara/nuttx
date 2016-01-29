@@ -286,7 +286,7 @@ static void dumpstate_vreg(struct vreg *vreg)
     }
 
     printf("\t\tnr_vregs=%u\n", vreg->nr_vregs);
-    printf("\t\tpower_state=%d\n", vreg->power_state);
+    printf("\t\tpower_enabled=%s\n", vreg->power_enabled ? "true" : "false");
     printf("\t\tuse_count=%u\n", atomic_get(&vreg->use_count));
     for (i = 0; i < vreg->nr_vregs; i++) {
         printf("\t\tvregs[%d]: gpio %u, hold_time %u, active_high %u, def_val %u\n",
