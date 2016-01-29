@@ -113,6 +113,20 @@ static inline uint8_t *cport_to_rxbuf(struct sw_es2_priv *priv, unsigned int cpo
     return NULL;
 }
 
+static void es2_set_valid_entry(struct tsb_switch *sw,
+                                uint8_t *table, int entry, bool valid) {
+    if (valid) {
+        table[15 - ((entry) / 8)] |= (1 << ((entry)) % 8);
+    } else {
+        table[15 - ((entry) / 8)] &= ~(1 << ((entry)) % 8);
+    }
+}
+
+static bool es2_check_valid_entry(struct tsb_switch *sw,
+                                  uint8_t *table, int entry) {
+    return table[15 - ((entry) / 8)] & (1 << ((entry)) % 8);
+}
+
 /* 19 bytes for entire report (7+12) and max 16 bytes of delay */
 #define SRPT_SIZE           (19 + 16)
 #define SRPT_REPORT_SIZE    (12)
@@ -894,20 +908,6 @@ static void es2_dev_id_mask_get_req(struct tsb_switch *sw,
     DEBUGASSERT(*req_size >= sizeof(dev_id_mask_get));
     memcpy(req, dev_id_mask_get, sizeof(dev_id_mask_get));
     *req_size = sizeof(dev_id_mask_get);
-}
-
-static void es2_set_valid_entry(struct tsb_switch *sw,
-                                uint8_t *table, int entry, bool valid) {
-    if (valid) {
-        table[15 - ((entry) / 8)] |= (1 << ((entry)) % 8);
-    } else {
-        table[15 - ((entry) / 8)] &= ~(1 << ((entry)) % 8);
-    }
-}
-
-static bool es2_check_valid_entry(struct tsb_switch *sw,
-                                  uint8_t *table, int entry) {
-    return table[15 - ((entry) / 8)] & (1 << ((entry)) % 8);
 }
 
 static void es2_switch_id_set_req(struct tsb_switch *sw,
