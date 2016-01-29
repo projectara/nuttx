@@ -312,6 +312,9 @@ void unipro_rxbuf_free(unsigned int cportid, void *ptr);
 #define N_TC0TXMAXSDUSIZE 0x3020
 #define N_TC1TXMAXSDUSIZE 0x3021
 
+/* Max device ID value */
+#define N_MAXDEVICEID     127
+
 /*
  * L4 attributes
  */
