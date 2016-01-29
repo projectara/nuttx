@@ -904,7 +904,8 @@ static void es2_set_valid_entry(uint8_t *table, int entry, bool valid) {
     }
 }
 
-static bool es2_check_valid_entry(uint8_t *table, int entry) {
+static bool es2_check_valid_entry(struct tsb_switch *sw,
+                                  uint8_t *table, int entry) {
     return table[15 - ((entry) / 8)] & (1 << ((entry)) % 8);
 }
 
@@ -934,41 +935,6 @@ static int es2_set_valid_device(struct tsb_switch *sw,
     }
 
     return rc;
-}
-
-/**
- * @brief Dump routing table to low level console
- */
-static int es2_dump_routing_table(struct tsb_switch *sw) {
-    int i, j, devid, unipro_portid;
-    uint8_t p = 0, id_mask[16];
-
-    dbg_info("======================================================\n");
-    dbg_info("Routing table:\n");
-    dbg_info(" [Port,DevId] -> [Port]\n");
-
-    for (unipro_portid = 0; unipro_portid <= SWITCH_PORT_ID; unipro_portid++) {
-        if (switch_dev_id_mask_get(sw, unipro_portid, id_mask)) {
-            dbg_error("%s() Failed to retrieve routing table.\n", __func__);
-            return -1;
-        }
-        dbg_insane("%s(): Mask ID %d\n", __func__, unipro_portid);
-        dbg_print_buf(ARADBG_INSANE, id_mask, sizeof(id_mask));
-
-        for (i = 0; i < 8; i++) {
-            for (j = 0; j < 16; j++) {
-                devid = i * 16 + j;
-                if (es2_check_valid_entry(id_mask, devid)) {
-                    switch_lut_get(sw, unipro_portid, devid, &p);
-                    dbg_info(" [%2u,%2u] -> %2u\n", unipro_portid, devid, p);
-               }
-            }
-        }
-    }
-
-    dbg_info("======================================================\n");
-
-    return 0;
 }
 
 static void es2_switch_id_set_req(struct tsb_switch *sw,
@@ -1050,12 +1016,12 @@ static struct tsb_switch_ops es2_ops = {
     .dev_id_mask_set_req   = es2_dev_id_mask_set_req,
 
     .set_valid_device      = es2_set_valid_device,
-    .dump_routing_table    = es2_dump_routing_table,
 
     .switch_data_send      = es2_data_send,
 
     .__irq_fifo_rx         = es2_irq_fifo_rx,
     .__ncp_transfer        = es2_ncp_transfer,
+    .__check_valid_entry   = es2_check_valid_entry,
 };
 
 int tsb_switch_es2_init(struct tsb_switch *sw, struct spi_dev_s *spi_dev)

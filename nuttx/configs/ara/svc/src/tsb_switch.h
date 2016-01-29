@@ -383,7 +383,6 @@ struct tsb_switch_ops {
                             uint8_t port_id,
                             uint8_t device_id,
                             bool valid);
-    int (*dump_routing_table)(struct tsb_switch*);
     int (*switch_data_send)(struct tsb_switch *, void *, size_t);
 
     /*
@@ -396,6 +395,8 @@ struct tsb_switch_ops {
                           uint8_t *tx_buf, size_t tx_size,
                           uint8_t *rx_buf, size_t rx_size);
     int (*__irq_fifo_rx)(struct tsb_switch *sw, unsigned int spi_fifo);
+    bool (*__check_valid_entry)(struct tsb_switch *sw,
+                                uint8_t *table, int entry);
 };
 
 struct tsb_switch {

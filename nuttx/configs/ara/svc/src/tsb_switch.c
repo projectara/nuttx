@@ -284,11 +284,42 @@ int switch_set_valid_device(struct tsb_switch *sw,
     return sw->ops->set_valid_device(sw, port_id, device_id, valid);
 }
 
+static bool check_valid_entry(struct tsb_switch *sw,
+                              uint8_t *table, int entry) {
+    DEBUGASSERT(sw->ops->__check_valid_entry);
+    return sw->ops->__check_valid_entry(sw, table, entry);
+}
+
+/**
+ * @brief Log the UniPro switch's routing table
+ */
 int switch_dump_routing_table(struct tsb_switch *sw) {
-    if (!sw->ops->dump_routing_table) {
-        return -EOPNOTSUPP;
+    int devid, unipro_portid;
+    uint8_t p = 0, id_mask[sw->rdata->dev_id_mask_size];
+
+    dbg_info("======================================================\n");
+    dbg_info("Routing table:\n");
+    dbg_info(" [Port,DevId] -> [Port]\n");
+
+    for (unipro_portid = 0; unipro_portid <= SWITCH_PORT_ID; unipro_portid++) {
+        if (switch_dev_id_mask_get(sw, unipro_portid, id_mask)) {
+            dbg_error("%s() Failed to retrieve routing table.\n", __func__);
+            return -1;
+        }
+        dbg_insane("%s(): Mask ID %d\n", __func__, unipro_portid);
+        dbg_print_buf(ARADBG_INSANE, id_mask, sizeof(id_mask));
+
+        for (devid = 0; devid < N_MAXDEVICEID; devid++) {
+            if (check_valid_entry(sw, id_mask, devid)) {
+                switch_lut_get(sw, unipro_portid, devid, &p);
+                dbg_info(" [%2u,%2u] -> %2u\n", unipro_portid, devid, p);
+            }
+        }
     }
-    return sw->ops->dump_routing_table(sw);
+
+    dbg_info("======================================================\n");
+
+    return 0;
 }
 
 int switch_enable_test_traffic(struct tsb_switch *sw,
