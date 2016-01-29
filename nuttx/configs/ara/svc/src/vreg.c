@@ -169,16 +169,3 @@ int vreg_put(struct vreg *vreg) {
 
     return 0;
 }
-
-/**
- * @brief Get vreg power supply state
- * @param vreg Regulator whose power state to retrieve
- * @return vreg's power state, or VREG_PWR_ERROR if vreg == NULL.
- */
-enum vreg_pwr_state vreg_get_pwr_state(struct vreg *vreg) {
-    if (!vreg) {
-        return VREG_PWR_ERROR;
-    }
-
-    return atomic_get(&vreg->power_state);
-}

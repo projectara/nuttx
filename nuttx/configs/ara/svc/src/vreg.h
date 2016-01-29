@@ -55,7 +55,6 @@ struct vreg_data {
 
 /* Regulator power state */
 enum vreg_pwr_state {
-    VREG_PWR_ERROR = -1,
     VREG_PWR_DOWN = 0,
     VREG_PWR_UP = 1,
 };
@@ -72,7 +71,6 @@ struct vreg {
 int vreg_config(struct vreg *);
 int vreg_get(struct vreg *);
 int vreg_put(struct vreg *);
-enum vreg_pwr_state vreg_get_pwr_state(struct vreg *);
 
 /*
  * Macro magic.
