@@ -379,10 +379,6 @@ struct tsb_switch_ops {
                                 uint8_t *mask,
                                 uint8_t *req, size_t *req_size);
 
-    int (*set_valid_device)(struct tsb_switch *sw,
-                            uint8_t port_id,
-                            uint8_t device_id,
-                            bool valid);
     int (*switch_data_send)(struct tsb_switch *, void *, size_t);
 
     /*
@@ -395,6 +391,8 @@ struct tsb_switch_ops {
                           uint8_t *tx_buf, size_t tx_size,
                           uint8_t *rx_buf, size_t rx_size);
     int (*__irq_fifo_rx)(struct tsb_switch *sw, unsigned int spi_fifo);
+    void (*__set_valid_entry)(struct tsb_switch *sw,
+                              uint8_t *table, int entry, bool valid);
     bool (*__check_valid_entry)(struct tsb_switch *sw,
                                 uint8_t *table, int entry);
 };

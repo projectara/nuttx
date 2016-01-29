@@ -274,14 +274,34 @@ int switch_enable_port(struct tsb_switch *sw,
     return sw->ops->enable_port(sw, portid);
 }
 
+static void set_valid_entry(struct tsb_switch *sw,
+                            uint8_t *table, int entry, bool valid) {
+    DEBUGASSERT(sw->ops->__set_valid_entry);
+    sw->ops->__set_valid_entry(sw, table, entry, valid);
+}
+
 int switch_set_valid_device(struct tsb_switch *sw,
                             uint8_t port_id,
                             uint8_t device_id,
                             bool valid) {
-    if (!sw->ops->set_valid_device) {
-        return -EOPNOTSUPP;
+    uint8_t id_mask[sw->rdata->dev_id_mask_size];
+    int rc;
+
+    rc = switch_dev_id_mask_get(sw, port_id, id_mask);
+    if (rc) {
+        dbg_error("Failed to get valid device bitmask for port %u\n", port_id);
+        return rc;
     }
-    return sw->ops->set_valid_device(sw, port_id, device_id, valid);
+
+    set_valid_entry(sw, id_mask, device_id, valid);
+
+    rc = switch_dev_id_mask_set(sw, port_id, id_mask);
+    if (rc) {
+        dbg_error("Failed to set valid device bitmask for port %u\n", port_id);
+        return rc;
+    }
+
+    return rc;
 }
 
 static bool check_valid_entry(struct tsb_switch *sw,

@@ -896,7 +896,8 @@ static void es2_dev_id_mask_get_req(struct tsb_switch *sw,
     *req_size = sizeof(dev_id_mask_get);
 }
 
-static void es2_set_valid_entry(uint8_t *table, int entry, bool valid) {
+static void es2_set_valid_entry(struct tsb_switch *sw,
+                                uint8_t *table, int entry, bool valid) {
     if (valid) {
         table[15 - ((entry) / 8)] |= (1 << ((entry)) % 8);
     } else {
@@ -907,34 +908,6 @@ static void es2_set_valid_entry(uint8_t *table, int entry, bool valid) {
 static bool es2_check_valid_entry(struct tsb_switch *sw,
                                   uint8_t *table, int entry) {
     return table[15 - ((entry) / 8)] & (1 << ((entry)) % 8);
-}
-
- /**
- * @brief Update the valid device bitmask for device_id on port_id
- */
-static int es2_set_valid_device(struct tsb_switch *sw,
-                                uint8_t port_id,
-                                uint8_t device_id,
-                                bool valid)
-{
-    uint8_t id_mask[16];
-    int rc;
-
-    rc = switch_dev_id_mask_get(sw, port_id, id_mask);
-    if (rc) {
-        dbg_error("Failed to get valid device bitmask for port %u\n", port_id);
-        return rc;
-    }
-
-    es2_set_valid_entry(id_mask, device_id, valid);
-
-    rc = switch_dev_id_mask_set(sw, port_id, id_mask);
-    if (rc) {
-        dbg_error("Failed to set valid device bitmask for port %u\n", port_id);
-        return rc;
-    }
-
-    return rc;
 }
 
 static void es2_switch_id_set_req(struct tsb_switch *sw,
@@ -1015,12 +988,11 @@ static struct tsb_switch_ops es2_ops = {
     .dev_id_mask_get_req   = es2_dev_id_mask_get_req,
     .dev_id_mask_set_req   = es2_dev_id_mask_set_req,
 
-    .set_valid_device      = es2_set_valid_device,
-
     .switch_data_send      = es2_data_send,
 
     .__irq_fifo_rx         = es2_irq_fifo_rx,
     .__ncp_transfer        = es2_ncp_transfer,
+    .__set_valid_entry     = es2_set_valid_entry,
     .__check_valid_entry   = es2_check_valid_entry,
 };
 
