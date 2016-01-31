@@ -51,6 +51,7 @@ config DRIVERS_ARA_AUDIO_RT5647
 	bool "Realtek ALC5647 Audio Codec Support"
 	depends on DRIVERS_ARA_AUDIO_BOARD
 	select DRIVERS_ARA_AUDIO_CODEC
+	select ARCH_CHIP_DEVICE_I2C
 	default n
 	---help---
 		Select to enable Greybus audio support using the
@@ -60,6 +61,7 @@ config DRIVERS_ARA_AUDIO_NXP9890
 	bool "NXP TFA9890A Audio Codec Support (Skeleton)"
 	depends on DRIVERS_ARA_AUDIO_BOARD
 	select DRIVERS_ARA_AUDIO_CODEC
+	select ARCH_CHIP_DEVICE_I2C
 	default n
 	---help---
 		Select to enable Greybus audio support using the
