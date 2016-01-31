@@ -103,6 +103,7 @@ CNTXTDIRS += etm
 CNTXTDIRS += gb_loopback
 CNTXTDIRS += gb-tape
 CNTXTDIRS += gpio
+CNTXTDIRS += i2c
 CNTXTDIRS += i2s
 CNTXTDIRS += pm
 CNTXTDIRS += pwm

@@ -107,6 +107,10 @@ ifeq ($(CONFIG_ARA_GPIO),y)
 CONFIGURED_APPS += ara/gpio
 endif
 
+ifeq ($(CONFIG_ARA_I2C),y)
+CONFIGURED_APPS += ara/i2c
+endif
+
 ifeq ($(CONFIG_ARA_SVC_ARAPM),y)
 CONFIGURED_APPS += ara/arapm
 endif
