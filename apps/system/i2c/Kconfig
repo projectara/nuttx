@@ -7,7 +7,7 @@
 config SYSTEM_I2CTOOL
 	bool "I2C tool"
 	default n
-	depends on I2C
+	depends on ARCH_BOARD_ARA_SVC && I2C
 	---help---
 		Enable support for the I2C tool.
 
