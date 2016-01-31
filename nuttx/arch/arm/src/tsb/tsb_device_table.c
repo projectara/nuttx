@@ -31,6 +31,7 @@
 #include <nuttx/util.h>
 #include <nuttx/device.h>
 #include <nuttx/device_table.h>
+#include <nuttx/device_i2c.h>
 #include <nuttx/device_pll.h>
 #include <nuttx/device_i2s.h>
 #include <nuttx/device_pwm.h>
@@ -52,6 +53,23 @@
 #include "debug.h"
 #include "tsb_pwm.h"
 #include "tsb_scm.h"
+
+#ifdef CONFIG_ARCH_CHIP_DEVICE_I2C
+static struct device_resource tsb_i2c_resources[] = {
+    {
+        .name   = "i2c_base",
+        .type   = DEVICE_RESOURCE_TYPE_REG,
+        .start  = I2C_BASE,
+        .count  = 1,
+    },
+    {
+        .name   = "i2cintr",
+        .type   = DEVICE_RESOURCE_TYPE_IRQ,
+        .start  = TSB_IRQ_I2C,
+        .count  = 1,
+    },
+};
+#endif
 
 #ifdef CONFIG_ARCH_CHIP_DEVICE_PLL
 #define TSB_PLLA_CG_BRIDGE_OFFSET    0x900
@@ -223,6 +241,16 @@ static struct device_resource tsb_sdio_resources[] = {
 #endif
 
 static struct device tsb_devices[] = {
+#ifdef CONFIG_ARCH_CHIP_DEVICE_I2C
+    {
+        .type           = DEVICE_TYPE_I2C_HW,
+        .name           = "tsb_i2c",
+        .desc           = "TSB I2C Controller",
+        .id             = 0,
+        .resources      = tsb_i2c_resources,
+        .resource_count = ARRAY_SIZE(tsb_i2c_resources),
+    },
+#endif
 #ifdef CONFIG_ARCH_CHIP_DEVICE_UART
     {
         .type           = DEVICE_TYPE_UART_HW,
@@ -254,7 +282,6 @@ static struct device tsb_devices[] = {
     },
 #endif
 #endif
-
 #ifdef CONFIG_ARCH_CHIP_DEVICE_PLL
     {
         .type           = DEVICE_TYPE_PLL_HW,

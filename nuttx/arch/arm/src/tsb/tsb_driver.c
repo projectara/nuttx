@@ -30,6 +30,7 @@
 
 #include <nuttx/device.h>
 
+extern struct device_driver tsb_i2c_driver;
 #ifdef CONFIG_ARCH_CHIP_DEVICE_GDMAC
 extern struct device_driver tsb_dma_driver;
 #ifdef CONFIG_ARCH_UNIPROTX_USE_DMA
@@ -47,6 +48,10 @@ extern struct device_driver tsb_sdio_driver;
 
 void tsb_driver_register(void)
 {
+#ifdef CONFIG_ARCH_CHIP_DEVICE_I2C
+    device_register_driver(&tsb_i2c_driver);
+#endif
+
 #ifdef CONFIG_ARCH_CHIP_DEVICE_GDMAC
     device_register_driver(&tsb_dma_driver);
 #ifdef CONFIG_ARCH_UNIPROTX_USE_DMA

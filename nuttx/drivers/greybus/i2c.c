@@ -31,14 +31,23 @@
 #include <stdlib.h>
 
 #include <arch/byteorder.h>
-#include <nuttx/i2c.h>
+#include <nuttx/device.h>
+#include <nuttx/device_i2c.h>
 #include <nuttx/greybus/greybus.h>
 #include <nuttx/greybus/debug.h>
 
 #include "i2c-gb.h"
 
-/* TODO move it inside a struct */
-struct i2c_dev_s *i2c_dev = NULL;
+/** Greybus I2C internal data structure */
+struct gb_i2c_info {
+    uint16_t        cport;      /**< assigned CPort number */
+    struct device   *dev;       /**< opened device driver handler */
+    char            *dev_type;  /**< device type for this device */
+    uint16_t        dev_id;     /**< Id for device in device table */
+};
+
+/** A instance of struct gb_i2c_info for internal usage */
+static struct gb_i2c_info *i2c_info = NULL;
 
 static uint8_t gb_i2c_protocol_version(struct gb_operation *operation)
 {
@@ -92,7 +101,9 @@ static uint8_t gb_i2c_protocol_transfer(struct gb_operation *operation)
     uint8_t *write_data;
     bool read_op;
     int read_count = 0;
-    struct i2c_msg_s *msg;
+
+    struct device_i2c_request *requests;
+
     struct gb_i2c_transfer_desc *desc;
     struct gb_i2c_transfer_req *request;
     struct gb_i2c_transfer_rsp *response;
@@ -125,8 +136,8 @@ static uint8_t gb_i2c_protocol_transfer(struct gb_operation *operation)
         return GB_OP_NO_MEMORY;
     }
 
-    msg = malloc(sizeof(struct i2c_msg_s) * op_count);
-    if (!msg) {
+    requests = malloc(sizeof(struct device_i2c_request) * op_count);
+    if (!requests) {
         return GB_OP_NO_MEMORY;
     }
 
@@ -134,32 +145,56 @@ static uint8_t gb_i2c_protocol_transfer(struct gb_operation *operation)
         desc = &request->desc[i];
         read_op = (le16_to_cpu(desc->flags) & GB_I2C_M_RD) ? true : false;
 
-        msg[i].flags = 0;
-        msg[i].addr = le16_to_cpu(desc->addr);
-        msg[i].length = le16_to_cpu(desc->size);
+        requests[i].flags = 0;
+        requests[i].addr = le16_to_cpu(desc->addr);
+        requests[i].length = le16_to_cpu(desc->size);
 
         if (read_op) {
-            msg[i].flags |= GB_I2C_M_RD;
-            msg[i].buffer = &response->data[read_count];
+            requests[i].flags |= GB_I2C_M_RD;
+            requests[i].buffer = &response->data[read_count];
             read_count += le16_to_cpu(desc->size);
         } else {
-            msg[i].buffer = write_data;
+            requests[i].buffer = write_data;
             write_data += le16_to_cpu(desc->size);
         }
     }
 
-    ret = I2C_TRANSFER(i2c_dev, msg, op_count);
+    ret = device_i2c_transfer(i2c_info->dev, requests, op_count);
 
-    free(msg);
+    free(requests);
 
     return gb_errno_to_op_result(ret);
 }
 
 static int gb_i2c_init(unsigned int cport)
 {
-    if (!i2c_dev)
-        i2c_dev = up_i2cinitialize(0);
+    i2c_info = zalloc(sizeof(*i2c_info));
+    if (!i2c_info) {
+        return -ENOMEM;
+    }
+
+    i2c_info->cport = cport;
+    i2c_info->dev_type = DEVICE_TYPE_I2C_HW;
+    i2c_info->dev_id = 0;
+
+    i2c_info->dev = device_open(i2c_info->dev_type, i2c_info->dev_id);
+    if (!i2c_info->dev) {
+        free(i2c_info);
+        gb_info("%s(): failed to open device!\n", __func__);
+        return -EIO;
+    }
+
     return 0;
+}
+
+static void gb_i2c_exit(unsigned int cport)
+{
+    if (i2c_info->dev) {
+        device_close(i2c_info->dev);
+    }
+
+    free(i2c_info);
+    i2c_info = NULL;
 }
 
 static struct gb_operation_handler gb_i2c_handlers[] = {
@@ -172,6 +207,7 @@ static struct gb_operation_handler gb_i2c_handlers[] = {
 
 static struct gb_driver gb_i2c_driver = {
     .init = gb_i2c_init,
+    .exit = gb_i2c_exit,
     .op_handlers = gb_i2c_handlers,
     .op_handlers_count = ARRAY_SIZE(gb_i2c_handlers),
 };
@@ -181,16 +217,3 @@ void gb_i2c_register(int cport)
     gb_register_driver(cport, &gb_i2c_driver);
 }
 
-int gb_i2c_set_dev(struct i2c_dev_s *dev)
-{
-    if (!i2c_dev)
-        i2c_dev = dev;
-    else
-        return -EBUSY;
-    return 0;
-}
-
-struct i2c_dev_s *gb_i2c_get_dev(void)
-{
-    return i2c_dev;
-}

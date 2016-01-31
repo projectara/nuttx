@@ -35,7 +35,8 @@
 #include <nuttx/util.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/wqueue.h>
-#include <nuttx/i2c.h>
+#include <nuttx/device.h>
+#include <nuttx/device_i2c.h>
 #include <nuttx/list.h>
 #include <nuttx/device_audio_board.h>
 #include <nuttx/ara/codec.h>
@@ -148,7 +149,7 @@ struct nxp9890_info {
     /** Driver model representation of the device */
     struct device *dev;
     /** i2c device handle */
-    struct i2c_dev_s *i2c;
+    struct device *i2c;
     /** codec name */
     uint8_t name[AUDIO_CODEC_NAME_MAX];
     /** device state */
@@ -376,7 +377,7 @@ static uint32_t nxp9890_codec_hw_read(uint32_t reg, uint32_t *value)
     /* nxp9890 i2c read format :
      * [SA + W] + [DA] + [SA + R] + [DATA_HIGH] + [DATA_LOW]
      */
-    struct i2c_msg_s msg[] = {
+    struct device_i2c_request msg[] = {
         {
             .addr = NXP9890_I2C_ADDR,
             .flags = 0,
@@ -385,7 +386,7 @@ static uint32_t nxp9890_codec_hw_read(uint32_t reg, uint32_t *value)
         },
         {
             .addr = NXP9890_I2C_ADDR,
-            .flags = I2C_M_READ,
+            .flags = I2C_FLAG_READ,
             .buffer = (uint8_t*)&data,
             .length = 2,
         }
@@ -402,7 +403,7 @@ static uint32_t nxp9890_codec_hw_read(uint32_t reg, uint32_t *value)
 
     cmd = (uint8_t)reg;
 
-    if (I2C_TRANSFER(info->i2c, msg, 2)) {
+    if (device_i2c_transfer(info->i2c, msg, 2)) {
         return -EIO;
     }
 
@@ -430,7 +431,7 @@ static uint32_t nxp9890_codec_hw_write(uint32_t reg, uint32_t value)
      * [SA + W] + [DA] + [DATA_HIGH] + [DATA_LOW]
      */
 
-    struct i2c_msg_s msg[] = {
+    struct device_i2c_request msg[] = {
         {
             .addr = NXP9890_I2C_ADDR,
             .flags = 0,
@@ -452,7 +453,7 @@ static uint32_t nxp9890_codec_hw_write(uint32_t reg, uint32_t value)
     cmd[1] = (uint8_t)((value >> 8) & 0xFF);
     cmd[2] = (uint8_t)(value & 0xFF);
 
-    if (I2C_TRANSFER(info->i2c, msg, 1)) {
+    if (device_i2c_transfer(info->i2c, msg, 1)) {
         return -EIO;
     }
 
@@ -1570,7 +1571,7 @@ static int nxp9890_codec_probe(struct device *dev)
     info->tdm_en = 1;
 
     /* initialize i2c bus */
-    info->i2c = up_i2cinitialize(0);
+    info->i2c = device_open(DEVICE_TYPE_I2C_HW, 0);
 
     if (!info->i2c) {
         free(info);
@@ -1652,7 +1653,7 @@ static void nxp9890_codec_remove(struct device *dev)
     }
 
     if (info->i2c) {
-        up_i2cuninitialize(info->i2c);
+        device_close(info->i2c);
         info->i2c = NULL;
     }
 

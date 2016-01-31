@@ -35,7 +35,8 @@
 #include <nuttx/util.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/wqueue.h>
-#include <nuttx/i2c.h>
+#include <nuttx/device.h>
+#include <nuttx/device_i2c.h>
 #include <nuttx/list.h>
 #include <nuttx/device_audio_board.h>
 #include <nuttx/ara/audio_board.h>
@@ -546,7 +547,7 @@ struct rt5647_info {
     /** Driver model representation of the device */
     struct device *dev;
     /** i2c device handle */
-    struct i2c_dev_s *i2c;
+    struct device *i2c;
     /** i2c slave address (7-bits) */
     uint8_t i2c_addr;
     /** codec name */
@@ -1167,14 +1168,14 @@ static uint32_t rt5647_codec_hw_read(uint32_t reg, uint32_t *value)
      * rt5647 i2c read format :
      * [SA + W] + [DA] + [SA + R] + [DATA_HIGH] + [DATA_LOW]
      */
-    struct i2c_msg_s msg[] = {
+    struct device_i2c_request msg[] = {
         {
             .flags = 0,
             .buffer = &cmd,
             .length = 1,
         },
         {
-            .flags = I2C_M_READ,
+            .flags = I2C_FLAG_READ,
             .buffer = (uint8_t*)&data,
             .length = 2,
         }
@@ -1194,7 +1195,7 @@ static uint32_t rt5647_codec_hw_read(uint32_t reg, uint32_t *value)
 
     cmd = (uint8_t)reg;
 
-    if (I2C_TRANSFER(info->i2c, msg, 2)) {
+    if (device_i2c_transfer(info->i2c, msg, 2)) {
         return -EIO;
     }
 
@@ -1221,7 +1222,7 @@ static uint32_t rt5647_codec_hw_write(uint32_t reg, uint32_t value)
      * [SA + W] + [DA] + [DATA_HIGH] + [DATA_LOW]
      */
 
-    struct i2c_msg_s msg[] = {
+    struct device_i2c_request msg[] = {
         {
             .flags = 0,
             .buffer = cmd,
@@ -1244,7 +1245,7 @@ static uint32_t rt5647_codec_hw_write(uint32_t reg, uint32_t value)
     cmd[1] = (uint8_t)((value >> 8) & 0xFF);
     cmd[2] = (uint8_t)(value & 0xFF);
 
-    if (I2C_TRANSFER(info->i2c, msg, 1)) {
+    if (device_i2c_transfer(info->i2c, msg, 1)) {
         return -EIO;
     }
 
@@ -2568,7 +2569,7 @@ static int rt5647_codec_probe(struct device *dev)
     info->tdm_en = 1;
 
     /* initialize i2c bus */
-    info->i2c = up_i2cinitialize(0);
+    info->i2c = device_open(DEVICE_TYPE_I2C_HW, 0);
     if (!info->i2c) {
         free(info);
         return -EIO;
@@ -2662,7 +2663,7 @@ static void rt5647_codec_remove(struct device *dev)
     }
 
     if (info->i2c) {
-        up_i2cuninitialize(info->i2c);
+        device_close(info->i2c);
         info->i2c = NULL;
     }
 
