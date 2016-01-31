@@ -198,6 +198,7 @@ endif # GPIO
 
 menuconfig I2C
 	bool "I2C Driver Support"
+	depends on ARCH_BOARD_ARA_SVC
 	default n
 	---help---
 		This selection enables building of the "upper-half" I2C driver.
