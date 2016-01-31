@@ -2605,7 +2605,7 @@ struct tsb_switch *switch_init(struct tsb_switch_data *pdata) {
         goto error;
     }
 
-    /* Configure the SPI1 bus in Mode0, 8bits, 13MHz clock */
+    /* Configure the SPI bus in Mode0, 8bits, 13MHz clock */
     SPI_SETMODE(spi_dev, SPIDEV_MODE0);
     SPI_SETBITS(spi_dev, 8);
     SPI_SETFREQUENCY(spi_dev, SWITCH_SPI_FREQUENCY);
