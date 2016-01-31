@@ -485,7 +485,6 @@ struct tsb_switch_ops {
 struct tsb_switch {
     void                    *priv;
     struct tsb_switch_ops   *ops;
-    struct vreg             *vreg;
     struct tsb_switch_data  *pdata;
     struct tsb_rev_data     *rdata;
     struct spi_dev_s        *spi_dev;
