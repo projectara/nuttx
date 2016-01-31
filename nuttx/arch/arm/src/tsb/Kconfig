@@ -135,6 +135,16 @@ config ARCH_CHIP_TSB_I2S
 
 endchoice
 
+config ARCH_CHIP_DEVICE_I2C
+	bool "I2C Master Support"
+	default n
+	select I2C
+	select I2C_TRANSFER
+	---help---
+		TSB I2C Master Driver
+
+if ARCH_CHIP_DEVICE_I2C
+
 choice
 	prompt "Toshiba I2C connection speed"
 	default TSB_I2C_SPEED_FAST
@@ -150,6 +160,8 @@ config TSB_I2C_SPEED_SLOW
 	bool "I2C controller speed slow"
 
 endchoice
+
+endif
 
 config ARCH_CHIP_USB_COMMON
 	bool
