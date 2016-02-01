@@ -44,10 +44,8 @@
 
 #include <arch/byteorder.h>
 
-#include "stm32.h"
 #include <ara_debug.h>
 #include "tsb_switch.h"
-#include "tsb_switch_event.h"
 #include "tsb_es2_mphy_fixups.h"
 
 #define SWITCH_SPI_INIT_DELAY   (700)   // us
