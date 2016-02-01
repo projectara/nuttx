@@ -66,11 +66,6 @@
 #define ES2_DEV_ID_MASK_SIZE 16
 /* 16-byte max delay + 5-byte header + 272-byte max payload + 2-byte footer */
 #define ES2_CPORT_RX_MAX_SIZE        (16 + 5 + 272 + 2)
-#define ES2_CPORT_NCP_MAX_PAYLOAD    (256)
-#define ES2_CPORT_DATA_MAX_PAYLOAD   (272)
-/* CPorts maximum FIFO data size */
-#define ES2_CPORT_NCP_FIFO_SIZE      (256)
-#define ES2_CPORT_DATA_FIFO_SIZE     (576)
 
 struct es2_cport {
     pthread_mutex_t lock;
@@ -167,12 +162,12 @@ static int es2_read_status(struct tsb_switch *sw,
 
         switch (cport) {
         case CPORT_NCP:
-            fifo_max_size = ES2_CPORT_NCP_FIFO_SIZE;
+            fifo_max_size = SWITCH_CPORT_NCP_FIFO_SIZE;
             break;
         case CPORT_DATA4:
         case CPORT_DATA5:
         default:
-            fifo_max_size = ES2_CPORT_DATA_FIFO_SIZE;
+            fifo_max_size = SWITCH_CPORT_DATA_FIFO_SIZE;
             break;
         }
 
@@ -210,7 +205,7 @@ static int es2_write(struct tsb_switch *sw,
 
     switch (cportid) {
     case CPORT_NCP:
-        if (tx_size >= ES2_CPORT_NCP_MAX_PAYLOAD) {
+        if (tx_size >= SWITCH_CPORT_NCP_MAX_PAYLOAD) {
             return -ENOMEM;
         }
         break;
@@ -225,7 +220,7 @@ static int es2_write(struct tsb_switch *sw,
         }
 
         /* messages greater than one fifo's worth are not supported */
-        if (tx_size >= ES2_CPORT_DATA_MAX_PAYLOAD) {
+        if (tx_size >= SWITCH_CPORT_DATA_MAX_PAYLOAD) {
             return -EINVAL;
         }
 

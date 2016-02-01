@@ -228,6 +228,13 @@
 #define INIT        (0x08)
 #define HNUL        (0xff)
 
+/* Switch payload size parameters */
+#define SWITCH_CPORT_NCP_MAX_PAYLOAD    (256)
+#define SWITCH_CPORT_DATA_MAX_PAYLOAD   (272)
+#define SWITCH_CPORT_NCP_FIFO_SIZE      (256)
+#define SWITCH_CPORT_DATA_FIFO_SIZE     (576)
+
+
 /*
  * @brief Switch QoS cycle rate is 166 MHz.  Convert back and forth.
  */
