@@ -45,6 +45,8 @@
 #define ES3_SWITCH_NCP_READ_DATA_LEN   (5)
 /* Write status reply length */
 #define ES3_SWITCH_WRITE_STATUS_LEN    (9)
+/* Returned session data header/trailer: 4 bytes header + END */
+#define SWITCH_DATA_READ_LEN           (5)
 /* Total number of NULLs to clock out to ensure a write status is read */
 #define ES3_SWITCH_WRITE_STATUS_NNULL  (ES3_SWITCH_WAIT_REPLY_LEN + \
                                         ES3_SWITCH_WRITE_STATUS_LEN)
@@ -325,8 +327,290 @@ done:
     return rc;
 }
 
-static int es3_irq_fifo_rx(struct tsb_switch *sw, unsigned int cportid) { /* FIXME */
-    return -1;
+/* Status report data size */
+#define SRPT_REPORT_SIZE             (12)
+/* Status report total size: 7 bytes header + data + Switch reply delay */
+#define SRPT_SIZE                   (7 + SRPT_REPORT_SIZE + \
+                                     ES3_SWITCH_WAIT_REPLY_LEN)
+
+struct __attribute__ ((__packed__)) srpt_read_status_report {
+    unsigned char raw[SRPT_REPORT_SIZE];
+    size_t rx_fifo_size; // number of bytes available in the rx buffer
+    size_t tx_fifo_size; // bytes available for enqueue in the tx buffer
+};
+
+/**
+ * @brief retrieve the state of the cport spi fifo.
+ */
+static int es3_read_status(struct tsb_switch *sw,
+                           unsigned int cport,
+                           struct srpt_read_status_report *status) {
+    struct sw_es3_priv *priv = sw->priv;
+    struct spi_dev_s *spi_dev = sw->spi_dev;
+    unsigned int offset;
+    struct srpt_read_status_report *rpt = NULL;
+    uint8_t *rxbuf = fifo_to_rxbuf(priv, cport);
+
+    const char srpt_cmd[] = {SRPT, cport, 0, 0, ENDP};
+    const char srpt_report_header[] = {SRPT, cport, 0x00, 0xC};
+
+    _switch_spi_select(sw, true);
+
+    SPI_SNDBLOCK(spi_dev, srpt_cmd, sizeof srpt_cmd);
+    SPI_EXCHANGE(spi_dev, NULL, rxbuf, SRPT_SIZE);
+
+    /* Make sure we use 16-bit frames */
+    if ((sizeof srpt_cmd + SRPT_SIZE) & 0x1) {
+        SPI_SEND(spi_dev, LNUL);
+    }
+
+    _switch_spi_select(sw, false);
+
+    /* Find the header */
+    for (offset = 0; offset < (SRPT_SIZE - SRPT_REPORT_SIZE); offset++) {
+        if (!memcmp(srpt_report_header,
+                    &rxbuf[offset],
+                    sizeof srpt_report_header)) {
+            /* Jump past the header */
+            rpt = (struct srpt_read_status_report *)
+                  &rxbuf[offset + sizeof srpt_report_header];
+            break;
+        }
+    }
+
+    if (!rpt) {
+        return -ENOMSG;
+    }
+
+    /* Fill in the report and parse useful fields */
+    if (status) {
+        size_t fifo_max_size;
+
+        memcpy(status, rpt, SRPT_REPORT_SIZE);
+
+        switch (cport) {
+        case SWITCH_FIFO_NCP:
+            fifo_max_size = SWITCH_CPORT_NCP_FIFO_SIZE;
+            break;
+        case SWITCH_FIFO_DATA4:
+        case SWITCH_FIFO_DATA5:
+        default:
+            fifo_max_size = SWITCH_CPORT_DATA_FIFO_SIZE;
+            break;
+        }
+
+        status->tx_fifo_size = rpt->raw[7] * 8;
+        status->rx_fifo_size = fifo_max_size -
+                               ((rpt->raw[10] << 8) | rpt->raw[11]);
+    }
+
+    return 0;
+}
+
+static int es3_session_write(struct tsb_switch *sw,
+                             uint8_t cportid,
+                             uint8_t *tx_buf,
+                             size_t tx_size) {
+    struct sw_es3_priv *priv = sw->priv;
+    struct spi_dev_s *spi_dev = sw->spi_dev;
+    struct srpt_read_status_report rpt;
+    uint8_t *rxbuf = fifo_to_rxbuf(priv, cportid);
+    unsigned int size;
+    int ret = OK;
+
+    uint8_t write_header[] = {
+        STRW,
+        cportid,
+        (tx_size & 0xFF00) >> 8,
+        (tx_size & 0xFF),
+    };
+
+    uint8_t write_trailer[] = {
+        ENDP,
+    };
+
+    /*
+     * Must read the fifo status for data to ensure there is enough space.
+     */
+    ret = es3_read_status(sw, cportid, &rpt);
+    if (ret) {
+        return ret;
+    }
+
+    /* messages greater than one fifo's worth are not supported */
+    if (tx_size >= SWITCH_CPORT_DATA_MAX_PAYLOAD) {
+        return -EINVAL;
+    }
+
+    if (tx_size >= rpt.tx_fifo_size) {
+        return -ENOMEM;
+    }
+
+    _switch_spi_select(sw, true);
+    /* Write */
+    SPI_SNDBLOCK(spi_dev, write_header, sizeof write_header);
+    SPI_SNDBLOCK(spi_dev, tx_buf, tx_size);
+    SPI_SNDBLOCK(spi_dev, write_trailer, sizeof write_trailer);
+
+    /* Wait write status, send NULL frames while waiting */
+    SPI_EXCHANGE(spi_dev, NULL, rxbuf, ES3_SWITCH_WRITE_STATUS_NNULL);
+
+    dbg_insane("Write payload:\n");
+    dbg_print_buf(ARADBG_INSANE, tx_buf, tx_size);
+    dbg_insane("Write status:\n");
+    dbg_print_buf(ARADBG_INSANE, rxbuf, ES3_SWITCH_WRITE_STATUS_NNULL);
+
+    /* Make sure we use 16-bit frames */
+    size = sizeof write_header + tx_size + sizeof write_trailer
+           + ES3_SWITCH_WRITE_STATUS_NNULL;
+    if (size & 1) {
+        SPI_SEND(spi_dev, LNUL);
+    }
+
+    /* Parse the write status and bail on error. */
+    ret = _switch_transfer_check_write_status(rxbuf,
+                                              ES3_SWITCH_WRITE_STATUS_NNULL);
+    if (ret) {
+        goto out;
+    }
+
+out:
+    _switch_spi_select(sw, false);
+    return ret;
+}
+
+static int es3_session_read(struct tsb_switch *sw,
+                            uint8_t cportid,
+                            uint8_t *rx_buf,
+                            size_t rx_size) {
+    struct sw_es3_priv *priv = sw->priv;
+    struct spi_dev_s *spi_dev = sw->spi_dev;
+    uint8_t *rxbuf = fifo_to_rxbuf(priv, cportid);
+    size_t size;
+    int rcv_done = 0;
+    bool null_rxbuf;
+    int ret = 0;
+
+    uint8_t read_header[] = {
+        STRR,
+        cportid,
+        0,      // LENM
+        0,      // LENL
+        ENDP,
+    };
+
+    _switch_spi_select(sw, true);
+
+    // Read CNF and retry if NACK received
+    do {
+        // Read the CNF
+        size = ES3_SWITCH_WAIT_REPLY_LEN + rx_size + SWITCH_DATA_READ_LEN;
+        SPI_SNDBLOCK(spi_dev, read_header, sizeof read_header);
+        SPI_EXCHANGE(spi_dev, NULL, rxbuf, size);
+        /* Make sure we use 16-bit frames */
+        if (size & 0x1) {
+            SPI_SEND(spi_dev, LNUL);
+        }
+
+        dbg_insane("RX Data:\n");
+        dbg_print_buf(ARADBG_INSANE, rxbuf, size);
+
+        if (!rx_buf) {
+            break;
+        }
+
+        /*
+         * Find the STRR and copy the response; handle other cases:
+         * NACK, switch not responding.
+         *
+         * In some cases (e.g. wrong function ID in the NCP command) the
+         * switch does respond on the command with all NULs.
+         * In that case bail out with error.
+         */
+        uint8_t *resp_start = NULL;
+        unsigned int i;
+        null_rxbuf = true;
+
+        for (i = 0; i < size; i++) {
+            // Detect an all-[LH]NULs RX buffer
+            if ((rxbuf[i] != LNUL) && (rxbuf[i] != HNUL)) {
+                null_rxbuf = false;
+            }
+            // Check for STRR or NACK
+            if (rxbuf[i] == STRR) {
+                // STRR found, parse the reply length and data
+                resp_start = &rxbuf[i];
+                size_t resp_len = resp_start[2] << 8 | resp_start[3];
+                memcpy(rx_buf, &resp_start[4], resp_len);
+                rcv_done = 1;
+                break;
+            } else if (rxbuf[i] == NACK) {
+                // NACK found, retry the CNF read
+                break;
+            }
+        }
+
+        // If all NULs in RX buffer, bail out with error code
+        if (null_rxbuf) {
+            ret = -EIO;
+            dbg_error("Switch not responding, aborting command\n");
+        }
+
+    } while (!rcv_done && !null_rxbuf);
+
+    _switch_spi_select(sw, false);
+
+    return ret;
+}
+
+static int es3_irq_fifo_rx(struct tsb_switch *sw, unsigned int cportid) {
+    struct sw_es3_priv *priv = sw->priv;
+    struct es3_cport *cport;
+    struct srpt_read_status_report rpt;
+    size_t len;
+    int rc;
+
+    switch (cportid) {
+    case SWITCH_FIFO_DATA4:
+        cport = &priv->data_cport4;
+        break;
+    case SWITCH_FIFO_DATA5:
+        cport = &priv->data_cport5;
+        break;
+    default:
+        return -EINVAL;
+    }
+
+    pthread_mutex_lock(&cport->lock);
+
+    rc = es3_read_status(sw, cportid, &rpt);
+    if (rc) {
+        rc = -EIO;
+        goto fill_done;
+    }
+    len = rpt.rx_fifo_size;
+
+    /*
+     * Drain the fifo data.
+     */
+    rc = es3_session_read(sw, cportid, cport->rxbuf, len);
+    if (rc) {
+        dbg_error("%s: read failed: %d\n", __func__, rc);
+        rc = -EIO;
+        goto fill_done;
+    }
+    dbg_print_buf(ARADBG_VERBOSE, cport->rxbuf, len);
+
+fill_done:
+    pthread_mutex_unlock(&cport->lock);
+    if (rc) {
+        return rc;
+    }
+
+    /* Give it to unipro. */
+    unipro_if_rx(cportid, cport->rxbuf, len);
+
+    return 0;
 }
 
 static uint8_t* es3_init_rxbuf(struct tsb_switch *sw) {
@@ -715,10 +999,25 @@ static void es3_switch_id_set_req(struct tsb_switch *sw,
 }
 
 /**
- * Send raw data down CPort 4
+ * Send raw data down CPort 4. We're only using this for the SVC
+ * connection, so fix the CPort number.
  */
-static int es3_data_send(struct tsb_switch *sw, void *data, size_t len) { /* FIXME */
-    return -1;
+static int es3_data_send(struct tsb_switch *sw, void *data, size_t len) {
+    struct sw_es3_priv *priv = sw->priv;
+    int rc;
+
+    pthread_mutex_lock(&priv->data_cport4.lock);
+
+    rc = es3_session_write(sw, SWITCH_FIFO_DATA4, data, len);
+    if (rc) {
+        dbg_error("%s() write failed: rc=%d\n", __func__, rc);
+        goto done;
+    }
+
+done:
+    pthread_mutex_unlock(&priv->data_cport4.lock);
+
+    return rc;
 }
 
 static struct tsb_rev_data es3_rev_data = {
