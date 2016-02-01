@@ -2621,6 +2621,11 @@ struct tsb_switch *switch_init(struct tsb_switch_data *pdata) {
             goto error;
         }
         break;
+    case SWITCH_REV_ES3:
+        if (tsb_switch_es3_init(sw, spi_dev)) {
+            goto error;
+        }
+        break;
     default:
         dbg_error("Unsupported switch revision: %u\n", sw->pdata->rev);
         goto error;
@@ -2728,6 +2733,8 @@ void switch_exit(struct tsb_switch *sw) {
     case SWITCH_REV_ES2:
         tsb_switch_es2_exit(sw);
         break;
+    case SWITCH_REV_ES3:
+        tsb_switch_es3_exit(sw);
     default:
         dbg_error("Unsupported switch revision: %u\n", sw->pdata->rev);
         break;
