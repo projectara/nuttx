@@ -95,6 +95,9 @@ extern int _switch_internal_set_id(struct tsb_switch *,
  */
 
 void _switch_spi_select(struct tsb_switch *sw, int select) {
+    if (select) {
+        SPI_LOCK(spi_dev, true);
+    }
     /*
      * SW-472: The STM32 SPI peripheral does not delay until the last
      * falling edge of SCK, instead dropping RXNE as soon as the rising
@@ -106,6 +109,9 @@ void _switch_spi_select(struct tsb_switch *sw, int select) {
 
     /* Set the GPIO low to select and high to de-select */
     stm32_gpiowrite(sw->pdata->spi_cs, !select);
+    if (!select) {
+        SPI_LOCK(spi_dev, false);
+    }
 }
 
 int _switch_transfer_check_write_status(uint8_t *status_block, size_t size)

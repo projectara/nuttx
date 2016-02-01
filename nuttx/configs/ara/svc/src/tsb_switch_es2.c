@@ -448,7 +448,6 @@ int es2_init_seq(struct tsb_switch *sw)
     int i, rc = -1;
 
     dbg_info("Initializing ES2 switch...\n");
-    SPI_LOCK(spi_dev, true);
     _switch_spi_select(sw, true);
 
     // Delay needed before the switch is ready on the SPI bus
@@ -468,7 +467,6 @@ int es2_init_seq(struct tsb_switch *sw)
     }
 
     _switch_spi_select(sw, false);
-    SPI_LOCK(spi_dev, false);
 
     if (rc) {
         dbg_error("%s: Failed to init the SPI link with the switch\n",
