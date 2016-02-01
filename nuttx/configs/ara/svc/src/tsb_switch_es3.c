@@ -120,167 +120,249 @@ static int es3_post_init_seq(struct tsb_switch *sw) { /* FIXME */
  * NCP command request helpers
  */
 
-static void es3_dme_set_req(struct tsb_switch *sw, /* FIXME */
+static void es3_dme_set_req(struct tsb_switch *sw,
                             uint8_t port_id,
                             uint16_t attrid,
                             uint16_t select_index,
                             uint32_t val,
                             uint8_t *req, size_t *req_size) {
     uint8_t set_req[] = {
-        /* FIXME, */
+        NCP_RESERVED,
+        port_id,
+        NCP_SETREQ,
+        (attrid >> 8),
+        (attrid & 0xff),
+        (select_index >> 8),
+        (select_index & 0xff),
+        ((val >> 24) & 0xff),
+        ((val >> 16) & 0xff),
+        ((val >> 8) & 0xff),
+        (val & 0xff)
     };
     DEBUGASSERT(*req_size >= sizeof(set_req));
     memcpy(req, set_req, sizeof(set_req));
     *req_size = sizeof(set_req);
 }
 
-static void es3_dme_get_req(struct tsb_switch *sw, /* FIXME */
+static void es3_dme_get_req(struct tsb_switch *sw,
                             uint8_t port_id,
                             uint16_t attrid,
                             uint16_t select_index,
                             uint8_t *req, size_t *req_size) {
     uint8_t get_req[] = {
-        /* FIXME, */
+        NCP_RESERVED,
+        port_id,
+        NCP_GETREQ,
+        (attrid >> 8),
+        (attrid & 0xff),
+        (select_index >> 8),
+        (select_index & 0xff),
     };
     DEBUGASSERT(*req_size >= sizeof(get_req));
     memcpy(req, get_req, sizeof(get_req));
     *req_size = sizeof(get_req);
 }
 
-static void es3_dme_peer_set_req(struct tsb_switch *sw, /* FIXME */
+static void es3_dme_peer_set_req(struct tsb_switch *sw,
                                  uint8_t port_id,
                                  uint16_t attrid,
                                  uint16_t select_index,
                                  uint32_t val,
                                  uint8_t *req, size_t *req_size) {
     uint8_t peer_set[] = {
-        /* FIXME, */
+        NCP_RESERVED,
+        port_id,
+        NCP_PEERSETREQ,
+        (attrid >> 8),
+        (attrid & 0xff),
+        (select_index >> 8),
+        (select_index & 0xff),
+        ((val >> 24) & 0xff),
+        ((val >> 16) & 0xff),
+        ((val >> 8) & 0xff),
+        (val & 0xff)
     };
     DEBUGASSERT(*req_size >= sizeof(peer_set));
     memcpy(req, peer_set, sizeof(peer_set));
     *req_size = sizeof(peer_set);
 }
 
-static void es3_dme_peer_get_req(struct tsb_switch *sw, /* FIXME */
+static void es3_dme_peer_get_req(struct tsb_switch *sw,
                                  uint8_t port_id,
                                  uint16_t attrid,
                                  uint16_t select_index,
                                  uint8_t *req, size_t *req_size) {
     uint8_t peer_get[] = {
-        /* FIXME, */
+        NCP_RESERVED,
+        port_id,
+        NCP_PEERGETREQ,
+        (attrid >> 8),
+        (attrid & 0xff),
+        (select_index >> 8),
+        (select_index & 0xff),
     };
     DEBUGASSERT(*req_size >= sizeof(peer_get));
     memcpy(req, peer_get, sizeof(peer_get));
     *req_size = sizeof(peer_get);
 }
 
-static void es3_lut_set_req(struct tsb_switch *sw, /* FIXME */
+static void es3_lut_set_req(struct tsb_switch *sw,
                             uint8_t unipro_portid,
                             uint8_t lut_address,
                             uint8_t dest_portid,
                             uint8_t *req, size_t *req_size) {
     uint8_t lut_set[] = {
-        /* FIXME, */
+        NCP_RESERVED,
+        NCP_RESERVED,
+        NCP_LUTSETREQ,
+        lut_address,
+        NCP_RESERVED,
+        NCP_RESERVED,
+        dest_portid
     };
     DEBUGASSERT(*req_size >= sizeof(lut_set));
     memcpy(req, lut_set, sizeof(lut_set));
     *req_size = sizeof(lut_set);
 }
 
-static void es3_lut_get_req(struct tsb_switch *sw, /* FIXME */
+static void es3_lut_get_req(struct tsb_switch *sw,
                             uint8_t unipro_portid,
                             uint8_t lut_address,
                             uint8_t *req, size_t *req_size) {
     uint8_t lut_get[] = {
-        /* FIXME, */
+        NCP_RESERVED,
+        NCP_RESERVED,
+        NCP_LUTGETREQ,
+        lut_address,
+        NCP_RESERVED,
     };
     DEBUGASSERT(*req_size >= sizeof(lut_get));
     memcpy(req, lut_get, sizeof(lut_get));
     *req_size = sizeof(lut_get);
 }
 
-static void es3_switch_attr_set_req(struct tsb_switch *sw, /* FIXME */
+static void es3_switch_attr_set_req(struct tsb_switch *sw,
                                     uint16_t attrid,
                                     uint32_t val,
                                     uint8_t *req, size_t *req_size) {
     uint8_t switch_attr_set[] = {
-        /* FIXME, */
+        NCP_RESERVED,
+        NCP_RESERVED,
+        NCP_SWITCHATTRSETREQ,
+        (attrid & 0xFF00) >> 8,
+        (attrid & 0xFF),
+        ((val >> 24) & 0xff),
+        ((val >> 16) & 0xff),
+        ((val >> 8) & 0xff),
+        (val & 0xff)
     };
     DEBUGASSERT(*req_size >= sizeof(switch_attr_set));
     memcpy(req, switch_attr_set, sizeof(switch_attr_set));
     *req_size = sizeof(switch_attr_set);
 }
 
-static void es3_switch_attr_get_req(struct tsb_switch *sw, /* FIXME */
+static void es3_switch_attr_get_req(struct tsb_switch *sw,
                                     uint16_t attrid,
                                     uint8_t *req, size_t *req_size) {
     uint8_t switch_attr_get[] = {
-        /* FIXME, */
+        NCP_RESERVED,
+        NCP_RESERVED,
+        NCP_SWITCHATTRGETREQ,
+        (attrid & 0xFF00) >> 8,
+        (attrid & 0xFF),
     };
     DEBUGASSERT(*req_size >= sizeof(switch_attr_get));
     memcpy(req, switch_attr_get, sizeof(switch_attr_get));
     *req_size = sizeof(switch_attr_get);
 }
 
-static void es3_sys_ctrl_set_req(struct tsb_switch *sw, /* FIXME */
+static void es3_sys_ctrl_set_req(struct tsb_switch *sw,
                                  uint16_t sc_addr,
                                  uint32_t val,
                                  uint8_t *req, size_t *req_size)
 {
     uint8_t sys_ctrl_set[] = {
-        /* FIXME, */
+        NCP_RESERVED,
+        NCP_RESERVED,
+        NCP_SYSCTRLSETREQ,
+        sc_addr >> 8,
+        sc_addr & 0xff,
+        val >> 24,
+        (val >> 16) & 0xff,
+        (val >> 8) & 0xff,
+        val & 0xff,
     };
     DEBUGASSERT(*req_size >= sizeof(sys_ctrl_set));
     memcpy(req, sys_ctrl_set, sizeof(sys_ctrl_set));
     *req_size = sizeof(sys_ctrl_set);
 }
 
-static void es3_sys_ctrl_get_req(struct tsb_switch *sw, /* FIXME */
+static void es3_sys_ctrl_get_req(struct tsb_switch *sw,
                                  uint16_t sc_addr,
                                  uint8_t *req, size_t *req_size)
 {
     uint8_t sys_ctrl_get[] = {
-        /* FIXME */
+        NCP_RESERVED,
+        NCP_RESERVED,
+        NCP_SYSCTRLGETREQ,
+        sc_addr >> 8,
+        sc_addr & 0xff,
     };
     DEBUGASSERT(*req_size >= sizeof(sys_ctrl_get));
     memcpy(req, sys_ctrl_get, sizeof(sys_ctrl_get));
     *req_size = sizeof(sys_ctrl_get);
 }
 
-static void es3_qos_attr_set_req(struct tsb_switch *sw, /* FIXME */
+static void es3_qos_attr_set_req(struct tsb_switch *sw,
                                  uint8_t  portid,
                                  uint8_t  attrid,
                                  uint32_t attr_val,
                                  uint8_t *req, size_t *req_size) {
     uint8_t qos_attr_set[] = {
-        /* FIXME */
+        NCP_RESERVED,
+        portid,
+        NCP_QOSATTRSETREQ,
+        NCP_RESERVED,
+        attrid,
+        (attr_val & 0xff000000) >> 24,
+        (attr_val & 0xff0000) >> 16,
+        (attr_val & 0xff00) >> 8,
+        (attr_val & 0xff) >> 0
     };
     DEBUGASSERT(*req_size >= sizeof(qos_attr_set));
     memcpy(req, qos_attr_set, sizeof(qos_attr_set));
     *req_size = sizeof(qos_attr_set);
 }
 
-static void es3_qos_attr_get_req(struct tsb_switch *sw, /* FIXME */
+static void es3_qos_attr_get_req(struct tsb_switch *sw,
                                  uint8_t portid,
                                  uint8_t attrid,
                                  uint8_t *req, size_t *req_size) {
     uint8_t qos_attr_get[] = {
-        /* FIXME */
+        NCP_RESERVED,
+        portid,
+        NCP_QOSATTRGETREQ,
+        NCP_RESERVED,
+        attrid
     };
     DEBUGASSERT(*req_size >= sizeof(qos_attr_get));
     memcpy(req, qos_attr_get, sizeof(qos_attr_get));
     *req_size = sizeof(qos_attr_get);
 }
 
-static void es3_dev_id_mask_set_req(struct tsb_switch *sw, /* FIXME */
+static void es3_dev_id_mask_set_req(struct tsb_switch *sw,
                                     uint8_t unipro_portid,
                                     uint8_t *mask,
                                     uint8_t *req, size_t *req_size) {
     struct __attribute__ ((__packed__)) {
-        uint8_t mask[ES3_DEST_VALID_MASK_SIZE];
-        /* FIXME */
+        uint8_t reserved;
+        uint8_t portid;
+        uint8_t function_id;
+        uint8_t mask[128];
     } dev_id_mask_set = {
-        /* FIXME */
+        NCP_RESERVED,
+        unipro_portid,
+        NCP_DESTVALIDSETREQ,
     };
     DEBUGASSERT(*req_size >= sizeof(dev_id_mask_set));
     memcpy(&dev_id_mask_set.mask, mask, sizeof(dev_id_mask_set.mask));
@@ -288,25 +370,35 @@ static void es3_dev_id_mask_set_req(struct tsb_switch *sw, /* FIXME */
     *req_size = sizeof(dev_id_mask_set);
 }
 
-static void es3_dev_id_mask_get_req(struct tsb_switch *sw, /* FIXME */
+static void es3_dev_id_mask_get_req(struct tsb_switch *sw,
                                     uint8_t unipro_portid,
                                     uint8_t *req, size_t *req_size) {
     uint8_t dev_id_mask_get[] = {
-        /* FIXME */
+        NCP_RESERVED,
+        unipro_portid,
+        NCP_DESTVALIDGETREQ,
     };
     DEBUGASSERT(*req_size >= sizeof(dev_id_mask_get));
     memcpy(req, dev_id_mask_get, sizeof(dev_id_mask_get));
     *req_size = sizeof(dev_id_mask_get);
 }
 
-static void es3_switch_id_set_req(struct tsb_switch *sw, /* FIXME */
+static void es3_switch_id_set_req(struct tsb_switch *sw,
                                   uint8_t cportid,
                                   uint8_t peer_cportid,
                                   uint8_t dis,
                                   uint8_t irt,
                                   uint8_t *req, size_t *req_size) {
     uint8_t switch_id_set[] = {
-        /* FIXME */
+        NCP_RESERVED,
+        (dis << 2) | (irt << 0),
+        NCP_SWITCHIDSETREQ,
+        SWITCH_DEVICE_ID,
+        cportid,            // L4 CPortID
+        SWITCH_DEVICE_ID,
+        peer_cportid,
+        NCP_RESERVED,
+        SWITCH_PORT_ID      // Source portID
     };
     DEBUGASSERT(*req_size >= sizeof(switch_id_set));
     memcpy(req, switch_id_set, sizeof(switch_id_set));

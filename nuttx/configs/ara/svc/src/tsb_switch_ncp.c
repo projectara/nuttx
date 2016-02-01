@@ -656,10 +656,17 @@ int switch_qos_attr_set(struct tsb_switch *sw,
         uint8_t reserved;
         uint8_t rc;
     };
+    struct __attribute__((packed)) es3_cnf {
+        uint8_t rc;
+        uint8_t function_id;
+        uint8_t portid;
+        uint8_t reserved;
+    };
     union {
         struct es2_cnf es2;
+        struct es3_cnf es3;
     } cnf;
-    size_t cnf_size = sizeof(cnf.es2);
+    size_t cnf_size = sizeof(cnf);
     uint8_t *cnf_portid;
     uint8_t *cnf_function_id;
     uint8_t *cnf_rc;
@@ -682,6 +689,11 @@ int switch_qos_attr_set(struct tsb_switch *sw,
         cnf_portid = &cnf.es2.portid;
         cnf_function_id = &cnf.es2.function_id;
         cnf_rc = &cnf.es2.rc;
+        break;
+    case SWITCH_REV_ES3:
+        cnf_portid = &cnf.es3.portid;
+        cnf_function_id = &cnf.es3.function_id;
+        cnf_rc = &cnf.es3.rc;
         break;
     default:
         dbg_error("%s: unsupported switch revision: %u\n",
