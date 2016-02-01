@@ -59,6 +59,44 @@
 /* 9-byte max delay + 4-byte header + 272-byte max payload + 1-byte footer */
 #define ES3_CPORT_RX_MAX_SIZE       (9 + 4 + 272 + 1)
 
+#define RTBITSEL                    (0x00BC)
+
+/* System registers, accessible via switch_sys_ctrl_set, switch_sys_ctrl_get */
+#define SC_SYSCLOCKENABLE           (0x0300)
+#define SC_SYSCLOCKDIV0             (0x0410)
+#define SC_SYSCLOCKDIV1             (0x0414)
+#define SC_SYSCLOCKDIV2             (0x0418)
+#define SC_LINKSTARTUPMODE          (0x0B00)
+#define SC_PMUSTANDBYSS             (0x0C00)
+#define SC_VDDVSAVE                 (0x0C10)
+#define SC_VDDVRESTORE              (0x0C14)
+#define SC_VDDVNPOWEROFF            (0x0C20)
+#define SC_VDDVNPOWERON             (0x0C24)
+#define SC_VDDNCPOWEREDSET          (0x0C30)
+#define SC_VDDNCPOWEREDCLR          (0x0C34)
+#define SC_VDDNSAVE                 (0x0C40)
+#define SC_VDDNRESTORE              (0x0C44)
+#define SC_VDDVNISOSET              (0x0C50)
+#define SC_VDDVNISOCLR              (0x0C54)
+#define SC_VDDVNHB8CLKEN            (0x0C60)
+#define SC_VDDVNHB8CLKGATE          (0x0C64)
+#define SC_VDDVNPOWERSTAT           (0x0D10)
+#define SC_VDDVNCPOWEREDST          (0x0D20)
+#define SC_VDDVNISOSTAT             (0x0D40)
+#define SC_VDDVNPSWACK              (0x0E00)
+#define SC_VDDVNSYSCLKOFFN          (0x0E10)
+
+/* System registers values */
+#define SC_RESET_CLK_SHARED         (1 << 15)
+/*  Enable Shared domain, PMU; RT10b = 0 */
+#define SC_SYSCLOCKENABLE_SH_PMU    (0x80008000)
+/*  Enable Unipro and M-port clock */
+#define SC_SYSCLOCKENABLE_PORT(i)   ((1 << (i + 16)) | (1 << i))
+/*  Enable all Unipro and M-ports clocks */
+#define SC_SYSCLOCKENABLE_ALL_PORTS (0x3FFF3FFF)
+/*  Enable VDDn for M-port */
+#define SC_VDDVN_PORT(i)            (1 << i)
+
 struct es3_cport {
     pthread_mutex_t lock;
     uint8_t rxbuf[ES3_CPORT_RX_MAX_SIZE];
@@ -104,16 +142,100 @@ static int es3_irq_fifo_rx(struct tsb_switch *sw, unsigned int cportid) { /* FIX
     return -1;
 }
 
-static uint8_t* es3_init_rxbuf(struct tsb_switch *sw) { /* FIXME */
-    return NULL;
+static uint8_t* es3_init_rxbuf(struct tsb_switch *sw) {
+    /* The NCP CPorts are big enough for this. */
+    struct sw_es3_priv *priv = sw->priv;
+    return fifo_to_rxbuf(priv, SWITCH_FIFO_NCP);
 }
 
-static int es3_enable_port(struct tsb_switch *sw, uint8_t portid) { /* FIXME */
-    return -1;
+static int es3_enable_port(struct tsb_switch *sw, uint8_t port) {
+    uint32_t value = 0;
+
+    /* Enable VDDVnPower */
+    if (switch_sys_ctrl_set(sw, SC_VDDVNPOWERON, SC_VDDVN_PORT(port))) {
+        dbg_error("VDDVnPowerOn register write failed\n");
+        return -EIO;
+    }
+
+    /* Wait for VDDVnPSWAck */
+    while (!(value & SC_VDDVN_PORT(port))) {
+        if (switch_sys_ctrl_get(sw, SC_VDDVNPSWACK, &value)) {
+            dbg_error("VDDVnPSWAck register read failed, aborting\n");
+            return -EIO;
+        }
+    }
+
+    /* Enable VDDVnCPowered */
+    if (switch_sys_ctrl_set(sw, SC_VDDNCPOWEREDSET, SC_VDDVN_PORT(port))) {
+        dbg_error("VDDVnCPoweredSet register write failed\n");
+        return -EIO;
+    }
+
+    /* Turn off isolation between VDDVn domain and VDDV domain (VDDVnIsoClr) */
+    if (switch_sys_ctrl_set(sw, SC_VDDVNISOCLR, SC_VDDVN_PORT(port))) {
+        dbg_error("VDDVnIsoClr register write failed\n");
+        return -EIO;
+    }
+
+    /* Enable Hibern8 Clock */
+    if (switch_sys_ctrl_set(sw, SC_VDDVNHB8CLKEN, SC_VDDVN_PORT(port))) {
+        dbg_error("VDDVnHB8ClkEnable register write failed\n");
+        return -EIO;
+    }
+
+    /* Enable Clock */
+    if (switch_sys_ctrl_set(sw, SC_SYSCLOCKENABLE,
+                            SC_SYSCLOCKENABLE_PORT(port))) {
+        dbg_error("SysClkEnable register write failed\n");
+        return -EIO;
+    }
+
+    /* Release reset for M-Port */
+    if (switch_sys_ctrl_set(sw, SC_SOFTRESETRELEASE,
+                            SC_RESET_CLK_MPORT(port))) {
+        dbg_error("SoftResetRelease register write failed\n");
+        return -EIO;
+    }
+
+    /* Release reset for Unipro port */
+    if (switch_sys_ctrl_set(sw, SC_SOFTRESETRELEASE,
+                            SC_RESET_CLK_UNIPROPORT(port))) {
+        dbg_error("SoftResetRelease register write failed\n");
+        return -EIO;
+    }
+
+    return 0;
 }
 
-static int es3_post_init_seq(struct tsb_switch *sw) { /* FIXME */
-    return -1;
+static int es3_post_init_seq(struct tsb_switch *sw) {
+    /* Enable Shared domain, PMU; RT10b = 0 */
+    if (switch_sys_ctrl_set(sw, SC_SYSCLOCKENABLE, SC_SYSCLOCKENABLE_SH_PMU)) {
+        dbg_error("SysClkEnable register write failed\n");
+        return -EIO;
+    }
+
+    /* Release reset for Shared domain */
+    if (switch_sys_ctrl_set(sw, SC_SOFTRESETRELEASE, SC_RESET_CLK_SHARED)) {
+        dbg_error("SoftResetRelease register write failed\n");
+        return -EIO;
+    }
+
+    /*
+     * Configure the Routing Table as 5 bit addressable
+     * (RT10b = 0, RTBitSel = 1).
+     */
+    if (switch_internal_setattr(sw, RTBITSEL, 0x1)) {
+        dbg_error("RTBITSEL register write failed\n");
+        return -EIO;
+    }
+
+    /* Setup automatic LinkStartupMode for all ports */
+    if (switch_sys_ctrl_set(sw, SC_LINKSTARTUPMODE, 0)) {
+        dbg_error("LinkStartupMode register write failed\n");
+        return -EIO;
+    }
+
+    return 0;
 }
 
 /*
