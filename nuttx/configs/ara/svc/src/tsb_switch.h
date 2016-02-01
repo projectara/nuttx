@@ -387,6 +387,8 @@ struct tsb_switch_ops {
      *
      * They don't have corresponding user-visible APIs.
      */
+    uint8_t* (*__switch_init_rxbuf)(struct tsb_switch *sw);
+    int (*__post_init_seq)(struct tsb_switch *sw);
     int (*__ncp_transfer)(struct tsb_switch *sw,
                           uint8_t *tx_buf, size_t tx_size,
                           uint8_t *rx_buf, size_t rx_size);
@@ -403,6 +405,7 @@ struct tsb_switch {
     struct vreg             *vreg;
     struct tsb_switch_data  *pdata;
     struct tsb_rev_data     *rdata;
+    struct spi_dev_s        *spi_dev;
     sem_t                   sw_irq_lock;
     int                     worker_id;
     bool                    sw_irq_worker_exit;
@@ -665,6 +668,9 @@ int switch_disable_test_traffic(struct tsb_switch *sw,
  * Revision (ES2, ES3) specific data for switch management
  */
 struct tsb_rev_data {
+    /* Number of bytes to wait for a reply in init */
+    size_t wait_reply_len;
+
     /* Max size in bytes of an NCP command request. */
     size_t ncp_req_max_size;
 

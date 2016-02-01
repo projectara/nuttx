@@ -49,6 +49,8 @@
 #include "tsb_switch.h"
 #include "vreg.h"
 
+#define SWITCH_SPI_INIT_DELAY_US   (700)
+
 #define SWITCH_SPI_FREQUENCY 13000000
 
 #define IRQ_WORKER_DEFPRIO          50
@@ -259,15 +261,47 @@ static void switch_power_off(struct tsb_switch *sw)
     stm32_gpiowrite(sw->pdata->gpio_reset, false);
 }
 
-
+static uint8_t* switch_init_rxbuf(struct tsb_switch *sw)
+{
+    DEBUGASSERT(sw->ops->__switch_init_rxbuf(sw));
+    return sw->ops->__switch_init_rxbuf(sw);
+}
 
 /* Switch communication link init and de-init */
 static int switch_init_comm(struct tsb_switch *sw)
 {
-    if (!sw->ops->init_comm) {
-        return -EOPNOTSUPP;
+    uint8_t *rxbuf = switch_init_rxbuf(sw);
+    struct spi_dev_s *spi_dev = sw->spi_dev;
+    const char init_reply[] = { INIT, LNUL };
+    int i, rc = -1;
+
+    dbg_info("Initializing switch SPI communications...\n");
+    _switch_spi_select(sw, true);
+
+    up_udelay(SWITCH_SPI_INIT_DELAY_US);
+
+    SPI_SEND(spi_dev, INIT);
+    SPI_SEND(spi_dev, INIT);
+    SPI_EXCHANGE(spi_dev, NULL, rxbuf, sw->rdata->wait_reply_len);
+
+    dbg_insane("Init RX Data:\n");
+    dbg_print_buf(ARADBG_INSANE, rxbuf, sw->rdata->wait_reply_len);
+
+    /* Check for the transition from INIT to LNUL after sending INITs */
+    for (i = 0; i < sw->rdata->wait_reply_len - 1; i++) {
+        if (!memcmp(rxbuf + i, init_reply, sizeof(init_reply)))
+            rc = 0;
     }
-    return sw->ops->init_comm(sw);
+
+    _switch_spi_select(sw, false);
+
+    if (rc) {
+        dbg_error("%s: Failed to init the SPI link with the switch\n",
+                  __func__);
+        return rc;
+    }
+    dbg_info("... Done!\n");
+    return 0;
 }
 
 /* Switch port enable (VDD and clocks) */
@@ -2528,6 +2562,18 @@ uint8_t stm32_spi2status(struct spi_dev_s *dev,
     return SPI_STATUS_PRESENT;
 }
 
+/*
+ * Platform-specific post-initialization, to be performed after SPI
+ * link with the switch is up.
+ */
+static int switch_post_init_comm(struct tsb_switch *sw)
+{
+    if (!sw->ops->__post_init_seq) {
+        return -EOPNOTSUPP;
+    }
+    return sw->ops->__post_init_seq(sw);
+}
+
 /**
  * @brief Initialize the switch and set default SVC<->Switch route
  * @param sw pdata platform-specific data for this switch
@@ -2567,6 +2613,7 @@ struct tsb_switch *switch_init(struct tsb_switch_data *pdata) {
         rc = -ENODEV;
         goto error;
     }
+    sw->spi_dev = spi_dev;
 
     switch (sw->pdata->rev) {
     case SWITCH_REV_ES2:
@@ -2585,6 +2632,10 @@ struct tsb_switch *switch_init(struct tsb_switch_data *pdata) {
     SPI_SETFREQUENCY(spi_dev, SWITCH_SPI_FREQUENCY);
 
     rc = switch_init_comm(sw);
+    if (rc && (rc != -EOPNOTSUPP)) {
+        goto error;
+    }
+    rc = switch_post_init_comm(sw);
     if (rc && (rc != -EOPNOTSUPP)) {
         goto error;
     }

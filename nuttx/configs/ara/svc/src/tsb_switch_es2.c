@@ -48,8 +48,6 @@
 #include "tsb_switch.h"
 #include "tsb_es2_mphy_fixups.h"
 
-#define SWITCH_SPI_INIT_DELAY   (700)   // us
-
 /* Max NULL frames to wait for a reply from the switch */
 #define ES2_SWITCH_WAIT_REPLY_LEN   (16)
 /* Write status reply length */
@@ -80,7 +78,6 @@ struct es2_cport {
 };
 
 struct sw_es2_priv {
-    struct spi_dev_s    *spi_dev;
     struct es2_cport ncp_cport;
     struct es2_cport data_cport4;
     struct es2_cport data_cport5;
@@ -133,7 +130,7 @@ static int es2_read_status(struct tsb_switch *sw,
                            unsigned int cport,
                            struct srpt_read_status_report *status) {
     struct sw_es2_priv *priv = sw->priv;
-    struct spi_dev_s *spi_dev = priv->spi_dev;
+    struct spi_dev_s *spi_dev = sw->spi_dev;
     unsigned int offset;
     struct srpt_read_status_report *rpt = NULL;
     uint8_t *rxbuf = cport_to_rxbuf(priv, cport);
@@ -192,7 +189,7 @@ static int es2_write(struct tsb_switch *sw,
                      uint8_t *tx_buf,
                      size_t tx_size) {
     struct sw_es2_priv *priv = sw->priv;
-    struct spi_dev_s *spi_dev = priv->spi_dev;
+    struct spi_dev_s *spi_dev = sw->spi_dev;
     struct srpt_read_status_report rpt;
     uint8_t *rxbuf = cport_to_rxbuf(priv, cportid);
     unsigned int size;
@@ -277,7 +274,7 @@ static int es2_read(struct tsb_switch *sw,
                     uint8_t *rx_buf,
                     size_t rx_size) {
     struct sw_es2_priv *priv = sw->priv;
-    struct spi_dev_s *spi_dev = priv->spi_dev;
+    struct spi_dev_s *spi_dev = sw->spi_dev;
     uint8_t *rxbuf = cport_to_rxbuf(priv, cportid);
     size_t size;
     int rcv_done = 0;
@@ -438,42 +435,14 @@ fill_done:
     return 0;
 }
 
-/* Switch communication init procedure */
-int es2_init_seq(struct tsb_switch *sw)
-{
+static uint8_t* es2_init_rxbuf(struct tsb_switch *sw) {
+    /* The NCP CPorts are big enough for this. */
     struct sw_es2_priv *priv = sw->priv;
-    struct spi_dev_s *spi_dev = priv->spi_dev;
-    const char init_reply[] = { INIT, LNUL };
-    uint8_t *rxbuf = cport_to_rxbuf(priv, CPORT_NCP);
-    int i, rc = -1;
+    return cport_to_rxbuf(priv, SWITCH_FIFO_NCP);
+}
 
-    dbg_info("Initializing ES2 switch...\n");
-    _switch_spi_select(sw, true);
-
-    // Delay needed before the switch is ready on the SPI bus
-    up_udelay(SWITCH_SPI_INIT_DELAY);
-
-    SPI_SEND(spi_dev, INIT);
-    SPI_SEND(spi_dev, INIT);
-    SPI_EXCHANGE(spi_dev, NULL, rxbuf, ES2_SWITCH_WAIT_REPLY_LEN);
-
-    dbg_insane("Init RX Data:\n");
-    dbg_print_buf(ARADBG_INSANE, rxbuf, ES2_SWITCH_WAIT_REPLY_LEN);
-
-    // Check for the transition from INIT to LNUL after sending INITs
-    for (i = 0; i < ES2_SWITCH_WAIT_REPLY_LEN - 1; i++) {
-        if (!memcmp(rxbuf + i, init_reply, sizeof(init_reply)))
-            rc = 0;
-    }
-
-    _switch_spi_select(sw, false);
-
-    if (rc) {
-        dbg_error("%s: Failed to init the SPI link with the switch\n",
-                  __func__);
-        return rc;
-    }
-    dbg_info("... Done!\n");
+static int es2_post_init_seq(struct tsb_switch *sw) {
+    int rc;
 
     rc = tsb_switch_es2_fixup_mphy(sw);
     if (rc) {
@@ -794,6 +763,7 @@ done:
 }
 
 static struct tsb_rev_data es2_rev_data = {
+    .wait_reply_len         = ES2_SWITCH_WAIT_REPLY_LEN,
     .ncp_req_max_size       = ES2_NCP_MAX_REQ_SIZE,
     .dev_id_mask_size       = ES2_DEV_ID_MASK_SIZE,
     .spicee_enable_all      = ES2_SPICEE_ENABLE_ALL,
@@ -802,8 +772,6 @@ static struct tsb_rev_data es2_rev_data = {
 };
 
 static struct tsb_switch_ops es2_ops = {
-    .init_comm             = es2_init_seq,
-
     .switch_id_set_req     = es2_switch_id_set_req,
 
     .set_req               = es2_dme_set_req,
@@ -829,6 +797,8 @@ static struct tsb_switch_ops es2_ops = {
 
     .switch_data_send      = es2_data_send,
 
+    .__switch_init_rxbuf   = es2_init_rxbuf,
+    .__post_init_seq       = es2_post_init_seq,
     .__irq_fifo_rx         = es2_irq_fifo_rx,
     .__ncp_transfer        = es2_ncp_transfer,
     .__set_valid_entry     = es2_set_valid_entry,
@@ -847,7 +817,6 @@ int tsb_switch_es2_init(struct tsb_switch *sw, struct spi_dev_s *spi_dev)
         goto error;
     }
 
-    priv->spi_dev = spi_dev;
     pthread_mutex_init(&priv->ncp_cport.lock, NULL);
     pthread_mutex_init(&priv->data_cport4.lock, NULL);
     pthread_mutex_init(&priv->data_cport5.lock, NULL);
