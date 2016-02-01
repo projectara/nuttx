@@ -41,11 +41,16 @@
 
 /* Max NULL frames to wait for a reply from the switch */
 #define ES3_SWITCH_WAIT_REPLY_LEN      (9)
+/* NCP read data command: 4 bytes header + END */
+#define ES3_SWITCH_NCP_READ_DATA_LEN   (5)
 /* Write status reply length */
 #define ES3_SWITCH_WRITE_STATUS_LEN    (9)
 /* Total number of NULLs to clock out to ensure a write status is read */
 #define ES3_SWITCH_WRITE_STATUS_NNULL  (ES3_SWITCH_WAIT_REPLY_LEN + \
                                         ES3_SWITCH_WRITE_STATUS_LEN)
+/* Total number of NULLs to clock out to ensure the returned NCP is read */
+#define ES3_SWITCH_NCP_READ_LEN        (ES3_SWITCH_WAIT_REPLY_LEN + \
+                                        ES3_SWITCH_NCP_READ_DATA_LEN)
 
 /* Interrupt enable bits */
 #define ES3_SPICEE_ENABLE_ALL        (0xF)
@@ -97,6 +102,8 @@
 /*  Enable VDDn for M-port */
 #define SC_VDDVN_PORT(i)            (1 << i)
 
+#define ES3_DEVICEID_MAX            31
+
 struct es3_cport {
     pthread_mutex_t lock;
     uint8_t rxbuf[ES3_CPORT_RX_MAX_SIZE];
@@ -120,22 +127,202 @@ static inline uint8_t *fifo_to_rxbuf(struct sw_es3_priv *priv, unsigned int fifo
     return NULL;
 }
 
-static void es3_set_valid_entry(struct tsb_switch *sw, /* FIXME */
-                                uint8_t *table, int entry, bool valid) {
-    DEBUGASSERT(0);
+/*
+ * Routing table: dest_valid table helpers.
+ * Only 5 bit routing is supported, with max 32 device IDs per switch
+ * and 32 CPorts per device.
+ *
+ * The routing is handled globally per destination device,
+ * i.e. all 32 CPorts for the destination device are handled at once.
+ */
+static int es3_set_valid_entry(struct tsb_switch *sw,
+                               uint8_t *table, int entry, bool valid) {
+    int offset;
+
+    if ((entry < 0) || (entry > ES3_DEVICEID_MAX)) {
+        return -EINVAL;
+    }
+
+    offset = 127 - (entry * 4);
+
+    table[offset--] = valid ? 0xFF : 0x00;
+    table[offset--] = valid ? 0xFF : 0x00;
+    table[offset--] = valid ? 0xFF : 0x00;
+    table[offset] = valid ? 0xFF : 0x00;
+
+    return 0;
 }
 
-static bool es3_check_valid_entry(struct tsb_switch *sw, /* FIXME */
+static bool es3_check_valid_entry(struct tsb_switch *sw,
                                   uint8_t *table, int entry) {
-    return false;
+    int offset;
+
+    if ((entry < 0) || (entry > ES3_DEVICEID_MAX)) {
+        return false;
+    }
+
+    offset = 127 - (entry * 4);
+
+    return ((table[offset--] == 0xFF) &&
+            (table[offset--] == 0xFF) &&
+            (table[offset--] == 0xFF) &&
+            (table[offset] == 0xFF));
 }
 
-static int es3_ncp_transfer(struct tsb_switch *sw, /* FIXME */
+
+static int es3_ncp_write(struct tsb_switch *sw,
+                         uint8_t cportid,
+                         uint8_t *tx_buf,
+                         size_t tx_size,
+                         size_t *out_size) {
+    struct spi_dev_s *spi_dev = sw->spi_dev;
+
+    uint8_t write_header[] = {
+        STRW,
+        cportid,
+        (tx_size & 0xFF00) >> 8,
+        (tx_size & 0xFF),
+    };
+
+    uint8_t write_trailer[] = {
+        ENDP,
+    };
+
+    if (tx_size >= SWITCH_CPORT_NCP_MAX_PAYLOAD) {
+        return -ENOMEM;
+    }
+
+    _switch_spi_select(sw, true);
+
+    SPI_SNDBLOCK(spi_dev, write_header, sizeof write_header);
+    SPI_SNDBLOCK(spi_dev, tx_buf, tx_size);
+    SPI_SNDBLOCK(spi_dev, write_trailer, sizeof write_trailer);
+    *out_size = sizeof write_header + tx_size + sizeof write_trailer;
+
+    _switch_spi_select(sw, false);
+
+    return OK;
+}
+
+static int es3_ncp_read(struct tsb_switch *sw,
+                        uint8_t cportid,
+                        uint8_t *rx_buf,
+                        size_t rx_size,
+                        size_t out_size) {
+    struct sw_es3_priv *priv = sw->priv;
+    struct spi_dev_s *spi_dev = sw->spi_dev;
+    uint8_t *rxbuf = fifo_to_rxbuf(priv, cportid);
+    size_t size;
+    int rcv_done = 0;
+    bool null_rxbuf;
+    int ret = 0;
+
+    uint8_t read_header[] = {
+        STRR,
+        cportid,
+        0,      // LENM
+        0,      // LENL
+        ENDP,
+    };
+
+    _switch_spi_select(sw, true);
+
+    // Read CNF and retry if NACK received
+    do {
+        // Read the CNF
+        size = ES3_SWITCH_NCP_READ_LEN + rx_size;
+        SPI_SNDBLOCK(spi_dev, read_header, sizeof read_header);
+        SPI_EXCHANGE(spi_dev, NULL, rxbuf, size);
+        /*
+         * Make sure we use 16-bit frames for the write and read commands
+         * combined.
+         */
+        if ((out_size + size) & 0x1) {
+            SPI_SEND(spi_dev, LNUL);
+        }
+
+        dbg_insane("TX Data (%d):\n", sizeof read_header);
+        dbg_print_buf(ARADBG_INSANE, read_header, sizeof read_header);
+        dbg_insane("TX Data (%d NULLs):\n", size);
+        dbg_insane("RX Data:\n");
+        dbg_print_buf(ARADBG_INSANE, rxbuf, size);
+
+        if (!rx_buf) {
+            break;
+        }
+
+        /*
+         * Find the STRR and copy the response; handle other cases:
+         * NACK, switch not responding.
+         *
+         * In some cases (e.g. wrong function ID in the NCP command) the
+         * switch does respond on the command with all NULs.
+         * In that case bail out with error.
+         */
+        uint8_t *resp_start = NULL;
+        unsigned int i;
+        null_rxbuf = true;
+
+        for (i = 0; i < size; i++) {
+            // Detect an all-[LH]NULs RX buffer
+            if ((rxbuf[i] != LNUL) && (rxbuf[i] != HNUL)) {
+                null_rxbuf = false;
+            }
+            // Check for STRR or NACK
+            if (rxbuf[i] == STRR) {
+                // STRR found, parse the reply length and data
+                resp_start = &rxbuf[i];
+                size_t resp_len = resp_start[2] << 8 | resp_start[3];
+                memcpy(rx_buf, &resp_start[4], resp_len);
+                rcv_done = 1;
+                break;
+            } else if (rxbuf[i] == NACK) {
+                // NACK found, retry the CNF read
+                break;
+            }
+        }
+
+        // If all NULs in RX buffer, bail out with error code
+        if (null_rxbuf) {
+            ret = -EIO;
+            dbg_error("Switch not responding, aborting command\n");
+        }
+
+    } while (!rcv_done && !null_rxbuf);
+
+    _switch_spi_select(sw, false);
+
+    return ret;
+}
+static int es3_ncp_transfer(struct tsb_switch *sw,
                             uint8_t *tx_buf,
                             size_t tx_size,
                             uint8_t *rx_buf,
                             size_t rx_size) {
-    return -1;
+    struct sw_es3_priv *priv = sw->priv;
+    size_t out_size;
+    int rc;
+
+    pthread_mutex_lock(&priv->ncp_cport.lock);
+
+    /* Send the request */
+    rc = es3_ncp_write(sw, SWITCH_FIFO_NCP, tx_buf, tx_size, &out_size);
+    if (rc) {
+        dbg_error("%s() write failed: rc=%d\n", __func__, rc);
+        goto done;
+    }
+
+    /* Read the CNF, back-to-back after the NCP request */
+    rc = es3_ncp_read(sw, SWITCH_FIFO_NCP, rx_buf, rx_size, out_size);
+    if (rc) {
+        dbg_error("%s() read failed: rc=%d\n", __func__, rc);
+        goto done;
+    }
+
+done:
+    pthread_mutex_unlock(&priv->ncp_cport.lock);
+
+    return rc;
 }
 
 static int es3_irq_fifo_rx(struct tsb_switch *sw, unsigned int cportid) { /* FIXME */

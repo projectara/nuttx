@@ -94,13 +94,14 @@ static inline uint8_t *cport_to_rxbuf(struct sw_es2_priv *priv, unsigned int cpo
     return NULL;
 }
 
-static void es2_set_valid_entry(struct tsb_switch *sw,
-                                uint8_t *table, int entry, bool valid) {
+static int es2_set_valid_entry(struct tsb_switch *sw,
+                               uint8_t *table, int entry, bool valid) {
     if (valid) {
         table[15 - ((entry) / 8)] |= (1 << ((entry)) % 8);
     } else {
         table[15 - ((entry) / 8)] &= ~(1 << ((entry)) % 8);
     }
+    return 0;
 }
 
 static bool es2_check_valid_entry(struct tsb_switch *sw,
