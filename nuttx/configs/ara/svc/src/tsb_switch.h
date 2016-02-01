@@ -234,6 +234,10 @@
 #define SWITCH_CPORT_NCP_FIFO_SIZE      (256)
 #define SWITCH_CPORT_DATA_FIFO_SIZE     (576)
 
+/* Switch FIFOs for SVC communication over SPI */
+#define SWITCH_FIFO_NCP   (0x03)
+#define SWITCH_FIFO_DATA4 (0x04)
+#define SWITCH_FIFO_DATA5 (0x05)
 
 /*
  * @brief Switch QoS cycle rate is 166 MHz.  Convert back and forth.

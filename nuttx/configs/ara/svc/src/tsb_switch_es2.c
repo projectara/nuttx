@@ -78,17 +78,13 @@ struct sw_es2_priv {
     struct es2_cport data_cport5;
 };
 
-#define CPORT_NCP   (0x03)
-#define CPORT_DATA4 (0x04)
-#define CPORT_DATA5 (0x05)
-
 static inline uint8_t *cport_to_rxbuf(struct sw_es2_priv *priv, unsigned int cportid) {
     switch (cportid) {
-    case CPORT_NCP:
+    case SWITCH_FIFO_NCP:
         return priv->ncp_cport.rxbuf;
-    case CPORT_DATA4:
+    case SWITCH_FIFO_DATA4:
         return priv->data_cport4.rxbuf;
-    case CPORT_DATA5:
+    case SWITCH_FIFO_DATA5:
         return priv->data_cport5.rxbuf;
     };
     return NULL;
@@ -161,11 +157,11 @@ static int es2_read_status(struct tsb_switch *sw,
         memcpy(status, rpt, SRPT_REPORT_SIZE);
 
         switch (cport) {
-        case CPORT_NCP:
+        case SWITCH_FIFO_NCP:
             fifo_max_size = SWITCH_CPORT_NCP_FIFO_SIZE;
             break;
-        case CPORT_DATA4:
-        case CPORT_DATA5:
+        case SWITCH_FIFO_DATA4:
+        case SWITCH_FIFO_DATA5:
         default:
             fifo_max_size = SWITCH_CPORT_DATA_FIFO_SIZE;
             break;
@@ -204,13 +200,13 @@ static int es2_write(struct tsb_switch *sw,
     };
 
     switch (cportid) {
-    case CPORT_NCP:
+    case SWITCH_FIFO_NCP:
         if (tx_size >= SWITCH_CPORT_NCP_MAX_PAYLOAD) {
             return -ENOMEM;
         }
         break;
-    case CPORT_DATA4:
-    case CPORT_DATA5:
+    case SWITCH_FIFO_DATA4:
+    case SWITCH_FIFO_DATA5:
         /*
          * Must read the fifo status for data to ensure there is enough space.
          */
@@ -361,14 +357,14 @@ static int es2_ncp_transfer(struct tsb_switch *sw,
     pthread_mutex_lock(&priv->ncp_cport.lock);
 
     /* Send the request */
-    rc = es2_write(sw, CPORT_NCP, tx_buf, tx_size);
+    rc = es2_write(sw, SWITCH_FIFO_NCP, tx_buf, tx_size);
     if (rc) {
         dbg_error("%s() write failed: rc=%d\n", __func__, rc);
         goto done;
     }
 
     /* Read the CNF */
-    rc = es2_read(sw, CPORT_NCP, rx_buf, rx_size);
+    rc = es2_read(sw, SWITCH_FIFO_NCP, rx_buf, rx_size);
     if (rc) {
         dbg_error("%s() read failed: rc=%d\n", __func__, rc);
         goto done;
@@ -388,10 +384,10 @@ static int es2_irq_fifo_rx(struct tsb_switch *sw, unsigned int cportid) {
     int rc;
 
     switch (cportid) {
-    case CPORT_DATA4:
+    case SWITCH_FIFO_DATA4:
         cport = &priv->data_cport4;
         break;
-    case CPORT_DATA5:
+    case SWITCH_FIFO_DATA5:
         cport = &priv->data_cport5;
         break;
     default:
@@ -745,7 +741,7 @@ static int es2_data_send(struct tsb_switch *sw, void *data, size_t len) {
 
     pthread_mutex_lock(&priv->data_cport4.lock);
 
-    rc = es2_write(sw, CPORT_DATA4, data, len);
+    rc = es2_write(sw, SWITCH_FIFO_DATA4, data, len);
     if (rc) {
         dbg_error("%s() write failed: rc=%d\n", __func__, rc);
         goto done;
