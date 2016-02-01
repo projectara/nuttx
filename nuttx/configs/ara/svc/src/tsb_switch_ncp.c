@@ -28,6 +28,7 @@
 
 #include "tsb_switch.h"
 
+#include <stdbool.h>
 #include <string.h>
 
 #include <nuttx/config.h>
@@ -514,14 +515,29 @@ int switch_internal_setattr(struct tsb_switch *sw,
         uint8_t rc;
         uint8_t function_id;
     } cnf;
+    bool ignore_reply = false;
 
     dbg_verbose("%s(): attrId=0x%04x\n", __func__, attrid);
+
+    switch (attrid) {
+    /* Special case for SWRES attribute: ignore reply */
+    case SWRES:
+        ignore_reply = true;
+        break;
+    default:
+        break;
+    }
 
     get_switch_attr_set_req(sw, attrid, val, req, &req_size);
     rc = ncp_transfer(sw, req, req_size, (uint8_t*)&cnf, sizeof(struct cnf));
     if (rc) {
         dbg_error("%s(): attrId=0x%04x failed: rc=%d\n", __func__, attrid, rc);
         return rc;
+    }
+    if (ignore_reply) {
+        /* Hopefully that worked. We have no way of knowing. */
+        dbg_verbose("%s(): ignoring reply\n", __func__);
+        return 0;
     }
 
     if (cnf.function_id != NCP_SWITCHATTRSETCNF) {
@@ -549,9 +565,20 @@ int switch_sys_ctrl_set(struct tsb_switch *sw,
         uint8_t rc;
         uint8_t function_id;
     } cnf;
+    bool ignore_reply = false;
 
     dbg_verbose("%s(): sc_addr=0x%x, val=0x%x (%d)",
                 __func__, sc_addr, val, val);
+
+    switch (sc_addr) {
+    /* Special case for PMU_StandbySqStart register: ignore reply */
+    case SC_PMUSTANDBYSS:
+        ignore_reply = true;
+        break;
+    default:
+        break;
+    }
+
     get_sys_ctrl_set_req(sw, sc_addr, val, req, &req_size);
     rc = ncp_transfer(sw, req, req_size, (uint8_t*)&cnf, sizeof(struct cnf));
     if (rc) {
@@ -559,6 +586,12 @@ int switch_sys_ctrl_set(struct tsb_switch *sw,
                   __func__, sc_addr, val, val, rc);
         return rc;
     }
+    if (ignore_reply) {
+        /* Hopefully that worked. We have no way of knowing. */
+        dbg_verbose("%s(): ignoring reply\n", __func__);
+        return 0;
+    }
+
     if (cnf.function_id != NCP_SYSCTRLSETCNF) {
         dbg_error("%s(): unexpected CNF 0x%x\n", __func__, cnf.function_id);
         return -EPROTO;
