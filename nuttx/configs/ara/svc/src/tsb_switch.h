@@ -49,10 +49,13 @@
 
 /* Switch internal attributes */
 #define SWVER                       (0x0000)
+#define SWPOR                       (0x0002)
 #define SWSTA                       (0x0003)
 #define SWINT                       (0x0010)
 #define SWINE                       (0x0015)
 #define SWINS                       (0x0016)
+#define SWRES                       (0x0020)
+#define SPICTLA                     (0x0040)
 #define SPICTLB                     (0x0041)
 #define SPIINTE                     (0x0042)
 #define SPICEE                      (0x0043)
@@ -63,6 +66,13 @@
 #define SPI4ES                      (0x0048)
 #define SPI5EE                      (0x0049)
 #define SPI5ES                      (0x004a)
+
+/* ES3-specific switch internal attributes */
+#define SWCCT                       (0x0022)
+#define SWALS                       (0x0023)
+#define SWLCE                       (0x0024)
+#define SWLCS                       (0x0025)
+#define SPITIMER                    (0x004c)
 
 /* NCP commands */
 #define NCP_SETREQ                  (0x00)
@@ -123,11 +133,46 @@
 #define SC_CHIPID1                  (0x0884)
 #define SC_CHIPID2                  (0x0888)
 
+/* ES3-specific system registers */
+#define SC_SYSCLOCKDIV0             (0x0410)
+#define SC_SYSCLOCKDIV1             (0x0414)
+#define SC_SYSCLOCKDIV2             (0x0418)
+#define SC_LINKSTARTUPMODE          (0x0B00)
+#define SC_PMUSTANDBYSS             (0x0C00)
+#define SC_VDDVSAVE                 (0x0C10)
+#define SC_VDDVRESTORE              (0x0C14)
+#define SC_VDDVNPOWEROFF            (0x0C20)
+#define SC_VDDVNPOWERON             (0x0C24)
+#define SC_VDDNCPOWEREDSET          (0x0C30)
+#define SC_VDDNCPOWEREDCLR          (0x0C34)
+#define SC_VDDNSAVE                 (0x0C40)
+#define SC_VDDNRESTORE              (0x0C44)
+#define SC_VDDVNISOSET              (0x0C50)
+#define SC_VDDVNISOCLR              (0x0C54)
+#define SC_VDDVNHB8CLKEN            (0x0C60)
+#define SC_VDDVNHB8CLKGATE          (0x0C64)
+#define SC_VDDVNPOWERSTAT           (0x0D10)
+#define SC_VDDVNCPOWEREDST          (0x0D20)
+#define SC_VDDVNISOSTAT             (0x0D40)
+#define SC_VDDVNPSWACK              (0x0E00)
+#define SC_VDDVNSYSCLKOFFN          (0x0E10)
+
 /* System registers values */
 #define SC_RESET_CLK_UNIPROPORT(i)  (1 << i)
 #define SC_RESET_CLK_NCP            (1 << 14)
 #define SC_RESET_CLK_MPORT(i)       (1 << (i + 16))
 #define SC_RESET_CLK_RT10B          (1 << 30)
+
+/* ES3-specific system registers values */
+#define SC_RESET_CLK_SHARED         (1 << 15)
+/*  Enable Shared domain, PMU; RT10b = 0 */
+#define SC_SYSCLOCKENABLE_SH_PMU    (0x80008000)
+/*  Enable Unipro and M-port clock */
+#define SC_SYSCLOCKENABLE_PORT(i)   ((1 << (i + 16)) | (1 << i))
+/*  Enable all Unipro and M-ports clocks */
+#define SC_SYSCLOCKENABLE_ALL_PORTS (0x3FFF3FFF)
+/*  Enable VDDn for M-port */
+#define SC_VDDVN_PORT(i)            (1 << i)
 
 /* NCP field values */
 #define NCP_RESERVED                (0x00)
