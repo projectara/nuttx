@@ -171,9 +171,12 @@ void gpio_set_value(uint8_t which, uint8_t value)
 
 int gpio_set_debounce(uint8_t which, uint16_t delay)
 {
-    printf("%s - unimplemented\n", __func__);
+    struct gpio_chip_s *chip = get_gpio_chip(&which);
 
-    return -ENOSYS;
+    DEBUGASSERT(chip);
+    DEBUGASSERT(chip-ops);
+    DEBUGASSERT(chip->ops->set_debounce);
+    return chip->ops->set_debounce(chip->driver_data, which, delay);
 }
 
 int gpio_set_pull(uint8_t which, enum gpio_pull_type pull_type)
