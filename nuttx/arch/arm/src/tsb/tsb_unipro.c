@@ -789,15 +789,7 @@ void unipro_init(void)
     DEBUGASSERT(TRANSFER_MODE == 2);
     configure_transfer_mode(TRANSFER_MODE);
 
-    /*
-     * Initialize cports.
-     */
-    unipro_write(UNIPRO_INT_EN, 0x0);
-    for (i = 0; i < cport_count; i++) {
-        unipro_init_cport(i);
-    }
     unipro_write(UNIPRO_INT_EN, 0x1);
-
 
     /*
      * Disable FCT transmission. See ENG-376.
@@ -938,6 +930,8 @@ int unipro_reset_cport(unsigned int cportid, cport_reset_completion_cb_t cb,
 int unipro_driver_register(struct unipro_driver *driver, unsigned int cportid)
 {
     struct cport *cport = cport_handle(cportid);
+    int retval;
+
     if (!cport) {
         return -ENODEV;
     }
@@ -950,10 +944,26 @@ int unipro_driver_register(struct unipro_driver *driver, unsigned int cportid)
 
     cport->driver = driver;
 
+    unipro_write(UNIPRO_INT_EN, 0);
+
+    retval = unipro_init_cport(cportid);
+    if (retval) {
+        lowsyslog("%s(): failed to initialize CP%u (%d)\n", cportid, retval);
+        goto error_cport_init;
+    }
+
+    unipro_write(UNIPRO_INT_EN, 1);
+
     lldbg("Registered driver %s on %sconnected CP%u\n",
           cport->driver->name, cport->connected ? "" : "un",
           cport->cportid);
+
     return 0;
+
+error_cport_init:
+    cport->driver = NULL;
+    unipro_write(UNIPRO_INT_EN, 1);
+    return retval;
 }
 
 int unipro_driver_unregister(unsigned int cportid)
