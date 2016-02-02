@@ -31,11 +31,8 @@
 
 #include <nuttx/gpio.h>
 #include <nuttx/gpio_chip.h>
-<<<<<<< HEAD
 #include <nuttx/power/pm.h>
-=======
 #include <nuttx/gpio/debounce.h>
->>>>>>> GPIO: TSB: add debouncing to TSB GPIO driver
 #include <arch/tsb/gpio.h>
 #include <arch/tsb/pm.h>
 
@@ -563,6 +560,20 @@ static int tsb_gpio_pm_prepare(struct pm_callback_s *cb,
     return OK;
 }
 
+static int tsb_gpio_set_debounce(void *driver_data, uint8_t which,
+                                 uint16_t delay)
+{
+    if (which >= tsb_nr_gpio()) {
+        return -EINVAL;
+    }
+
+    /* store debounce time and reset debounce state */
+    tsb_gpio_irq_vectors[which].debounce.ms = delay;
+    tsb_gpio_irq_vectors[which].debounce.db_state = DB_ST_INVALID;
+
+    return 0;
+}
+
 static void tsb_gpio_initialize(void)
 {
     irqstate_t flags;
@@ -704,6 +715,7 @@ static struct gpio_ops_s tsb_gpio_ops = {
     .clear_interrupt = tsb_gpio_clear_interrupt,
     .set_pull = tsb_gpio_set_pull,
     .get_pull = tsb_gpio_get_pull,
+    .set_debounce = tsb_gpio_set_debounce,
 };
 
 int tsb_gpio_register(void *driver_data)
