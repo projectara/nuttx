@@ -1020,8 +1020,7 @@ static int es2_tsb_unipro_set_init_status(uint32_t val)
 {
     int rc;
 
-    rc = unipro_attr_local_write(T_TSTSRCINCREMENT, ES2_INIT_STATUS(val),
-                                 UNIPRO_SELINDEX_NULL);
+    rc = unipro_attr_local_write(T_TSTSRCINCREMENT, ES2_INIT_STATUS(val), 0);
     if (rc) {
         lldbg("init-status write failed: rc=%d\n", rc);
         return rc;
