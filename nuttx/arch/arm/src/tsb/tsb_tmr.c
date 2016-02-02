@@ -137,7 +137,7 @@ static uint32_t tsb_tmr_freq_to_usec(uint32_t freq)
 
     ratio = freq;
     ratio *= TSB_TMR_CNT_MAX_USEC;
-    ratio = DIV_ROUND_CLOSEST(ratio, TSB_TMR_COUNTER_MAX);
+    ratio = ratio / TSB_TMR_COUNTER_MAX;
     ASSERT(ratio <= UINT32_MAX);
 
     return (uint32_t)ratio;
