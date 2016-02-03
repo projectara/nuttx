@@ -183,6 +183,7 @@ build_image_from_defconfig() {
 }
 
 copy_image_files() {
+  local nuttx2ffff_targets
   echo "Copying image files"
   imgfiles="nuttx nuttx.bin System.map"
   for fn in $imgfiles; do
@@ -195,7 +196,15 @@ copy_image_files() {
   if [ -z $(echo $buildname | grep "svc")  ] ; then
     truncate -s 2M $ARA_BUILD_TOPDIR/image/nuttx.bin
     if [ -x $(which nuttx2ffff) ] ; then
-        nuttx2ffff --in=$ARA_BUILD_TOPDIR/image/nuttx --build=$buildname >/dev/null 2>&1
+        # HACK: pick up nuttx2ffff targets by defconfig name.
+        if [ -z $(echo $buildname | grep "apbridgea") ] ; then
+            nuttx2ffff_targets="apb gpb"
+        else
+            nuttx2ffff_targets=apb
+        fi
+        for tgt in $nuttx2ffff_targets; do
+            nuttx2ffff --in=$ARA_BUILD_TOPDIR/image/nuttx --target=$tgt
+        done
     fi
   fi
 }
