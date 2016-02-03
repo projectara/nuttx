@@ -59,12 +59,17 @@ void *unipro_rxbuf_alloc(unsigned int cportid)
     if (cport->max_inflight_buf_count != INFINITE_MAX_INFLIGHT_BUFCOUNT &&
         atomic_get(&cport->inflight_buf_count) >=
             cport->max_inflight_buf_count) {
+        DBG_UNIPRO("Couldn't allocate rx buf for CP%u: %u >= %u\n", cportid,
+                  atomic_get(&cport->inflight_buf_count),
+                  cport->max_inflight_buf_count);
         return NULL;
     }
 
     buf = bufram_page_alloc(bufram_size_to_page_count(CPORT_BUF_SIZE));
-    if (!buf)
+    if (!buf) {
+        DBG_UNIPRO("Couldn't allocate rx buf for CP%u: no bufram\n", cportid);
         return NULL;
+    }
 
     atomic_inc(&cport->inflight_buf_count);
     return buf;

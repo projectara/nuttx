@@ -343,6 +343,7 @@ static int irq_rx_eom(int irq, void *context) {
             unipro_unpause_rx(cport->cportid);
         } else {
             cport->switch_buf_on_free = true;
+            DBG_UNIPRO("cport %u: switch buf when available\n", cport->cportid);
         }
 
         cport->driver->rx_handler(cport->cportid, data,
