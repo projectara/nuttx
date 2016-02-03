@@ -75,9 +75,14 @@
 
 #define TSB_GPIO_ACTIVITY       9
 
-/* A table of handlers for each GPIO interrupt */
-static xcpt_t *tsb_gpio_irq_vector;
-static uint8_t *tsb_gpio_irq_gpio_base;
+/* Structure for storing interrupt handlers and debounce data for each GPIO */
+struct tsb_gpio_irq_vectors_s {
+    xcpt_t irq_vector;
+    uint8_t irq_gpio_base;
+};
+
+/* A table of handlers and debounce data for each GPIO interrupt */
+static struct tsb_gpio_irq_vectors_s *tsb_gpio_irq_vectors;
 static volatile uint32_t refcount;
 
 /* GPIO state */
@@ -389,8 +394,8 @@ static int tsb_gpio_irq_handler(int irq, void *context)
     /* Now process each IRQ pending in the GPIO */
     for (pin = 0; pin < nr_gpio && irqstat != 0; pin++, irqstat >>= 1) {
         if ((irqstat & 1) != 0) {
-            base = tsb_gpio_irq_gpio_base[pin];
-            tsb_gpio_irq_vector[pin](base + pin, context);
+            base = tsb_gpio_irq_vectors[pin].irq_gpio_base;
+            tsb_gpio_irq_vectors[pin].irq_vector(base + pin, context);
         }
     }
 
@@ -416,8 +421,8 @@ static int tsb_gpio_irqattach(void *driver_data, uint8_t irq, xcpt_t isr, uint8_
     }
 
     /* Save the new ISR in the table. */
-    tsb_gpio_irq_vector[irq] = isr;
-    tsb_gpio_irq_gpio_base[irq] = base;
+    tsb_gpio_irq_vectors[irq].irq_vector = isr;
+    tsb_gpio_irq_vectors[irq].irq_gpio_base = base;
     irqrestore(flags);
 
     return OK;
@@ -429,7 +434,7 @@ static void tsb_gpio_irqinitialize(void)
 
     /* Point all interrupt vectors to the unexpected interrupt */
     for (i = 0; i < tsb_nr_gpio(); i++) {
-        tsb_gpio_irq_vector[i] = irq_unexpected_isr;
+        tsb_gpio_irq_vectors[i].irq_vector = irq_unexpected_isr;
     }
 }
 
@@ -635,16 +640,10 @@ int tsb_gpio_register(void *driver_data)
         tsb_gpio_pinsharing = &tsb_gpb_gpio_pinsharing[0];
     }
 
-    tsb_gpio_irq_vector = calloc(sizeof(*tsb_gpio_irq_vector), tsb_nr_gpio());
-    if (!tsb_gpio_irq_vector)
+    tsb_gpio_irq_vectors =
+        calloc(sizeof(struct tsb_gpio_irq_vectors_s), tsb_nr_gpio());
+    if (!tsb_gpio_irq_vectors)
         return -ENOMEM;
-
-    tsb_gpio_irq_gpio_base =
-        calloc(sizeof(*tsb_gpio_irq_gpio_base), tsb_nr_gpio());
-    if (!tsb_gpio_irq_gpio_base) {
-        retval = -ENOMEM;
-        goto err_irq_gpio_base_alloc;
-    }
 
     retval = register_gpio_chip(&tsb_gpio_ops, TSB_GPIO_CHIP_BASE, driver_data);
     if (retval)
@@ -658,11 +657,8 @@ int tsb_gpio_register(void *driver_data)
     return 0;
 
 err_register_gpio_chip:
-    free(tsb_gpio_irq_gpio_base);
-    tsb_gpio_irq_gpio_base = NULL;
-err_irq_gpio_base_alloc:
-    free(tsb_gpio_irq_vector);
-    tsb_gpio_irq_vector = NULL;
+    free(tsb_gpio_irq_vectors);
+    tsb_gpio_irq_vectors = NULL;
 
     return retval;
 }
