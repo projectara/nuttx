@@ -31,7 +31,11 @@
 
 #include <nuttx/gpio.h>
 #include <nuttx/gpio_chip.h>
+<<<<<<< HEAD
 #include <nuttx/power/pm.h>
+=======
+#include <nuttx/gpio/debounce.h>
+>>>>>>> GPIO: TSB: add debouncing to TSB GPIO driver
 #include <arch/tsb/gpio.h>
 #include <arch/tsb/pm.h>
 
@@ -79,6 +83,8 @@
 struct tsb_gpio_irq_vectors_s {
     xcpt_t irq_vector;
     uint8_t irq_gpio_base;
+    struct debounce_data debounce;
+    int irq_trigger_type;
 };
 
 /* A table of handlers and debounce data for each GPIO interrupt */
@@ -343,6 +349,10 @@ static int tsb_set_gpio_triggering(void *driver_data, uint8_t which, int trigger
     uint32_t shift = 4 * (which & 0x7);
     uint32_t v = getreg32(reg);
 
+    if (which >= tsb_nr_gpio()) {
+        return -EINVAL;
+    }
+
     switch(trigger) {
     case IRQ_TYPE_EDGE_RISING:
         tsb_trigger = TSB_IRQ_TYPE_EDGE_RISING;
@@ -363,7 +373,67 @@ static int tsb_set_gpio_triggering(void *driver_data, uint8_t which, int trigger
         return -EINVAL;
     }
 
+    /* update trigger type in IRQ vectors and reset debounce state */
+    tsb_gpio_irq_vectors[which].irq_trigger_type = trigger;
+    tsb_gpio_irq_vectors[which].debounce.db_state = DB_ST_INVALID;
+
     putreg32(v | (tsb_trigger << shift), reg);
+    return 0;
+}
+
+static int tsb_gpio_irq_debounce_handler(int irq, void *context)
+{
+    /* preserve ISR context */
+    tsb_gpio_irq_vectors[irq].debounce.context = context;
+
+    bool value = !!tsb_gpio_get_value(NULL, irq);
+
+    /* check if GPIO value is stable */
+    if (debounce_gpio(&tsb_gpio_irq_vectors[irq].debounce, value)) {
+
+        int trigger_type = tsb_gpio_irq_vectors[irq].irq_trigger_type;
+        enum debounce_state state = tsb_gpio_irq_vectors[irq].debounce.db_state;
+
+        switch (trigger_type) {
+            case IRQ_TYPE_EDGE_RISING:
+                if (state == DB_ST_ACTIVE_STABLE) {
+                    goto call_irq;
+                }
+                break;
+            case IRQ_TYPE_EDGE_FALLING:
+                if (state == DB_ST_INACTIVE_STABLE) {
+                    goto call_irq;
+                }
+                break;
+            case IRQ_TYPE_EDGE_BOTH:
+                    /*
+                     * no need to check state because it must be ACTIVE_STABLE
+                     * or INACTIVE_STABLE for debounce_gpio() to return true
+                     */
+                    goto call_irq;
+                break;
+            case IRQ_TYPE_LEVEL_HIGH:
+                if (state == DB_ST_ACTIVE_STABLE) {
+                    goto call_irq;
+                }
+                break;
+            case IRQ_TYPE_LEVEL_LOW:
+                if (state == DB_ST_INACTIVE_STABLE) {
+                    goto call_irq;
+                }
+                break;
+            case IRQ_TYPE_NONE:
+            default:
+                break;
+        }
+    }
+
+    return 0;
+
+call_irq:
+    /* reset debounce state and call attached irq handler */
+    tsb_gpio_irq_vectors[irq].debounce.db_state = DB_ST_INVALID;
+    tsb_gpio_irq_vectors[irq].irq_vector(irq, context);
     return 0;
 }
 
@@ -394,8 +464,16 @@ static int tsb_gpio_irq_handler(int irq, void *context)
     /* Now process each IRQ pending in the GPIO */
     for (pin = 0; pin < nr_gpio && irqstat != 0; pin++, irqstat >>= 1) {
         if ((irqstat & 1) != 0) {
+
             base = tsb_gpio_irq_vectors[pin].irq_gpio_base;
-            tsb_gpio_irq_vectors[pin].irq_vector(base + pin, context);
+
+            if (tsb_gpio_irq_vectors[pin].debounce.ms == 0) {
+                /* no debouncing, call attached irq handler */
+                tsb_gpio_irq_vectors[pin].irq_vector(base + pin, context);
+            } else {
+                /* else, call debounce handler */
+                tsb_gpio_irq_debounce_handler(base + pin, context);
+            }
         }
     }
 
@@ -432,9 +510,16 @@ static void tsb_gpio_irqinitialize(void)
 {
     int i;
 
-    /* Point all interrupt vectors to the unexpected interrupt */
     for (i = 0; i < tsb_nr_gpio(); i++) {
+        /* Point all interrupt vectors to the unexpected interrupt */
         tsb_gpio_irq_vectors[i].irq_vector = irq_unexpected_isr;
+
+        /* Initialize all debounce info */
+        tsb_gpio_irq_vectors[i].debounce.gpio = i;
+        tsb_gpio_irq_vectors[i].debounce.ms = 0; // 0 = debouncing disabled
+        tsb_gpio_irq_vectors[i].debounce.isr = tsb_gpio_irq_debounce_handler;
+        tsb_gpio_irq_vectors[i].debounce.db_state = DB_ST_INVALID;
+        tsb_gpio_irq_vectors[i].irq_trigger_type = IRQ_TYPE_NONE;
     }
 }
 
