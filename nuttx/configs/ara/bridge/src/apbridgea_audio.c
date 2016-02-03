@@ -88,6 +88,9 @@ static atomic_t request_id;
 static pthread_t apbridgea_audio_demux_thread;
 static sem_t apbridgea_audio_demux_sem;
 
+static pthread_t apbridgea_audio_restart_thread;
+static sem_t apbridgea_audio_restart_sem;
+
 static LIST_DECLARE(apbridgea_audio_info_list);
 static LIST_DECLARE(apbridgea_audio_demux_list);
 
@@ -434,6 +437,29 @@ static int apbridgea_audio_set_tx_data_size(struct apbridgea_audio_info *info,
     return 0;
 }
 
+static void *apbridgea_audio_restart(void *arg)
+{
+    struct apbridgea_audio_info *info = arg;
+    int ret;
+
+    while(1) {
+        ret = sem_wait(&apbridgea_audio_restart_sem);
+        if (ret != OK) {
+            continue;
+        }
+
+        if (info->flags & APBRIDGEA_AUDIO_FLAG_TX_STARTED) {
+            ret = device_i2s_start_receiver(info->i2s_dev);
+            if (ret) {
+                lowsyslog("Restart of I2S receiver failed: %d\n", ret);
+            }
+        }
+    }
+
+    /* NOTREACHED */
+    return NULL;
+}
+
 static int apbridgea_audio_send_data_completion(int status, const void *buf,
                                                 void *priv)
 {
@@ -494,11 +520,25 @@ static void apbridgea_audio_i2s_rx_cb(struct ring_buf *rb,
 {
     struct apbridgea_audio_info *info = arg;
 
-    if (!(info->flags & APBRIDGEA_AUDIO_FLAG_TX_STARTED) ||
-        (event != DEVICE_I2S_EVENT_RX_COMPLETE)) {
+    if (!(info->flags & APBRIDGEA_AUDIO_FLAG_TX_STARTED)) {
+        ring_buf_reset(rb);
+        ring_buf_pass(rb);
+
+        return;
+    }
+
+    if (event != DEVICE_I2S_EVENT_RX_COMPLETE) {
+        lowsyslog("Unexpected I2S event: %d, flags: 0x%x\n", event,
+                  info->flags);
 
         ring_buf_reset(rb);
         ring_buf_pass(rb);
+
+        if (info->flags & APBRIDGEA_AUDIO_FLAG_TX_STARTED) {
+            lowsyslog("Restarting I2S receiver\n");
+
+            sem_post(&apbridgea_audio_restart_sem);
+        }
 
         return;
     }
@@ -768,6 +808,17 @@ int apbridgea_audio_init(void)
         goto err_destroy_sem;
     }
 
+    ret = sem_init(&apbridgea_audio_restart_sem, 0, 0);
+    if (ret) {
+        goto err_destroy_sem;
+    }
+
+    ret = pthread_create(&apbridgea_audio_restart_thread, NULL,
+                         apbridgea_audio_restart, info);
+    if (ret) {
+        goto err_destroy_restart_sem;
+    }
+
     list_init(&info->cport_list);
     list_init(&info->list);
 
@@ -777,6 +828,8 @@ int apbridgea_audio_init(void)
 
     return 0;
 
+err_destroy_restart_sem:
+    sem_destroy(&apbridgea_audio_restart_sem);
 err_destroy_sem:
     sem_destroy(&apbridgea_audio_demux_sem);
 err_close_i2s:
