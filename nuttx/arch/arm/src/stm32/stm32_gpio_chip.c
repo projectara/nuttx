@@ -262,6 +262,13 @@ static enum gpio_pull_type stm32_gpio_get_pull(void *driver_data, uint8_t pin)
     }
 }
 
+static int stm32_gpio_set_debounce(void *driver_data, uint8_t pin,
+                                   uint16_t delay)
+{
+    //TODO implement debouncing for STM32 gpio driver
+    return -ENOSYS;
+}
+
 static int stm32_gpio_irqattach(void *driver_data, uint8_t pin, xcpt_t isr,
                                 uint8_t base)
 {
@@ -424,6 +431,7 @@ static struct gpio_ops_s stm32_gpio_ops = {
     .clear_interrupt =  stm32_gpio_clear_interrupt,
     .set_pull =         stm32_gpio_set_pull,
     .get_pull =         stm32_gpio_get_pull,
+    .set_debounce =     stm32_gpio_set_debounce,
 };
 
 /* Public functions */
