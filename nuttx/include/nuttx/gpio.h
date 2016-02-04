@@ -117,7 +117,7 @@ void gpio_set_value(uint8_t which, uint8_t value);
 /**
  * @brief Set the debouncing delay of a GPIO line
  * @param which The number of the GPIO line
- * @param delay Debouncing delay
+ * @param delay Debouncing delay in ms, delay of zero disables debouncing
  * @return 0 on success, !=0 on failure
  */
 int gpio_set_debounce(uint8_t which, uint16_t delay);
