@@ -66,6 +66,10 @@
 #define ES2_DEV_ID_MASK_SIZE 16
 /* 16-byte max delay + 5-byte header + 272-byte max payload + 2-byte footer */
 #define ES2_CPORT_RX_MAX_SIZE        (16 + 5 + 272 + 2)
+/* We need our port IRQs re-enabled; they can sometimes get turned off
+ * if the link startup sequence happens after we've already linked
+ * up. */
+#define ES2_SWITCH_REV_FLAGS TSB_SWITCH_RFLAG_REENABLE_PORT_IRQ_HACK
 
 struct es2_cport {
     pthread_mutex_t lock;
@@ -760,6 +764,7 @@ static struct tsb_rev_data es2_rev_data = {
     .spicee_enable_all      = ES2_SPICEE_ENABLE_ALL,
     .spi3ee_enable_all      = ES2_SPI3EE_ENABLE_ALL,
     .spi45ee_enable_all     = ES2_SPI45EE_ENABLE_ALL,
+    .rflags                 = ES2_SWITCH_REV_FLAGS,
 };
 
 static struct tsb_switch_ops es2_ops = {

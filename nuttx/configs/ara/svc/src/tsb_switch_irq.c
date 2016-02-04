@@ -222,6 +222,30 @@ static int tsb_switch_event_notify(struct tsb_switch *sw,
     return 0;
 }
 
+static void switch_port_irq_reenable_hack(struct tsb_switch *sw, uint8_t port) {
+    uint32_t attr_value;
+    /*
+     * We got interrupted, but something inside the switch
+     * disabled the interrupt source. This happens if e.g. a port
+     * re-links up.
+     *
+     * Check the interrupt enable attribute, if interrupts are
+     * disabled for the port, re-enable them. Since the interrupt is
+     * latched in the switch it will fire again after enablement.
+     */
+    if (switch_dme_get(sw, port, TSB_INTERRUPTENABLE, 0x0,
+                       &attr_value)) {
+        dbg_error("IRQ: Port %u TSB_INTERRUPTENABLE read failed\n",
+                  port);
+    } else {
+        if (!attr_value) {
+            dbg_insane("IRQ: port %u TSB_INTERRUPTENABLE=%d\n",
+                       port, attr_value);
+            switch_port_irq_enable(sw, port, true);
+        }
+    }
+}
+
 int switch_irq_handler(struct tsb_switch *sw) {
     uint32_t swint, swins, port_irq_status, attr_value;
     int i, j;
@@ -288,25 +312,8 @@ int switch_irq_handler(struct tsb_switch *sw) {
 
         // Handle Unipro interrupts: read the Unipro ports interrupt status
         for (i = 0; i < SWITCH_PORT_MAX; i++) {
-            /*
-             * We got interrupted, but something inside the switch
-             * disabled the interrupt source. This happens if e.g. a port
-             * re-links up.
-             *
-             * Check the interrupt enable attribute, if interrupts are
-             * disabled for the port, re-enable them. Since the interrupt is
-             * latched in the switch it will fire again after enablement.
-             */
-            if (switch_dme_get(sw, i, TSB_INTERRUPTENABLE, 0x0,
-                               &attr_value)) {
-                dbg_error("IRQ: Port %d TSB_INTERRUPTENABLE read failed\n",
-                          i);
-            } else {
-                if (!attr_value) {
-                    dbg_insane("IRQ: port %d TSB_INTERRUPTENABLE=%d\n",
-                               i, attr_value);
-                    switch_port_irq_enable(sw, i, true);
-                }
+            if (sw->rdata->rflags & TSB_SWITCH_RFLAG_REENABLE_PORT_IRQ_HACK) {
+                switch_port_irq_reenable_hack(sw, (uint8_t)i);
             }
 
             // If Unipro interrupt pending, read the interrupt status attribute

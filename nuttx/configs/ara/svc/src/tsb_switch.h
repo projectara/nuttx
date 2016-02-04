@@ -697,6 +697,13 @@ struct tsb_rev_data {
     uint32_t spicee_enable_all;
     uint32_t spi3ee_enable_all;
     uint32_t spi45ee_enable_all;
+
+    /* Revision-specific flags */
+    uint32_t rflags;
+    /* This revision of the switch needs port IRQs re-enabled every
+     * time they're disabled, as long as the global switch IRQ is
+     * enabled. */
+#define TSB_SWITCH_RFLAG_REENABLE_PORT_IRQ_HACK 0x1
 };
 
 /*
