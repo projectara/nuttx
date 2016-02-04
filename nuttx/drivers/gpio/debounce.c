@@ -80,7 +80,7 @@ bool debounce_gpio(struct debounce_data *db, bool active)
             if (timercmp(&diff, &timeout_tv, >=)) {
                 /* We have a stable signal */
                 db->db_state = DB_ST_ACTIVE_STABLE;
-		stable = true;
+                stable = true;
             } else {
                 /* Check for a stable signal after the debounce timeout */
                 debounce_delay_check(db);
@@ -100,7 +100,7 @@ bool debounce_gpio(struct debounce_data *db, bool active)
             if (timercmp(&diff, &timeout_tv, >=)) {
                 /* We have a stable signal */
                 db->db_state = DB_ST_INACTIVE_STABLE;
-		stable = true;
+                stable = true;
             } else {
                 /* Check for a stable signal after the debounce timeout */
                 debounce_delay_check(db);
