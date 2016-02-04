@@ -37,6 +37,12 @@ config ARCH_CHIP_TSB_BRIDGE
 	select ARCH_HAVE_UART
 	default y
 
+config ARCH_UNIPRO_DEBUG
+	bool "UniPro debug messages"
+	default n
+	---help---
+		Enable UniPro to print internal debug messages.
+
 config ARCH_CHIP_DEVICE_GDMAC
 	bool "GDMAC support"
 	select DEVICE_CORE

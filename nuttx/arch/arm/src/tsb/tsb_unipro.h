@@ -35,7 +35,7 @@
 #include <nuttx/unipro/unipro.h>
 #include <nuttx/list.h>
 
-#ifdef UNIPRO_DEBUG
+#ifdef CONFIG_ARCH_UNIPRO_DEBUG
 #define DBG_UNIPRO(fmt, ...) lldbg(fmt, ##__VA_ARGS__)
 #else
 #define DBG_UNIPRO(fmt, ...) ((void)0)
