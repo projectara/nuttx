@@ -34,6 +34,7 @@
  * @brief HID Device driver API
  */
 
+#include <errno.h>
 #include <stdint.h>
 
 #include <nuttx/device.h>
