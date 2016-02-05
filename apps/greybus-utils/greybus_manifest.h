@@ -55,7 +55,7 @@ enum greybus_protocol {
     /* 0x0a is unused */
     GREYBUS_PROTOCOL_SPI            = 0x0b,
     GREYBUS_PROTOCOL_DISPLAY        = 0x0c,
-    GREYBUS_PROTOCOL_CAMERA         = 0x0d,
+    GREYBUS_PROTOCOL_CAMERA_MGMT    = 0x0d,
     GREYBUS_PROTOCOL_SENSOR         = 0x0e,
     GREYBUS_PROTOCOL_LIGHTS         = 0x0f,
     GREYBUS_PROTOCOL_VIBRATOR       = 0x10,
@@ -64,6 +64,7 @@ enum greybus_protocol {
     GREYBUS_PROTOCOL_AUDIO_DATA     = 0x13,
     GREYBUS_PROTOCOL_SVC            = 0x14,
     GREYBUS_PROTOCOL_FIRMWARE       = 0x15,
+    GREYBUS_PROTOCOL_CAMERA_DATA    = 0x16,
     /* ... */
     GREYBUS_PROTOCOL_RAW            = 0xfe,
     GREYBUS_PROTOCOL_VENDOR         = 0xff,
@@ -78,7 +79,7 @@ enum greybus_class_type {
     GREYBUS_CLASS_HID               = 0x05,
     GREYBUS_CLASS_USB               = 0x06,
     GREYBUS_CLASS_SDIO              = 0x07,
-    GREYBUS_CLASS_BATTERY           = 0x08,
+    GREYBUS_CLASS_POWER_SUPPLY      = 0x08,
     GREYBUS_CLASS_PWM               = 0x09,
     /* 0x0a is unused */
     GREYBUS_CLASS_SPI               = 0x0b,
@@ -88,8 +89,8 @@ enum greybus_class_type {
     GREYBUS_CLASS_LIGHTS            = 0x0f,
     GREYBUS_CLASS_VIBRATOR          = 0x10,
     GREYBUS_CLASS_LOOPBACK          = 0x11,
-    GREYBUS_CLASS_AUDIO_MGMT        = 0x12,
-    GREYBUS_CLASS_AUDIO_DATA        = 0x13,
+    GREYBUS_CLASS_AUDIO             = 0x12,
+    /* 0x13 is unused */
     GREYBUS_CLASS_SVC               = 0x14,
     GREYBUS_CLASS_FIRMWARE          = 0x15,
     /* ... */
