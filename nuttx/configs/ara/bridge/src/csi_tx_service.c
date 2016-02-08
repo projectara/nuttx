@@ -81,7 +81,9 @@ int csi_tx_srv_start(uint8_t csi_id, struct csi_tx_config *cfg)
     if (info->csi_state != CSI_STATE_STOP)
         return -EINVAL;
 
-    /* copy parameters to internal space */
+    /* Validate and copy parameters to internal space */
+    if (csi_tx_validate_config(cfg))
+        return -EINVAL;
     info->cfg = *cfg;
 
     /* signal thread to start */

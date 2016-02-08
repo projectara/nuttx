@@ -81,15 +81,24 @@ struct csi_tx_config {
     uint8_t flags;
     /** lane number for camera stream */
     uint8_t num_lanes;
-    /** csi frequence */
+    /** CSI frequency in Hz */
     uint32_t bus_freq;
     /** line per second including blankings */
     uint32_t lines_per_second;
 };
 
 /**
+ * @brief Validate settings provided to CSI interface
+ *
+ * @param cfg Pointer to structure of CSI settings to validate
+ * @return 0 on success, negative on error
+ */
+int csi_tx_validate_config(struct csi_tx_config *cfg);
+
+/**
  * @brief Start the CSI for data streaming
  *
+ * @param dev Pointer to the CDSI device structure
  * @param cfg Pointer to structure of CSI configuration settings.
  * @return 0 on success, negative errno on error.
  */

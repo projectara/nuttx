@@ -41,6 +41,13 @@ struct cdsi_dev
 {
     uint32_t base;
     enum cdsi_direction dir;
+
+    /* CSI clock configuration values */
+    uint32_t hsck_mhz;
+    uint32_t pll_config_fbd;
+    uint32_t pll_config_prd;
+    uint32_t pll_config_frs;
+    uint32_t pic_com_delay;
 };
 
 void cdsi_write(struct cdsi_dev *dev, uint32_t addr, uint32_t v);

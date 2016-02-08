@@ -35,9 +35,599 @@
 #include <arch/tsb/cdsi0_offs_def.h>
 #include <arch/tsb/cdsi0_reg_def.h>
 #include <arch/tsb/csi.h>
+#include <nuttx/util.h>
 
 #define CDSI_TX_START_TIMEOUT           10
 #define CDSI_TX_STOP_TIMEOUT            10
+
+/* CSI TX interface parameters */
+#define CDSITX_PLL_REF_CLK_HZ           38400000
+#define CDSITX_PLL_VCO_MIN_FREQ_HZ      1000000000
+#define CDSITX_PLL_HSCK_MIN_FREQ_HZ     62500000
+#define CDSITX_PLL_HSCK_MAX_FREQ_HZ     1000000000
+
+/* Timing parameters for csi transmitter */
+/**
+ * @brief Associates clocks configuration values to
+ *        an upper limit of line speed in Mbps
+ */
+struct tsb_csi_tx_timing_params {
+    /** The value to compare the current line speed in Mpbs to */
+    uint16_t fence;
+    /** Value used to configure the CSI timing registers */
+    uint16_t val;
+};
+
+/* ---- Configurations value --- */
+static const struct tsb_csi_tx_timing_params non_bta_lptxtimecnt[] = {
+    { .fence = 95,   .val = 2 },
+    { .fence = 127,  .val = 3 },
+    { .fence = 159,  .val = 4 },
+    { .fence = 190,  .val = 5 },
+    { .fence = 220,  .val = 7 },
+    { .fence = 254,  .val = 3 },
+    { .fence = 318,  .val = 4 },
+    { .fence = 381,  .val = 5 },
+    { .fence = 400,  .val = 6 },
+    { .fence = 509,  .val = 3 },
+    { .fence = 636,  .val = 4 },
+    { .fence = 763,  .val = 5 },
+    { .fence = 891,  .val = 6 },
+    { .fence = 1000, .val = 7 },
+};
+
+static const struct tsb_csi_tx_timing_params non_bta_twakeupcnt[] = {
+    { .fence = 95,   .val = 7918 },
+    { .fence = 127,  .val = 7939 },
+    { .fence = 159,  .val = 7951 },
+    { .fence = 190,  .val = 7951 },
+    { .fence = 220,  .val = 7939 },
+    { .fence = 254,  .val = 7939 },
+    { .fence = 318,  .val = 7951 },
+    { .fence = 381,  .val = 7951 },
+    { .fence = 400,  .val = 7951 },
+    { .fence = 509,  .val = 7955 },
+    { .fence = 636,  .val = 7955 },
+    { .fence = 763,  .val = 7955 },
+    { .fence = 891,  .val = 7957 },
+    { .fence = 1000, .val = 7958 },
+};
+
+static const struct tsb_csi_tx_timing_params rxtasurecnt[] = {
+    { .fence = 95,   .val = 7  },
+    { .fence = 127,  .val = 8  },
+    { .fence = 159,  .val = 9  },
+    { .fence = 190,  .val = 12 },
+    { .fence = 220,  .val = 14 },
+    { .fence = 254,  .val = 9  },
+    { .fence = 318,  .val = 10 },
+    { .fence = 381,  .val = 12 },
+    { .fence = 400,  .val = 13 },
+    { .fence = 509,  .val = 9  },
+    { .fence = 636,  .val = 10 },
+    { .fence = 763,  .val = 12 },
+    { .fence = 891,  .val = 13 },
+    { .fence = 1000, .val = 14 },
+};
+
+static const struct tsb_csi_tx_timing_params tclk_prezerocnt[] = {
+    { .fence = 83,   .val = 13 },
+    { .fence = 90,   .val = 14 },
+    { .fence = 97,   .val = 15 },
+    { .fence = 104,  .val = 16 },
+    { .fence = 110,  .val = 17 },
+    { .fence = 117,  .val = 18 },
+    { .fence = 124,  .val = 19 },
+    { .fence = 131,  .val = 20 },
+    { .fence = 137,  .val = 21 },
+    { .fence = 144,  .val = 22 },
+    { .fence = 151,  .val = 23 },
+    { .fence = 157,  .val = 24 },
+    { .fence = 164,  .val = 25 },
+    { .fence = 171,  .val = 26 },
+    { .fence = 178,  .val = 27 },
+    { .fence = 184,  .val = 28 },
+    { .fence = 191,  .val = 29 },
+    { .fence = 198,  .val = 30 },
+    { .fence = 204,  .val = 31 },
+    { .fence = 211,  .val = 32 },
+    { .fence = 220,  .val = 33 },
+    { .fence = 225,  .val = 16 },
+    { .fence = 238,  .val = 17 },
+    { .fence = 251,  .val = 18 },
+    { .fence = 265,  .val = 19 },
+    { .fence = 278,  .val = 20 },
+    { .fence = 292,  .val = 21 },
+    { .fence = 305,  .val = 22 },
+    { .fence = 319,  .val = 23 },
+    { .fence = 332,  .val = 24 },
+    { .fence = 346,  .val = 25 },
+    { .fence = 359,  .val = 26 },
+    { .fence = 372,  .val = 27 },
+    { .fence = 386,  .val = 28 },
+    { .fence = 399,  .val = 29 },
+    { .fence = 400,  .val = 30 },
+    { .fence = 413,  .val = 14 },
+    { .fence = 440,  .val = 15 },
+    { .fence = 467,  .val = 16 },
+    { .fence = 493,  .val = 17 },
+    { .fence = 520,  .val = 18 },
+    { .fence = 547,  .val = 19 },
+    { .fence = 574,  .val = 20 },
+    { .fence = 601,  .val = 21 },
+    { .fence = 628,  .val = 22 },
+    { .fence = 655,  .val = 23 },
+    { .fence = 682,  .val = 24 },
+    { .fence = 708,  .val = 25 },
+    { .fence = 735,  .val = 26 },
+    { .fence = 762,  .val = 27 },
+    { .fence = 789,  .val = 28 },
+    { .fence = 816,  .val = 29 },
+    { .fence = 843,  .val = 30 },
+    { .fence = 870,  .val = 31 },
+    { .fence = 897,  .val = 32 },
+    { .fence = 923,  .val = 33 },
+    { .fence = 950,  .val = 34 },
+    { .fence = 977,  .val = 35 },
+    { .fence = 1000, .val = 36 },
+};
+
+static const struct tsb_csi_tx_timing_params tclk_precnt[] = {
+    { .fence = 198,  .val = 7 },
+    { .fence = 220,  .val = 8 },
+    { .fence = 397,  .val = 2 },
+    { .fence = 400,  .val = 3 },
+    { .fence = 1000, .val = 0 },
+};
+
+static const struct tsb_csi_tx_timing_params tclk_preparecnt[] = {
+    { .fence = 82,   .val = 2 },
+    { .fence = 106,  .val = 3 },
+    { .fence = 130,  .val = 4 },
+    { .fence = 154,  .val = 5 },
+    { .fence = 178,  .val = 6 },
+    { .fence = 220,  .val = 7 },
+    { .fence = 260,  .val = 4 },
+    { .fence = 308,  .val = 5 },
+    { .fence = 356,  .val = 6 },
+    { .fence = 400,  .val = 7 },
+    { .fence = 425,  .val = 3 },
+    { .fence = 521,  .val = 4 },
+    { .fence = 617,  .val = 5 },
+    { .fence = 713,  .val = 6 },
+    { .fence = 809,  .val = 7 },
+    { .fence = 905,  .val = 8 },
+    { .fence = 1000, .val = 9 },
+};
+
+static const struct tsb_csi_tx_timing_params tclk_exitcnt[] = {
+    { .fence = 84,   .val = 5  },
+    { .fence = 98,   .val = 6  },
+    { .fence = 112,  .val = 7  },
+    { .fence = 126,  .val = 8  },
+    { .fence = 140,  .val = 9  },
+    { .fence = 154,  .val = 10 },
+    { .fence = 168,  .val = 11 },
+    { .fence = 182,  .val = 12 },
+    { .fence = 196,  .val = 13 },
+    { .fence = 210,  .val = 14 },
+    { .fence = 220,  .val = 15 },
+    { .fence = 224,  .val = 7  },
+    { .fence = 252,  .val = 8  },
+    { .fence = 280,  .val = 9  },
+    { .fence = 308,  .val = 10 },
+    { .fence = 336,  .val = 11 },
+    { .fence = 364,  .val = 12 },
+    { .fence = 392,  .val = 13 },
+    { .fence = 400,  .val = 14 },
+    { .fence = 448,  .val = 7  },
+    { .fence = 504,  .val = 8  },
+    { .fence = 560,  .val = 9  },
+    { .fence = 616,  .val = 10 },
+    { .fence = 673,  .val = 11 },
+    { .fence = 729,  .val = 12 },
+    { .fence = 785,  .val = 13 },
+    { .fence = 841,  .val = 14 },
+    { .fence = 897,  .val = 15 },
+    { .fence = 953,  .val = 16 },
+    { .fence = 1000, .val = 17 },
+};
+
+static const struct tsb_csi_tx_timing_params tclk_trailcnt[] = {
+    { .fence = 103,  .val = 4 },
+    { .fence = 136,  .val = 5 },
+    { .fence = 168,  .val = 6 },
+    { .fence = 200,  .val = 7 },
+    { .fence = 220,  .val = 8 },
+    { .fence = 281,  .val = 3 },
+    { .fence = 346,  .val = 4 },
+    { .fence = 400,  .val = 5 },
+    { .fence = 443,  .val = 1 },
+    { .fence = 573,  .val = 2 },
+    { .fence = 702,  .val = 3 },
+    { .fence = 831,  .val = 4 },
+    { .fence = 960,  .val = 5 },
+    { .fence = 1000, .val = 6 },
+};
+
+static const struct tsb_csi_tx_timing_params ths_prezerocnt[] = {
+    { .fence = 199,  .val = 0  },
+    { .fence = 212,  .val = 1  },
+    { .fence = 220,  .val = 2  },
+    { .fence = 226,  .val = 0  },
+    { .fence = 254,  .val = 1  },
+    { .fence = 281,  .val = 2  },
+    { .fence = 309,  .val = 3  },
+    { .fence = 336,  .val = 4  },
+    { .fence = 363,  .val = 5  },
+    { .fence = 391,  .val = 6  },
+    { .fence = 400,  .val = 7  },
+    { .fence = 446,  .val = 3  },
+    { .fence = 501,  .val = 4  },
+    { .fence = 556,  .val = 5  },
+    { .fence = 611,  .val = 6  },
+    { .fence = 666,  .val = 7  },
+    { .fence = 721,  .val = 8  },
+    { .fence = 775,  .val = 9  },
+    { .fence = 830,  .val = 10 },
+    { .fence = 885,  .val = 11 },
+    { .fence = 940,  .val = 12 },
+    { .fence = 995,  .val = 13 },
+    { .fence = 1000, .val = 14 },
+};
+
+static const struct tsb_csi_tx_timing_params ths_preparecnt[] = {
+    { .fence = 99,   .val = 5  },
+    { .fence = 124,  .val = 6  },
+    { .fence = 148,  .val = 7  },
+    { .fence = 173,  .val = 8  },
+    { .fence = 198,  .val = 9  },
+    { .fence = 220,  .val = 10 },
+    { .fence = 259,  .val = 5  },
+    { .fence = 309,  .val = 6  },
+    { .fence = 358,  .val = 7  },
+    { .fence = 400,  .val = 8  },
+    { .fence = 480,  .val = 4  },
+    { .fence = 579,  .val = 5  },
+    { .fence = 679,  .val = 6  },
+    { .fence = 778,  .val = 7  },
+    { .fence = 877,  .val = 8  },
+    { .fence = 976,  .val = 9  },
+    { .fence = 1000, .val = 10 },
+};
+
+static const struct tsb_csi_tx_timing_params ths_exitcnt[] = {
+    { .fence = 85,   .val = 9  },
+    { .fence = 99,   .val = 10 },
+    { .fence = 113,  .val = 11 },
+    { .fence = 127,  .val = 12 },
+    { .fence = 142,  .val = 13 },
+    { .fence = 156,  .val = 14 },
+    { .fence = 170,  .val = 15 },
+    { .fence = 184,  .val = 16 },
+    { .fence = 199,  .val = 17 },
+    { .fence = 213,  .val = 18 },
+    { .fence = 220,  .val = 19 },
+    { .fence = 227,  .val = 9  },
+    { .fence = 255,  .val = 10 },
+    { .fence = 284,  .val = 11 },
+    { .fence = 312,  .val = 12 },
+    { .fence = 341,  .val = 13 },
+    { .fence = 369,  .val = 14 },
+    { .fence = 398,  .val = 15 },
+    { .fence = 400,  .val = 16 },
+    { .fence = 455,  .val = 8  },
+    { .fence = 511,  .val = 9  },
+    { .fence = 568,  .val = 10 },
+    { .fence = 625,  .val = 11 },
+    { .fence = 682,  .val = 12 },
+    { .fence = 739,  .val = 13 },
+    { .fence = 796,  .val = 14 },
+    { .fence = 853,  .val = 15 },
+    { .fence = 910,  .val = 16 },
+    { .fence = 967,  .val = 17 },
+    { .fence = 1000, .val = 18 },
+};
+
+static struct  tsb_csi_tx_timing_params ths_trailcnt[] = {
+    { .fence = 96,   .val = 10 },
+    { .fence = 128,  .val = 11 },
+    { .fence = 160,  .val = 12 },
+    { .fence = 193,  .val = 13 },
+    { .fence = 220,  .val = 14 },
+    { .fence = 241,  .val = 6  },
+    { .fence = 306,  .val = 7  },
+    { .fence = 371,  .val = 8  },
+    { .fence = 400,  .val = 9  },
+    { .fence = 461,  .val = 4  },
+    { .fence = 589,  .val = 5  },
+    { .fence = 716,  .val = 6  },
+    { .fence = 844,  .val = 7  },
+    { .fence = 971,  .val = 8  },
+    { .fence = 1000, .val = 9  },
+};
+
+static struct tsb_csi_tx_timing_params cnt_tclk_postcnt[] = {
+    { .fence = 100,  .val = 16 },
+    { .fence = 120,  .val = 17 },
+    { .fence = 141,  .val = 18 },
+    { .fence = 161,  .val = 19 },
+    { .fence = 181,  .val = 20 },
+    { .fence = 201,  .val = 21 },
+    { .fence = 220,  .val = 23 },
+    { .fence = 221,  .val = 6  },
+    { .fence = 261,  .val = 7  },
+    { .fence = 302,  .val = 8  },
+    { .fence = 342,  .val = 9  },
+    { .fence = 382,  .val = 10 },
+    { .fence = 400,  .val = 11 },
+    { .fence = 463,  .val = 1  },
+    { .fence = 544,  .val = 2  },
+    { .fence = 624,  .val = 3  },
+    { .fence = 705,  .val = 4  },
+    { .fence = 785,  .val = 5  },
+    { .fence = 866,  .val = 6  },
+    { .fence = 946,  .val = 7  },
+    { .fence = 1000, .val = 8  },
+};
+
+static struct tsb_csi_tx_timing_params non_cnt_tclk_postcnt[] = {
+    { .fence = 100,  .val = 32 },
+    { .fence = 120,  .val = 33 },
+    { .fence = 141,  .val = 34 },
+    { .fence = 161,  .val = 35 },
+    { .fence = 181,  .val = 36 },
+    { .fence = 201,  .val = 37 },
+    { .fence = 220,  .val = 39 },
+    { .fence = 221,  .val = 18 },
+    { .fence = 261,  .val = 19 },
+    { .fence = 302,  .val = 20 },
+    { .fence = 342,  .val = 21 },
+    { .fence = 382,  .val = 22 },
+    { .fence = 400,  .val = 23 },
+    { .fence = 463,  .val = 11 },
+    { .fence = 544,  .val = 12 },
+    { .fence = 624,  .val = 13 },
+    { .fence = 705,  .val = 14 },
+    { .fence = 785,  .val = 15 },
+    { .fence = 866,  .val = 16 },
+    { .fence = 946,  .val = 17 },
+    { .fence = 1000, .val = 18 },
+};
+
+static struct tsb_csi_tx_timing_params syscldtclksel[] = {
+    { .fence = 220,  .val = 2 },
+    { .fence = 400,  .val = 1 },
+    { .fence = 1000, .val = 0 },
+};
+
+/**
+ * @brief Walk the array of possible fence-value pairs
+ *
+ * @param dev The CDSI device
+ * @param params The table of values to inspect
+ *
+ * @return The value associated with current interface hsck
+ */
+static int csi_tx_get_param(struct cdsi_dev *dev,
+        const struct tsb_csi_tx_timing_params *params)
+{
+    struct tsb_csi_tx_timing_params *rover =
+        (struct tsb_csi_tx_timing_params *)params;
+
+    /*
+     * The hsck value is guaranteed by the PLL computation code to
+     * be lower than 1000 MHz, ensuring that the loop will not
+     * go past the last entry of the timing parameters table
+     */
+    while (dev->hsck_mhz >= rover->fence)
+        rover++;
+
+    return rover->val;
+}
+
+/**
+ * @brief Compute delay settings for tx bridge pixel interface
+ *
+ * @param dev The CDSI device
+ * @param cfg The CDSI device configuration as supplied by AP
+ */
+static void csi_reg_pic_com_delay(struct cdsi_dev *dev,
+        struct csi_tx_config *cfg)
+{
+    uint32_t line_len_nsec;
+    uint32_t line_len_samples;
+
+    /* Assign to variables for rounding */
+    line_len_nsec = DIV_ROUND_CLOSEST(1000000000, cfg->lines_per_second);
+    line_len_samples = line_len_nsec * (cfg->bus_freq / 1000000);
+
+    dev->pic_com_delay = line_len_samples / 16000 + 1;
+}
+
+/**
+ * @brief Compute pll register settings based on AP requested
+ *        bus frequency
+ *
+ * @param dev  CDSI interface
+ * @param bus_freq_hz The bus frequency in Hz requested by the AP
+ */
+static void csi_reg_pll_config(struct cdsi_dev *dev, uint32_t bus_freq_hz)
+{
+    uint32_t pll_vco_hz;
+    uint16_t pll_frs;
+    uint16_t pll_fbd;
+
+    /*
+     * The PLL is organized as follows.
+     *
+     * External Input                        1GHz < VCO < 2GHz             HSCK
+     * Clock (38.4 MHz)
+     *   |                                           |                      |
+     *   |                                           |                      |
+     *   v       ,-----------.     ,--------------.  |  ,------------.      v
+     *  ,--.     |   Pre PLL |     |   PLL        |  v  |   Post PLL |     ,--.
+     *  |  | --> | ÷ Clock   | --> | x Multiplier | --> | ÷ Clock    | --> |  |
+     *  `--'     |   Divider |     |              |     |   Divider  |     `--'
+     *           `-----------'     `--------------'     `------------'
+     *                 ^                  ^                   ^
+     *                 |                  |                   |
+     *                PRD                FBD                2^FRS
+     *
+     * PRD: PRe-Divider
+     * FBD: FeedBack Divider
+     * FRS: Frequency Range Selection
+     *
+     * Note that the values written in the hardware
+     * registers are PRD - 1, FBD - 1 and FRS - 1.
+     *
+     * The code below doesn't take this into account to simplify PLL
+     * calculations, the offset is only subtracted when computing the register
+     * values.
+     */
+
+    /*
+     * Compute the Post PLL Clock Divider value. As the divider can only takes
+     * power of two values, and as the maximum allowed VCO frequency is exactly
+     * twice its minimum allowed value, there's exactly one possible
+     * post-divider value except for output frequencies equal to the VCO lower
+     * bound divided by a power of two, in which case two post-divider values
+     * are possible. We can thus simply look for the lowest power of two
+     * multiplier of the output frequency that leads to a VCO frequency higher
+     * than or equal to the VCO lower bound. As a result the VCO frequency will
+     * always be lower than and never equal to its upper bound.
+     */
+    pll_frs = 0;
+    do {
+        pll_vco_hz = bus_freq_hz * (1 << (++pll_frs));
+    } while (pll_vco_hz < CDSITX_PLL_VCO_MIN_FREQ_HZ);
+
+    /*
+     * We need to round the FBD multiplier up to achieve a VCO equal to or
+     * higher than the requested output frequency value.
+     *
+     * Hardcode the PRD pre-divider to 1 for now, the output frequency
+     * accuracy can be improved by making active use of it.
+     */
+    pll_fbd = (pll_vco_hz + CDSITX_PLL_REF_CLK_HZ - 1)
+	        / CDSITX_PLL_REF_CLK_HZ;
+
+    pll_vco_hz = pll_fbd * CDSITX_PLL_REF_CLK_HZ;
+    dev->hsck_mhz = pll_vco_hz / (1 << pll_frs) / 1000000;
+    dev->pll_config_fbd = pll_fbd;
+    dev->pll_config_frs = pll_frs;
+    dev->pll_config_prd = 1;
+}
+
+/**
+ * @brief Configure CSI TX timing parameters using parameter tables
+ *
+ * @param dev The cdsi device
+ * @param cfg The CSI transmitter configuration structure
+ */
+static void csi_tx_set_timings(struct cdsi_dev *dev, struct csi_tx_config *cfg)
+{
+    uint32_t val;
+
+    val = csi_tx_get_param(dev, syscldtclksel);
+    cdsi_write(dev, CDSI0_CDSITX_GLOBAL_TIMING_PARAM_00_OFFS, val);
+
+    cdsi_write(dev, CDSI0_CDSITX_GLOBAL_TIMING_PARAM_01_OFFS,
+               CDSI0_CDSITX_GLOBAL_TIMING_PARAM_01_SBS_DPHY_CLM_LPTXCURR1EN_MASK |
+               CDSI0_CDSITX_GLOBAL_TIMING_PARAM_01_SBS_DPHY_D3M_LPTXCURR1EN_MASK |
+               CDSI0_CDSITX_GLOBAL_TIMING_PARAM_01_SBS_DPHY_D2M_LPTXCURR1EN_MASK |
+               CDSI0_CDSITX_GLOBAL_TIMING_PARAM_01_SBS_DPHY_D1M_LPTXCURR1EN_MASK |
+               CDSI0_CDSITX_GLOBAL_TIMING_PARAM_01_SBS_DPHY_D0M_LPTXCURR1EN_MASK);
+
+    val = csi_tx_get_param(dev, non_bta_lptxtimecnt);
+    if (val == 2)
+        cdsi_write(dev, CDSI0_CDSITX_GLOBAL_TIMING_PARAM_02_OFFS,
+                   (val + 1) <<
+                   CDSI0_CDSITX_GLOBAL_TIMING_PARAM_02_SBS_DPHY_HSTXCLK_DIVCNT_SHIFT);
+    else
+        cdsi_write(dev, CDSI0_CDSITX_GLOBAL_TIMING_PARAM_02_OFFS,
+                   val <<
+                   CDSI0_CDSITX_GLOBAL_TIMING_PARAM_02_SBS_DPHY_HSTXCLK_DIVCNT_SHIFT);
+
+    cdsi_write(dev, CDSI0_CDSITX_GLOBAL_TIMING_PARAM_03_OFFS,
+               val <<
+               CDSI0_CDSITX_GLOBAL_TIMING_PARAM_03_SBS_DPHY_PPI_LPTXTIMECNT_SHIFT);
+
+    val = csi_tx_get_param(dev, tclk_preparecnt) <<
+	    CDSI0_CDSITX_GLOBAL_TIMING_PARAM_04_SBS_DPHY_PPI_TCLK_PREPARECNT_SHIFT |
+          csi_tx_get_param(dev, tclk_precnt) <<
+            CDSI0_CDSITX_GLOBAL_TIMING_PARAM_04_SBS_DPHY_PPI_TCLK_PRECNT_SHIFT |
+          csi_tx_get_param(dev, tclk_prezerocnt) <<
+            CDSI0_CDSITX_GLOBAL_TIMING_PARAM_04_SBS_DPHY_PPI_TCLK_PREZEROCNT_SHIFT;
+    cdsi_write(dev, CDSI0_CDSITX_GLOBAL_TIMING_PARAM_04_OFFS, val);
+
+    val = csi_tx_get_param(dev, tclk_trailcnt) <<
+            CDSI0_CDSITX_GLOBAL_TIMING_PARAM_05_SBS_DPHY_PPI_TCLK_TRAILCNT_SHIFT |
+          csi_tx_get_param(dev, tclk_exitcnt)  <<
+            CDSI0_CDSITX_GLOBAL_TIMING_PARAM_05_SBS_DPHY_PPI_TCLK_EXITCNT_SHIFT;
+    cdsi_write(dev, CDSI0_CDSITX_GLOBAL_TIMING_PARAM_05_OFFS, val );
+
+    val = csi_tx_get_param(dev, ths_preparecnt) <<
+	    CDSI0_CDSITX_GLOBAL_TIMING_PARAM_06_SBS_DPHY_PPI_THS_PREPARECNT_SHIFT |
+          csi_tx_get_param(dev, ths_prezerocnt) <<
+            CDSI0_CDSITX_GLOBAL_TIMING_PARAM_06_SBS_DPHY_PPI_THS_PREZEROCNT_SHIFT;
+    cdsi_write(dev, CDSI0_CDSITX_GLOBAL_TIMING_PARAM_06_OFFS, val);
+
+    val = csi_tx_get_param(dev, ths_trailcnt) <<
+	    CDSI0_CDSITX_GLOBAL_TIMING_PARAM_07_SBS_DPHY_PPI_THS_TRAILCNT_SHIFT |
+          csi_tx_get_param(dev, ths_exitcnt) <<
+            CDSI0_CDSITX_GLOBAL_TIMING_PARAM_07_SBS_DPHY_PPI_THS_EXITCNT_SHIFT;
+    cdsi_write(dev, CDSI0_CDSITX_GLOBAL_TIMING_PARAM_07_OFFS, val);
+
+    val = csi_tx_get_param(dev, non_bta_twakeupcnt) <<
+            CDSI0_CDSITX_GLOBAL_TIMING_PARAM_08_SBS_DPHY_PPI_TWAKEUPCNT_SHIFT;
+    cdsi_write(dev, CDSI0_CDSITX_GLOBAL_TIMING_PARAM_08_OFFS, val);
+
+    if (cfg->flags & CSI_TX_FLAG_CLOCK_CONTINUOUS)
+        val = csi_tx_get_param(dev, cnt_tclk_postcnt) <<
+              CDSI0_CDSITX_GLOBAL_TIMING_PARAM_09_SBS_DPHY_PPI_TCLK_POSTCNT_SHIFT;
+    else
+        val = csi_tx_get_param(dev, non_cnt_tclk_postcnt) <<
+              CDSI0_CDSITX_GLOBAL_TIMING_PARAM_09_SBS_DPHY_PPI_TCLK_POSTCNT_SHIFT;
+    cdsi_write(dev, CDSI0_CDSITX_GLOBAL_TIMING_PARAM_09_OFFS, val);
+
+    val = csi_tx_get_param(dev, rxtasurecnt) <<
+            CDSI0_CDSITX_GLOBAL_TIMING_PARAM_10_SBS_DPHY_PPI_RXTASURECNT_SHIFT |
+          csi_tx_get_param(dev, non_bta_lptxtimecnt) <<
+            CDSI0_CDSITX_GLOBAL_TIMING_PARAM_10_SBS_DPHY_PPI_TXTAGOCNT_SHIFT;
+    cdsi_write(dev, CDSI0_CDSITX_GLOBAL_TIMING_PARAM_10_OFFS, val);
+}
+
+/**
+ * @brief Validate the supplied configuration values for the CSI interface
+ *
+ * @param cfg The CSI interface configuration values
+ *
+ * @return 0 on success, a negative value for errors
+ */
+int csi_tx_validate_config(struct csi_tx_config *cfg)
+{
+    /* Validate the bus requested frequency */
+    if (cfg->bus_freq < CDSITX_PLL_HSCK_MIN_FREQ_HZ ||
+        cfg->bus_freq > CDSITX_PLL_HSCK_MAX_FREQ_HZ) {
+        lldbg("CDSI: Invalid bus frequency %u\n", cfg->bus_freq);
+        return -EINVAL;
+    }
+
+    /* Validate the number of CSI data lanes */
+    if (cfg->num_lanes < 1 || cfg->num_lanes > 4) {
+        lldbg("CDSI: Invalid number of data lanes\n");
+        return -EINVAL;
+    }
+
+    /* Validate flags: only clock mode is currently supported */
+    if (cfg->flags & ~CSI_TX_FLAG_CLOCK_CONTINUOUS) {
+        lldbg("CDSI: Unsupported flags 0x%2x\n", cfg->flags);
+        return -EINVAL;
+    }
+
+    return 0;
+}
 
 /**
  * @brief Set the registers in CSI controller to start transfer.
@@ -52,6 +642,9 @@ int csi_tx_start(struct cdsi_dev *dev, struct csi_tx_config *cfg)
     uint32_t val;
 
     cdsi_enable(dev);
+
+    csi_reg_pll_config(dev, cfg->bus_freq);
+    csi_reg_pic_com_delay(dev, cfg);
 
     /* Set to Tx mode for CDSI */
     cdsi_write(dev, CDSI0_AL_TX_BRG_CDSITX_MODE_OFFS,
@@ -71,8 +664,10 @@ int csi_tx_start(struct cdsi_dev *dev, struct csi_tx_config *cfg)
                CDSI0_AL_TX_BRG_PIC_COM_SET_AL_TX_BRG_REG_COM_PLURALIMGTYPE_A_MASK |
                CDSI0_AL_TX_BRG_PIC_COM_SET_AL_TX_BRG_REG_COM_FRAMENUM_EN_A_MASK |
                CDSI0_AL_TX_BRG_PIC_COM_SET_AL_TX_BRG_REG_COM_UPDATE_EN_A_MASK);
-    cdsi_write(dev, CDSI0_AL_TX_BRG_PIC_COM_VDELAYSTRCOUNT_OFFS, 1702);
-    cdsi_write(dev, CDSI0_AL_TX_BRG_PIC_COM_VDELAYENDCOUNT_OFFS, 1702);
+    cdsi_write(dev, CDSI0_AL_TX_BRG_PIC_COM_VDELAYSTRCOUNT_OFFS,
+               dev->pic_com_delay);
+    cdsi_write(dev, CDSI0_AL_TX_BRG_PIC_COM_VDELAYENDCOUNT_OFFS,
+               dev->pic_com_delay);
     cdsi_write(dev, CDSI0_AL_TX_BRG_PIC_COM_MAXFCNT_OFFS, 0);
 
     cdsi_write(dev, CDSI0_AL_TX_BRG_PIC_SYN_SET_OFFS,
@@ -162,10 +757,14 @@ int csi_tx_start(struct cdsi_dev *dev, struct csi_tx_config *cfg)
 
     /* D-PHY PLL setting */
     cdsi_write(dev, CDSI0_CDSITX_PLL_CONFIG_00_OFFS,
-               (2 << CDSI0_CDSITX_PLL_CONFIG_00_SBS_DPHY_MPM_PRD_SHIFT) |
-               (2 << CDSI0_CDSITX_PLL_CONFIG_00_SBS_DPHY_MPM_LBWS_SHIFT) |
-               CDSI0_CDSITX_PLL_CONFIG_00_SBS_DPHY_CLM_LFBREN_MASK |
-               (124 << CDSI0_CDSITX_PLL_CONFIG_00_SBS_DPHY_MPM_FBD_SHIFT));
+               (1 << CDSI0_CDSITX_PLL_CONFIG_00_SBS_DPHY_CLM_LFBREN_SHIFT) |
+               (2 << CDSI0_CDSITX_PLL_CONFIG_00_SBS_DPHY_MPM_LBWS_SHIFT)   |
+               ((dev->pll_config_fbd - 1) <<
+                    CDSI0_CDSITX_PLL_CONFIG_00_SBS_DPHY_MPM_FBD_SHIFT)     |
+               ((dev->pll_config_frs - 1) <<
+                    CDSI0_CDSITX_PLL_CONFIG_00_SBS_DPHY_MPM_FRS_SHIFT)     |
+               ((dev->pll_config_prd - 1) <<
+                    CDSI0_CDSITX_PLL_CONFIG_00_SBS_DPHY_MPM_PRD_SHIFT));
     cdsi_write(dev, CDSI0_CDSITX_PLL_CONFIG_02_OFFS, 5760);
 
     /* D-PHY PLL enable */
@@ -175,35 +774,19 @@ int csi_tx_start(struct cdsi_dev *dev, struct csi_tx_config *cfg)
                CDSI0_CDSITX_PLL_CONTROL_01_SBD_DPHY_MP_ENABLE_MASK);
 
     /* CDSITX setting */
-    cdsi_write(dev, CDSI0_CDSITX_LANE_ENABLE_00_OFFS,
-               CDSI0_CDSITX_LANE_ENABLE_00_SBS_DPHY_CLM_HM_EN_MASK |
-               CDSI0_CDSITX_LANE_ENABLE_00_SBS_DPHY_D3M_HM_EN_MASK |
-               CDSI0_CDSITX_LANE_ENABLE_00_SBS_DPHY_D2M_HM_EN_MASK |
-               CDSI0_CDSITX_LANE_ENABLE_00_SBS_DPHY_D1M_HM_EN_MASK |
-               CDSI0_CDSITX_LANE_ENABLE_00_SBS_DPHY_D0M_HM_EN_MASK);
-    cdsi_write(dev, CDSI0_CDSITX_LANE_ENABLE_01_OFFS,
-               CDSI0_CDSITX_LANE_ENABLE_01_SBD_DPHY_CLM_SM_EN_MASK |
-               CDSI0_CDSITX_LANE_ENABLE_01_SBD_DPHY_D3M_SM_EN_MASK |
-               CDSI0_CDSITX_LANE_ENABLE_01_SBD_DPHY_D2M_SM_EN_MASK |
-               CDSI0_CDSITX_LANE_ENABLE_01_SBD_DPHY_D1M_SM_EN_MASK |
-               CDSI0_CDSITX_LANE_ENABLE_01_SBD_DPHY_D0M_SM_EN_MASK);
-    cdsi_write(dev, CDSI0_CDSITX_LANE_ENABLE_02_OFFS,
-               CDSI0_CDSITX_LANE_ENABLE_02_SBS_LINK_CLM_EN_MASK |
-               CDSI0_CDSITX_LANE_ENABLE_02_SBS_LINK_D3M_EN_MASK |
-               CDSI0_CDSITX_LANE_ENABLE_02_SBS_LINK_D2M_EN_MASK |
-               CDSI0_CDSITX_LANE_ENABLE_02_SBS_LINK_D1M_EN_MASK |
-               CDSI0_CDSITX_LANE_ENABLE_02_SBS_LINK_D0M_EN_MASK);
+    val = CDSI0_CDSITX_LANE_ENABLE_00_SBS_DPHY_CLM_HM_EN_MASK
+        | ((1 << cfg->num_lanes) - 1);
+    cdsi_write(dev, CDSI0_CDSITX_LANE_ENABLE_00_OFFS, val);
+    cdsi_write(dev, CDSI0_CDSITX_LANE_ENABLE_01_OFFS, val);
+    cdsi_write(dev, CDSI0_CDSITX_LANE_ENABLE_02_OFFS, val);
 
     /* D-PHY Vreg setting */
     cdsi_write(dev, CDSI0_CDSITX_VREG_CONFIG_OFFS, 19);
 
     /* D-PHY Vreg enable */
-    cdsi_write(dev, CDSI0_CDSITX_VREG_CONTROL_OFFS,
-               CDSI0_CDSITX_VREG_CONTROL_SBS_DPHY_CLM_HSTXVREGEN_MASK |
-               CDSI0_CDSITX_VREG_CONTROL_SBS_DPHY_D3M_HSTXVREGEN_MASK |
-               CDSI0_CDSITX_VREG_CONTROL_SBS_DPHY_D2M_HSTXVREGEN_MASK |
-               CDSI0_CDSITX_VREG_CONTROL_SBS_DPHY_D1M_HSTXVREGEN_MASK |
-               CDSI0_CDSITX_VREG_CONTROL_SBS_DPHY_D0M_HSTXVREGEN_MASK);
+    val = CDSI0_CDSITX_LANE_ENABLE_00_SBS_DPHY_CLM_HM_EN_MASK
+        | ((1 << cfg->num_lanes) - 1);
+    cdsi_write(dev, CDSI0_CDSITX_VREG_CONTROL_OFFS, val);
 
     cdsi_write(dev, CDSI0_CDSITX_LPRX_CALIB_CONFIG_OFFS, 10);
     cdsi_write(dev, CDSI0_CDSITX_LPRX_CALIB_CONTROL_OFFS,
@@ -214,37 +797,7 @@ int csi_tx_start(struct cdsi_dev *dev, struct csi_tx_config *cfg)
                CDSI0_CDSITX_CSI2DSI_SELECT_SBS_APF_CSI2_MODE_MASK |
                CDSI0_CDSITX_CSI2DSI_SELECT_SBS_LINK_CSI2_MODE_MASK);
 
-    cdsi_write(dev, CDSI0_CDSITX_GLOBAL_TIMING_PARAM_00_OFFS, 0);
-    cdsi_write(dev, CDSI0_CDSITX_GLOBAL_TIMING_PARAM_01_OFFS,
-               CDSI0_CDSITX_GLOBAL_TIMING_PARAM_01_SBS_DPHY_CLM_LPTXCURR1EN_MASK |
-               CDSI0_CDSITX_GLOBAL_TIMING_PARAM_01_SBS_DPHY_D3M_LPTXCURR1EN_MASK |
-               CDSI0_CDSITX_GLOBAL_TIMING_PARAM_01_SBS_DPHY_D2M_LPTXCURR1EN_MASK |
-               CDSI0_CDSITX_GLOBAL_TIMING_PARAM_01_SBS_DPHY_D1M_LPTXCURR1EN_MASK |
-               CDSI0_CDSITX_GLOBAL_TIMING_PARAM_01_SBS_DPHY_D0M_LPTXCURR1EN_MASK);
-    cdsi_write(dev, CDSI0_CDSITX_GLOBAL_TIMING_PARAM_02_OFFS,
-               6 << CDSI0_CDSITX_GLOBAL_TIMING_PARAM_02_SBS_DPHY_HSTXCLK_DIVCNT_SHIFT);
-    cdsi_write(dev, CDSI0_CDSITX_GLOBAL_TIMING_PARAM_03_OFFS,
-               6 << CDSI0_CDSITX_GLOBAL_TIMING_PARAM_03_SBS_DPHY_PPI_LPTXTIMECNT_SHIFT);
-    cdsi_write(dev, CDSI0_CDSITX_GLOBAL_TIMING_PARAM_04_OFFS,
-               (29 << CDSI0_CDSITX_GLOBAL_TIMING_PARAM_04_SBS_DPHY_PPI_TCLK_PREZEROCNT_SHIFT) |
-               (0 << CDSI0_CDSITX_GLOBAL_TIMING_PARAM_04_SBS_DPHY_PPI_TCLK_PRECNT_SHIFT) |
-               (7 << CDSI0_CDSITX_GLOBAL_TIMING_PARAM_04_SBS_DPHY_PPI_TCLK_PREPARECNT_SHIFT));
-    cdsi_write(dev, CDSI0_CDSITX_GLOBAL_TIMING_PARAM_05_OFFS,
-               (14 << CDSI0_CDSITX_GLOBAL_TIMING_PARAM_05_SBS_DPHY_PPI_TCLK_EXITCNT_SHIFT) |
-               (4 << CDSI0_CDSITX_GLOBAL_TIMING_PARAM_05_SBS_DPHY_PPI_TCLK_TRAILCNT_SHIFT));
-    cdsi_write(dev, CDSI0_CDSITX_GLOBAL_TIMING_PARAM_06_OFFS,
-               (10 << CDSI0_CDSITX_GLOBAL_TIMING_PARAM_06_SBS_DPHY_PPI_THS_PREZEROCNT_SHIFT) |
-               (8 << CDSI0_CDSITX_GLOBAL_TIMING_PARAM_06_SBS_DPHY_PPI_THS_PREPARECNT_SHIFT));
-    cdsi_write(dev, CDSI0_CDSITX_GLOBAL_TIMING_PARAM_07_OFFS,
-               (15 << CDSI0_CDSITX_GLOBAL_TIMING_PARAM_07_SBS_DPHY_PPI_THS_EXITCNT_SHIFT) |
-               (7 << CDSI0_CDSITX_GLOBAL_TIMING_PARAM_07_SBS_DPHY_PPI_THS_TRAILCNT_SHIFT));
-    cdsi_write(dev, CDSI0_CDSITX_GLOBAL_TIMING_PARAM_08_OFFS,
-               7967 << CDSI0_CDSITX_GLOBAL_TIMING_PARAM_08_SBS_DPHY_PPI_TWAKEUPCNT_SHIFT);
-    cdsi_write(dev, CDSI0_CDSITX_GLOBAL_TIMING_PARAM_09_OFFS,
-               16 << CDSI0_CDSITX_GLOBAL_TIMING_PARAM_09_SBS_DPHY_PPI_TCLK_POSTCNT_SHIFT);
-    cdsi_write(dev, CDSI0_CDSITX_GLOBAL_TIMING_PARAM_10_OFFS,
-               (6 << CDSI0_CDSITX_GLOBAL_TIMING_PARAM_10_SBS_DPHY_PPI_TXTAGOCNT_SHIFT) |
-               (13 << CDSI0_CDSITX_GLOBAL_TIMING_PARAM_10_SBS_DPHY_PPI_RXTASURECNT_SHIFT));
+    csi_tx_set_timings(dev, cfg);
 
     cdsi_write(dev, CDSI0_CDSITX_SIDEBAND_COUNT_CONFIG_00_OFFS, 1940);
     cdsi_write(dev, CDSI0_CDSITX_SIDEBAND_COUNT_CONFIG_01_OFFS, 0xffffffff);
@@ -301,7 +854,9 @@ int csi_tx_start(struct cdsi_dev *dev, struct csi_tx_config *cfg)
                CDSI0_CDSITX_SIDEBAND_CONFIG_05_SBS_LINK_RXVC1EN_MASK |
                CDSI0_CDSITX_SIDEBAND_CONFIG_05_SBS_LINK_RXVC0EN_MASK);
     cdsi_write(dev, CDSI0_CDSITX_SIDEBAND_CONFIG_06_OFFS, 0);
-    cdsi_write(dev, CDSI0_CDSITX_SIDEBAND_CONFIG_07_OFFS, 0);
+    cdsi_write(dev, CDSI0_CDSITX_SIDEBAND_CONFIG_07_OFFS,
+               cfg->flags & CSI_TX_FLAG_CLOCK_CONTINUOUS ?
+               CDSI0_CDSITX_SIDEBAND_CONFIG_07_SBS_LINK_HS_CLK_MODE_MASK : 0);
 
     cdsi_write(dev, CDSI0_CDSITX_SIDEBAND_CONFIG_08_OFFS,
                CDSI0_CDSITX_SIDEBAND_CONFIG_08_SBS_APF_DSI_DTVALID_POL_MASK);
