@@ -233,7 +233,7 @@ DECLARE_MODULE_PORT_INTERFACE(module_5, "module_5", module_5_vreg_data, 10,
 #define I2C_SEL1_INH    BIT(2)
 
 enum {
-    I2C_INA230_SEL1_A = STM32_GPIO_CHIP_BASE + 71, /* PE7 */
+    I2C_INA230_SEL1_A = 0,
     I2C_INA230_SEL1_B,
     I2C_INA230_SEL1_INH,
 };
@@ -312,16 +312,16 @@ static struct pwrmon_dev_ctx db3_pwrmon_devs[] = {
 
 static void db3_pwrmon_reset_i2c_sel(pwrmon_board_info* board)
 {
-    gpio_set_value(I2C_INA230_SEL1_INH, 1);
-    gpio_set_value(I2C_INA230_SEL1_A, 1);
-    gpio_set_value(I2C_INA230_SEL1_B, 1);
+    gpio_set_value(board->i2c_sel_gpio_base + I2C_INA230_SEL1_INH, 0);
+    gpio_set_value(board->i2c_sel_gpio_base + I2C_INA230_SEL1_A, 0);
+    gpio_set_value(board->i2c_sel_gpio_base + I2C_INA230_SEL1_B, 0);
 }
 
 static void db3_pwrmon_init_i2c_sel(pwrmon_board_info* board)
 {
-    gpio_direction_out(I2C_INA230_SEL1_A, 1);
-    gpio_direction_out(I2C_INA230_SEL1_B, 1);
-    gpio_direction_out(I2C_INA230_SEL1_INH, 1);
+    gpio_direction_out(board->i2c_sel_gpio_base + I2C_INA230_SEL1_A, 0);
+    gpio_direction_out(board->i2c_sel_gpio_base + I2C_INA230_SEL1_B, 0);
+    gpio_direction_out(board->i2c_sel_gpio_base + I2C_INA230_SEL1_INH, 0);
 }
 
 static int db3_pwrmon_do_i2c_sel(pwrmon_board_info* board, uint8_t dev)
@@ -333,23 +333,26 @@ static int db3_pwrmon_do_i2c_sel(pwrmon_board_info* board, uint8_t dev)
     /* First inhibit all lines, to make sure there is no short/collision */
     gpio_set_value(I2C_INA230_SEL1_INH, 1);
 
-    gpio_set_value(I2C_INA230_SEL1_A, board->devs[dev].i2c_sel & I2C_SEL1_A ? 0 : 1);
-    gpio_set_value(I2C_INA230_SEL1_B, board->devs[dev].i2c_sel & I2C_SEL1_B ? 0 : 1);
+    gpio_set_value(board->i2c_sel_gpio_base + I2C_INA230_SEL1_A,
+                   board->devs[dev].i2c_sel & I2C_SEL1_A ? 0 : 1);
+    gpio_set_value(board->i2c_sel_gpio_base + I2C_INA230_SEL1_B,
+                   board->devs[dev].i2c_sel & I2C_SEL1_B ? 0 : 1);
 
     if (board->devs[dev].i2c_sel & I2C_SEL1_INH) {
-        gpio_set_value(I2C_INA230_SEL1_INH, 0);
+        gpio_set_value(board->i2c_sel_gpio_base + I2C_INA230_SEL1_INH, 0);
     }
 
     return 0;
 }
 
 pwrmon_board_info db3_pwrmon = {
-        .i2c_bus        = 1,
-        .devs           = db3_pwrmon_devs,
-        .num_devs       = ARRAY_SIZE(db3_pwrmon_devs),
-        .reset_i2c_sel  = db3_pwrmon_reset_i2c_sel,
-        .init_i2c_sel   = db3_pwrmon_init_i2c_sel,
-        .do_i2c_sel     = db3_pwrmon_do_i2c_sel,
+    .i2c_bus        = 1,
+    .devs           = db3_pwrmon_devs,
+    .num_devs       = ARRAY_SIZE(db3_pwrmon_devs),
+    .reset_i2c_sel  = db3_pwrmon_reset_i2c_sel,
+    .init_i2c_sel   = db3_pwrmon_init_i2c_sel,
+    .do_i2c_sel     = db3_pwrmon_do_i2c_sel,
+    .i2c_sel_gpio_base = STM32_GPIO_CHIP_BASE + 71, /* PE7 */
 };
 
 /*
