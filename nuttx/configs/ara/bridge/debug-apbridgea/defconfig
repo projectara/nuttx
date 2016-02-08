@@ -335,7 +335,6 @@ CONFIG_PWM=y
 CONFIG_DEVICE_CORE=y
 CONFIG_GPIO=y
 # CONFIG_GPIO_TCA64XX is not set
-# CONFIG_GPIO_DEBOUNCE is not set
 # CONFIG_SPI is not set
 # CONFIG_I2S is not set
 # CONFIG_RTC is not set
