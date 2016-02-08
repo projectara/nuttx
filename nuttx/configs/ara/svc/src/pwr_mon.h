@@ -78,6 +78,7 @@ typedef struct pwrmon_boardinfo {
     struct pwrmon_dev_ctx *devs;
     size_t num_devs;
     int i2c_bus;
+    int i2c_sel_gpio_base;
     /* Set the i2c selection gpios to their default values. */
     void (*reset_i2c_sel)(struct pwrmon_boardinfo* board);
     /* Set the i2c selection gpios' direction. */
