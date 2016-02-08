@@ -326,17 +326,17 @@ static void db3_pwrmon_init_i2c_sel(pwrmon_board_info* board)
 
 static int db3_pwrmon_do_i2c_sel(pwrmon_board_info* board, uint8_t dev)
 {
-    if (dev >= ARRAY_SIZE(db3_pwrmon_devs)) {
+    if (dev >= board->num_devs) {
         return -EINVAL;
     }
 
     /* First inhibit all lines, to make sure there is no short/collision */
     gpio_set_value(I2C_INA230_SEL1_INH, 1);
 
-    gpio_set_value(I2C_INA230_SEL1_A, db3_pwrmon_devs[dev].i2c_sel & I2C_SEL1_A ? 0 : 1);
-    gpio_set_value(I2C_INA230_SEL1_B, db3_pwrmon_devs[dev].i2c_sel & I2C_SEL1_B ? 0 : 1);
+    gpio_set_value(I2C_INA230_SEL1_A, board->devs[dev].i2c_sel & I2C_SEL1_A ? 0 : 1);
+    gpio_set_value(I2C_INA230_SEL1_B, board->devs[dev].i2c_sel & I2C_SEL1_B ? 0 : 1);
 
-    if (db3_pwrmon_devs[dev].i2c_sel & I2C_SEL1_INH) {
+    if (board->devs[dev].i2c_sel & I2C_SEL1_INH) {
         gpio_set_value(I2C_INA230_SEL1_INH, 0);
     }
 
