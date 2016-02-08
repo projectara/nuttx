@@ -625,8 +625,8 @@ static int arapm_main_init(void)
         for (r = r_start; r < r_end; r++) {
             arapm_rails[d][r] = pwrmon_init_rail(d, r);
             if (!arapm_rails[d][r]) {
-                fprintf(stderr, "%s(): Failed to init %s rail! (%d)\n",
-                        __func__, pwrmon_rail_name(d, r), ret);
+                fprintf(stderr, "%s(): Failed to init %s rail!\n",
+                        __func__, pwrmon_rail_name(d, r));
                 return -EIO;
            }
         }
