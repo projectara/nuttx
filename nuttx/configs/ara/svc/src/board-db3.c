@@ -310,6 +310,60 @@ static struct pwrmon_dev_ctx db3_pwrmon_devs[] = {
     },
 };
 
+static struct pwrmon_dev_ctx db3_5_pwrmon_devs[] = {
+    {
+        .name = "SWitch",
+        .i2c_sel = I2C_SEL1_A | I2C_SEL1_B | I2C_SEL1_INH,
+        .rails = {
+            DEFINE_PWR_RAIL("VSW_1P1_PLL",        0x42),
+            DEFINE_PWR_RAIL("VSW_1P1_CORE",       0x41),
+            DEFINE_PWR_RAIL("VSW_1P8_UNIPRO",     0x47),
+            DEFINE_PWR_RAIL("VSW_1P8_IO",         0x48),
+        },
+        .num_rails = 4,
+    },
+    {
+        .name = "APB1",
+        .i2c_sel = I2C_SEL1_B | I2C_SEL1_INH,
+        .rails = {
+            DEFINE_PWR_RAIL("VAPB1_1P1_CORE",     0x41),
+            DEFINE_PWR_RAIL("VAPB1_1P1_PLL1",     0x42),
+            DEFINE_PWR_RAIL("VAPB1_1P2_CDSI_PLL", 0x4A),
+            DEFINE_PWR_RAIL("VAPB1_1P2_CDSI",     0x4B),
+            DEFINE_PWR_RAIL("VAPB1_1P2_HSIC",     0x46),
+            DEFINE_PWR_RAIL("VAPB1_1P8_UNIPRO",   0x47),
+            DEFINE_PWR_RAIL("VAPB1_1P8_IO",       0x48),
+            DEFINE_PWR_RAIL("VAPB1_1P1_PLL2",     0x43),
+        },
+        .num_rails = 8,
+    },
+    {
+        .name = "APB2",
+        .i2c_sel = I2C_SEL1_A | I2C_SEL1_INH,
+        .rails = {
+            DEFINE_PWR_RAIL("VAPB2_1P1_CORE",     0x41),
+            DEFINE_PWR_RAIL("VAPB2_1P1_PLL1",     0x42),
+            DEFINE_PWR_RAIL("VAPB2_1P2_CDSI_PLL", 0x4A),
+            DEFINE_PWR_RAIL("VAPB2_1P2_CDSI",     0x4B),
+            DEFINE_PWR_RAIL("VAPB2_1P2_HSIC",     0x46),
+            DEFINE_PWR_RAIL("VAPB2_1P8_UNIPRO",   0x47),
+            DEFINE_PWR_RAIL("VAPB2_1P8_IO",       0x48),
+            DEFINE_PWR_RAIL("VAPB2_1P1_PLL2",     0x43),
+        },
+        .num_rails = 8,
+    },
+    {
+        .name = "SVC",
+        .i2c_sel = I2C_SEL1_INH,
+        .rails = {
+            DEFINE_PWR_RAIL("SVC_1P8_VDD",        0x42),
+            DEFINE_PWR_RAIL("SVC_1P8_VBAT",       0x41),
+            DEFINE_PWR_RAIL("SVC_1P8_VDDA",       0x47),
+        },
+        .num_rails = 3,
+    },
+};
+
 static void db3_pwrmon_reset_i2c_sel(pwrmon_board_info* board)
 {
     gpio_set_value(board->i2c_sel_gpio_base + I2C_INA230_SEL1_INH, 0);
@@ -353,6 +407,16 @@ pwrmon_board_info db3_pwrmon = {
     .init_i2c_sel   = db3_pwrmon_init_i2c_sel,
     .do_i2c_sel     = db3_pwrmon_do_i2c_sel,
     .i2c_sel_gpio_base = STM32_GPIO_CHIP_BASE + 71, /* PE7 */
+};
+
+pwrmon_board_info db3_5_pwrmon = {
+    .i2c_bus        = 1,
+    .devs           = db3_5_pwrmon_devs,
+    .num_devs       = ARRAY_SIZE(db3_5_pwrmon_devs),
+    .reset_i2c_sel  = db3_pwrmon_reset_i2c_sel,
+    .init_i2c_sel   = db3_pwrmon_init_i2c_sel,
+    .do_i2c_sel     = db3_pwrmon_do_i2c_sel,
+    .i2c_sel_gpio_base = U4570_GPIO_PIN(11),
 };
 
 /*
