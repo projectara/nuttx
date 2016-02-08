@@ -162,7 +162,7 @@ static int pwrmon_ina230_select(uint8_t dev)
         return 0;
     }
 
-    status = board_info->do_i2c_sel(dev);
+    status = board_info->do_i2c_sel(board_info, dev);
     if (status < 0) {
         return status;
     }
@@ -272,7 +272,7 @@ int pwrmon_init(uint32_t current_lsb_uA,
 
     current_dev = -1;
 
-    board_info->init_i2c_sel();
+    board_info->init_i2c_sel(board_info);
 
     dbg_verbose("%s(): done.\n", __func__);
 
@@ -289,7 +289,7 @@ void pwrmon_deinit(void)
         return;
     }
 
-    board_info->reset_i2c_sel();
+    board_info->reset_i2c_sel(board_info);
 
     /* Release I2C resource */
     up_i2cuninitialize(i2c_dev);

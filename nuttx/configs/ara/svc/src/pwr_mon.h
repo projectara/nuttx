@@ -74,16 +74,16 @@ typedef struct {
  * Board specific info for power monitoring.
  * To be implemented in appropriate board files.
  */
-typedef struct {
+typedef struct pwrmon_boardinfo {
     struct pwrmon_dev_ctx *devs;
     size_t num_devs;
     int i2c_bus;
     /* Set the i2c selection gpios to their default values. */
-    void (*reset_i2c_sel)(void);
+    void (*reset_i2c_sel)(struct pwrmon_boardinfo* board);
     /* Set the i2c selection gpios' direction. */
-    void (*init_i2c_sel)(void);
+    void (*init_i2c_sel)(struct pwrmon_boardinfo* board);
     /* Select given i2c line. */
-    int (*do_i2c_sel)(uint8_t dev);
+    int (*do_i2c_sel)(struct pwrmon_boardinfo* board, uint8_t dev);
 } pwrmon_board_info;
 
 /* Exported functions */

@@ -363,15 +363,15 @@ static struct pwrmon_dev_ctx evt1_pwrmon_devs[] = {
     },
 };
 
-static void evt1_pwrmon_reset_i2c_sel(void)
+static void evt1_pwrmon_reset_i2c_sel(pwrmon_board_info* board)
 {
 }
 
-static void evt1_pwrmon_init_i2c_sel(void)
+static void evt1_pwrmon_init_i2c_sel(pwrmon_board_info* board)
 {
 }
 
-static int evt1_pwrmon_do_i2c_sel(uint8_t dev)
+static int evt1_pwrmon_do_i2c_sel(pwrmon_board_info* board, uint8_t dev)
 {
     return 0;
 }

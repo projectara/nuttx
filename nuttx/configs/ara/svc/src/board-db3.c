@@ -310,21 +310,21 @@ static struct pwrmon_dev_ctx db3_pwrmon_devs[] = {
     },
 };
 
-static void db3_pwrmon_reset_i2c_sel(void)
+static void db3_pwrmon_reset_i2c_sel(pwrmon_board_info* board)
 {
     gpio_set_value(I2C_INA230_SEL1_INH, 1);
     gpio_set_value(I2C_INA230_SEL1_A, 1);
     gpio_set_value(I2C_INA230_SEL1_B, 1);
 }
 
-static void db3_pwrmon_init_i2c_sel(void)
+static void db3_pwrmon_init_i2c_sel(pwrmon_board_info* board)
 {
     gpio_direction_out(I2C_INA230_SEL1_A, 1);
     gpio_direction_out(I2C_INA230_SEL1_B, 1);
     gpio_direction_out(I2C_INA230_SEL1_INH, 1);
 }
 
-static int db3_pwrmon_do_i2c_sel(uint8_t dev)
+static int db3_pwrmon_do_i2c_sel(pwrmon_board_info* board, uint8_t dev)
 {
     if (dev >= ARRAY_SIZE(db3_pwrmon_devs)) {
         return -EINVAL;
