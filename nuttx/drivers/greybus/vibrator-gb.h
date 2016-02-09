@@ -42,10 +42,10 @@
 struct gb_vibrator_proto_version_response {
     __u8 major;
     __u8 minor;
-};
+} __packed;
 
 struct gb_vibrator_on_request {
     __le16 timeout_ms;
-};
+} __packed;
 
 #endif /* __VIBRATOR_GB_H__ */
