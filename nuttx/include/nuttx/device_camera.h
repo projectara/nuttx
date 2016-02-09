@@ -39,14 +39,6 @@
 
 #define DEVICE_TYPE_CAMERA_HW    "camera"
 
-/**
- * Camera module capabilities
- */
-#define CAP_METADATA_GREYBUS     BIT(0)
-#define CAP_METADATA_MIPI        BIT(1)
-#define CAP_STILL_IMAGE          BIT(2)
-#define CAP_JPEG                 BIT(3)
-
 /* Image format codes */
 #define CAMERA_IMAGE_FORMAT_RESERVED  0x00
 #define CAMERA_UYVY422_PACKED         0x01

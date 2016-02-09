@@ -40,12 +40,6 @@
 #define GB_CAMERA_TYPE_FLUSH                    0x05
 #define GB_CAMERA_TYPE_METADATA                 0x06
 
-/* Capabilities flags */
-#define GB_CAP_METADATA_GREYBUS     BIT(0)
-#define GB_CAP_METADATA_MIPI        BIT(1)
-#define GB_CAP_STILL_IMAGE          BIT(2)
-#define GB_CAP_JPEG                 BIT(3)
-
 /* Stream configuratoin */
 #define MAX_STREAMS_NUM             4
 
