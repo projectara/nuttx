@@ -52,11 +52,15 @@
 #define POWER_OFF_TIME_IN_US                        (500000)
 #define WAKEOUT_PULSE_DURATION_IN_US                (100000)
 #define MODULE_PORT_WAKEOUT_PULSE_DURATION_IN_US    (500000)
+#define LINKUP_WD_DELAY_IN_MS                       (120)
+#define LINKUP_WD_DELAY        ((LINKUP_WD_DELAY_IN_MS * CLOCKS_PER_SEC) / 1000)
 
 static struct interface **interfaces;
 static unsigned int nr_interfaces;
 static unsigned int nr_spring_interfaces;
+static struct work_s linkup_work;
 
+static void interface_power_cycle(void *data);
 static void interface_uninstall_wd_handler(struct wd_data *wd);
 static int interface_install_wd_handler(struct interface *iface, bool);
 
@@ -324,6 +328,8 @@ int interface_power_off(struct interface *iface)
         return -EINVAL;
     }
 
+    wd_cancel(&iface->linkup_wd);
+
     /* Disable Switch port */
     rc = switch_enable_port(svc->sw, iface->switch_portid, false);
     if (rc && (rc != -EOPNOTSUPP)) {
@@ -343,6 +349,20 @@ int interface_power_off(struct interface *iface)
     }
 
     return 0;
+}
+
+static void interface_linkup_timeout(int argc, uint32_t arg1, ...)
+{
+    struct interface *iface = (struct interface*) arg1;
+
+    DEBUGASSERT(sizeof(struct interface*) == sizeof(uint32_t));
+
+    iface->linkup_retries++;
+
+    dbg_warn("Link-up took more than %d ms, turning interface '%s' OFF and ON again\n",
+             LINKUP_WD_DELAY_IN_MS, iface->name);
+
+    work_queue(HPWORK, &linkup_work, interface_power_cycle, iface, 0);
 }
 
 /*
@@ -383,6 +403,9 @@ int interface_power_on(struct interface *iface)
         return rc;
     }
 
+    wd_start(&iface->linkup_wd, LINKUP_WD_DELAY, interface_linkup_timeout, 1,
+             iface);
+
     /* Enable Switch port */
     rc = switch_enable_port(svc->sw, iface->switch_portid, true);
     if (rc && (rc != -EOPNOTSUPP)) {
@@ -404,6 +427,30 @@ int interface_power_on(struct interface *iface)
     return 0;
 }
 
+void interface_cancel_linkup_wd(struct interface *iface)
+{
+    dbg_verbose("Canceling linkup watchdog for '%s'\n", iface->name);
+    wd_cancel(&iface->linkup_wd);
+}
+
+static void interface_power_cycle(void *data)
+{
+    struct interface *iface = data;
+    uint8_t retries;
+
+    interface_power_off(iface);
+
+    if (iface->linkup_retries >= INTERFACE_MAX_LINKUP_TRIES) {
+        dbg_error("Could not link-up with '%s' in less than %d ms, aborting after %d tries\n",
+                  iface->name, LINKUP_WD_DELAY_IN_MS,
+                  INTERFACE_MAX_LINKUP_TRIES);
+        return;
+    }
+
+    retries = iface->linkup_retries;
+    interface_power_on(iface);
+    iface->linkup_retries = retries;
+}
 
 /**
  * @brief           Return the name of the interface

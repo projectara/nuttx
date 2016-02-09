@@ -37,6 +37,7 @@
 #include <time.h>
 
 #include <nuttx/wqueue.h>
+#include <nuttx/wdog.h>
 
 #include "vreg.h"
 
@@ -124,6 +125,7 @@ struct interface {
     uint8_t linkup_retries;
     bool ejectable;
     uint8_t release_gpio;
+    struct wdog_s linkup_wd;
 };
 
 #define interface_foreach(iface, idx)                       \
@@ -146,6 +148,7 @@ int interface_set_devid_by_id(uint8_t intf_id, uint8_t dev_id);
 struct interface* interface_spring_get(uint8_t index);
 uint8_t interface_get_count(void);
 uint8_t interface_get_spring_count(void);
+void interface_cancel_linkup_wd(struct interface *iface);
 
 void interface_forcibly_eject_all(uint32_t delay);
 int interface_forcibly_eject(struct interface *iface, uint32_t delay);
@@ -232,6 +235,7 @@ uint32_t interface_pm_get_spin(struct interface *iface);
                                   !!detect_in_pol),            \
         .ejectable = _ejectable,                               \
         .release_gpio = _rg,                                   \
+        .linkup_wd = WDOG_INITIAILIZER,                        \
     }
 
 #endif

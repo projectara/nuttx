@@ -157,8 +157,10 @@ static int event_linkup(struct tsb_switch_event *ev) {
     case SW_LINKUP_INITIATE:
         /* Initiate the LinkUp. The Switch will notify the result back */
         iface->linkup_retries = 0;
-        /* Fall through */
+        rc = switch_link_startup(svc->sw, ev->linkup.port);
+        break;
     case TSB_LINKUP_FAIL:
+        interface_cancel_linkup_wd(iface);
         /* LinkUp failed, retry until max retries count is reached */
         if (iface->linkup_retries >= INTERFACE_MAX_LINKUP_TRIES) {
             interface_power_off(iface);
@@ -171,6 +173,7 @@ static int event_linkup(struct tsb_switch_event *ev) {
         }
        break;
     case TSB_LINKUP_SUCCESS:
+        interface_cancel_linkup_wd(iface);
         /* LinkUp succeeded, do nothing. The mailbox handshake follows */
         break;
     default:
