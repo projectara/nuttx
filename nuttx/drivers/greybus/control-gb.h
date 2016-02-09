@@ -49,29 +49,29 @@
 struct gb_control_proto_version_response {
     __u8      major;
     __u8      minor;
-};
+} __packed;
 
 /* Control protocol get manifest size request has no payload*/
 struct gb_control_get_manifest_size_response {
     __le16    size;
-};
+} __packed;
 
 /* Control protocol get manifest request has no payload */
 struct gb_control_get_manifest_response {
     __u8      data[0];
-};
+} __packed;
 
 /* Control protocol [dis]connected request */
 struct gb_control_connected_request {
     __le16    cport_id;
-};
+} __packed;
 /* Control protocol [dis]connected response has no payload */
 
 /* Control protocol interface (firmware) version request has no payload */
 struct gb_control_interface_version_response {
     __le16    major;
     __le16    minor;
-};
+} __packed;
 
 #endif /* __CONTROL_GB_H__ */
 
