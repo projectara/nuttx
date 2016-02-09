@@ -37,10 +37,12 @@
 
 #define ROMSTRING __attribute__ ((section(".rodata"),aligned(4)))
 
-const char __ara_build_target[] ROMSTRING = {ARA_BUILD_TARGET};
-const char __ara_git_version[]  ROMSTRING = {ARA_FW_VERSION};
+const char __ara_build_name[] ROMSTRING = {ARA_BUILD_NAME};
+const char __ara_nuttx_version[]  ROMSTRING = {ARA_NUTTX_VERSION};
+const char __ara_fdk_version[]  ROMSTRING = {ARA_FDK_VERSION};
 
 void ara_show_build_info(void) {
-    early_dbg("__ara_build_target '%s'\n", __ara_build_target);
-    early_dbg("__ara_git_version  '%s'\n", __ara_git_version);
+    early_dbg("__ara_build_name     : '%s'\n", __ara_build_name);
+    early_dbg("__ara_nuttx_version  : '%s'\n", __ara_nuttx_version);
+    early_dbg("__ara_fdk_version    : '%s'\n", __ara_fdk_version);
 }

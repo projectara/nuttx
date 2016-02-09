@@ -42,9 +42,20 @@ ASRCS =
 CSRCS =
 MAINSRC = version_main.c
 
-VERSION_STR := $(shell git describe --long --dirty --abbrev=10 --tags)
+NUTTX_VERSION_STR := $(shell git describe --long --dirty --abbrev=10 --tags 2>/dev/null)
+ifeq ($(NUTTX_VERSION_STR),)
+NUTTX_VERSION_STR := $(OOT_NUTTX_VERSION_STR)
+endif
 
-CFLAGS += -DVERSION_STR=\"$(VERSION_STR)\"
+FDK_VERSION_STR := $(OOT_FDK_VERSION_STR)
+
+ifeq ($(OOT_BUILD_NAME),)
+BUILD_NAME := "Unknown"
+else
+BUILD_NAME := $(OOT_BUILD_NAME)
+endif
+
+CFLAGS += -DNUTTX_VERSION_STR=\"$(NUTTX_VERSION_STR)\" -DFDK_VERSION_STR=\"$(FDK_VERSION_STR)\" -DBUILD_NAME=\"$(BUILD_NAME)\"
 
 CONFIG_ARA_VERSION_PROGNAME ?= version$(EXEEXT)
 PROGNAME = $(CONFIG_ARA_VERSION_PROGNAME)

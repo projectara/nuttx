@@ -41,8 +41,8 @@ int main(int argc, FAR char *argv[])
 int version_main(int argc, char *argv[])
 #endif
 {
-  printf("Nuttx Version: ");
-  printf(VERSION_STR);
-  printf("\n");
+  printf("NuttX Version: " NUTTX_VERSION_STR "\n");
+  printf("FDK Version:   " FDK_VERSION_STR "\n");
+  printf("Build name:    " BUILD_NAME "\n");
   return 0;
 }
