@@ -209,6 +209,45 @@ static void enable_int(unsigned int cportid) {
 }
 
 /**
+ * @brief Initialize one UniPro cport
+ */
+static int unipro_init_cport(unsigned int cportid)
+{
+    struct cport *cport = cport_handle(cportid);
+
+    if (!cport) {
+        return -EINVAL;
+    }
+
+    if (cport->connected) {
+        return 0;
+    }
+
+    atomic_init(&cport->inflight_buf_count, 0);
+#if defined(CONFIG_APBRIDGEA)
+    cport->max_inflight_buf_count = 1;
+#else
+    cport->max_inflight_buf_count = CONFIG_TSB_UNIPRO_MAX_INFLIGHT_BUFCOUNT;
+#endif
+    cport->switch_buf_on_free = false;
+
+    cport->rx_buf = unipro_rxbuf_alloc(cportid);
+    if (!cport->rx_buf) {
+        lowsyslog("unipro: couldn't allocate initial buffer for CP%u\n",
+                  cportid);
+        return -ENOMEM;
+    }
+
+    unipro_switch_rxbuf(cportid, cport->rx_buf);
+
+#ifdef UNIPRO_DEBUG
+    unipro_info();
+#endif
+
+    return 0;
+}
+
+/**
  * @brief Enable a CPort that has a connected connection.
  */
 static int configure_connected_cport(unsigned int cportid) {
@@ -224,6 +263,22 @@ static int configure_connected_cport(unsigned int cportid) {
     rc = cport_get_status(cport);
     switch (rc) {
     case CPORT_STATUS_CONNECTED:
+        /*
+         * Disabling the interrupt here is not useful but it is a reminder that
+         * this code is ran from interrupt context and that the unipro interrupt
+         * should be disabled if this code is ever called outside of
+         * interrupt context.
+         */
+        unipro_write(UNIPRO_INT_EN, 0);
+        ret = unipro_init_cport(cportid);
+        unipro_write(UNIPRO_INT_EN, 1);
+
+        if (ret) {
+            lowsyslog("%s(): failed to initialize CP%u (%d)\n", __func__,
+                      cportid, ret);
+            break;
+        }
+
         cport->connected = 1;
 
         /*
@@ -691,46 +746,6 @@ void unipro_switch_rxbuf(unsigned int cportid, void *buffer)
     unipro_write(ahm_address, (uint32_t) buffer);
 }
 
-/**
- * @brief Initialize one UniPro cport
- */
-static int unipro_init_cport(unsigned int cportid)
-{
-    struct cport *cport = cport_handle(cportid);
-
-    if (!cport) {
-        return -EINVAL;
-    }
-
-    if (cport->connected)
-        return 0;
-
-    _unipro_reset_cport(cportid);
-
-    atomic_init(&cport->inflight_buf_count, 0);
-#if defined(CONFIG_APBRIDGEA)
-    cport->max_inflight_buf_count = 1;
-#else
-    cport->max_inflight_buf_count = CONFIG_TSB_UNIPRO_MAX_INFLIGHT_BUFCOUNT;
-#endif
-    cport->switch_buf_on_free = false;
-
-    cport->rx_buf = unipro_rxbuf_alloc(cportid);
-    if (!cport->rx_buf) {
-        lowsyslog("unipro: couldn't allocate initial buffer for CP%u\n",
-                  cportid);
-        return -ENOMEM;
-    }
-
-    unipro_switch_rxbuf(cportid, cport->rx_buf);
-
-#ifdef UNIPRO_DEBUG
-    unipro_info();
-#endif
-
-    return 0;
-}
-
 void unipro_set_event_handler(unipro_event_handler_t handler)
 {
     evt_handler = handler;
@@ -776,6 +791,8 @@ void unipro_init(void)
         cport->cportid = i;
         cport->connected = 0;
         list_init(&cport->tx_fifo);
+
+        _unipro_reset_cport(i);
     }
 
     unipro_write(LUP_INT_EN, 0x1);
@@ -930,7 +947,6 @@ int unipro_reset_cport(unsigned int cportid, cport_reset_completion_cb_t cb,
 int unipro_driver_register(struct unipro_driver *driver, unsigned int cportid)
 {
     struct cport *cport = cport_handle(cportid);
-    int retval;
 
     if (!cport) {
         return -ENODEV;
@@ -944,26 +960,11 @@ int unipro_driver_register(struct unipro_driver *driver, unsigned int cportid)
 
     cport->driver = driver;
 
-    unipro_write(UNIPRO_INT_EN, 0);
-
-    retval = unipro_init_cport(cportid);
-    if (retval) {
-        lowsyslog("%s(): failed to initialize CP%u (%d)\n", cportid, retval);
-        goto error_cport_init;
-    }
-
-    unipro_write(UNIPRO_INT_EN, 1);
-
     lldbg("Registered driver %s on %sconnected CP%u\n",
           cport->driver->name, cport->connected ? "" : "un",
           cport->cportid);
 
     return 0;
-
-error_cport_init:
-    cport->driver = NULL;
-    unipro_write(UNIPRO_INT_EN, 1);
-    return retval;
 }
 
 int unipro_driver_unregister(unsigned int cportid)
