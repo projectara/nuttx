@@ -47,11 +47,6 @@
 #define CAP_STILL_IMAGE          BIT(2)
 #define CAP_JPEG                 BIT(3)
 
-/**
- * Query required data size to report
- */
-#define SIZE_CAPABILITIES       0
-
 /* Image format codes */
 #define CAMERA_IMAGE_FORMAT_RESERVED  0x00
 #define CAMERA_UYVY422_PACKED         0x01
@@ -148,11 +143,8 @@ struct metadata_info {
  */
 struct device_camera_type_ops {
     /** Camera capabilities */
-    int (*capabilities)(struct device *dev, uint32_t *size,
-                        uint8_t *capabilities);
-    /** Get required size of various data  */
-    int (*get_required_size)(struct device *dev, uint8_t operation,
-                             uint16_t *size);
+    int (*capabilities)(struct device *dev, size_t *size,
+                        const uint8_t **capabilities);
     /** Set configures to camera module */
     int (*set_streams_cfg)(struct device *dev, uint8_t *num_streams,
                            uint8_t req_flags,
@@ -170,11 +162,12 @@ struct device_camera_type_ops {
  *
  * @param dev Pointer to structure of device data
  * @param size The size of capabilities data length from protocol to driver
- * @param capabilities Pointer that will be stored camera module capabilities.
+ * @param capabilities Pointer to be filled by the camera driver with the
+ *        pointer to the capabilities buffer
  * @return 0 on success, negative errno on error
  */
-static inline int device_camera_capabilities(struct device *dev, uint16_t *size,
-                                             uint8_t *capabilities)
+static inline int device_camera_capabilities(struct device *dev, size_t *size,
+                                             const uint8_t **capabilities)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -184,29 +177,6 @@ static inline int device_camera_capabilities(struct device *dev, uint16_t *size,
     if (DEVICE_DRIVER_GET_OPS(dev, camera)->capabilities) {
         return DEVICE_DRIVER_GET_OPS(dev, camera)->capabilities(dev, size,
                                                                 capabilities);
-    }
-    return -ENOSYS;
-}
-
-/**
- * @brief Get required data size of camera module information
- *
- * @param dev Pointer to structure of device data
- * @param operation The id of operation
- * @param size Get the required buffer size from driver
- * @return 0 on success, negative errno on error
- */
-static inline int device_camera_get_required_size(struct device *dev,
-                                              uint8_t operation, uint16_t *size)
-{
-    DEVICE_DRIVER_ASSERT_OPS(dev);
-
-    if (!device_is_open(dev)) {
-        return -ENODEV;
-    }
-    if (DEVICE_DRIVER_GET_OPS(dev, camera)->get_required_size) {
-        return DEVICE_DRIVER_GET_OPS(dev, camera)->get_required_size(dev,
-                                                               operation, size);
     }
     return -ENOSYS;
 }

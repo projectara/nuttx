@@ -111,8 +111,8 @@ static uint8_t gb_camera_protocol_version(struct gb_operation *operation)
 static uint8_t gb_camera_capabilities(struct gb_operation *operation)
 {
     struct gb_camera_capabilities_response *response;
-    uint8_t *capabilities;
-    uint16_t size;
+    const uint8_t *caps;
+    size_t size;
     int ret;
 
     lldbg("gb_camera_capabilities() + \n");
@@ -122,9 +122,14 @@ static uint8_t gb_camera_capabilities(struct gb_operation *operation)
         return GB_OP_INVALID;
     }
 
-    ret = device_camera_get_required_size(info->dev, SIZE_CAPABILITIES, &size);
+    /* Retrieve the capabilities and their size. */
+    ret = device_camera_capabilities(info->dev, &size, &caps);
     if (ret) {
         return gb_errno_to_op_result(ret);
+    }
+
+    if (size > GB_MAX_PAYLOAD_SIZE) {
+        return GB_OP_NO_MEMORY;
     }
 
     response = gb_operation_alloc_response(operation, sizeof(*response) + size);
@@ -132,14 +137,8 @@ static uint8_t gb_camera_capabilities(struct gb_operation *operation)
         return GB_OP_NO_MEMORY;
     }
 
-    /* camera module capabilities */
-    ret = device_camera_capabilities(info->dev, &size, capabilities);
-    if (ret) {
-        return gb_errno_to_op_result(ret);
-    }
-
     response->size = cpu_to_le16(size);
-    memcpy(response->capabilities, &capabilities, size);
+    memcpy(response->capabilities, caps, size);
 
     lldbg("gb_camera_capabilities() - \n");
 
