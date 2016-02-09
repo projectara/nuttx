@@ -45,18 +45,18 @@
 struct gb_usb_proto_version_response {
 	__u8	major;
 	__u8	minor;
-};
+} __packed;
 
 struct gb_usb_hub_control_request {
 	__le16 typeReq;
 	__le16 wValue;
 	__le16 wIndex;
 	__le16 wLength;
-};
+} __packed;
 
 struct gb_usb_hub_control_response {
 	__u8 buf[0];
-};
+} __packed;
 
 #endif /* __USB_GB_H__ */
 
