@@ -583,8 +583,6 @@ static int tsb_i2c_irq_handler(int irq, void *context)
     enabled = i2c_read(info->reg_base, TSB_I2C_ENABLE);
     stat = i2c_read(info->reg_base, TSB_I2C_RAW_INTR_STAT);
 
-    lldbg("enabled=0x%x stat=0x%x\n", enabled, stat);
-
     if (!enabled || !(stat & ~TSB_I2C_INTR_ACTIVITY))
         return -1;
 
@@ -610,7 +608,6 @@ tx_aborted:
         lldbg("aborted %x %x\n", stat, info->abort_source);
 
     if ((stat & (TSB_I2C_INTR_TX_ABRT | TSB_I2C_INTR_STOP_DET)) || info->msg_err) {
-        lldbg("release sem\n");
         sem_post(&info->wait);
     }
 
