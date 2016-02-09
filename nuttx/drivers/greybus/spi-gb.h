@@ -60,35 +60,35 @@
 struct gb_spi_proto_version_response {
     __u8    major; /**< SPI Protocol major version */
     __u8    minor; /**< SPI Protocol minor version */
-};
+} __packed;
 
 /**
  * SPI Protocol Mode Response
  */
 struct gb_spi_mode_response {
     __le16  mode; /**< Greybus SPI Protocol Mode Bit Masks */
-};
+} __packed;
 
 /**
  * SPI Protocol Flags Response
  */
 struct gb_spi_flags_response {
     __le16  flags; /**< Greybus SPI Protocol Flags Bit Masks */
-};
+} __packed;
 
 /**
  * SPI Protocol Bits Per Word Mask Response
  */
 struct gb_spi_bpw_response {
     __le32  bits_per_word_mask; /**< Bits per word mask of the SPI master */
-};
+} __packed;
 
 /**
  * Number of Chip Selects Response
  */
 struct gb_spi_chipselect_response {
     __le16  num_chipselect; /**< Maximum number of chip select pins */
-};
+} __packed;
 
 /**
  * SPI Protocol gb_spi_transfer descriptor
@@ -104,7 +104,7 @@ struct gb_spi_transfer_desc {
     __u8    cs_change;
     /** Select bits per word for this trnasfer */
     __u8    bits_per_word;
-};
+} __packed;
 
 /**
  * SPI Protocol Transfer Request
@@ -118,7 +118,7 @@ struct gb_spi_transfer_request {
     __le16  count;
     /** SPI gb_spi_transfer_desc array in the transfer */
     struct gb_spi_transfer_desc  transfers[0];
-};
+} __packed;
 
 /**
  * SPI Protocol Transfer Response
@@ -126,6 +126,6 @@ struct gb_spi_transfer_request {
 struct gb_spi_transfer_response {
     /** Data array for read gb_spi_transfer descriptor on the transfer */
     __u8    data[0];
-};
+} __packed;
 
 #endif /* _GREYBUS_SPI_H_ */
