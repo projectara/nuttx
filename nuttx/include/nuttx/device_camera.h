@@ -99,6 +99,18 @@ struct streams_cfg_ans {
 };
 
 /**
+ * CSI bus configuration parameters
+ */
+struct csi_bus_config {
+    /** Number of CSI data lanes */
+    uint8_t     num_lanes;
+    /** CSI clock frequency */
+    uint32_t    bus_freq;
+    /** Total number of lines in a second of transmission (blanking included) */
+    uint32_t    lines_per_second;
+};
+
+/**
  *  Parameters for Camera Capture
  */
 struct capture_info {
@@ -139,6 +151,7 @@ struct device_camera_type_ops {
                         const uint8_t **capabilities);
     /** Set configures to camera module */
     int (*set_streams_cfg)(struct device *dev, uint8_t *num_streams,
+                           struct csi_bus_config *csi_bus_cfg,
                            uint8_t req_flags,
                            struct streams_cfg_req *config,
                            uint8_t *res_flags,
@@ -186,6 +199,7 @@ static inline int device_camera_capabilities(struct device *dev, size_t *size,
  */
 static inline int device_camera_set_streams_cfg(struct device *dev,
                                          uint8_t *num_streams,
+                                         struct csi_bus_config *csi_bus_cfg,
                                          uint8_t req_flags,
                                          struct streams_cfg_req *config,
                                          uint8_t *res_flags,
@@ -198,7 +212,8 @@ static inline int device_camera_set_streams_cfg(struct device *dev,
     }
     if (DEVICE_DRIVER_GET_OPS(dev, camera)->set_streams_cfg) {
         return DEVICE_DRIVER_GET_OPS(dev, camera)->set_streams_cfg(dev,
-                                            num_streams, req_flags, config,
+                                            num_streams, csi_bus_cfg,
+                                            req_flags, config,
                                             res_flags, answer);
     }
     return -ENOSYS;

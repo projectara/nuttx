@@ -161,6 +161,7 @@ static uint8_t gb_camera_configure_streams(struct gb_operation *operation)
     struct gb_stream_config_resp *cfg_ans_resp;
     struct streams_cfg_req *cfg_request;
     struct streams_cfg_ans *cfg_answer;
+    struct csi_bus_config csi_cfg;
     uint8_t num_streams;
     uint8_t res_flags = 0;
     int i, ret;
@@ -194,8 +195,8 @@ static uint8_t gb_camera_configure_streams(struct gb_operation *operation)
     if (num_streams == 0) {
         info->state = STATE_UNCONFIGURED;
 
-        ret = device_camera_set_streams_cfg(info->dev, &num_streams, 0, NULL,
-                                            NULL, NULL);
+        ret = device_camera_set_streams_cfg(info->dev, &num_streams, NULL,
+                                            0, NULL, NULL, NULL);
         if (ret)
             return gb_errno_to_op_result(ret);
 
@@ -231,7 +232,7 @@ static uint8_t gb_camera_configure_streams(struct gb_operation *operation)
     }
 
     /* driver shall check the num_streams, it can't exceed its capability */
-    ret = device_camera_set_streams_cfg(info->dev, &num_streams,
+    ret = device_camera_set_streams_cfg(info->dev, &num_streams, &csi_cfg,
                                         request->flags, cfg_request,
                                         &res_flags, cfg_answer);
     if (ret) {
@@ -263,10 +264,15 @@ static uint8_t gb_camera_configure_streams(struct gb_operation *operation)
             sizeof(*response) + request->num_streams * sizeof(*cfg_ans_resp));
     response->num_streams = num_streams;
     response->flags = res_flags;
-    response->padding[0] = 0;
-    response->padding[1] = 0;
+    response->num_lanes = csi_cfg.num_lanes;
+    response->padding = 0;
+    response->bus_freq = cpu_to_le32(csi_cfg.bus_freq);
+    response->lines_per_second = cpu_to_le32(csi_cfg.lines_per_second);
 
-    lldbg("flags = 0x%2x: \n", response->flags);
+    lldbg("flags = 0x%2x\n", response->flags);
+    lldbg("lanes = %u\n", response->num_lanes);
+    lldbg("freq = %u\n", csi_cfg.bus_freq);
+    lldbg("lines = %u\n", csi_cfg.lines_per_second);
 
     for (i = 0; i < num_streams; i++) {
         cfg_ans_resp = &response->config[i];

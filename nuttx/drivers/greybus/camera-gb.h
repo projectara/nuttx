@@ -127,8 +127,14 @@ struct gb_camera_configure_streams_response {
     __u8    num_streams;
     /** Flags for configure streams response */
     __u8    flags;
+    /** Number of data lanes used on CSI bus, between 1 and 4 inclusive */
+    __u8    num_lanes;
     /** Must be set to zero */
-    __u8    padding[2];
+    __u8    padding;
+    /** Clock speed of the CSI bus */
+    __le32   bus_freq;
+    /** Total number of lines sent in a second including blankings */
+    __le32   lines_per_second;
     /** Streams Configure Blocks */
     struct gb_stream_config_resp config[0];
 } __packed;
