@@ -197,7 +197,7 @@ void enable_cports(void)
 #endif
 
 #ifdef CONFIG_GREYBUS_CAMERA
-        if (protocol == GREYBUS_PROTOCOL_CAMERA) {
+        if (protocol == GREYBUS_PROTOCOL_CAMERA_MGMT) {
             gb_info("Registering Camera greybus driver. id= %d\n", id);
             gb_camera_register(id);
         }
