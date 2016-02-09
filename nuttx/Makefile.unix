@@ -269,23 +269,6 @@ else
 include/stdarg.h:
 endif
 
-# Targets used to build include/nuttx/version.h.  Creation of version.h is
-# part of the overall NuttX configuration sequence. Notice that the
-# tools/mkversion tool is built and used to create include/nuttx/version.h
-
-tools/mkversion$(HOSTEXEEXT):
-	$(Q) $(MAKE) -C tools -f Makefile.host TOPDIR="$(TOPDIR)"  mkversion$(HOSTEXEEXT)
-
-$(TOPDIR)/.version:
-	$(Q) if [ ! -f .version ]; then \
-		echo "No .version file found, creating one"; \
-		tools/version.sh -v 0.0 -b 0 .version; \
-		chmod 755 .version; \
-	fi
-
-include/nuttx/version.h: $(TOPDIR)/.version tools/mkversion$(HOSTEXEEXT)
-	$(Q) tools/mkversion $(TOPDIR) > include/nuttx/version.h
-
 # Targets used to build include/nuttx/config.h.  Creation of config.h is
 # part of the overall NuttX configuration sequence. Notice that the
 # tools/mkconfig tool is built and used to create include/nuttx/config.h
@@ -357,10 +340,10 @@ dirlinks: include/arch include/arch/board include/arch/chip $(ARCH_SRC)/board $(
 #
 # The context target is invoked on each target build to assure that NuttX is
 # properly configured.  The basic configuration steps include creation of the
-# the config.h and version.h header files in the include/nuttx directory and
+# the config.h header file in the include/nuttx directory and
 # the establishment of symbolic links to configured directories.
 
-context: check_context include/nuttx/config.h include/nuttx/version.h include/math.h include/float.h include/stdarg.h dirlinks
+context: check_context include/nuttx/config.h include/math.h include/float.h include/stdarg.h dirlinks
 	$(Q) for dir in $(CONTEXTDIRS) ; do \
 		$(MAKE) -C $$dir TOPDIR="$(TOPDIR)" context; \
 	done
@@ -372,7 +355,6 @@ context: check_context include/nuttx/config.h include/nuttx/version.h include/ma
 
 clean_context:
 	$(call DELFILE, include/nuttx/config.h)
-	$(call DELFILE, include/nuttx/version.h)
 	$(call DELFILE, include/math.h)
 	$(call DELFILE, include/stdarg.h)
 	$(Q) $(DIRUNLINK) include/arch/board

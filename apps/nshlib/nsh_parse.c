@@ -49,7 +49,6 @@
 #  include <sys/stat.h>
 #endif
 
-#include <nuttx/version.h>
 #include <apps/nsh.h>
 
 #include "nsh.h"
@@ -218,11 +217,7 @@ static const char g_nullstring[]      = "";
  * in the NSH greeting.
  */
 
-#if CONFIG_VERSION_MAJOR != 0 || CONFIG_VERSION_MINOR != 0
-const char g_nshgreeting[]       = "\nNuttShell (NSH) NuttX-" CONFIG_VERSION_STRING "\n";
-#else
 const char g_nshgreeting[]       = "\nNuttShell (NSH)\n";
-#endif
 
 /* Telnet login prompts */
 
