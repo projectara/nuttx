@@ -80,6 +80,8 @@ struct csi_tx_config {
     uint8_t num_lanes;
     /** csi frequence */
     uint32_t bus_freq;
+    /** line per second including blankings */
+    uint32_t lines_per_second;
 };
 
 /**

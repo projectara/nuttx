@@ -231,6 +231,7 @@ struct csi_tx_control {
     __u8 num_lanes;
     __u8 padding;
     __le32 bus_freq;
+    __le32 lines_per_second;
 };
 
 enum ctrlreq_state {
@@ -1426,6 +1427,7 @@ static int csi_tx_control_vendor_request_out(struct usbdev_s *dev, uint8_t req,
     cfg.clock_mode = ctrl->clock_mode;
     cfg.num_lanes = ctrl->num_lanes;
     cfg.bus_freq = le32_to_cpu(ctrl->bus_freq);
+    cfg.lines_per_second = le32_to_cpu(ctrl->lines_per_second);
 
     return csi_tx_srv_start(ctrl->csi_id, &cfg);
 }
