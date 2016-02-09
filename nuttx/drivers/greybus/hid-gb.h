@@ -50,7 +50,7 @@
 struct gb_hid_proto_version_response {
     __u8 major; /**< Greybus HID Protocol major version */
     __u8 minor; /**< Greybus HID Protocol minor version */
-};
+} __packed;
 
 /**
  * Greybus HID Get Descriptor Response
@@ -70,7 +70,7 @@ struct gb_hid_desc_response {
 struct gb_hid_get_report_request {
     __u8 report_type; /**< Greybus HID Report Type */
     __u8 report_id; /**< Report ID */
-};
+} __packed;
 
 /**
  * Greybus HID Set Report Request
@@ -79,13 +79,13 @@ struct gb_hid_set_report_request {
     __u8 report_type; /**< Greybus HID Report Type */
     __u8 report_id; /**< Report ID */
     __u8 report[0]; /**< Report data */
-};
+} __packed;
 
 /**
  * HID Input Report Request (IRQ Event request)
  */
 struct gb_hid_input_report_request {
     __u8 report[0]; /**< data */
-};
+} __packed;
 
 #endif /* __HID_GB_H__ */
