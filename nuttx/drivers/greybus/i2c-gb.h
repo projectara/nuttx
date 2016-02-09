@@ -68,26 +68,26 @@
 struct gb_i2c_proto_version_response {
 	__u8	major;
 	__u8	minor;
-};
+} __packed;
 
 struct gb_i2c_functionality_rsp {
 	__le32	functionality;
-};
+} __packed;
 
 struct gb_i2c_transfer_desc {
 	__le16	addr;
 	__le16	flags;
 	__le16	size;
-};
+} __packed;
 
 struct gb_i2c_transfer_req {
 	__le16	op_count;
 	struct gb_i2c_transfer_desc desc[0];
-};
+} __packed;
 
 struct gb_i2c_transfer_rsp {
 	__u8	data[0];
-};
+} __packed;
 
 #endif /* _GREYBUS_I2C_H_ */
 
