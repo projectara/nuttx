@@ -74,6 +74,7 @@ SUBDIRS += gb_loopback
 SUBDIRS += gb_tape
 SUBDIRS += gpbridge
 SUBDIRS += gpio
+SUBDIRS += i2c
 SUBDIRS += i2s
 SUBDIRS += pm
 SUBDIRS += pwm
