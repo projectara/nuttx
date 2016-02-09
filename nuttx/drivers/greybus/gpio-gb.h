@@ -63,80 +63,80 @@
 struct gb_gpio_proto_version_response {
 	__u8	major;
 	__u8	minor;
-};
+} __packed;
 
 /* line count request has no payload */
 struct gb_gpio_line_count_response {
 	__u8	count;
-};
+} __packed;
 
 struct gb_gpio_activate_request {
 	__u8	which;
-};
+} __packed;
 /* activate response has no payload */
 
 struct gb_gpio_deactivate_request {
 	__u8	which;
-};
+} __packed;
 /* deactivate response has no payload */
 
 struct gb_gpio_get_direction_request {
 	__u8	which;
-};
+} __packed;
 struct gb_gpio_get_direction_response {
 	__u8	direction;
-};
+} __packed;
 
 struct gb_gpio_direction_in_request {
 	__u8	which;
-};
+} __packed;
 /* direction in response has no payload */
 
 struct gb_gpio_direction_out_request {
 	__u8	which;
 	__u8	value;
-};
+} __packed;
 /* direction out response has no payload */
 
 struct gb_gpio_get_value_request {
 	__u8	which;
-};
+} __packed;
 struct gb_gpio_get_value_response {
 	__u8	value;
-};
+} __packed;
 
 struct gb_gpio_set_value_request {
 	__u8	which;
 	__u8	value;
-};
+} __packed;
 /* set value response has no payload */
 
 struct gb_gpio_set_debounce_request {
 	__u8	which;
-	__le16	usec __attribute__((__packed__));
-};
+	__le16	usec;
+} __packed;
 /* debounce response has no payload */
 
 struct gb_gpio_irq_type_request {
 	__u8	which;
 	__u8	type;
-};
+} __packed;
 /* irq type response has no payload */
 
 struct gb_gpio_irq_mask_request {
 	__u8	which;
-};
+} __packed;
 /* irq mask response has no payload */
 
 struct gb_gpio_irq_unmask_request {
 	__u8	which;
-};
+} __packed;
 /* irq unmask response has no payload */
 
 /* irq event requests originate on another module and are handled on the AP */
 struct gb_gpio_irq_event_request {
 	__u8	which;
-};
+} __packed;
 /* irq event has no response */
 
 #endif /* __GPIO_GB_H__ */
