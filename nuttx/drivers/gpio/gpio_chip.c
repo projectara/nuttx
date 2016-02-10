@@ -129,6 +129,7 @@ void gpio_direction_in(uint8_t which)
     struct gpio_chip_s *chip = get_gpio_chip(&which);
 
     DEBUGASSERT(chip);
+    DEBUGASSERT(chip->ops);
     DEBUGASSERT(chip->ops->direction_in);
     chip->ops->direction_in(chip->driver_data, which);
 }
@@ -138,6 +139,7 @@ void gpio_direction_out(uint8_t which, uint8_t value)
     struct gpio_chip_s *chip = get_gpio_chip(&which);
 
     DEBUGASSERT(chip);
+    DEBUGASSERT(chip->ops);
     DEBUGASSERT(chip->ops->direction_out);
     chip->ops->direction_out(chip->driver_data, which, value);
 }
@@ -147,6 +149,7 @@ int gpio_activate(uint8_t which)
     struct gpio_chip_s *chip = get_gpio_chip(&which);
 
     DEBUGASSERT(chip);
+    DEBUGASSERT(chip->ops);
     DEBUGASSERT(chip->ops->activate);
     return chip->ops->activate(chip->driver_data, which);
 }
@@ -156,6 +159,7 @@ uint8_t gpio_get_value(uint8_t which)
     struct gpio_chip_s *chip = get_gpio_chip(&which);
 
     DEBUGASSERT(chip);
+    DEBUGASSERT(chip->ops);
     DEBUGASSERT(chip->ops->get_value);
     return chip->ops->get_value(chip->driver_data, which);
 }
@@ -165,6 +169,7 @@ void gpio_set_value(uint8_t which, uint8_t value)
     struct gpio_chip_s *chip = get_gpio_chip(&which);
 
     DEBUGASSERT(chip);
+    DEBUGASSERT(chip->ops);
     DEBUGASSERT(chip->ops->set_value);
     chip->ops->set_value(chip->driver_data, which, value);
 }
@@ -184,6 +189,7 @@ int gpio_set_pull(uint8_t which, enum gpio_pull_type pull_type)
     struct gpio_chip_s *chip = get_gpio_chip(&which);
 
     DEBUGASSERT(chip);
+    DEBUGASSERT(chip->ops);
     DEBUGASSERT(chip->ops->set_pull);
     return chip->ops->set_pull(chip->driver_data, which, pull_type);
 }
@@ -193,6 +199,7 @@ enum gpio_pull_type gpio_get_pull(uint8_t which)
     struct gpio_chip_s *chip = get_gpio_chip(&which);
 
     DEBUGASSERT(chip);
+    DEBUGASSERT(chip->ops);
     DEBUGASSERT(chip->ops->get_pull);
     return chip->ops->get_pull(chip->driver_data, which);
 }
@@ -202,6 +209,7 @@ int gpio_deactivate(uint8_t which)
     struct gpio_chip_s *chip = get_gpio_chip(&which);
 
     DEBUGASSERT(chip);
+    DEBUGASSERT(chip->ops);
     DEBUGASSERT(chip->ops->deactivate);
     return chip->ops->deactivate(chip->driver_data, which);
 }
@@ -216,6 +224,7 @@ int gpio_irq_attach(uint8_t which, xcpt_t isr)
     struct gpio_chip_s *chip = get_gpio_chip(&which);
 
     DEBUGASSERT(chip);
+    DEBUGASSERT(chip->ops);
     if (chip->ops->irqattach)
         return chip->ops->irqattach(chip->driver_data, which, isr,
                                     chip->base);
@@ -227,6 +236,7 @@ int gpio_irq_settriggering(uint8_t which, int trigger)
     struct gpio_chip_s *chip = get_gpio_chip(&which);
 
     DEBUGASSERT(chip);
+    DEBUGASSERT(chip->ops);
     if (chip->ops->set_triggering)
         return chip->ops->set_triggering(chip->driver_data, which, trigger);
     return -EINVAL;
@@ -237,6 +247,7 @@ int gpio_irq_mask(uint8_t which)
     struct gpio_chip_s *chip = get_gpio_chip(&which);
 
     DEBUGASSERT(chip);
+    DEBUGASSERT(chip->ops);
     if (chip->ops->mask_irq)
         return chip->ops->mask_irq(chip->driver_data, which);
     return -EINVAL;
@@ -247,6 +258,7 @@ int gpio_irq_unmask(uint8_t which)
     struct gpio_chip_s *chip = get_gpio_chip(&which);
 
     DEBUGASSERT(chip);
+    DEBUGASSERT(chip->ops);
     if (chip->ops->unmask_irq)
         return chip->ops->unmask_irq(chip->driver_data, which);
     return -EINVAL;
@@ -257,6 +269,7 @@ int gpio_irq_clear(uint8_t which)
     struct gpio_chip_s *chip = get_gpio_chip(&which);
 
     DEBUGASSERT(chip);
+    DEBUGASSERT(chip->ops);
     if (chip->ops->clear_interrupt)
         return chip->ops->clear_interrupt(chip->driver_data, which);
     return -EINVAL;
