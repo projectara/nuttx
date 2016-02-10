@@ -174,7 +174,7 @@ int gpio_set_debounce(uint8_t which, uint16_t delay)
     struct gpio_chip_s *chip = get_gpio_chip(&which);
 
     DEBUGASSERT(chip);
-    DEBUGASSERT(chip-ops);
+    DEBUGASSERT(chip->ops);
     DEBUGASSERT(chip->ops->set_debounce);
     return chip->ops->set_debounce(chip->driver_data, which, delay);
 }
