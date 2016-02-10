@@ -159,9 +159,13 @@
 #define MOD_RELEASE_4B      STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN7)
 #define MOD_RELEASE_5       STM32_GPIO_PIN(GPIO_PORTE | GPIO_PIN7)
 
-#define ARA_KEY_CONFIG        (GPIO_INPUT | GPIO_PULLDOWN | GPIO_PORTA \
-                               | GPIO_PIN0)
-#define ARA_KEY               STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN0)
+/* UART RX line from MSM. Used to wake-up the SVC on incoming traffic */
+#define UART_MSM_TX_SVC_RX  STM32_GPIO_PIN(GPIO_PORTC | GPIO_PIN13)
+
+/* Ara key */
+#define ARA_KEY_CONFIG      (GPIO_INPUT | GPIO_PULLDOWN | GPIO_PORTA \
+                             | GPIO_PIN0)
+#define ARA_KEY             STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN0)
 
 /* Switch control pins */
 #define SW_1P1_EN          STM32_GPIO_PIN(GPIO_PORTB | GPIO_PIN0)
@@ -753,6 +757,11 @@ static struct vreg_data refclk_main_vreg_data[] = {
 
 DECLARE_VREG(refclk_main_vreg, refclk_main_vreg_data);
 
+static int uart_msm_rx_gpio_handler(int irq, void *context)
+{
+    return OK;
+}
+
 /* EVT1 */
 static int evt1_board_init(struct ara_board_info *board_info) {
     int rc;
@@ -795,6 +804,18 @@ static int evt1_board_init(struct ara_board_info *board_info) {
 
     /* Configure ARA key input pin */
     stm32_configgpio(ARA_KEY_CONFIG);
+
+    /*
+     * Install IRQ for the MSM UART RX line. Used to wake-up the SVC
+     * from low power idle
+     */
+    gpio_direction_in(UART_MSM_TX_SVC_RX);
+    if (gpio_irq_settriggering(UART_MSM_TX_SVC_RX, IRQ_TYPE_EDGE_BOTH) ||
+        gpio_irq_attach(UART_MSM_TX_SVC_RX, uart_msm_rx_gpio_handler) ||
+        gpio_irq_unmask(UART_MSM_TX_SVC_RX)) {
+        dbg_error("%s: cannot install wake-up handler for MSM UART RX\n",
+                  __func__);
+    }
 
     /*
      * (Module hotplug pins unconfigured. TODO, part of SW-1942.)
@@ -895,6 +916,18 @@ static int evt1_5_board_init(struct ara_board_info *board_info) {
 
     /* Configure ARA key input pin */
     stm32_configgpio(ARA_KEY_CONFIG);
+
+    /*
+     * Install IRQ for the MSM UART RX line. Used to wake-up the SVC
+     * from low power idle
+     */
+    gpio_direction_in(UART_MSM_TX_SVC_RX);
+    if (gpio_irq_settriggering(UART_MSM_TX_SVC_RX, IRQ_TYPE_EDGE_BOTH) ||
+        gpio_irq_attach(UART_MSM_TX_SVC_RX, uart_msm_rx_gpio_handler) ||
+        gpio_irq_unmask(UART_MSM_TX_SVC_RX)) {
+        dbg_error("%s: cannot install wake-up handler for MSM UART RX\n",
+                  __func__);
+    }
 
     /*
      * (Module hotplug pins unconfigured. TODO, part of SW-1942.)
