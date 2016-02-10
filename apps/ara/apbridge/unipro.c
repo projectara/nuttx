@@ -35,6 +35,7 @@
 #include <arch/board/apbridgea_gadget.h>
 #include <apps/greybus-utils/utils.h>
 #include <nuttx/wdog.h>
+#include <nuttx/wqueue.h>
 
 #include "apbridge_backend.h"
 
@@ -56,6 +57,7 @@ struct cport_reset_priv {
     struct wdog_s timeout_wd;
     atomic_t refcount;
 };
+static struct work_s mbox_work;
 
 static void cport_reset_cb(unsigned int cportid, void *data)
 {
@@ -130,15 +132,22 @@ static struct unipro_driver unipro_driver = {
     .rx_handler = recv_from_unipro,
 };
 
+static void tsb_unipro_mbox_send_worker(void *priv)
+{
+    tsb_unipro_mbox_send(TSB_MAIL_READY_AP);
+}
+
 static void apbridge_unipro_evt_handler(enum unipro_event evt)
 {
     switch (evt) {
     case UNIPRO_EVT_LUP_DONE:
         tsb_unipro_set_init_status(INIT_STATUS_OPERATING);
         /*
-         * Tell the SVC that the AP Module is ready
+         * Tell the SVC that the AP Module is ready.
+         * Don't execute this job from interrupt because it can take a while.
          */
-        tsb_unipro_mbox_send(TSB_MAIL_READY_AP);
+        work_queue(HPWORK, &mbox_work,
+                   tsb_unipro_mbox_send_worker, NULL, 0);
         break;
 
     default:
