@@ -785,7 +785,8 @@ int unipro_to_usb(struct apbridge_dev_s *priv, unsigned int cportid,
         return unipro_offloaded(priv, cportid, payload, len);
     }
 
-    req = get_request(ep, usbclass_wrcomplete, APBRIDGE_REQ_SIZE,
+    /* Bulk in request use UniPro buffer so only get a request without buffer */
+    req = get_request(ep, usbclass_wrcomplete, 0,
                       (void*) cportid);
     if (!req) {
         return apbridge_queue(priv, ep, payload, len, (void*) cportid);
@@ -1212,8 +1213,9 @@ static int usbclass_bind(struct usbdevclass_driver_s *driver,
     request_pool_prealloc(priv->ep[0], APBRIDGE_MXDESCLEN, 1);
     request_pool_prealloc(priv->ep[CONFIG_APBRIDGE_EPBULKOUT],
                           APBRIDGE_REQ_SIZE, APBRIDGE_NREQS * APBRIDGE_NBULKS);
+    /* Bulk in request use UniPro buffer so only get a request without buffer */
     request_pool_prealloc(priv->ep[CONFIG_APBRIDGE_EPBULKIN],
-                          APBRIDGE_REQ_SIZE, APBRIDGE_NREQS * APBRIDGE_NBULKS);
+                          0, APBRIDGE_NREQS * APBRIDGE_NBULKS);
 
     /* TODO test result of prealloc */
 
