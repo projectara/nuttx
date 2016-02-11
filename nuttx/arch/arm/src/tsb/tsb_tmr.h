@@ -63,6 +63,7 @@ void tsb_tmr_set_time(struct tsb_tmr_ctx *tmr, uint32_t usec);
 void tsb_tmr_start(struct tsb_tmr_ctx *tmr);
 uint32_t tsb_tmr_cancel(struct tsb_tmr_ctx *tmr);
 uint32_t tsb_tmr_usec_left(struct tsb_tmr_ctx *tmr);
+uint32_t tsb_tmr_get_counter(struct tsb_tmr_ctx *tmr);
 void tsb_tmr_ack_irq(struct tsb_tmr_ctx *tmr);
 
 #endif /* __ARCH_ARM_SRC_TSB_TSB_TMR_H */

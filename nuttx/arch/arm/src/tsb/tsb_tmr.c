@@ -263,6 +263,17 @@ uint32_t tsb_tmr_usec_left(struct tsb_tmr_ctx *tmr)
 }
 
 /**
+ * @brief Read the counter register of a timer.
+ * @param tmr Timer handle.
+ * @return Current timer counts
+ *
+ */
+uint32_t tsb_tmr_get_counter(struct tsb_tmr_ctx *tmr)
+{
+    return tsb_tmr_getreg32(tmr, TSB_TMR_CNT);
+}
+
+/**
  * @brief Clear the interrupt bit from timer's interrupt register.
  * @param tmr Timer handle.
  */
