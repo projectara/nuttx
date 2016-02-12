@@ -44,6 +44,7 @@
 #define GB_CONTROL_TYPE_CONNECTED               0x05
 #define GB_CONTROL_TYPE_DISCONNECTED            0x06
 #define GB_CONTROL_TYPE_INTERFACE_VERSION       0x0a
+#define GB_CONTROL_TYPE_INTF_POWER_STATE_SET    0x0b
 
 /* version request has no payload */
 struct gb_control_proto_version_response {
@@ -71,6 +72,21 @@ struct gb_control_connected_request {
 struct gb_control_interface_version_response {
     __le16    major;
     __le16    minor;
+} __packed;
+
+struct gb_control_intf_pwr_set_request {
+    __u8      pwr_state;
+#define GB_CONTROL_PWR_STATE_OFF        0x00
+#define GB_CONTROL_PWR_STATE_SUSPEND    0x01
+#define GB_CONTROL_PWR_STATE_ON         0xff
+} __packed;
+
+struct gb_control_intf_pwr_set_response {
+    __u8      result_code;
+#define GB_CONTROL_PWR_OK               0x00
+#define GB_CONTROL_PWR_BUSY             0x01
+#define GB_CONTROL_PWR_ERROR_CAP        0x02
+#define GB_CONTROL_PWR_FAIL             0x03
 } __packed;
 
 #endif /* __CONTROL_GB_H__ */
