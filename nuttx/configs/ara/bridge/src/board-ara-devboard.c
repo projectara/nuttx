@@ -43,6 +43,7 @@
 
 #include "tsb_scm.h"
 #include "up_arch.h"
+#include "bridge_wakeup.h"
 
 #include <arch/board/csi_tx_service.h>
 #include <arch/tsb/gpio.h>
@@ -182,4 +183,5 @@ void ara_module_init(void)
 #if defined(CONFIG_APBRIDGEA) && defined(CONFIG_ARCH_CHIP_DEVICE_CSI)
     csi_tx_srv_init();
 #endif
+    bridge_wakeup_init();
 }

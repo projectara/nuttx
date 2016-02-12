@@ -36,6 +36,7 @@ AOBJS		= $(ASRCS:.S=$(OBJEXT))
 
 CSRCS		= up_boot.c
 CSRCS		+= board-ara.c
+CSRCS		+= bridge_wakeup.c
 
 ifeq ($(CONFIG_ARA_BRIDGE_BOARD_ARA_DEVBOARD),y)
 CSRCS		+= board-ara-devboard.c
