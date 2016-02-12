@@ -94,12 +94,23 @@ int stm32_pmstop(bool lpds)
   regval  = getreg32(STM32_PWR_CR);
   regval &= ~(PWR_CR_LPDS | PWR_CR_PDDS);
 
+#ifndef CONFIG_STM32_STM32F446_OPTIMIZED_STOP
   /* Set the Low Power Deep Sleep (LPDS) bit if so requested */
 
   if (lpds)
     {
       regval |= PWR_CR_LPDS;
     }
+
+#else
+  /*
+   * LPDS and PDDS bits are reset. Configure other bits to achieve under-drive,
+   * low power regulator, flash off.
+   */
+  regval &= ~(PWR_CR_ODEN | PWR_CR_ODSWEN);
+  regval |= PWR_CR_LPDS | PWR_CR_FPDS;
+  regval |= PWR_CR_LPUDS | PWR_CR_MRUDS | PWR_CR_UDEN;
+#endif
 
   putreg32(regval, STM32_PWR_CR);
 

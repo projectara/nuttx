@@ -88,41 +88,74 @@
 #    define PWR_CR_2p8V        (6 << PWR_CR_PLS_SHIFT) /* 110: 2.8V */
 #    define PWR_CR_2p9V        (7 << PWR_CR_PLS_SHIFT) /* 111: 2.9V */
 # endif
-#define PWR_CR_DBP             (1 << 8)  /* Bit 8: Disable Backup Domain write protection */
+/* Bit 8: Disable Backup Domain write protection */
+#define PWR_CR_DBP             (1 << 8)
 
 #if defined(CONFIG_STM32_STM32F20XX) || defined(CONFIG_STM32_STM32F40XX)
-#  define PWR_CR_FPDS          (1 << 9)  /* Bit 9: Flash power down in Stop mode */
+/* Bit 9: Flash power down in Stop mode */
+#  define PWR_CR_FPDS          (1 << 9)
+#if  defined(CONFIG_STM32_STM32F446)
+/*
+ * Bit 10: Low-power regulator in under-drive mode if LPDS bit is set and Flash
+ * memory in power- down when the device is in Stop under-drive mode
+ */
+#  define PWR_CR_LPUDS         (1 << 10)
+/*
+ * Bit 11: Main Regulator in under-drive mode and Flash memory in power-down when
+ * the device is in Stop under-drive mode
+ */
+#  define PWR_CR_MRUDS         (1 << 11)
+#endif
 #  if  defined(CONFIG_STM32_STM32F427) || defined(CONFIG_STM32_STM32F429) || \
        defined(CONFIG_STM32_STM32F446)
-#    define PWR_CR_ADCDC1      (1 << 13) /* Bit 13: see AN4073 for details */
-#    define PWR_CR_VOS_MASK    (3 << 14) /* Bits 14-15: Regulator voltage scaling output selection */
-#    define PWR_CR_VOS_SCALE_1 (3 << 14) /* Fmax = 168MHz */
-#    define PWR_CR_VOS_SCALE_2 (2 << 14) /* Fmax = 144MHz */
-#    define PWR_CR_VOS_SCALE_3 (1 << 14) /* Fmax = 120MHz */
+/* Bit 13: see AN4073 for details */
+#    define PWR_CR_ADCDC1      (1 << 13)
+/* Bits 14-15: Regulator voltage scaling output selection */
+#    define PWR_CR_VOS_MASK    (3 << 14)
+/* Fmax = 168MHz */
+#    define PWR_CR_VOS_SCALE_1 (3 << 14)
+/* Fmax = 144MHz */
+#    define PWR_CR_VOS_SCALE_2 (2 << 14)
+/* Fmax = 120MHz */
+#    define PWR_CR_VOS_SCALE_3 (1 << 14)
 #  else
-#    define PWR_CR_VOS         (1 << 14) /* Bit 14: Regulator voltage scaling output selection */
-                                         /* 0: Fmax = 144MHz  1: Fmax = 168MHz */
+/*
+ * Bit 14: Regulator voltage scaling output selection
+ * 0: Fmax = 144MHz  1: Fmax = 168MHz
+ */
+#    define PWR_CR_VOS         (1 << 14)
 #  endif
 #endif
 
 #if defined(CONFIG_STM32_STM32L15XX)
 #  define PWR_CR_ULP           (1 << 9)  /* Ultralow power mode */
 #  define PWR_CR_FWU           (1 << 10) /* Low power run mode */
-#  define PWR_CR_VOS_MASK      (3 << 11) /* Bits 11-12: Regulator voltage scaling output selection */
-#  define PWR_CR_VOS_SCALE_1   (1 << 11) /* 1.8 V (range 1) PLL VCO Max = 96MHz */
-#  define PWR_CR_VOS_SCALE_2   (2 << 11) /* 1.5 V (range 2) PLL VCO Max = 64MHz */
-#  define PWR_CR_VOS_SCALE_3   (3 << 11) /* 1.2 V (range 3) PLL VCO Max = 24MHz */
-#  define PWR_CR_LPRUN         (1 << 14) /* Low power run mode */
+/* Bits 11-12: Regulator voltage scaling output selection */
+#  define PWR_CR_VOS_MASK      (3 << 11)
+/* 1.8 V (range 1) PLL VCO Max = 96MHz */
+#  define PWR_CR_VOS_SCALE_1   (1 << 11)
+/* 1.5 V (range 2) PLL VCO Max = 64MHz */
+#  define PWR_CR_VOS_SCALE_2   (2 << 11)
+/* 1.2 V (range 3) PLL VCO Max = 24MHz */
+#  define PWR_CR_VOS_SCALE_3   (3 << 11)
+/* Low power run mode */
+#  define PWR_CR_LPRUN         (1 << 14)
 #endif
 
 #if defined(CONFIG_STM32_STM32F429) || defined(CONFIG_STM32_STM32F446)
-#  define PWR_CR_ODEN          (1 << 16) /* Over Drive enable */
-#  define PWR_CR_ODSWEN        (1 << 17) /* Over Drive switch enabled */
+/* Over Drive enable */
+#  define PWR_CR_ODEN          (1 << 16)
+/* Over Drive switch enabled */
+#  define PWR_CR_ODSWEN        (1 << 17)
 #endif
 
 #if  defined(CONFIG_STM32_STM32F446)
-#  define PWR_CR_FMSSR         (1 << 20) /* Flash Memory Stop while System Run */
-#  define PWR_CR_FISSR         (1 << 21) /* Flash Interface Stop while System Run*/
+/* Under-drive enable */
+#  define PWR_CR_UDEN          (3 << 18)
+/* Flash Memory Stop while System Run */
+#  define PWR_CR_FMSSR         (1 << 20)
+/* Flash Interface Stop while System Run*/
+#  define PWR_CR_FISSR         (1 << 21)
 #endif
 
 /* Power control/status register */
@@ -134,9 +167,12 @@
 #if defined(CONFIG_STM32_STM32F20XX) || defined(CONFIG_STM32_STM32F40XX)
 #  define PWR_CSR_BRR          (1 << 3)  /* Bit 3:  Backup regulator ready */
 #elif defined(CONFIG_STM32_STM32L15XX)
-#  define PWR_CSR_VREFINTRDYF  (1 << 3)  /* Bit 3: Internal voltage reference (VREFINT) ready flag */
-#  define PWR_CSR_VOSF         (1 << 4)  /* Bit 4: Voltage Scaling select flag */
-#  define PWR_CSR_REGLPF       (1 << 5)  /* Bit 5: Regulator LP flag */
+/* Bit 3: Internal voltage reference (VREFINT) ready flag */
+#  define PWR_CSR_VREFINTRDYF  (1 << 3)
+/* Bit 4: Voltage Scaling select flag */
+#  define PWR_CSR_VOSF         (1 << 4)
+/* Bit 5: Regulator LP flag */
+#  define PWR_CSR_REGLPF       (1 << 5)
 #endif
 
 #if defined(CONFIG_STM32_STM32F30XX)
@@ -151,8 +187,10 @@
 #endif
 
 #if defined(CONFIG_STM32_STM32F20XX) || defined(CONFIG_STM32_STM32F40XX)
-#  define PWR_CSR_BRE          (1 << 9)  /* Bit 9:  Backup regulator enable */
-#  define PWR_CSR_VOSRDY       (1 << 14) /* Bit 14: Regulator voltage scaling output selection ready bite */
+/* Bit 9:  Backup regulator enable */
+#  define PWR_CSR_BRE          (1 << 9)
+/* Bit 14: Regulator voltage scaling output selection ready bite */
+#  define PWR_CSR_VOSRDY       (1 << 14)
 #endif
 
 #if defined(CONFIG_STM32_STM32F429) || defined(CONFIG_STM32_STM32F446)

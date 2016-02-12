@@ -1703,6 +1703,14 @@ config STM32_JTAG_SW_ENABLE
 
 endchoice
 
+config STM32_STM32F446_OPTIMIZED_STOP
+	bool "Enable optimized Stop mode on STM32F446"
+	depends on STM32_STM32F446
+	default n
+	---help---
+		Allow optimized low power Stop mode on STM32F446. This enables the
+		under-drive mode, low power regulator and flash OFF mode.
+
 config STM32_DISABLE_IDLE_SLEEP_DURING_DEBUG
 	bool "Disable IDLE Sleep (WFI) in debug mode"
 	default n
