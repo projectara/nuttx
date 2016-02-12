@@ -202,20 +202,34 @@ void tsb_tmr_set_time(struct tsb_tmr_ctx *tmr, uint32_t usec)
 }
 
 /**
+ * @brief Start the timer taking the period as an argument directly - lockless
+ * @param tmr Timer handle.
+ * @param period Timer period.
+ * @param interrupt Enable IRQ for this timer
+ */
+void tsb_tmr_start_ext(struct tsb_tmr_ctx *tmr, uint32_t period, bool interrupt)
+{
+    tsb_tmr_putreg32(tmr, 0x00, TSB_TMR_CTRL);
+    tsb_tmr_ack_irq(tmr);
+    tsb_tmr_putreg32(tmr, period, TSB_TMR_LOAD);
+    if (interrupt) {
+        tsb_tmr_putreg32(tmr, TSB_TMR_CTRL_IRQ_ENABLE | tmr->mode, TSB_TMR_CTRL);
+
+    } else {
+        tsb_tmr_putreg32(tmr, tmr->mode, TSB_TMR_CTRL);
+    }
+}
+/**
  * @brief Start the timer.
  * @param tmr Timer handle.
  */
 void tsb_tmr_start(struct tsb_tmr_ctx *tmr)
 {
     irqstate_t flags;
+    uint32_t period = tsb_tmr_usec_to_freq(tmr->usec);
 
     flags = irqsave();
-
-    tsb_tmr_putreg32(tmr, 0x00, TSB_TMR_LOAD);
-    tsb_tmr_putreg32(tmr, tmr->mode, TSB_TMR_CTRL);
-    tsb_tmr_putreg32(tmr, tsb_tmr_usec_to_freq(tmr->usec), TSB_TMR_LOAD);
-    tsb_tmr_putreg32(tmr, TSB_TMR_CTRL_IRQ_ENABLE | tmr->mode, TSB_TMR_CTRL);
-
+    tsb_tmr_start_ext(tmr, period, true);
     irqrestore(flags);
 }
 

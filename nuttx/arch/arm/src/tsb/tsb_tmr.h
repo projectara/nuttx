@@ -33,6 +33,7 @@
 
 #include <nuttx/irq.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 /*
  * Simple API allowing access to four timers present on Toshiba bridges. As of
@@ -61,6 +62,7 @@ struct tsb_tmr_ctx * tsb_tmr_get(int id);
 void tsb_tmr_configure(struct tsb_tmr_ctx *tmr, int mode, xcpt_t isr);
 void tsb_tmr_set_time(struct tsb_tmr_ctx *tmr, uint32_t usec);
 void tsb_tmr_start(struct tsb_tmr_ctx *tmr);
+void tsb_tmr_start_ext(struct tsb_tmr_ctx *tmr, uint32_t period, bool interrupt);
 uint32_t tsb_tmr_cancel(struct tsb_tmr_ctx *tmr);
 uint32_t tsb_tmr_usec_left(struct tsb_tmr_ctx *tmr);
 uint32_t tsb_tmr_get_counter(struct tsb_tmr_ctx *tmr);
