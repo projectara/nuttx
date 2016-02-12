@@ -91,6 +91,11 @@
  *  ARA_BOARD_STM32_168MHZ
  * Only one shall be defined here. If needed this could become a Kconfig
  * option.
+ *
+ * !Warning!
+ * At frequencies below 120MHz the voltage scaling Scale 3 is used. This
+ * cannot be used at higher frequencies.
+ * Cf. CONFIG_STM32_STM32F446_VOLTAGE_SCALING_3 option
  */
 #define ARA_BOARD_STM32_104MHZ
 

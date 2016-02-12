@@ -598,7 +598,11 @@ static void stm32_stdclockconfig(void)
 
       regval  = getreg32(STM32_PWR_CR);
       regval &= ~PWR_CR_VOS_MASK;
+#ifndef CONFIG_STM32_STM32F446_VOLTAGE_SCALING_3
       regval |= PWR_CR_VOS_SCALE_1;
+#else
+      regval |= PWR_CR_VOS_SCALE_3;
+#endif
 
       putreg32(regval, STM32_PWR_CR);
 

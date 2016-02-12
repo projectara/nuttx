@@ -1711,6 +1711,13 @@ config STM32_STM32F446_OPTIMIZED_STOP
 		Allow optimized low power Stop mode on STM32F446. This enables the
 		under-drive mode, low power regulator and flash OFF mode.
 
+config STM32_STM32F446_VOLTAGE_SCALING_3
+	bool "Enable optimized voltage scaling on STM32F446"
+	depends on STM32_STM32F446
+	default n
+	---help---
+		Allow optimized voltage scaling for CPU frequency under 120MHz.
+
 config STM32_DISABLE_IDLE_SLEEP_DURING_DEBUG
 	bool "Disable IDLE Sleep (WFI) in debug mode"
 	default n
