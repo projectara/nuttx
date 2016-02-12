@@ -57,6 +57,7 @@
 #define GB_SVC_TYPE_INTF_EJECT          0x11
 #define GB_SVC_TYPE_KEY_EVENT           0x12
 #define GB_SVC_TYPE_PING                0x13
+#define GB_SVC_TYPE_INTF_PWR_ENABLE     0x14
 
 struct gb_svc_protocol_version_request {
 	__u8	major;
@@ -201,6 +202,22 @@ struct gb_svc_key_event_request {
 #define GB_SVC_KEY_RELEASED	0x00
 #define GB_SVC_KEY_PRESSED	0x01
 } __packed;
+
+struct gb_svc_intf_pwr_enable_request {
+    __u8 intf_id;
+    __u8 enable;
+#define GB_SVC_INTF_PWR_DISABLE         0x00
+#define GB_SVC_INTF_PWR_ENABLE          0x01
+};
+
+struct gb_svc_intf_pwr_enable_response {
+    __u8 result_code;
+#define GB_SVC_INTF_PWR_OK              0x00
+#define GB_SVC_INTF_PWR_BUSY            0x01
+#define GB_SVC_INTF_PWR_ERROR_CAP       0x02
+#define GB_SVC_INTF_PWR_INSUFFICIENT    0x03
+#define GB_SVC_INTF_PWR_FAIL            0x04
+};
 
 int gb_svc_protocol_version(void);
 int gb_svc_hello(uint8_t ap_intf_id);

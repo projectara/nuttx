@@ -454,6 +454,21 @@ static uint8_t gb_svc_intf_set_power_mode(struct gb_operation *op) {
     return GB_OP_SUCCESS;
 }
 
+static uint8_t gb_svc_intf_pwr_enable(struct gb_operation *operation)
+{
+    struct gb_svc_intf_pwr_enable_request *request;
+    struct gb_svc_intf_pwr_enable_response *response;
+
+    response = gb_operation_alloc_response(operation, sizeof(*response));
+    if (!response)
+        return GB_OP_NO_MEMORY;
+
+    request = gb_operation_get_request_payload(operation);
+    (void)request;
+
+    return GB_OP_PROTOCOL_BAD;
+}
+
 static struct gb_operation_handler gb_svc_handlers[] = {
     GB_HANDLER(GB_SVC_TYPE_INTF_DEVICE_ID, gb_svc_intf_device_id),
     GB_HANDLER(GB_SVC_TYPE_INTF_EJECT, gb_svc_intf_eject),
@@ -465,6 +480,7 @@ static struct gb_operation_handler gb_svc_handlers[] = {
     GB_HANDLER(GB_SVC_TYPE_DME_PEER_SET, gb_svc_dme_peer_set),
     GB_HANDLER(GB_SVC_TYPE_INTF_SET_PWRM, gb_svc_intf_set_power_mode),
     GB_HANDLER(GB_SVC_TYPE_PING, gb_svc_ping),
+    GB_HANDLER(GB_SVC_TYPE_INTF_PWR_ENABLE, gb_svc_intf_pwr_enable),
 };
 
 struct gb_driver svc_driver = {
