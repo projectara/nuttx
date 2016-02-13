@@ -137,7 +137,6 @@ static uint8_t gb_camera_capabilities(struct gb_operation *operation)
         return GB_OP_NO_MEMORY;
     }
 
-    response->size = cpu_to_le16(size);
     memcpy(response->capabilities, caps, size);
 
     lldbg("gb_camera_capabilities() - \n");

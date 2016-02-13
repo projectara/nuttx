@@ -101,8 +101,6 @@ struct gb_camera_version_response {
  * Camera Protocol Capabilities Response
  */
 struct gb_camera_capabilities_response {
-    /** Size of capabilities data */
-    __le16  size;
     /** Capabilities of the Camera Module */
     __u8   capabilities[0];
 } __packed;
