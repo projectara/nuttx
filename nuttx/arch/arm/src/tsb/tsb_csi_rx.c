@@ -110,7 +110,7 @@ int csi_rx_init(struct cdsi_dev *dev, const struct csi_rx_config *cfg)
                CDSI0_CDSIRX_MODE_CONFIG_CSI2MODE_MASK);
     cdsi_write(dev, CDSI0_CDSIRX_LANE_ENABLE_OFFS,
                CDSI0_CDSIRX_LANE_ENABLE_CLANEEN_MASK |
-               (2 << CDSI0_CDSIRX_LANE_ENABLE_DTLANEEN_SHIFT)); /* Update with lane count */
+               (cfg->num_lanes << CDSI0_CDSIRX_LANE_ENABLE_DTLANEEN_SHIFT));
     cdsi_write(dev, CDSI0_CDSIRX_VC_ENABLE_OFFS,
                CDSI0_CDSIRX_VC_ENABLE_VC3EN_MASK |
                CDSI0_CDSIRX_VC_ENABLE_VC2EN_MASK |
