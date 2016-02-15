@@ -121,6 +121,24 @@ static int cport_count_vendor_request_in(struct usbdev_s *dev, uint8_t req,
     return sizeof(uint16_t);
 }
 
+static int cport_enable_fct_tx_flow_vendor_request_out(struct usbdev_s *dev,
+                                                       uint8_t req,
+                                                       uint16_t index,
+                                                       uint16_t value,
+                                                       void *buf, uint16_t len)
+{
+    return unipro_enable_fct_tx_flow(value);
+}
+
+static int cport_disable_fct_tx_flow_vendor_request_out(struct usbdev_s *dev,
+                                                        uint8_t req,
+                                                        uint16_t index,
+                                                        uint16_t value,
+                                                        void *buf, uint16_t len)
+{
+    return unipro_disable_fct_tx_flow(value);
+}
+
 static int unipro_usb_to_unipro(unsigned int cportid, void *buf, size_t len,
                                 unipro_send_completion_t callback, void *priv)
 {
@@ -199,6 +217,18 @@ void apbridge_backend_register(struct apbridge_backend *apbridge_backend)
                             VENDOR_REQ_OUT | VENDOR_REQ_DEFER,
                             cport_reset_vendor_request_out)) {
         printf("Fail to register APBRIDGE_WOREQUEST_CPORT_RESET"
+               " vendor request\n");
+    }
+    if (register_vendor_request(APBRIDGE_WOREQUEST_CPORT_ENA_FCT_TX_FLOW,
+                                VENDOR_REQ_OUT,
+                                cport_enable_fct_tx_flow_vendor_request_out)) {
+        printf("Fail to register APBRIDGE_WOREQUEST_CPORT_ENA_FCT_TX_FLOW"
+               " vendor request\n");
+    }
+    if (register_vendor_request(APBRIDGE_WOREQUEST_CPORT_DIS_FCT_TX_FLOW,
+                                VENDOR_REQ_OUT,
+                                cport_disable_fct_tx_flow_vendor_request_out)) {
+        printf("Fail to register APBRIDGE_WOREQUEST_CPORT_DIS_FCT_TX_FLOW"
                " vendor request\n");
     }
 

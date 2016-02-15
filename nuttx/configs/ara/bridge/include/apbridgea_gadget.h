@@ -34,15 +34,17 @@
 
 /* Vender specific control requests *******************************************/
 
-#define APBRIDGE_RWREQUEST_LOG                  (0x02)
-#define APBRIDGE_RWREQUEST_EP_MAPPING           (0x03)
-#define APBRIDGE_ROREQUEST_CPORT_COUNT          (0x04)
-#define APBRIDGE_WOREQUEST_CPORT_RESET          (0x05)
-#define APBRIDGE_ROREQUEST_LATENCY_TAG_EN       (0x06)
-#define APBRIDGE_ROREQUEST_LATENCY_TAG_DIS      (0x07)
-#define APBRIDGE_RWREQUEST_CSI_TX_CONTROL       (0x08)
-#define APBRIDGE_RWREQUEST_AUDIO_APBRIDGEA      (0x09)
-#define APBRIDGE_WOREQUEST_SET_REQUEST_COUNT    (0x0a)
+#define APBRIDGE_RWREQUEST_LOG                      (0x02)
+#define APBRIDGE_RWREQUEST_EP_MAPPING               (0x03)
+#define APBRIDGE_ROREQUEST_CPORT_COUNT              (0x04)
+#define APBRIDGE_WOREQUEST_CPORT_RESET              (0x05)
+#define APBRIDGE_ROREQUEST_LATENCY_TAG_EN           (0x06)
+#define APBRIDGE_ROREQUEST_LATENCY_TAG_DIS          (0x07)
+#define APBRIDGE_RWREQUEST_CSI_TX_CONTROL           (0x08)
+#define APBRIDGE_RWREQUEST_AUDIO_APBRIDGEA          (0x09)
+#define APBRIDGE_WOREQUEST_SET_REQUEST_COUNT        (0x0a)
+#define APBRIDGE_WOREQUEST_CPORT_ENA_FCT_TX_FLOW    (0x0b)
+#define APBRIDGE_WOREQUEST_CPORT_DIS_FCT_TX_FLOW    (0x0c)
 
 struct apbridge_dev_s;
 
