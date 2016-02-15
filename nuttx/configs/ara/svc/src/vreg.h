@@ -101,7 +101,7 @@ enum vreg_pwr_state vreg_get_pwr_state(struct vreg *);
 #define INIT_MODULE_CLK_DATA(g) INIT_ACTIVE_HIGH_VREG_DATA(g, 0)
 
 #define DECLARE_VREG(_name, vreg_data)                         \
-    static struct vreg _name ## _vreg = {                      \
+    static struct vreg _name = {                               \
         .name = #_name,                                        \
         .vregs = vreg_data,                                    \
         .nr_vregs = ARRAY_SIZE(vreg_data),                     \

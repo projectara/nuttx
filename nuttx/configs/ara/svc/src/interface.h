@@ -212,7 +212,7 @@ uint32_t interface_pm_get_spin(struct interface *iface);
                                       detect_in_pol,           \
                                       _ejectable,              \
                                       _rg)                     \
-    DECLARE_VREG(_var_name, vreg_data)                         \
+    DECLARE_VREG(_var_name ## _vreg, vreg_data)                \
     static struct interface MAKE_INTERFACE(_var_name) = {      \
         .name = _name,                                         \
         .if_type = ARA_IFACE_TYPE_MODULE_PORT,                 \

@@ -524,7 +524,7 @@ static struct vreg_data sw_vreg_data[] = {
     INIT_ACTIVE_HIGH_VREG_DATA(SW_1P8_UNIPRO_EN, HOLD_TIME_SW_1P8),
     INIT_ACTIVE_HIGH_VREG_DATA(REFCLK_SW_EN, HOLD_TIME_SW_CLK_US),
 };
-DECLARE_VREG(sw, sw_vreg_data);
+DECLARE_VREG(sw_vreg, sw_vreg_data);
 
 /*
  * I/O expanders
@@ -563,7 +563,7 @@ static struct vreg_data refclk_main_vreg_data[] = {
     INIT_MODULE_CLK_DATA(REFCLK_BUFFERS_EN),
 };
 
-DECLARE_VREG(refclk_main, refclk_main_vreg_data);
+DECLARE_VREG(refclk_main_vreg, refclk_main_vreg_data);
 
 /* EVT1 */
 static int evt1_board_init(struct ara_board_info *board_info) {

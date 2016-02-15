@@ -447,7 +447,7 @@ static struct vreg_data sw_vreg_data[] = {
     INIT_ACTIVE_HIGH_VREG_DATA(STM32_GPIO_PIN(GPIO_PORTB | GPIO_PIN1),
                                HOLD_TIME_SW_1P8),
 };
-DECLARE_VREG(sw, sw_vreg_data);
+DECLARE_VREG(sw_vreg, sw_vreg_data);
 
 static struct io_expander_info db3_io_expanders[] = {
         {
