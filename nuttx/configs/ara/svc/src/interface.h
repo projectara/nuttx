@@ -223,6 +223,6 @@ uint32_t interface_pm_get_spin(struct interface *iface);
                                   !!detect_in_pol),            \
         .ejectable = _ejectable,                               \
         .release_gpio = _rg,                                   \
-    };
+    }
 
 #endif
