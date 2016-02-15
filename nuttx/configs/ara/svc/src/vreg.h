@@ -106,6 +106,6 @@ enum vreg_pwr_state vreg_get_pwr_state(struct vreg *);
         .vregs = vreg_data,                                    \
         .nr_vregs = ARRAY_SIZE(vreg_data),                     \
         .use_count = 0,                                        \
-    };
+    }
 
 #endif
