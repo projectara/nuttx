@@ -375,26 +375,17 @@ static int irq_rx_eom(int irq, void *context) {
 
 static int tsb_unipro_mbox_ack(uint16_t val);
 
-/**
- * @brief See ENG-376.
- *
- * We use a mailbox notification from the SVC to solve a race condition
- * involving FCT transmission. When the SVC makes a connection, it sets all the
- * relevant DME parameters as defined in MIPI UniPro 1.6, then pokes the
- * bridge mailbox, telling it that it is safe to send FCTs on a given CPort.
- */
 static int mailbox_evt(void)
 {
     uint32_t cportid;
     int rc;
-    uint32_t e2efc;
-    uint32_t val;
 
     DBG_UNIPRO("mailbox interrupt received\n");
 
     /*
-     * Figure out which CPort to turn on FCT. The desired CPort is always
-     * the mailbox value - 1.
+     * The following code is kept for compatibility with the bootrom, i.e. the
+     * bootrom uses the mailbox to enable the FCT transmission, so the SVC still
+     * send mailbox events for CPort 0 and CPort 1, so we need to ACK them.
      */
     rc = unipro_attr_local_read(TSB_MAILBOX, &cportid, 0);
     if (rc) {
@@ -406,23 +397,6 @@ static int mailbox_evt(void)
         return -EINVAL;
     }
     cportid--;
-
-    rc = unipro_attr_local_read(T_CPORTFLAGS, &val, cportid);
-    if (rc) {
-        return rc;
-    }
-    if (val & CPORT_FLAGS_E2EFC) {
-        DBG_UNIPRO("Enabling E2EFC on cport %u\n", cportid);
-        if (cportid < 32) {
-            e2efc = unipro_read(CPB_RX_E2EFC_EN_0);
-            e2efc |= (1 << cportid);
-            unipro_write(CPB_RX_E2EFC_EN_0, e2efc);
-        } else if (cportid < 64) {
-            e2efc = unipro_read(CPB_RX_E2EFC_EN_1);
-            e2efc |= (1 << (cportid - 32));
-            unipro_write(CPB_RX_E2EFC_EN_1, e2efc);
-        }
-    }
 
     /* Acknowledge the mailbox write */
     rc = tsb_unipro_mbox_ack(cportid + 1);
@@ -773,9 +747,15 @@ void unipro_init(void)
     /*
      * Disable FCT transmission. See ENG-376.
      */
-    unipro_write(CPB_RX_E2EFC_EN_0, 0x0);
+    unipro_write(CPB_TX_E2EFC_EN_0, 0x0);
     if (tsb_get_product_id() == tsb_pid_apbridge) {
-        unipro_write(CPB_RX_E2EFC_EN_1, 0x0);
+        unipro_write(CPB_TX_E2EFC_EN_1, 0x0);
+    }
+
+    /* Enable FCT RX reception - needed because of ES3's bootrom */
+    unipro_write(CPB_RX_E2EFC_EN_0, ~0);
+    if (tsb_get_product_id() == tsb_pid_apbridge) {
+        unipro_write(CPB_RX_E2EFC_EN_1, ~0);
     }
 
     irq_attach(TSB_IRQ_UNIPRO, irq_unipro);
