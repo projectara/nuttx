@@ -76,6 +76,9 @@
  *
  */
 
+#include <nuttx/config.h>
+#include <nuttx/bufram.h>
+
 #include "dwc_otg_pcd.h"
 
 #ifdef DWC_UTE_CFI
@@ -272,8 +275,23 @@ static dwc_otg_cil_callbacks_t pcd_callbacks = {
 dwc_otg_dev_dma_desc_t *dwc_otg_ep_alloc_desc_chain(dwc_dma_t * dma_desc_addr,
 						    uint32_t count)
 {
-	return DWC_DMA_ALLOC_ATOMIC(count * sizeof(dwc_otg_dev_dma_desc_t),
-				    dma_desc_addr);
+#if defined(CONFIG_MM_BUFRAM_ALLOCATOR)
+    size_t page_count;
+    void *ptr;
+
+    page_count =
+        bufram_size_to_page_count(count * sizeof(dwc_otg_dev_dma_desc_t));
+    ptr = bufram_page_alloc(page_count);
+
+    if (dma_desc_addr) {
+        *dma_desc_addr = (dwc_dma_t) ptr;
+    }
+
+    return ptr;
+#else
+    return DWC_DMA_ALLOC_ATOMIC(count * sizeof(dwc_otg_dev_dma_desc_t),
+                                dma_desc_addr);
+#endif
 }
 
 /**
@@ -282,8 +300,15 @@ dwc_otg_dev_dma_desc_t *dwc_otg_ep_alloc_desc_chain(dwc_dma_t * dma_desc_addr,
 void dwc_otg_ep_free_desc_chain(dwc_otg_dev_dma_desc_t * desc_addr,
 				uint32_t dma_desc_addr, uint32_t count)
 {
-	DWC_DMA_FREE(count * sizeof(dwc_otg_dev_dma_desc_t), desc_addr,
-		     dma_desc_addr);
+#if defined(CONFIG_MM_BUFRAM_ALLOCATOR)
+    size_t page_count =
+        bufram_size_to_page_count(count * sizeof(dwc_otg_dev_dma_desc_t));
+
+    bufram_page_free(desc_addr, page_count);
+#else
+    DWC_DMA_FREE(count * sizeof(dwc_otg_dev_dma_desc_t), desc_addr,
+                 dma_desc_addr);
+#endif
 }
 
 #ifdef DWC_EN_ISOC
