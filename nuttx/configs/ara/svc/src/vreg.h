@@ -100,11 +100,8 @@ enum vreg_pwr_state vreg_get_pwr_state(struct vreg *);
 /* Helper for module clock gating control. */
 #define INIT_MODULE_CLK_DATA(g) INIT_ACTIVE_HIGH_VREG_DATA(g, 0)
 
-/* vreg build helper */
-#define __MAKE_VREG(n) n ## _vreg
-#define MAKE_VREG(n) __MAKE_VREG(n)
 #define DECLARE_VREG(_name, vreg_data)                         \
-    static struct vreg MAKE_VREG(_name) = {                    \
+    static struct vreg _name ## _vreg = {                      \
         .name = #_name,                                        \
         .vregs = vreg_data,                                    \
         .nr_vregs = ARRAY_SIZE(vreg_data),                     \

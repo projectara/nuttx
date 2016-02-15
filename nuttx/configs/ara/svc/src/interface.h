@@ -216,7 +216,7 @@ uint32_t interface_pm_get_spin(struct interface *iface);
     static struct interface MAKE_INTERFACE(_var_name) = {      \
         .name = _name,                                         \
         .if_type = ARA_IFACE_TYPE_MODULE_PORT,                 \
-        .vreg = &MAKE_VREG(_var_name),                         \
+        .vreg = &_var_name ## _vreg,                           \
         .switch_portid = portid,                               \
         .pm = NULL,                                            \
         .detect_in = INIT_WD_DATA(wake_detect_gpio,            \
