@@ -787,6 +787,34 @@ void unipro_init(void)
     lldbg("UniPro enabled\n");
 }
 
+int unipro_disable_fct_tx_flow(unsigned int cport)
+{
+    uintptr_t reg;
+
+    if (cport >= cport_count) {
+        return -EINVAL;
+    }
+
+    reg = CPB_TX_E2EFC_EN_REG(cport);
+
+    unipro_write(reg, unipro_read(reg) & ~(cport % 32));
+    return 0;
+}
+
+int unipro_enable_fct_tx_flow(unsigned int cport)
+{
+    uintptr_t reg;
+
+    if (cport >= cport_count) {
+        return -EINVAL;
+    }
+
+    reg = CPB_TX_E2EFC_EN_REG(cport);
+
+    unipro_write(reg, unipro_read(reg) | (cport % 32));
+    return 0;
+}
+
 /**
  * @brief Perform a DME get request
  * @param attr DME attribute address
