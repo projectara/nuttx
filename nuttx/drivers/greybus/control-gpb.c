@@ -107,6 +107,8 @@ static uint8_t gb_control_connected(struct gb_operation *operation)
     if (retval)
         goto error_notify;
 
+    unipro_enable_fct_tx_flow(le16_to_cpu(request->cport_id));
+
     return GB_OP_SUCCESS;
 
 error_notify:
@@ -125,6 +127,8 @@ static uint8_t gb_control_disconnected(struct gb_operation *operation)
         gb_error("dropping short message\n");
         return GB_OP_INVALID;
     }
+
+    unipro_disable_fct_tx_flow(le16_to_cpu(request->cport_id));
 
     retval = gb_notify(le16_to_cpu(request->cport_id), GB_EVT_DISCONNECTED);
     if (retval) {
@@ -210,5 +214,6 @@ struct gb_driver control_driver = {
 void gb_control_register(int cport)
 {
     gb_register_driver(cport, &control_driver);
+    unipro_enable_fct_tx_flow(cport);
     gb_listen(cport);
 }
