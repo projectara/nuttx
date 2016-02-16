@@ -144,15 +144,21 @@
                                | GPIO_PIN0)
 #define ARA_KEY               STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN0)
 
-/*
- * On-board bridges clock control
- */
+/* The on-board bridges vsys GPIOs are controlled by the AP. */
 
-static struct vreg_data apb1_vreg_data[] = {
+static struct vreg_data apb1_vsys_vreg_data[] = {
+};
+
+static struct vreg_data apb2_vsys_vreg_data[] = {
+};
+
+/* On-board bridges clock control */
+
+static struct vreg_data apb1_refclk_vreg_data[] = {
     INIT_MODULE_CLK_DATA(REFCLK_APB1_EN),
 };
 
-static struct vreg_data apb2_vreg_data[] = {
+static struct vreg_data apb2_refclk_vreg_data[] = {
     INIT_MODULE_CLK_DATA(REFCLK_APB2_EN),
 };
 
@@ -169,61 +175,83 @@ static struct vreg_data apb2_vreg_data[] = {
  * control pins to the SVC are present but not used:
  * WD_6, REFCLK_6_EN, VSYS_EN6.
  */
-static struct vreg_data module_1_vreg_data[] = {
+static struct vreg_data module_1_vsys_vreg_data[] = {
     INIT_ACTIVE_LOW_VREG_DATA(U4550_GPIO_PIN(0), HOLD_TIME_MODULE),
+};
+
+static struct vreg_data module_2_vsys_vreg_data[] = {
+    INIT_ACTIVE_LOW_VREG_DATA(U4550_GPIO_PIN(2), HOLD_TIME_MODULE),
+};
+
+static struct vreg_data module_3_vsys_vreg_data[] = {
+    INIT_ACTIVE_LOW_VREG_DATA(U4550_GPIO_PIN(4), HOLD_TIME_MODULE),
+};
+
+static struct vreg_data module_4a_vsys_vreg_data[] = {
+    INIT_ACTIVE_LOW_VREG_DATA(U4550_GPIO_PIN(6), HOLD_TIME_MODULE),
+};
+
+static struct vreg_data module_4b_vsys_vreg_data[] = {
+    INIT_ACTIVE_LOW_VREG_DATA(U4550_GPIO_PIN(6), HOLD_TIME_MODULE),
+};
+
+static struct vreg_data module_5_vsys_vreg_data[] = {
+    INIT_ACTIVE_LOW_VREG_DATA(U4550_GPIO_PIN(8), HOLD_TIME_MODULE),
+};
+
+/* Modules clock control list. */
+
+static struct vreg_data module_1_refclk_vreg_data[] = {
     INIT_MODULE_CLK_DATA(REFCLK_1_EN),
 };
 
-static struct vreg_data module_2_vreg_data[] = {
-    INIT_ACTIVE_LOW_VREG_DATA(U4550_GPIO_PIN(2), HOLD_TIME_MODULE),
+static struct vreg_data module_2_refclk_vreg_data[] = {
     INIT_MODULE_CLK_DATA(REFCLK_2_EN),
 };
 
-static struct vreg_data module_3_vreg_data[] = {
-    INIT_ACTIVE_LOW_VREG_DATA(U4550_GPIO_PIN(4), HOLD_TIME_MODULE),
+static struct vreg_data module_3_refclk_vreg_data[] = {
     INIT_MODULE_CLK_DATA(REFCLK_3_EN),
 };
 
-static struct vreg_data module_4a_vreg_data[] = {
-    INIT_ACTIVE_LOW_VREG_DATA(U4550_GPIO_PIN(6), HOLD_TIME_MODULE),
+static struct vreg_data module_4a_refclk_vreg_data[] = {
     INIT_MODULE_CLK_DATA(REFCLK_4A_EN),
 };
 
-static struct vreg_data module_4b_vreg_data[] = {
-    INIT_ACTIVE_LOW_VREG_DATA(U4550_GPIO_PIN(6), HOLD_TIME_MODULE),
+static struct vreg_data module_4b_refclk_vreg_data[] = {
     INIT_MODULE_CLK_DATA(REFCLK_4B_EN),
 };
 
-static struct vreg_data module_5_vreg_data[] = {
-    INIT_ACTIVE_LOW_VREG_DATA(U4550_GPIO_PIN(8), HOLD_TIME_MODULE),
+static struct vreg_data module_5_refclk_vreg_data[] = {
     INIT_MODULE_CLK_DATA(REFCLK_5_EN),
 };
 
 /*
  * Interfaces on this board
  */
-DECLARE_MODULE_PORT_INTERFACE(apb1, "apb1", apb1_vreg_data, 3,
-                              WD8A_DET, ARA_IFACE_WD_ACTIVE_HIGH, false, 0);
-DECLARE_MODULE_PORT_INTERFACE(apb2, "apb2", apb2_vreg_data, 1,
-                              WD8B_DET, ARA_IFACE_WD_ACTIVE_HIGH, false, 0);
-DECLARE_MODULE_PORT_INTERFACE(module_1, "module_1", module_1_vreg_data, 13,
-                              WD_1_DET, ARA_IFACE_WD_ACTIVE_LOW,
-                              true, MOD_RELEASE_1);
-DECLARE_MODULE_PORT_INTERFACE(module_2, "module_2", module_2_vreg_data, 11,
-                              WD_2_DET, ARA_IFACE_WD_ACTIVE_LOW,
-                              true, MOD_RELEASE_2);
-DECLARE_MODULE_PORT_INTERFACE(module_3, "module_3", module_3_vreg_data, 4,
-                              WD_3_DET, ARA_IFACE_WD_ACTIVE_LOW,
-                              true, MOD_RELEASE_3);
-DECLARE_MODULE_PORT_INTERFACE(module_4a, "module_4a", module_4a_vreg_data, 8,
-                              WD_4A_DET, ARA_IFACE_WD_ACTIVE_LOW,
-                              true, MOD_RELEASE_4);
-DECLARE_MODULE_PORT_INTERFACE(module_4b, "module_4b", module_4b_vreg_data, 6,
-                              WD_4B_DET, ARA_IFACE_WD_ACTIVE_LOW,
-                              true, MOD_RELEASE_4);
-DECLARE_MODULE_PORT_INTERFACE(module_5, "module_5", module_5_vreg_data, 10,
-                              WD_5_DET, ARA_IFACE_WD_ACTIVE_LOW,
-                              true, MOD_RELEASE_5);
+DECLARE_MODULE_PORT_INTERFACE(apb1, "apb1", apb1_vsys_vreg_data,
+                              apb1_refclk_vreg_data, 3, WD8A_DET,
+                              ARA_IFACE_WD_ACTIVE_HIGH, false, 0);
+DECLARE_MODULE_PORT_INTERFACE(apb2, "apb2", apb2_vsys_vreg_data,
+                              apb2_refclk_vreg_data, 1, WD8B_DET,
+                              ARA_IFACE_WD_ACTIVE_HIGH, false, 0);
+DECLARE_MODULE_PORT_INTERFACE(module_1, "module_1", module_1_vsys_vreg_data,
+                              module_1_refclk_vreg_data, 13, WD_1_DET,
+                              ARA_IFACE_WD_ACTIVE_LOW, true, MOD_RELEASE_1);
+DECLARE_MODULE_PORT_INTERFACE(module_2, "module_2", module_2_vsys_vreg_data,
+                              module_2_refclk_vreg_data, 11, WD_2_DET,
+                              ARA_IFACE_WD_ACTIVE_LOW, true, MOD_RELEASE_2);
+DECLARE_MODULE_PORT_INTERFACE(module_3, "module_3", module_3_vsys_vreg_data,
+                              module_3_refclk_vreg_data, 4, WD_3_DET,
+                              ARA_IFACE_WD_ACTIVE_LOW, true, MOD_RELEASE_3);
+DECLARE_MODULE_PORT_INTERFACE(module_4a, "module_4a", module_4a_vsys_vreg_data,
+                              module_4a_refclk_vreg_data, 8, WD_4A_DET,
+                              ARA_IFACE_WD_ACTIVE_LOW, true, MOD_RELEASE_4);
+DECLARE_MODULE_PORT_INTERFACE(module_4b, "module_4b", module_4b_vsys_vreg_data,
+                              module_4b_refclk_vreg_data, 6, WD_4B_DET,
+                              ARA_IFACE_WD_ACTIVE_LOW, true, MOD_RELEASE_4);
+DECLARE_MODULE_PORT_INTERFACE(module_5, "module_5", module_5_vsys_vreg_data,
+                              module_5_refclk_vreg_data, 10, WD_5_DET,
+                              ARA_IFACE_WD_ACTIVE_LOW, true, MOD_RELEASE_5);
 
 #define I2C_SEL1_A      BIT(0)
 #define I2C_SEL1_B      BIT(1)

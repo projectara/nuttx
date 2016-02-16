@@ -275,11 +275,27 @@ static void dumpstate_usage(int exit_status)
     exit(exit_status);
 }
 
-static int dumpstate_func(struct interface *iface, void *context)
+static void dumpstate_vreg(struct vreg *vreg)
 {
-    struct vreg *vreg;
     int i;
 
+    printf("\tvreg: %s\n", vreg->name);
+    if (!vreg->vregs) {
+        printf("\t\t(no vregs)\n");
+    }
+
+    printf("\t\tnr_vregs=%u\n", vreg->nr_vregs);
+    printf("\t\tpower_state=%d\n", vreg->power_state);
+    printf("\t\tuse_count=%u\n", atomic_get(&vreg->use_count));
+    for (i = 0; i < vreg->nr_vregs; i++) {
+        printf("\t\tvregs[%d]: gpio %u, hold_time %u, active_high %u, def_val %u\n",
+               i, vreg->vregs[i].gpio, vreg->vregs[i].hold_time,
+               vreg->vregs[i].active_high, vreg->vregs[i].def_val);
+    }
+}
+
+static int dumpstate_func(struct interface *iface, void *context)
+{
     (void)context;
 
     printf("Interface %s:\n", iface->name);
@@ -293,22 +309,8 @@ static int dumpstate_func(struct interface *iface, void *context)
                interface_get_id_by_portid(iface->switch_portid));
     }
 
-    vreg = iface->vsys_vreg;
-
-    printf("\tvreg: %s\n", vreg->name);
-    if (!vreg->vregs) {
-        printf("\t\t(no vregs)\n");
-        return 0;
-    }
-
-    printf("\t\tnr_vregs=%u\n", vreg->nr_vregs);
-    printf("\t\tpower_state=%d\n", vreg->power_state);
-    printf("\t\tuse_count=%u\n", atomic_get(&vreg->use_count));
-    for (i = 0; i < vreg->nr_vregs; i++) {
-        printf("\t\tvregs[%d]: gpio %u, hold_time %u, active_high %u, def_val %u\n",
-               i, vreg->vregs[i].gpio, vreg->vregs[i].hold_time,
-               vreg->vregs[i].active_high, vreg->vregs[i].def_val);
-    }
+    dumpstate_vreg(iface->vsys_vreg);
+    dumpstate_vreg(iface->refclk_vreg);
 
     /*
      * Do a little extra for the module ports, which are the currently

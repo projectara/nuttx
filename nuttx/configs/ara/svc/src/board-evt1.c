@@ -217,18 +217,24 @@
  * ----------------------------------------------------------------------
  */
 
-static struct vreg_data apb1_vreg_data[] = {
+static struct vreg_data apb1_vsys_vreg_data[] = {
 };
 
-static struct vreg_data apb2_vreg_data[] = {
+static struct vreg_data apb2_vsys_vreg_data[] = {
 };
 
-DECLARE_MODULE_PORT_INTERFACE(apb1, "apb1", apb1_vreg_data, 3,
-                              WD_8A_DET, ARA_IFACE_WD_ACTIVE_HIGH,
-                              false, 0);
-DECLARE_MODULE_PORT_INTERFACE(apb2, "apb2", apb2_vreg_data, 1,
-                              WD_8B_DET, ARA_IFACE_WD_ACTIVE_HIGH,
-                              false, 0);
+static struct vreg_data apb1_refclk_vreg_data[] = {
+};
+
+static struct vreg_data apb2_refclk_vreg_data[] = {
+};
+
+DECLARE_MODULE_PORT_INTERFACE(apb1, "apb1", apb1_vsys_vreg_data,
+                              apb1_refclk_vreg_data, 3, WD_8A_DET,
+                              ARA_IFACE_WD_ACTIVE_HIGH, false, 0);
+DECLARE_MODULE_PORT_INTERFACE(apb2, "apb2", apb2_vsys_vreg_data,
+                              apb2_refclk_vreg_data, 1, WD_8B_DET,
+                              ARA_IFACE_WD_ACTIVE_HIGH, false, 0);
 
 /*
  * Modules voltage regulator list and interface declarations.
@@ -244,69 +250,90 @@ DECLARE_MODULE_PORT_INTERFACE(apb2, "apb2", apb2_vreg_data, 1,
 /*
  * EVT1 interface ports
  */
-static struct vreg_data evt1_module_1_vreg_data[] = {
+static struct vreg_data evt1_module_1_vsys_vreg_data[] = {
     INIT_ACTIVE_LOW_VREG_DATA(VSYS_EN1_N, HOLD_TIME_MODULE),
+};
+
+static struct vreg_data evt1_module_2_vsys_vreg_data[] = {
+    INIT_ACTIVE_LOW_VREG_DATA(VSYS_EN2_N, HOLD_TIME_MODULE),
+};
+
+static struct vreg_data evt1_module_3A_vsys_vreg_data[] = {
+    INIT_ACTIVE_LOW_VREG_DATA(VSYS_EN3A_N, HOLD_TIME_MODULE),
+};
+
+static struct vreg_data evt1_module_3B_vsys_vreg_data[] = {
+    INIT_ACTIVE_LOW_VREG_DATA(VSYS_EN3B_N, HOLD_TIME_MODULE),
+};
+
+static struct vreg_data evt1_module_4A_vsys_vreg_data[] = {
+    INIT_ACTIVE_LOW_VREG_DATA(VSYS_EN4A_N, HOLD_TIME_MODULE),
+};
+
+static struct vreg_data evt1_module_4B_vsys_vreg_data[] = {
+    INIT_ACTIVE_LOW_VREG_DATA(VSYS_EN4B_N, HOLD_TIME_MODULE),
+};
+
+static struct vreg_data evt1_module_5_lcd_vsys_vreg_data[] = {
+    INIT_ACTIVE_LOW_VREG_DATA(VSYS_EN5_N, HOLD_TIME_MODULE),
+};
+
+static struct vreg_data evt1_module_1_refclk_vreg_data[] = {
     INIT_MODULE_CLK_DATA(REFCLK_1_EN),
 };
 
-static struct vreg_data evt1_module_2_vreg_data[] = {
-    INIT_ACTIVE_LOW_VREG_DATA(VSYS_EN2_N, HOLD_TIME_MODULE),
+static struct vreg_data evt1_module_2_refclk_vreg_data[] = {
     INIT_MODULE_CLK_DATA(REFCLK_2_EN),
 };
 
-static struct vreg_data evt1_module_3A_vreg_data[] = {
-    INIT_ACTIVE_LOW_VREG_DATA(VSYS_EN3A_N, HOLD_TIME_MODULE),
+static struct vreg_data evt1_module_3A_refclk_vreg_data[] = {
     INIT_MODULE_CLK_DATA(REFCLK_3A_EN),
 };
 
-static struct vreg_data evt1_module_3B_vreg_data[] = {
-    INIT_ACTIVE_LOW_VREG_DATA(VSYS_EN3B_N, HOLD_TIME_MODULE),
+static struct vreg_data evt1_module_3B_refclk_vreg_data[] = {
     INIT_MODULE_CLK_DATA(REFCLK_3B_EN),
 };
 
-static struct vreg_data evt1_module_4A_vreg_data[] = {
-    INIT_ACTIVE_LOW_VREG_DATA(VSYS_EN4A_N, HOLD_TIME_MODULE),
+static struct vreg_data evt1_module_4A_refclk_vreg_data[] = {
     INIT_MODULE_CLK_DATA(REFCLK_4A_EN),
 };
 
-static struct vreg_data evt1_module_4B_vreg_data[] = {
-    INIT_ACTIVE_LOW_VREG_DATA(VSYS_EN4B_N, HOLD_TIME_MODULE),
+static struct vreg_data evt1_module_4B_refclk_vreg_data[] = {
     INIT_MODULE_CLK_DATA(REFCLK_4B_EN),
 };
 
-static struct vreg_data evt1_module_5_lcd_vreg_data[] = {
-    INIT_ACTIVE_LOW_VREG_DATA(VSYS_EN5_N, HOLD_TIME_MODULE),
+static struct vreg_data evt1_module_5_lcd_refclk_vreg_data[] = {
     INIT_MODULE_CLK_DATA(REFCLK_5_EN),
 };
 
 DECLARE_MODULE_PORT_INTERFACE(evt1_module_1, "module_1",
-                              evt1_module_1_vreg_data, 13,
-                              WD_1_DET, ARA_IFACE_WD_ACTIVE_LOW,
-                              true, MOD_RELEASE_1);
+                              evt1_module_1_vsys_vreg_data,
+                              evt1_module_1_refclk_vreg_data, 13, WD_1_DET,
+                              ARA_IFACE_WD_ACTIVE_LOW, true, MOD_RELEASE_1);
 DECLARE_MODULE_PORT_INTERFACE(evt1_module_2, "module_2",
-                              evt1_module_2_vreg_data, 11,
-                              WD_2_DET, ARA_IFACE_WD_ACTIVE_LOW,
-                              true, MOD_RELEASE_2);
+                              evt1_module_2_vsys_vreg_data,
+                              evt1_module_2_refclk_vreg_data, 11, WD_2_DET,
+                              ARA_IFACE_WD_ACTIVE_LOW, true, MOD_RELEASE_2);
 DECLARE_MODULE_PORT_INTERFACE(evt1_module_3A, "module_3a",
-                              evt1_module_3A_vreg_data, 4,
-                              WD_3A_DET, ARA_IFACE_WD_ACTIVE_LOW,
-                              true, MOD_RELEASE_3A);
+                              evt1_module_3A_vsys_vreg_data,
+                              evt1_module_3A_refclk_vreg_data, 4, WD_3A_DET,
+                              ARA_IFACE_WD_ACTIVE_LOW, true, MOD_RELEASE_3A);
 DECLARE_MODULE_PORT_INTERFACE(evt1_module_3B, "module_3b",
-                              evt1_module_3B_vreg_data, 2,
-                              WD_3B_DET, ARA_IFACE_WD_ACTIVE_LOW,
-                              true, MOD_RELEASE_3B);
+                              evt1_module_3B_vsys_vreg_data,
+                              evt1_module_3B_refclk_vreg_data, 2, WD_3B_DET,
+                              ARA_IFACE_WD_ACTIVE_LOW, true, MOD_RELEASE_3B);
 DECLARE_MODULE_PORT_INTERFACE(evt1_module_4A, "module_4a",
-                              evt1_module_4A_vreg_data, 6,
-                              WD_4A_DET, ARA_IFACE_WD_ACTIVE_LOW,
-                              true, MOD_RELEASE_4A);
+                              evt1_module_4A_vsys_vreg_data,
+                              evt1_module_4A_refclk_vreg_data, 6, WD_4A_DET,
+                              ARA_IFACE_WD_ACTIVE_LOW, true, MOD_RELEASE_4A);
 DECLARE_MODULE_PORT_INTERFACE(evt1_module_4B, "module_4b",
-                              evt1_module_4B_vreg_data, 8,
-                              WD_4B_DET, ARA_IFACE_WD_ACTIVE_LOW,
-                              true, MOD_RELEASE_4B);
+                              evt1_module_4B_vsys_vreg_data,
+                              evt1_module_4B_refclk_vreg_data, 8, WD_4B_DET,
+                              ARA_IFACE_WD_ACTIVE_LOW, true, MOD_RELEASE_4B);
 DECLARE_MODULE_PORT_INTERFACE(evt1_module_5_lcd, "module_5",
-                              evt1_module_5_lcd_vreg_data, 10,
-                              WD_5_DET, ARA_IFACE_WD_ACTIVE_LOW,
-                              false, MOD_RELEASE_5);
+                              evt1_module_5_lcd_vsys_vreg_data,
+                              evt1_module_5_lcd_refclk_vreg_data, 10, WD_5_DET,
+                              ARA_IFACE_WD_ACTIVE_LOW, false, MOD_RELEASE_5);
 
 /*
  * Power rail groups definitions.
@@ -400,69 +427,90 @@ static struct interface *evt1_interfaces[] = {
 /*
  * EVT1.5 interface ports
  */
-static struct vreg_data evt1_5_module_1_vreg_data[] = {
+static struct vreg_data evt1_5_module_1_vsys_vreg_data[] = {
     INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN1_N, HOLD_TIME_MODULE),
+};
+
+static struct vreg_data evt1_5_module_2_vsys_vreg_data[] = {
+    INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN2_N, HOLD_TIME_MODULE),
+};
+
+static struct vreg_data evt1_5_module_3A_vsys_vreg_data[] = {
+    INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN3A_N, HOLD_TIME_MODULE),
+};
+
+static struct vreg_data evt1_5_module_3B_vsys_vreg_data[] = {
+    INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN3B_N, HOLD_TIME_MODULE),
+};
+
+static struct vreg_data evt1_5_module_4A_vsys_vreg_data[] = {
+    INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN4A_N, HOLD_TIME_MODULE),
+};
+
+static struct vreg_data evt1_5_module_4B_vsys_vreg_data[] = {
+    INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN4B_N, HOLD_TIME_MODULE),
+};
+
+static struct vreg_data evt1_5_module_5_lcd_vsys_vreg_data[] = {
+    INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN5_N, HOLD_TIME_MODULE),
+};
+
+static struct vreg_data evt1_5_module_1_refclk_vreg_data[] = {
     INIT_MODULE_CLK_DATA(REFCLK_1_EN),
 };
 
-static struct vreg_data evt1_5_module_2_vreg_data[] = {
-    INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN2_N, HOLD_TIME_MODULE),
+static struct vreg_data evt1_5_module_2_refclk_vreg_data[] = {
     INIT_MODULE_CLK_DATA(REFCLK_2_EN),
 };
 
-static struct vreg_data evt1_5_module_3A_vreg_data[] = {
-    INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN3A_N, HOLD_TIME_MODULE),
+static struct vreg_data evt1_5_module_3A_refclk_vreg_data[] = {
     INIT_MODULE_CLK_DATA(REFCLK_3A_EN),
 };
 
-static struct vreg_data evt1_5_module_3B_vreg_data[] = {
-    INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN3B_N, HOLD_TIME_MODULE),
+static struct vreg_data evt1_5_module_3B_refclk_vreg_data[] = {
     INIT_MODULE_CLK_DATA(REFCLK_3B_EN),
 };
 
-static struct vreg_data evt1_5_module_4A_vreg_data[] = {
-    INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN4A_N, HOLD_TIME_MODULE),
+static struct vreg_data evt1_5_module_4A_refclk_vreg_data[] = {
     INIT_MODULE_CLK_DATA(REFCLK_4A_EN),
 };
 
-static struct vreg_data evt1_5_module_4B_vreg_data[] = {
-    INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN4B_N, HOLD_TIME_MODULE),
+static struct vreg_data evt1_5_module_4B_refclk_vreg_data[] = {
     INIT_MODULE_CLK_DATA(REFCLK_4B_EN),
 };
 
-static struct vreg_data evt1_5_module_5_lcd_vreg_data[] = {
-    INIT_ACTIVE_HIGH_VREG_DATA(VSYS_EN5_N, HOLD_TIME_MODULE),
+static struct vreg_data evt1_5_module_5_lcd_refclk_vreg_data[] = {
     INIT_MODULE_CLK_DATA(REFCLK_5_EN),
 };
 
 DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_1, "module_1",
-                              evt1_5_module_1_vreg_data, 13,
-                              WD_1_DET, ARA_IFACE_WD_ACTIVE_LOW,
-                              true, MOD_RELEASE_1);
+                              evt1_5_module_1_vsys_vreg_data,
+                              evt1_5_module_1_refclk_vreg_data, 13, WD_1_DET,
+                              ARA_IFACE_WD_ACTIVE_LOW, true, MOD_RELEASE_1);
 DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_2, "module_2",
-                              evt1_5_module_2_vreg_data, 11,
-                              WD_2_DET, ARA_IFACE_WD_ACTIVE_LOW,
-                              true, MOD_RELEASE_2);
+                              evt1_5_module_2_vsys_vreg_data,
+                              evt1_5_module_2_refclk_vreg_data, 11, WD_2_DET,
+                              ARA_IFACE_WD_ACTIVE_LOW, true, MOD_RELEASE_2);
 DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_3A, "module_3a",
-                              evt1_5_module_3A_vreg_data, 4,
-                              WD_3A_DET, ARA_IFACE_WD_ACTIVE_LOW,
-                              true, MOD_RELEASE_3A);
+                              evt1_5_module_3A_vsys_vreg_data,
+                              evt1_5_module_3A_refclk_vreg_data, 4, WD_3A_DET,
+                              ARA_IFACE_WD_ACTIVE_LOW, true, MOD_RELEASE_3A);
 DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_3B, "module_3b",
-                              evt1_5_module_3B_vreg_data, 2,
-                              WD_3B_DET, ARA_IFACE_WD_ACTIVE_LOW,
-                              true, MOD_RELEASE_3B);
+                              evt1_5_module_3B_vsys_vreg_data,
+                              evt1_5_module_3B_refclk_vreg_data, 2, WD_3B_DET,
+                              ARA_IFACE_WD_ACTIVE_LOW, true, MOD_RELEASE_3B);
 DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_4A, "module_4a",
-                              evt1_5_module_4A_vreg_data, 6,
-                              WD_4A_DET, ARA_IFACE_WD_ACTIVE_LOW,
-                              true, MOD_RELEASE_4A);
+                              evt1_5_module_4A_vsys_vreg_data,
+                              evt1_5_module_4A_refclk_vreg_data, 6, WD_4A_DET,
+                              ARA_IFACE_WD_ACTIVE_LOW, true, MOD_RELEASE_4A);
 DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_4B, "module_4b",
-                              evt1_5_module_4B_vreg_data, 8,
-                              WD_4B_DET, ARA_IFACE_WD_ACTIVE_LOW,
-                              true, MOD_RELEASE_4B);
+                              evt1_5_module_4B_vsys_vreg_data,
+                              evt1_5_module_4B_refclk_vreg_data, 8, WD_4B_DET,
+                              ARA_IFACE_WD_ACTIVE_LOW, true, MOD_RELEASE_4B);
 DECLARE_MODULE_PORT_INTERFACE(evt1_5_module_5_lcd, "module_5",
-                              evt1_5_module_5_lcd_vreg_data, 10,
-                              WD_5_DET, ARA_IFACE_WD_ACTIVE_LOW,
-                              true, MOD_RELEASE_5);
+                              evt1_5_module_5_lcd_vsys_vreg_data,
+                              evt1_5_module_5_lcd_refclk_vreg_data, 10, WD_5_DET,
+                              ARA_IFACE_WD_ACTIVE_LOW, true, MOD_RELEASE_5);
 
 static struct interface *evt1_5_interfaces[] = {
     &apb1_interface,
@@ -481,13 +529,13 @@ static struct interface *evt1_5_interfaces[] = {
  * Similar to EVT1.5 interfaces, with different mapping of the physical ports
  */
 DECLARE_MODULE_PORT_INTERFACE(db3_5_module_3B, "module_3b",
-                              evt1_5_module_3B_vreg_data, 10,
-                              WD_3B_DET, ARA_IFACE_WD_ACTIVE_LOW,
-                              true, MOD_RELEASE_3B);
+                              evt1_5_module_3B_vsys_vreg_data,
+                              evt1_5_module_3B_refclk_vreg_data, 10, WD_3B_DET,
+                              ARA_IFACE_WD_ACTIVE_LOW, true, MOD_RELEASE_3B);
 DECLARE_MODULE_PORT_INTERFACE(db3_5_module_5_lcd, "module_5",
-                              evt1_5_module_5_lcd_vreg_data, 9,
-                              WD_5_DET, ARA_IFACE_WD_ACTIVE_LOW,
-                              true, MOD_RELEASE_5);
+                              evt1_5_module_5_lcd_vsys_vreg_data,
+                              evt1_5_module_5_lcd_refclk_vreg_data, 9, WD_5_DET,
+                              ARA_IFACE_WD_ACTIVE_LOW, true, MOD_RELEASE_5);
 
 /* Interfaces on DB3.5 */
 struct interface *db3_5_interfaces[] = {

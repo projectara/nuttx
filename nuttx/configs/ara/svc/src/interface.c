@@ -74,6 +74,7 @@ static int interface_config(struct interface *iface)
 
     /* Configure default state for the regulator pins */
     rc = vreg_config(iface->vsys_vreg);
+    rc |= vreg_config(iface->refclk_vreg);
 
     /* Configure the interfaces pin according to the interface type */
     switch (iface->if_type) {
@@ -100,7 +101,6 @@ static int interface_config(struct interface *iface)
     return rc;
 }
 
-
 /**
  * @brief Turn on the power to this interface
  *
@@ -121,6 +121,7 @@ int interface_pwr_enable(struct interface *iface)
     }
 
     rc = vreg_get(iface->vsys_vreg);
+    rc |= vreg_get(iface->refclk_vreg);
     if (rc) {
         dbg_error("Can't enable interface %s: %d\n",
                   iface->name ? iface->name : "unknown",
@@ -155,6 +156,7 @@ int interface_pwr_disable(struct interface *iface)
     }
 
     rc = vreg_put(iface->vsys_vreg);
+    rc |= vreg_put(iface->refclk_vreg);
     if (rc) {
         dbg_error("Can't disable interface %s: %d\n",
                   iface->name ? iface->name : "unknown",

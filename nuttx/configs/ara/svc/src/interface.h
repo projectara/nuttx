@@ -112,6 +112,7 @@ struct interface {
     uint8_t dev_id;
     enum ara_iface_type if_type;
     struct vreg *vsys_vreg;
+    struct vreg *refclk_vreg;
     enum ara_iface_pwr_state power_state;
     struct pm_data *pm;
     struct wd_data detect_in;
@@ -206,17 +207,20 @@ uint32_t interface_pm_get_spin(struct interface *iface);
  * is INVALID_PORT.
  */
 #define DECLARE_MODULE_PORT_INTERFACE(_var_name, _name,        \
-                                      vreg_data,               \
+                                      vsys_vreg_data,          \
+                                      refclk_vreg_data,        \
                                       portid,                  \
                                       wake_detect_gpio,        \
                                       detect_in_pol,           \
                                       _ejectable,              \
                                       _rg)                     \
-    DECLARE_VREG(_var_name ## _vreg, vreg_data);               \
+    DECLARE_VREG(_var_name ## _vsys_vreg, vsys_vreg_data);     \
+    DECLARE_VREG(_var_name ## _refclk_vreg, refclk_vreg_data); \
     static struct interface MAKE_INTERFACE(_var_name) = {      \
         .name = _name,                                         \
         .if_type = ARA_IFACE_TYPE_MODULE_PORT,                 \
-        .vsys_vreg = &_var_name ## _vreg,                      \
+        .vsys_vreg = &_var_name ## _vsys_vreg,                 \
+        .refclk_vreg = &_var_name ## _refclk_vreg,             \
         .switch_portid = portid,                               \
         .pm = NULL,                                            \
         .detect_in = INIT_WD_DATA(wake_detect_gpio,            \
