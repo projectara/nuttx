@@ -293,7 +293,7 @@ static int dumpstate_func(struct interface *iface, void *context)
                interface_get_id_by_portid(iface->switch_portid));
     }
 
-    vreg = iface->vreg;
+    vreg = iface->vsys_vreg;
 
     printf("\tvreg: %s\n", vreg->name);
     if (!vreg->vregs) {

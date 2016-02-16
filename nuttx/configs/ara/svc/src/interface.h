@@ -111,7 +111,7 @@ struct interface {
     unsigned int switch_portid;
     uint8_t dev_id;
     enum ara_iface_type if_type;
-    struct vreg *vreg;
+    struct vreg *vsys_vreg;
     enum ara_iface_pwr_state power_state;
     struct pm_data *pm;
     struct wd_data detect_in;
@@ -216,7 +216,7 @@ uint32_t interface_pm_get_spin(struct interface *iface);
     static struct interface MAKE_INTERFACE(_var_name) = {      \
         .name = _name,                                         \
         .if_type = ARA_IFACE_TYPE_MODULE_PORT,                 \
-        .vreg = &_var_name ## _vreg,                           \
+        .vsys_vreg = &_var_name ## _vreg,                      \
         .switch_portid = portid,                               \
         .pm = NULL,                                            \
         .detect_in = INIT_WD_DATA(wake_detect_gpio,            \
