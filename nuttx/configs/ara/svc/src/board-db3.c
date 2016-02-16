@@ -148,15 +148,12 @@
  * On-board bridges clock control
  */
 
-/* FIXME: put the bridge enables back in here once the handshaking
- * with MSM is OK. */
-
 static struct vreg_data apb1_vreg_data[] = {
-    /* INIT_MODULE_CLK_DATA(REFCLK_APB1_EN), */
+    INIT_MODULE_CLK_DATA(REFCLK_APB1_EN),
 };
 
 static struct vreg_data apb2_vreg_data[] = {
-    /* INIT_MODULE_CLK_DATA(REFCLK_APB2_EN), */
+    INIT_MODULE_CLK_DATA(REFCLK_APB2_EN),
 };
 
 /*
@@ -479,14 +476,6 @@ static int db3_board_init(struct ara_board_info *board_info) {
     gpio_activate(REFCLK_BUFFERS_EN);
     gpio_direction_out(REFCLK_REQ, 1);
     gpio_direction_out(REFCLK_BUFFERS_EN, 1);
-
-    /*
-     * FIXME: tear this out once the handshaking with MSM is OK.
-     */
-    gpio_activate(REFCLK_APB1_EN);
-    gpio_activate(REFCLK_APB2_EN);
-    gpio_direction_out(REFCLK_APB1_EN, 1);
-    gpio_direction_out(REFCLK_APB2_EN, 1);
 
     /*
      * Configure the switch power supply lines.
