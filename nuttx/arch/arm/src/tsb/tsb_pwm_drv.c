@@ -534,7 +534,7 @@ static int tsb_pwm_op_config(struct device *dev, uint16_t which, uint32_t duty,
     uint32_t set_duty;
     int ret = 0;
 
-    if (valid_param(dev, which) || period == 0 || duty == 0) {
+    if (valid_param(dev, which)) {
         return -EINVAL;
     }
 
