@@ -247,7 +247,7 @@ enum ara_iface_pwr_state interface_get_pwr_state(struct interface *iface)
  *
  * Power OFF the interface
  */
-static int interface_power_off(struct interface *iface)
+int interface_power_off(struct interface *iface)
 {
     int rc;
 
@@ -280,7 +280,7 @@ static int interface_power_off(struct interface *iface)
  * module(s). Then an initial handshake between the module(s) and the
  * interface can take place.
  */
-static int interface_power_on(struct interface *iface)
+int interface_power_on(struct interface *iface)
 {
     int rc;
 

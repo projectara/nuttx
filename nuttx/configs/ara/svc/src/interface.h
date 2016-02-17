@@ -148,6 +148,8 @@ int interface_forcibly_eject(struct interface *iface, uint32_t delay);
 const char *interface_get_name(struct interface *iface);
 int interface_pwr_enable(struct interface*);
 int interface_pwr_disable(struct interface*);
+int interface_power_off(struct interface *iface);
+int interface_power_on(struct interface *iface);
 enum ara_iface_pwr_state interface_get_pwr_state(struct interface *iface);
 int interface_generate_wakeout(struct interface *, bool assert, int length);
 int interface_store_hotplug_state(uint8_t port_id, enum hotplug_state hotplug);
