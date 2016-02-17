@@ -408,6 +408,20 @@ int svc_connection_create(uint8_t intf1_id, uint16_t cport1_id,
         return rc;
     }
 
+    rc = switch_cport_connect(sw, c.port_id0, c.cport_id0);
+    if (rc) {
+        dbg_error("Failed to enable connection to [p=%u,c=%u].\n",
+                  c.port_id0, c.cport_id0);
+        return rc;
+    }
+
+    rc = switch_cport_connect(sw, c.port_id1, c.cport_id1);
+    if (rc) {
+        dbg_error("Failed to enable connection to [p=%u,c=%u].\n", c.port_id1,
+                  c.cport_id1);
+        return rc;
+    }
+
     /*
      * Poke bridge mailboxes.
      * @jira{ENG-376}
@@ -613,6 +627,23 @@ static int svc_handle_ap(void) {
     rc = switch_connection_create(svc->sw, &svc_conn);
     if (rc) {
         dbg_error("Failed to create initial SVC connection: %d\n", rc);
+    }
+
+    /*
+     * Enable connection to AP
+     */
+    rc = switch_cport_connect(svc->sw, svc_conn.port_id0, svc_conn.cport_id0);
+    if (rc) {
+        dbg_error("Failed to enable connection to [p=%u,c=%u].\n",
+                  svc_conn.port_id0, svc_conn.cport_id0);
+        return rc;
+    }
+
+    rc = switch_cport_connect(svc->sw, svc_conn.port_id1, svc_conn.cport_id1);
+    if (rc) {
+        dbg_error("Failed to enable connection to [p=%u,c=%u].\n",
+                  svc_conn.port_id1, svc_conn.cport_id1);
+        return rc;
     }
 
     /*
@@ -1177,6 +1208,21 @@ int svc_connect_interfaces(struct interface *iface1, uint16_t cportid1,
                   con.port_id0, con.device_id0, con.cport_id0,
                   con.port_id1, con.device_id1, con.cport_id1,
                   con.tc, con.flags);
+        goto error_exit;
+    }
+
+    rc = switch_cport_connect(sw, con.port_id0, con.cport_id0);
+    if (rc) {
+        dbg_error("Failed to enable connection to [p=%u,c=%u].\n",
+                  con.port_id0, con.cport_id0);
+        goto error_exit;
+    }
+
+    rc = switch_cport_connect(sw, con.port_id1, con.cport_id1);
+    if (rc) {
+        dbg_error("Failed to enable connection to [p=%u,c=%u].\n", con.port_id1,
+                  con.cport_id1);
+        goto error_exit;
     }
 
  error_exit:
