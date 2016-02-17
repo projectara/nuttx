@@ -54,6 +54,8 @@
 #define SVCD_PRIORITY      (40)
 #define SVCD_STACK_SIZE    (2048)
 #define SVC_PROTOCOL_CPORT_ID    (4)
+#define MODULE_CONTROL_CPORT_ID  (0)
+#define MODULE_FIRMWARE_CPORT_ID (1)
 
 static struct svc the_svc;
 struct svc *svc = &the_svc;
@@ -439,16 +441,28 @@ int svc_connection_create(uint8_t intf1_id, uint16_t cport1_id,
     /*
      * Poke bridge mailboxes.
      * @jira{ENG-376}
+     *
+     * Poke only CPort 0 and 1 of modules in order to not break the support
+     * of bridges ES3's bootrom.
      */
-    rc = svc_mailbox_poke(intf1_id, cport1_id);
-    if (rc) {
-        dbg_error("Failed to notify intf %u\n", intf1_id);
-        return rc;
+    if (intf1_id != svc->ap_intf_id &&
+            (cport1_id == MODULE_CONTROL_CPORT_ID ||
+             cport1_id == MODULE_FIRMWARE_CPORT_ID)) {
+        rc = svc_mailbox_poke(intf1_id, cport1_id);
+        if (rc) {
+            dbg_error("Failed to notify intf %u\n", intf1_id);
+            return rc;
+        }
     }
-    rc = svc_mailbox_poke(intf2_id, cport2_id);
-    if (rc) {
-        dbg_error("Failed to notify intf %u\n", intf2_id);
-        return rc;
+
+    if (intf2_id != svc->ap_intf_id &&
+            (cport2_id == MODULE_CONTROL_CPORT_ID ||
+             cport2_id == MODULE_FIRMWARE_CPORT_ID)) {
+        rc = svc_mailbox_poke(intf2_id, cport2_id);
+        if (rc) {
+            dbg_error("Failed to notify intf %u\n", intf2_id);
+            return rc;
+        }
     }
 
     return 0;
@@ -657,15 +671,6 @@ static int svc_handle_ap(void) {
     if (rc) {
         dbg_error("Failed to enable connection to [p=%u,c=%u].\n",
                   svc_conn.port_id1, svc_conn.cport_id1);
-        return rc;
-    }
-
-    /*
-     * Poke the AP module so that it can transmit FCTs
-     */
-    rc = svc_mailbox_poke(svc->ap_intf_id, GB_SVC_CPORT_ID);
-    if (rc) {
-        dbg_error("AP did not respond to poke. Timed out.\n");
         return rc;
     }
 
