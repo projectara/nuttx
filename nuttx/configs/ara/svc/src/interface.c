@@ -372,6 +372,21 @@ struct interface* interface_get_by_name(const char *name)
     return NULL;
 }
 
+/**
+ * @brief           Return the interface struct from the port_id
+ * @returns: interface* on success, NULL on error
+ */
+struct interface* interface_get_by_portid(uint8_t port_id)
+{
+    int iface_idx = interface_get_id_by_portid(port_id);
+
+    if (iface_idx <= 0) {
+        return NULL;
+    }
+
+    return interface_get(iface_idx - 1);
+}
+
 /*
  * Interface numbering is defined as it's position in the interface table + 1.
  *

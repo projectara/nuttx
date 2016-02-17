@@ -133,7 +133,8 @@ int interface_early_init(struct interface**,
 void interface_exit(void);
 struct interface* interface_get(uint8_t index);
 struct interface* interface_get_by_name(const char *name);
-int interface_get_id_by_portid(uint8_t portid);
+struct interface* interface_get_by_portid(uint8_t port_id);
+int interface_get_id_by_portid(uint8_t port_id);
 int interface_get_portid_by_id(uint8_t intf_id);
 int interface_get_devid_by_id(uint8_t intf_id);
 int interface_set_devid_by_id(uint8_t intf_id, uint8_t dev_id);
