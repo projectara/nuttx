@@ -184,7 +184,7 @@ static void set_power_usage(int exit_status)
 static int set_power_func(struct interface *iface, void *context)
 {
     int enable = (int)context;
-    return enable ? interface_pwr_enable(iface) : interface_pwr_disable(iface);
+    return enable ? interface_power_on(iface) : interface_power_off(iface);
 }
 
 static int cmd_set_power(int argc, char *argv[])
