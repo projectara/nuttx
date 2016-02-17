@@ -106,6 +106,9 @@ enum ara_iface_pwr_state {
     ARA_IFACE_PWR_UP = 1,
 };
 
+/* Max number of LinkUp retries before the interface is shut down */
+#define INTERFACE_MAX_LINKUP_TRIES  10
+
 struct interface {
     const char *name;
     unsigned int switch_portid;
@@ -117,6 +120,7 @@ struct interface {
     struct pm_data *pm;
     struct wd_data detect_in;
     enum hotplug_state hp_state;
+    uint8_t linkup_retries;
     bool ejectable;
     uint8_t release_gpio;
 };

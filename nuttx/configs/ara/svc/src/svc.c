@@ -123,6 +123,7 @@ static int event_cb(struct tsb_switch_event *ev) {
 static int event_linkup(struct tsb_switch_event *ev) {
     int rc = 0;
     char *linkup_result;
+    struct interface *iface;
 
     switch (ev->linkup.val) {
     case SW_LINKUP_INITIATE:
@@ -141,21 +142,39 @@ static int event_linkup(struct tsb_switch_event *ev) {
     dbg_info("event received: type: %u (LINKUP) port: %u val: %u (%s)\n",
              ev->type, ev->linkup.port, ev->linkup.val, linkup_result);
 
+    iface = interface_get_by_portid(ev->linkup.port);
+    if (!iface) {
+        dbg_error("%s: No interface for portId %d\n", __func__,
+                  ev->linkup.port);
+        return -EINVAL;
+    }
+
     pthread_mutex_lock(&svc->lock);
 
     switch (ev->linkup.val) {
     case SW_LINKUP_INITIATE:
-        /* Initiate the LinkUp. The Switch will notify back of the result */
+        /* Initiate the LinkUp. The Switch will notify the result back */
+        iface->linkup_retries = 0;
+        /* Fall through */
     case TSB_LINKUP_FAIL:
-        /* LinkUp failed, retry */
-        rc = switch_link_startup(svc->sw, ev->linkup.port);
-        break;
+        /* LinkUp failed, retry until max retries count is reached */
+        if (iface->linkup_retries >= INTERFACE_MAX_LINKUP_TRIES) {
+            interface_power_off(iface);
+            dbg_error("%s: Max LinkUp retry count reached for %s, aborting...\n",
+                      __func__, iface->name);
+            rc = -ENOLINK;
+        } else {
+            iface->linkup_retries++;
+            rc = switch_link_startup(svc->sw, ev->linkup.port);
+        }
+       break;
     case TSB_LINKUP_SUCCESS:
         /* LinkUp succeeded, do nothing. The mailbox handshake follows */
         break;
     default:
-        dbg_error("unexpected LinkUp value: %u port: %u\n",
-                  ev->linkup.val, ev->linkup.port);
+        dbg_error("%s: Unexpected LinkUp value: %u port: %u\n",
+                  __func__, ev->linkup.val, ev->linkup.port);
+        rc = -EINVAL;
     }
 
     pthread_mutex_unlock(&svc->lock);
