@@ -110,7 +110,7 @@
  * Name: I2C_SETADDRESS
  *
  * Description:
- *   Set the I2C slave address. This frequency will be retained in the struct
+ *   Set the I2C slave address. This address will be retained in the struct
  *   i2c_dev_s instance and will be used with all transfers.  Required.
  *
  * Input Parameters:
