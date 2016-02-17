@@ -146,8 +146,6 @@ int interface_forcibly_eject(struct interface *iface, uint32_t delay);
 #define MOD_RELEASE_PULSE_WIDTH 1500U /* ms */
 
 const char *interface_get_name(struct interface *iface);
-int interface_pwr_enable(struct interface*);
-int interface_pwr_disable(struct interface*);
 int interface_power_off(struct interface *iface);
 int interface_power_on(struct interface *iface);
 enum ara_iface_pwr_state interface_get_pwr_state(struct interface *iface);

@@ -111,7 +111,7 @@ static int interface_config(struct interface *iface)
  * @param iface Interface whose power to enable
  * @returns: 0 on success, <0 on error
  */
-int interface_pwr_enable(struct interface *iface)
+static int interface_pwr_enable(struct interface *iface)
 {
     int rc;
 
@@ -146,7 +146,7 @@ int interface_pwr_enable(struct interface *iface)
  *
  * @returns: 0 on success, <0 on error
  */
-int interface_pwr_disable(struct interface *iface)
+static int interface_pwr_disable(struct interface *iface)
 {
     int rc;
 
