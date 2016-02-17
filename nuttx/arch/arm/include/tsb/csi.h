@@ -51,6 +51,9 @@
 #define MIPI_DT_RAW12               0x2c
 #define MIPI_DT_RAW14               0x2d
 
+/* Flags for the CSI Tx configuration */
+#define CSI_TX_FLAG_CLOCK_CONTINUOUS  BIT(0)
+
 /* CSI RX */
 struct csi_rx_config {
     unsigned int vchan;
@@ -74,8 +77,8 @@ uint32_t csi_rx_get_error(struct cdsi_dev *dev);
  * CSI configuration for camera stream start
  */
 struct csi_tx_config {
-    /** clocking mode for continuous or non-continuous */
-    uint8_t clock_mode;
+    /** flags for csi transmitter configuration */
+    uint8_t flags;
     /** lane number for camera stream */
     uint8_t num_lanes;
     /** csi frequence */

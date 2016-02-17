@@ -227,7 +227,7 @@ struct cport_to_ep {
 
 struct csi_tx_control {
     __u8 csi_id;
-    __u8 clock_mode;
+    __u8 flags;
     __u8 num_lanes;
     __u8 padding;
     __le32 bus_freq;
@@ -1424,7 +1424,7 @@ static int csi_tx_control_vendor_request_out(struct usbdev_s *dev, uint8_t req,
     if (ctrl->num_lanes != 1 && ctrl->num_lanes != 2 && ctrl->num_lanes != 4)
         return -EINVAL;
 
-    cfg.clock_mode = ctrl->clock_mode;
+    cfg.flags = ctrl->flags;
     cfg.num_lanes = ctrl->num_lanes;
     cfg.bus_freq = le32_to_cpu(ctrl->bus_freq);
     cfg.lines_per_second = le32_to_cpu(ctrl->lines_per_second);
