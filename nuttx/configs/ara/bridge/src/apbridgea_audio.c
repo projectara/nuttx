@@ -84,6 +84,10 @@ struct apbridgea_audio_demux_entry {
     struct list_head            list;
 };
 
+struct apbridga_audio_rb_hdr {
+    uint32_t    not_acked;
+};
+
 static atomic_t request_id;
 
 static pthread_t apbridgea_audio_demux_thread;
@@ -439,18 +443,18 @@ static int apbridgea_audio_send_data_completion(int status, const void *buf,
                                                 void *priv)
 {
     struct ring_buf *rb = priv;
-    unsigned int *countp;
+    struct apbridga_audio_rb_hdr *rb_hdr;
 
-    countp = ring_buf_get_buf(rb);
+    rb_hdr = ring_buf_get_buf(rb);
 
-    if (*countp == 0) { /* Should never happen */
-        lowsyslog("%s: count of zero\n", __func__);
+    if (!rb_hdr->not_acked) { /* Should never happen */
+        lowsyslog("%s: not_acked of zero\n", __func__);
         return 0;
     }
 
-    (*countp)--;
+    rb_hdr->not_acked--;
 
-    if (*countp == 0) {
+    if (!rb_hdr->not_acked) {
         ring_buf_reset(rb);
         ring_buf_pass(rb);
     }
@@ -462,30 +466,30 @@ static void apbridgea_audio_send_data(struct apbridgea_audio_info *info,
                                       struct ring_buf *rb)
 {
     struct apbridgea_audio_cport *cport;
+    struct apbridga_audio_rb_hdr *rb_hdr;
     struct gb_operation_hdr *gb_hdr;
     struct list_head *iter;
-    unsigned int *countp;
     int ret;
 
-    countp = ring_buf_get_buf(rb);
+    rb_hdr = ring_buf_get_buf(rb);
     gb_hdr = ring_buf_get_priv(rb);
 
     gb_hdr->id = cpu_to_le16(atomic_inc(&request_id));
     if (gb_hdr->id == 0) /* ID 0 is for request with no response */
         gb_hdr->id = cpu_to_le16(atomic_inc(&request_id));
 
-    *countp = 0;
+    rb_hdr->not_acked = 0;
 
     list_foreach(&info->cport_list, iter) {
         cport = list_entry(iter, struct apbridgea_audio_cport, list);
 
-        (*countp)++;
+        rb_hdr->not_acked++;
 
         ret = unipro_send_async(cport->data_cportid, gb_hdr,
                                 le16_to_cpu(gb_hdr->size),
                                 apbridgea_audio_send_data_completion, rb);
         if (ret) {
-            (*countp)--;
+            rb_hdr->not_acked--;
         }
     }
 }
@@ -509,9 +513,10 @@ static void apbridgea_audio_i2s_rx_cb(struct ring_buf *rb,
 
 /*
  * Each ring buffer entry will point to a memory area containing:
- * - A count field used by apbridgea_audio_send_data_completion() to
- *   tell when the last UniPro send has completed and the rb entry
- *   can be passed back to the i2s driver;
+ * - A ring buffer data header containing:
+ *   - a 4-byte count field used by apbridgea_audio_send_data_completion()
+ *     to tell when the last UniPro send has completed and the rb entry
+ *     can be passed back to the i2s driver.
  * - The Greybus Audio Data Message containing:
  *   - the Greybus header;
  *   - the Greybus Audio Data Message header;
@@ -524,11 +529,12 @@ static void apbridgea_audio_i2s_rx_cb(struct ring_buf *rb,
 static int apbridgea_audio_rb_alloc(struct ring_buf *rb, void *arg)
 {
     struct apbridgea_audio_info *info = arg;
+    struct apbridga_audio_rb_hdr *rb_hdr;
     struct gb_operation_hdr *gb_hdr;
     size_t headroom, total_size;
     void *buf;
 
-    headroom = sizeof(unsigned int) + sizeof(*gb_hdr) +
+    headroom = sizeof(*rb_hdr) + sizeof(*gb_hdr) +
                sizeof(struct gb_audio_send_data_request);
     total_size = headroom + info->tx_data_size;
 
@@ -539,8 +545,8 @@ static int apbridgea_audio_rb_alloc(struct ring_buf *rb, void *arg)
 
     memset(buf, 0, headroom);
 
-    gb_hdr = buf + sizeof(unsigned int);
-    gb_hdr->size = cpu_to_le16(total_size - sizeof(unsigned int));
+    gb_hdr = buf + sizeof(*rb_hdr);
+    gb_hdr->size = cpu_to_le16(total_size - sizeof(*rb_hdr));
     gb_hdr->type = GB_AUDIO_TYPE_SEND_DATA;
 
     ring_buf_init(rb, buf, headroom, info->tx_data_size);
