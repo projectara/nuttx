@@ -225,7 +225,8 @@ int interface_generate_wakeout(struct interface *iface, bool assert,
  * @param iface Interface whose power state to retrieve
  * @return iface's power state, or ARA_IFACE_PWR_ERROR if iface == NULL.
  */
-enum ara_iface_pwr_state interface_get_pwr_state(struct interface *iface)
+static enum ara_iface_pwr_state
+interface_get_power_state(struct interface *iface)
 {
     if (!iface) {
         return ARA_IFACE_PWR_ERROR;
@@ -282,7 +283,7 @@ int interface_power_on(struct interface *iface)
     }
 
     /* If powered OFF, power it ON now */
-    if (!interface_get_pwr_state(iface)) {
+    if (!interface_get_power_state(iface)) {
         rc = interface_power_enable(iface);
         if (rc < 0) {
             return rc;
