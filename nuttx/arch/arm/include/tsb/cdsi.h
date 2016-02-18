@@ -46,8 +46,11 @@ struct cdsi_dev
 void cdsi_write(struct cdsi_dev *dev, uint32_t addr, uint32_t v);
 uint32_t cdsi_read(struct cdsi_dev *dev, uint32_t addr);
 
-struct cdsi_dev *cdsi_initialize(int dsi, enum cdsi_direction dir);
-void cdsi_uninitialize(struct cdsi_dev *dev);
+struct cdsi_dev *cdsi_open(int dsi, enum cdsi_direction dir);
+void cdsi_close(struct cdsi_dev *dev);
+
+void cdsi_enable(struct cdsi_dev *dev);
+void cdsi_disable(struct cdsi_dev *dev);
 
 #endif
 

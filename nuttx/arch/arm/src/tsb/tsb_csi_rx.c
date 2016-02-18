@@ -61,6 +61,8 @@ int csi_rx_init(struct cdsi_dev *dev, const struct csi_rx_config *cfg)
 {
     unsigned int timeout;
 
+    cdsi_enable(dev);
+
     /* Enable the Rx bridge and set to CSI mode */
     cdsi_write(dev, CDSI0_AL_RX_BRG_MODE_OFFS,
                CDSI0_AL_RX_BRG_MODE_CSI2_MODE_MASK |
@@ -238,6 +240,8 @@ int csi_rx_uninit(struct cdsi_dev *dev)
     if (val & CDSI0_AL_RX_BRG_MODE_BUSY_MASK)
         printf("cdsi: RX bridge failed to become idle (0x%08x)\n", val);
 
+    cdsi_disable(dev);
+
     return 0;
 }
 
@@ -388,10 +392,10 @@ uint32_t csi_rx_get_error(struct cdsi_dev *dev)
 
 struct cdsi_dev *csi_rx_open(unsigned int cdsi)
 {
-    return cdsi_initialize(cdsi, TSB_CDSI_RX);
+    return cdsi_open(cdsi, TSB_CDSI_RX);
 }
 
 void csi_rx_close(struct cdsi_dev *dev)
 {
-    cdsi_uninitialize(dev);
+    cdsi_close(dev);
 }

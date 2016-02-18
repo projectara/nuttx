@@ -46,12 +46,12 @@ uint32_t cdsi_read(struct cdsi_dev *dev, uint32_t addr)
 }
 
 /**
- * @brief Initialize cdsi in csi mode
- * @param cdsi The CDSI block to initialize (0 or 1)
- * @param dir The CDSI block operation direction (TSB_CDSI_RX or TSB_CDSI_TX)
+ * @brief Open a CDSI device
+ * @param cdsi The CDSI instance to initialize (0 or 1)
+ * @param dir The CDSI instance operating direction (TSB_CDSI_RX or TSB_CDSI_TX)
  * @return a cdsi_dev pointer or NULL on any faillure.
  */
-struct cdsi_dev *cdsi_initialize(int cdsi, enum cdsi_direction dir)
+struct cdsi_dev *cdsi_open(int cdsi, enum cdsi_direction dir)
 {
     struct cdsi_dev *dev;
 
@@ -61,8 +61,30 @@ struct cdsi_dev *cdsi_initialize(int cdsi, enum cdsi_direction dir)
 
     dev->dir = dir;
     dev->base = cdsi == TSB_CDSI0 ? CDSI0_BASE : CDSI1_BASE;
+
+    return dev;
+}
+
+/**
+ * @brief Close a CDSI device
+ * @param dev Pointer to CDSI device
+ */
+void cdsi_close(struct cdsi_dev *dev)
+{
+    free(dev);
+}
+
+/**
+ * @brief Enable a CDSI device
+ * @param dev Pointer to CDSI device
+ */
+void cdsi_enable(struct cdsi_dev *dev)
+{
+    int cdsi = dev->base == CDSI0_BASE ? TSB_CDSI0 : TSB_CDSI1;
+
     tsb_clk_enable(cdsi == TSB_CDSI0 ? TSB_CLK_CDSI0_REF : TSB_CLK_CDSI1_REF);
-    if (dir == TSB_CDSI_TX) {
+
+    if (dev->dir == TSB_CDSI_TX) {
         if (cdsi == TSB_CDSI0) {
             tsb_clk_enable(TSB_CLK_CDSI0_TX_SYS);
             tsb_clk_enable(TSB_CLK_CDSI0_TX_APB);
@@ -87,17 +109,18 @@ struct cdsi_dev *cdsi_initialize(int cdsi, enum cdsi_direction dir)
             tsb_reset(TSB_RST_CDSI1_RX_AIO);
         }
     }
-    return dev;
 }
 
 /**
- * @brief Uninitialize csi
- * @param dev Pointer to cdsi to uninitialize
+ * @brief Disable a CDSI device
+ * @param dev Pointer to CDSI device
  */
-void cdsi_uninitialize(struct cdsi_dev *dev)
+void cdsi_disable(struct cdsi_dev *dev)
 {
     int cdsi = dev->base == CDSI0_BASE ? TSB_CDSI0 : TSB_CDSI1;
+
     tsb_clk_disable(cdsi == TSB_CDSI0 ? TSB_CLK_CDSI0_REF : TSB_CLK_CDSI1_REF);
+
     if (dev->dir == TSB_CDSI_TX) {
         if (cdsi == TSB_CDSI0) {
             tsb_clk_disable(TSB_CLK_CDSI0_TX_SYS);
@@ -115,5 +138,4 @@ void cdsi_uninitialize(struct cdsi_dev *dev)
             tsb_clk_disable(TSB_CLK_CDSI1_RX_APB);
         }
     }
-    free(dev);
 }

@@ -51,6 +51,8 @@ int csi_tx_start(struct cdsi_dev *dev, struct csi_tx_config *cfg)
     unsigned int timeout;
     uint32_t val;
 
+    cdsi_enable(dev);
+
     /* Set to Tx mode for CDSI */
     cdsi_write(dev, CDSI0_AL_TX_BRG_CDSITX_MODE_OFFS,
                CDSI0_AL_TX_BRG_CDSITX_MODE_AL_TX_CDSITX_MODE_MASK);
@@ -511,6 +513,8 @@ int csi_tx_stop(struct cdsi_dev *dev)
     /* Release the Initialization signal for the PPI */
     cdsi_write(dev, CDSI0_CDSITX_SIDEBAND_CONTROL_00_OFFS,
                CDSI0_CDSITX_SIDEBAND_INIT_CONTROL_00_SBD_DPHY_MPM_CKEN_MASK);
+
+    cdsi_disable(dev);
 
     return 0;
 }
