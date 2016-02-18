@@ -352,7 +352,7 @@ int svc_intf_eject(uint8_t intf_id) {
 
     iface = interface_get(intf_id - 1);
     if (!iface) {
-	return -EINVAL;
+        return -EINVAL;
     }
 
     return interface_forcibly_eject(iface, MOD_RELEASE_PULSE_WIDTH);
@@ -852,7 +852,7 @@ static int svc_handle_events(void) {
         event = list_entry(node, struct svc_event, events);
         switch (event->type) {
         case SVC_EVENT_TYPE_READY_OTHER:
-	    svc_handle_module_ready(event->data.ready_other.port);
+            svc_handle_module_ready(event->data.ready_other.port);
             break;
         case SVC_EVENT_TYPE_HOT_UNPLUG:
             svc_handle_hot_unplug(event->data.hot_unplug.port);
@@ -861,7 +861,7 @@ static int svc_handle_events(void) {
             dbg_error("Unknown event %d\n", event->type);
         }
 
-	svc_event_destroy(event);
+        svc_event_destroy(event);
     }
 
     return 0;
@@ -1018,9 +1018,9 @@ static int svcd_main(int argc, char **argv) {
             svc_consume_hotplug_events();
         }
 
-	if (svc->ap_initialized) {
-	    svc_handle_events();
-	}
+        if (svc->ap_initialized) {
+            svc_handle_events();
+        }
     };
 
     rc = svcd_cleanup();
