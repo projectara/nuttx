@@ -116,8 +116,8 @@ static int interface_pwr_enable(struct interface *iface)
     int rc;
 
     if (!iface) {
-        dbg_error("%s: called with null interface\n", __func__);
-        return -ENODEV;
+        dbg_verbose("%s: called with null interface\n", __func__);
+        return -EINVAL;
     }
 
     rc = vreg_get(iface->vsys_vreg);
@@ -148,8 +148,8 @@ static int interface_pwr_disable(struct interface *iface)
     int rc;
 
     if (!iface) {
-        dbg_error("%s: called with null interface\n", __func__);
-        return -ENODEV;
+        dbg_verbose("%s: called with null interface\n", __func__);
+        return -EINVAL;
     }
 
     rc = vreg_put(iface->vsys_vreg);
