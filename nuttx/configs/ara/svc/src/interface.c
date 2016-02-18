@@ -168,7 +168,7 @@ static int interface_pwr_disable(struct interface *iface)
         iface->power_state = ARA_IFACE_PWR_DOWN;
     }
 
-    return 0;
+    return rc;
 }
 
 
