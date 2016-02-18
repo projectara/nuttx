@@ -122,14 +122,11 @@ static int interface_pwr_enable(struct interface *iface)
 
     rc = vreg_get(iface->vsys_vreg);
     rc |= vreg_get(iface->refclk_vreg);
+
     if (rc) {
-        dbg_error("Can't enable interface %s: %d\n",
-                  iface->name ? iface->name : "unknown",
-                  rc);
+        dbg_error("Failed to enable interface %s: %d\n", iface->name, rc);
         iface->power_state = ARA_IFACE_PWR_ERROR;
     } else {
-        dbg_info("Enabled interface %s.\n",
-                 iface->name ? iface->name : "unknown");
         iface->power_state = ARA_IFACE_PWR_UP;
     }
 
@@ -157,14 +154,11 @@ static int interface_pwr_disable(struct interface *iface)
 
     rc = vreg_put(iface->vsys_vreg);
     rc |= vreg_put(iface->refclk_vreg);
+
     if (rc) {
-        dbg_error("Can't disable interface %s: %d\n",
-                  iface->name ? iface->name : "unknown",
-                  rc);
+        dbg_error("Failed to disable interface %s: %d\n", iface->name, rc);
         iface->power_state = ARA_IFACE_PWR_ERROR;
     } else {
-        dbg_info("Disabled interface %s.\n",
-                 iface->name ? iface->name : "unknown");
         iface->power_state = ARA_IFACE_PWR_DOWN;
     }
 
@@ -265,7 +259,6 @@ int interface_power_off(struct interface *iface)
     /* Power off the interface */
     rc = interface_pwr_disable(iface);
     if (rc < 0) {
-        dbg_error("Failed to disable interface %s\n", iface->name);
         return rc;
     }
 
@@ -292,7 +285,6 @@ int interface_power_on(struct interface *iface)
     if (!interface_get_pwr_state(iface)) {
         rc = interface_pwr_enable(iface);
         if (rc < 0) {
-            dbg_error("Failed to enable interface %s\n", iface->name);
             return rc;
         }
     }
@@ -1114,7 +1106,6 @@ void interface_exit(void) {
     interface_foreach(ifc, i) {
         rc = interface_pwr_disable(ifc);
         if (rc < 0) {
-            dbg_error("Failed to disable interface %s\n", ifc->name);
             /* Continue turning off the rest even if this one failed */
             continue;
         }
