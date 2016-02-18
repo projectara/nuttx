@@ -124,14 +124,14 @@ static void *csi_tx_srv_thread(int argc, char *argv[])
     while (1) {
         sem_wait(&info->csi_sem);
         if (info->csi_cmd == CSI_CMD_START) {
-            info->csi_dev = csi_initialize(info->csi_id, TSB_CDSI_TX);
+            info->csi_dev = cdsi_initialize(info->csi_id, TSB_CDSI_TX);
             if (info->csi_dev) {
                 csi_tx_start(info->csi_dev, &info->cfg);
                 info->csi_state = CSI_STATE_START;
             }
         } else {
             csi_tx_stop(info->csi_dev);
-            csi_uninitialize(info->csi_dev);
+            cdsi_uninitialize(info->csi_dev);
             info->csi_state = CSI_STATE_STOP;
         }
     }

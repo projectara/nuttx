@@ -45,7 +45,13 @@ uint32_t cdsi_read(struct cdsi_dev *dev, uint32_t addr)
     return getreg32(dev->base + addr);
 }
 
-static struct cdsi_dev *cdsi_initialize(int cdsi, int tx)
+/**
+ * @brief Initialize cdsi in csi mode
+ * @param cdsi The CDSI block to initialize (0 or 1)
+ * @param dir The CDSI block operation direction (TSB_CDSI_RX or TSB_CDSI_TX)
+ * @return a cdsi_dev pointer or NULL on any faillure.
+ */
+struct cdsi_dev *cdsi_initialize(int cdsi, enum cdsi_direction dir)
 {
     struct cdsi_dev *dev;
 
@@ -53,10 +59,10 @@ static struct cdsi_dev *cdsi_initialize(int cdsi, int tx)
     if (!dev)
         return NULL;
 
-    dev->tx = tx;
+    dev->dir = dir;
     dev->base = cdsi == TSB_CDSI0 ? CDSI0_BASE : CDSI1_BASE;
     tsb_clk_enable(cdsi == TSB_CDSI0 ? TSB_CLK_CDSI0_REF : TSB_CLK_CDSI1_REF);
-    if (tx) {
+    if (dir == TSB_CDSI_TX) {
         if (cdsi == TSB_CDSI0) {
             tsb_clk_enable(TSB_CLK_CDSI0_TX_SYS);
             tsb_clk_enable(TSB_CLK_CDSI0_TX_APB);
@@ -84,11 +90,15 @@ static struct cdsi_dev *cdsi_initialize(int cdsi, int tx)
     return dev;
 }
 
-static void cdsi_uninitialize(struct cdsi_dev *dev)
+/**
+ * @brief Uninitialize csi
+ * @param dev Pointer to cdsi to uninitialize
+ */
+void cdsi_uninitialize(struct cdsi_dev *dev)
 {
     int cdsi = dev->base == CDSI0_BASE ? TSB_CDSI0 : TSB_CDSI1;
     tsb_clk_disable(cdsi == TSB_CDSI0 ? TSB_CLK_CDSI0_REF : TSB_CLK_CDSI1_REF);
-    if (dev->tx) {
+    if (dev->dir == TSB_CDSI_TX) {
         if (cdsi == TSB_CDSI0) {
             tsb_clk_disable(TSB_CLK_CDSI0_TX_SYS);
             tsb_clk_disable(TSB_CLK_CDSI0_TX_APB);
@@ -106,53 +116,4 @@ static void cdsi_uninitialize(struct cdsi_dev *dev)
         }
     }
     free(dev);
-}
-
-/**
- * @brief Initialize cdsi in dsi mode
- * @param panel Panel to register
- * @param cdsi   The cdsi block to initialize
- * @param tx    0 if dsi work in rx mode or 1 for tx mode
- * @return a cdsi_dev pointer or NULL on any faillure.
- */
-struct cdsi_dev *dsi_initialize(struct display_panel *panel, int cdsi, int tx)
-{
-    struct cdsi_dev *dev;
-
-    dev = cdsi_initialize(cdsi, tx);
-    if (!dev)
-        return NULL;
-
-    panel->cdsi_panel_init(dev);
-
-    return dev;
-}
-
-/**
- * @brief Uninitialize dsi
- * @param dev Pointer to cdsi to uninitialize
- */
-void dsi_uninitialize(struct cdsi_dev *dev)
-{
-    cdsi_uninitialize(dev);
-}
-
-/**
- * @brief Initialize cdsi in csi mode
- * @param cdsi The cdsi block to initialize
- * @param tx 0 if csi work in rx mode or 1 for tx mode
- * @return a cdsi_dev pointer or NULL on any faillure.
- */
-struct cdsi_dev *csi_initialize(int cdsi, int tx)
-{
-    return cdsi_initialize(cdsi, tx);
-}
-
-/**
- * @brief Uninitialize csi
- * @param dev Pointer to cdsi to uninitialize
- */
-void csi_uninitialize(struct cdsi_dev *dev)
-{
-    cdsi_uninitialize(dev);
 }

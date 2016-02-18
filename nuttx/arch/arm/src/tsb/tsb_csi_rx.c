@@ -388,10 +388,10 @@ uint32_t csi_rx_get_error(struct cdsi_dev *dev)
 
 struct cdsi_dev *csi_rx_open(unsigned int cdsi)
 {
-    return csi_initialize(cdsi, TSB_CDSI_RX);
+    return cdsi_initialize(cdsi, TSB_CDSI_RX);
 }
 
 void csi_rx_close(struct cdsi_dev *dev)
 {
-    csi_uninitialize(dev);
+    cdsi_uninitialize(dev);
 }
