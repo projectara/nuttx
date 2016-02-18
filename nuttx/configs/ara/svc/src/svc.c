@@ -139,10 +139,12 @@ static int event_linkup(struct tsb_switch_event *ev) {
         linkup_result = "unknown";
         break;
     }
-    dbg_info("event received: type: %u (LINKUP) port: %u val: %u (%s)\n",
-             ev->type, ev->linkup.port, ev->linkup.val, linkup_result);
-
     iface = interface_get_by_portid(ev->linkup.port);
+
+    dbg_info("event received: type: %u (LINKUP) port: %u (%s) val: %u (%s)\n",
+             ev->type, ev->linkup.port, interface_get_name(iface),
+             ev->linkup.val, linkup_result);
+
     if (!iface) {
         dbg_error("%s: No interface for portId %d\n", __func__,
                   ev->linkup.port);
@@ -184,10 +186,13 @@ static int event_linkup(struct tsb_switch_event *ev) {
 
 static int event_mailbox(struct tsb_switch_event *ev) {
     struct svc_event *svc_ev;
+    struct interface *iface;
     int rc = 0;
 
-    dbg_info("event received: type: %u (MBOX) port: %u val: %u\n",
-             ev->type, ev->mbox.port, ev->mbox.val);
+    iface = interface_get_by_portid(ev->mbox.port);
+
+    dbg_info("event received: type: %u (MBOX) port: %u (%s) val: %u\n",
+             ev->type, ev->mbox.port, interface_get_name(iface), ev->mbox.val);
 
     pthread_mutex_lock(&svc->lock);
 
@@ -640,7 +645,8 @@ static int svc_handle_ap(void) {
 static int svc_handle_hot_unplug(uint8_t portid) {
     int intf_id;
 
-    dbg_info("Hot_unplug event received for port %u\n", portid);
+    dbg_info("Hot_unplug event received for port %u (%s)\n",
+             portid, interface_get_name(interface_get_by_portid(portid)));
     intf_id = interface_get_id_by_portid(portid);
     if (intf_id < 0) {
         return intf_id;
@@ -694,7 +700,8 @@ static int svc_handle_module_ready(uint8_t portid) {
     uint32_t ddbl1_mfr_id, ddbl1_prod_id, ara_vend_id, ara_prod_id;
     uint64_t serial_number;
 
-    dbg_info("Hotplug event received for port %u\n", portid);
+    dbg_info("Hotplug event received for port %u (%s)\n",
+             portid, interface_get_name(interface_get_by_portid(portid)));
     intf_id = interface_get_id_by_portid(portid);
     if (intf_id < 0) {
         return intf_id;
