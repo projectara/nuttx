@@ -94,5 +94,7 @@
 #define CM3UP_BASE      0xE000E000
 #define CM3UP_SIZE      0x1000
 
+#define CRYP_BASE       0x40085000
+#define CRYP_SIZE       0x1000
 
 #endif /* __ARCH_ARM_TSB_CHIP_H */

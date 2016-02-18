@@ -35,6 +35,84 @@
 #include "up_arch.h"
 #include "tsb_scm.h"
 
+/* -----------------------------------------------------------------------------
+ * Video Crypto Engine
+ */
+
+#define VCRYP_CONFIG                    0x0000
+#define VCRYP_CONFIG_CH_BYPASS_TX       0
+#define VCRYP_CONFIG_CH_BYPASS_RX       1
+#define VCRYP_CONFIG_CH_DECRYPT         2
+#define VCRYP_CONFIG_CH_ENCRYPT         3
+#define VCRYP_CONFIG_CH_MASK            3
+#define VCRYP_CONFIG_CH1_SHIFT          2
+#define VCRYP_CONFIG_CH0_SHIFT          0
+
+#define VCRYP_START                     0x0004
+#define VCRYP_START_CH1                 (1 << 2)
+#define VCRYP_START_CH0                 (1 << 0)
+
+#define VCRYP_STOP                      0x0008
+#define VCRYP_STOP_CH1_FORCE            (3 << 2)
+#define VCRYP_STOP_CH1                  (1 << 2)
+#define VCRYP_STOP_CH0_FORCE            (3 << 0)
+#define VCRYP_STOP_CH0                  (1 << 0)
+
+static unsigned int vcrypt_enable_count;
+
+static uint32_t vcrypt_read(uint32_t offset)
+{
+    return getreg32(CRYP_BASE + offset);
+}
+
+static void vcrypt_write(uint32_t offset, uint32_t v)
+{
+    putreg32(v, CRYP_BASE + offset);
+}
+
+static void vcrypt_enable(struct cdsi_dev *dev)
+{
+    unsigned int cdsi = dev->base == CDSI0_BASE ? TSB_CDSI0 : TSB_CDSI1;
+    unsigned int mode = dev->dir == TSB_CDSI_RX? VCRYP_CONFIG_CH_BYPASS_RX
+                      : VCRYP_CONFIG_CH_BYPASS_TX;
+    unsigned int shift = cdsi ? VCRYP_CONFIG_CH1_SHIFT : VCRYP_CONFIG_CH0_SHIFT;
+    uint32_t val;
+
+    if (vcrypt_enable_count++ == 0) {
+        tsb_clk_enable(TSB_CLK_VCRYP);
+        tsb_reset(TSB_RST_VCRYPSYS);
+    }
+
+    if (cdsi == TSB_CDSI0) {
+        tsb_reset(TSB_RST_VCRYPCH0);
+    } else {
+        tsb_reset(TSB_RST_VCRYPCH1);
+    }
+
+    /* Configure the channel in bypass mode and start it. */
+    val = vcrypt_read(VCRYP_CONFIG);
+    val &= ~(VCRYP_CONFIG_CH_MASK << shift);
+    val |= mode << shift;
+    vcrypt_write(VCRYP_CONFIG, val);
+
+    vcrypt_write(VCRYP_START, cdsi ? VCRYP_START_CH1 : VCRYP_START_CH0);
+}
+
+static void vcrypt_disable(struct cdsi_dev *dev)
+{
+    unsigned int cdsi = dev->base == CDSI0_BASE ? TSB_CDSI0 : TSB_CDSI1;
+
+    vcrypt_write(VCRYP_START, cdsi ? VCRYP_STOP_CH1_FORCE : VCRYP_STOP_CH0_FORCE);
+
+    if (--vcrypt_enable_count == 0) {
+        tsb_clk_disable(TSB_CLK_VCRYP);
+    }
+}
+
+/* -----------------------------------------------------------------------------
+ * CDSI
+ */
+
 void cdsi_write(struct cdsi_dev *dev, uint32_t addr, uint32_t v)
 {
     putreg32(v, dev->base + addr);
@@ -77,6 +155,9 @@ void cdsi_close(struct cdsi_dev *dev)
 /**
  * @brief Enable a CDSI device
  * @param dev Pointer to CDSI device
+ *
+ * This function isn't thread-safe, the callers need to ensure proper
+ * serialization.
  */
 void cdsi_enable(struct cdsi_dev *dev)
 {
@@ -109,15 +190,24 @@ void cdsi_enable(struct cdsi_dev *dev)
             tsb_reset(TSB_RST_CDSI1_RX_AIO);
         }
     }
+
+    if (tsb_get_rev_id() == tsb_rev_es3)
+        vcrypt_enable(dev);
 }
 
 /**
  * @brief Disable a CDSI device
  * @param dev Pointer to CDSI device
+ *
+ * This function isn't thread-safe, the callers need to ensure proper
+ * serialization.
  */
 void cdsi_disable(struct cdsi_dev *dev)
 {
     int cdsi = dev->base == CDSI0_BASE ? TSB_CDSI0 : TSB_CDSI1;
+
+    if (tsb_get_rev_id() == tsb_rev_es3)
+        vcrypt_disable(dev);
 
     tsb_clk_disable(cdsi == TSB_CDSI0 ? TSB_CLK_CDSI0_REF : TSB_CLK_CDSI1_REF);
 
