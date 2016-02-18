@@ -108,7 +108,7 @@ enum ara_iface_pwr_state {
 };
 
 /* Max number of LinkUp retries before the interface is shut down */
-#define INTERFACE_MAX_LINKUP_TRIES  10
+#define INTERFACE_MAX_LINKUP_TRIES  3
 
 struct interface {
     const char *name;
