@@ -111,7 +111,7 @@ static int interface_config(struct interface *iface)
  * @param iface Interface whose power to enable
  * @returns: 0 on success, <0 on error
  */
-static int interface_pwr_enable(struct interface *iface)
+static int interface_power_enable(struct interface *iface)
 {
     int rc;
 
@@ -143,7 +143,7 @@ static int interface_pwr_enable(struct interface *iface)
  *
  * @returns: 0 on success, <0 on error
  */
-static int interface_pwr_disable(struct interface *iface)
+static int interface_power_disable(struct interface *iface)
 {
     int rc;
 
@@ -257,7 +257,7 @@ int interface_power_off(struct interface *iface)
     }
 
     /* Power off the interface */
-    rc = interface_pwr_disable(iface);
+    rc = interface_power_disable(iface);
     if (rc < 0) {
         return rc;
     }
@@ -283,7 +283,7 @@ int interface_power_on(struct interface *iface)
 
     /* If powered OFF, power it ON now */
     if (!interface_get_pwr_state(iface)) {
-        rc = interface_pwr_enable(iface);
+        rc = interface_power_enable(iface);
         if (rc < 0) {
             return rc;
         }
@@ -1104,7 +1104,7 @@ void interface_exit(void) {
 
     /* Power off */
     interface_foreach(ifc, i) {
-        rc = interface_pwr_disable(ifc);
+        rc = interface_power_disable(ifc);
         if (rc < 0) {
             /* Continue turning off the rest even if this one failed */
             continue;
