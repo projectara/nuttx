@@ -67,14 +67,14 @@ static int interface_install_wd_handler(struct interface *iface, bool);
  */
 static int interface_config(struct interface *iface)
 {
-    int rc = 0;
+    int rc_pwr, rc_clk;
 
     dbg_verbose("Configuring interface %s.\n",
             iface->name ? iface->name : "unknown");
 
     /* Configure default state for the regulator pins */
-    rc = vreg_config(iface->vsys_vreg);
-    rc |= vreg_config(iface->refclk_vreg);
+    rc_pwr = vreg_config(iface->vsys_vreg);
+    rc_clk = vreg_config(iface->refclk_vreg);
 
     /* Configure the interfaces pin according to the interface type */
     switch (iface->if_type) {
@@ -96,7 +96,69 @@ static int interface_config(struct interface *iface)
     }
 
     /* Init power state */
-    iface->power_state = rc ? ARA_IFACE_PWR_ERROR : ARA_IFACE_PWR_DOWN;
+    iface->power_state = rc_pwr ? ARA_IFACE_PWR_ERROR : ARA_IFACE_PWR_DOWN;
+    iface->refclk_state = rc_clk ? ARA_IFACE_PWR_ERROR : ARA_IFACE_PWR_DOWN;
+
+    return rc_pwr ? rc_pwr : rc_clk ? rc_clk : 0;
+}
+
+/**
+ * @brief Supply the reference clock to an interface
+ *
+ * This function attempts to apply the reference clock to the
+ * interface, and updates the interface's refclk state accordingly.
+ * This affects the value returned by interface_get_refclk_state(iface).
+ *
+ * @param iface Interface whose reference clock to enable
+ * @return 0 on success, <0 on error
+ */
+static int interface_refclk_enable(struct interface *iface)
+{
+    int rc;
+
+    if (!iface) {
+        return -EINVAL;
+    }
+
+    rc = vreg_get(iface->refclk_vreg);
+    if (rc) {
+        dbg_error("Failed to enable the reference clock for interface %s: %d\n",
+                  iface->name, rc);
+        iface->refclk_state = ARA_IFACE_PWR_ERROR;
+    } else {
+        iface->refclk_state = ARA_IFACE_PWR_UP;
+    }
+
+    return rc;
+}
+
+
+/**
+ * @brief Disable the reference clock supply to this interface
+ *
+ * This function attempts to remove the reference clock from the
+ * interface, and updates the interface's refclk state accordingly.
+ * This affects the value returned by interface_get_refclk_state(iface).
+ *
+ * @param iface Interface whose reference clock to disable
+ * @return 0 on success, <0 on error
+ */
+static int interface_refclk_disable(struct interface *iface)
+{
+    int rc;
+
+    if (!iface) {
+        return -EINVAL;
+    }
+
+    rc = vreg_put(iface->refclk_vreg);
+    if (rc) {
+        dbg_error("Failed to disable the reference clock for interface %s: %d\n",
+                  iface->name, rc);
+        iface->refclk_state = ARA_IFACE_PWR_ERROR;
+    } else {
+        iface->refclk_state = ARA_IFACE_PWR_DOWN;
+    }
 
     return rc;
 }
@@ -109,7 +171,7 @@ static int interface_config(struct interface *iface)
  * This affects the value returned by interface_get_pwr_state(iface).
  *
  * @param iface Interface whose power to enable
- * @returns: 0 on success, <0 on error
+ * @return 0 on success, <0 on error
  */
 static int interface_power_enable(struct interface *iface)
 {
@@ -121,8 +183,6 @@ static int interface_power_enable(struct interface *iface)
     }
 
     rc = vreg_get(iface->vsys_vreg);
-    rc |= vreg_get(iface->refclk_vreg);
-
     if (rc) {
         dbg_error("Failed to enable interface %s: %d\n", iface->name, rc);
         iface->power_state = ARA_IFACE_PWR_ERROR;
@@ -141,7 +201,8 @@ static int interface_power_enable(struct interface *iface)
  * interface, and updates the interface's power state accordingly.
  * This affects the value returned by interface_get_pwr_state(iface).
  *
- * @returns: 0 on success, <0 on error
+ * @param iface Interface whose power to disable
+ * @return 0 on success, <0 on error
  */
 static int interface_power_disable(struct interface *iface)
 {
@@ -153,8 +214,6 @@ static int interface_power_disable(struct interface *iface)
     }
 
     rc = vreg_put(iface->vsys_vreg);
-    rc |= vreg_put(iface->refclk_vreg);
-
     if (rc) {
         dbg_error("Failed to disable interface %s: %d\n", iface->name, rc);
         iface->power_state = ARA_IFACE_PWR_ERROR;
@@ -235,6 +294,21 @@ interface_get_power_state(struct interface *iface)
     return iface->power_state;
 }
 
+/**
+ * @brief Get interface refclk supply state
+ * @param iface Interface whose refclk state to retrieve
+ * @return iface's refclk state, or ARA_IFACE_PWR_ERROR if iface == NULL.
+ */
+static enum ara_iface_pwr_state
+interface_get_refclk_state(struct interface *iface)
+{
+    if (!iface) {
+        return ARA_IFACE_PWR_ERROR;
+    }
+
+    return iface->refclk_state;
+}
+
 
 /*
  * Interface power control helper, to be used by the DETECT_IN/hotplug
@@ -263,6 +337,11 @@ int interface_power_off(struct interface *iface)
         return rc;
     }
 
+    rc = interface_refclk_disable(iface);
+    if (rc < 0) {
+        return rc;
+    }
+
     return 0;
 }
 
@@ -285,6 +364,13 @@ int interface_power_on(struct interface *iface)
     /* If powered OFF, power it ON now */
     if (!interface_get_power_state(iface)) {
         rc = interface_power_enable(iface);
+        if (rc < 0) {
+            return rc;
+        }
+    }
+
+    if (!interface_get_refclk_state(iface)) {
+        rc = interface_refclk_enable(iface);
         if (rc < 0) {
             return rc;
         }
@@ -1089,7 +1175,6 @@ int interface_init(struct interface **ints,
  */
 void interface_exit(void) {
     unsigned int i;
-    int rc;
     struct interface *ifc;
 
     dbg_info("Disabling all interfaces\n");
@@ -1105,11 +1190,11 @@ void interface_exit(void) {
 
     /* Power off */
     interface_foreach(ifc, i) {
-        rc = interface_power_disable(ifc);
-        if (rc < 0) {
-            /* Continue turning off the rest even if this one failed */
-            continue;
-        }
+        /*
+         * Continue turning off the rest even if this one failed - just ignore
+         * the return value of interface_power_off().
+         */
+        (void)interface_power_off(ifc);
     }
 
     interfaces = NULL;

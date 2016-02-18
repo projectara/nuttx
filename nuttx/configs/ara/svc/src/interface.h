@@ -117,6 +117,7 @@ struct interface {
     struct vreg *vsys_vreg;
     struct vreg *refclk_vreg;
     enum ara_iface_pwr_state power_state;
+    enum ara_iface_pwr_state refclk_state;
     struct pm_data *pm;
     struct wd_data detect_in;
     enum hotplug_state hp_state;
