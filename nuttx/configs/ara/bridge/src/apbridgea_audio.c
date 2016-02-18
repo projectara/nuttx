@@ -68,6 +68,8 @@ struct apbridgea_audio_info {
     struct device       *i2s_dev;
     struct ring_buf     *rx_rb;
     unsigned int        tx_data_size;
+    size_t              tx_rb_headroom;
+    size_t              tx_rb_total_size;
     struct list_head    cport_list;
     struct list_head    list;
 };
@@ -536,25 +538,20 @@ static int apbridgea_audio_rb_alloc(struct ring_buf *rb, void *arg)
     struct apbridgea_audio_info *info = arg;
     struct apbridga_audio_rb_hdr *rb_hdr;
     struct gb_operation_hdr *gb_hdr;
-    size_t headroom, total_size;
     void *buf;
 
-    headroom = sizeof(*rb_hdr) + sizeof(*gb_hdr) +
-               sizeof(struct gb_audio_send_data_request);
-    total_size = headroom + info->tx_data_size;
-
-    buf = malloc(total_size);
+    buf = malloc(info->tx_rb_total_size);
     if (!buf) {
         return -ENOMEM;
     }
 
-    memset(buf, 0, headroom);
+    memset(buf, 0, info->tx_rb_headroom);
 
     gb_hdr = buf + sizeof(*rb_hdr);
-    gb_hdr->size = cpu_to_le16(total_size - sizeof(*rb_hdr));
+    gb_hdr->size = cpu_to_le16(info->tx_rb_total_size - sizeof(*rb_hdr));
     gb_hdr->type = GB_AUDIO_TYPE_SEND_DATA;
 
-    ring_buf_init(rb, buf, headroom, info->tx_data_size);
+    ring_buf_init(rb, buf, info->tx_rb_headroom, info->tx_data_size);
     ring_buf_set_priv(rb, gb_hdr);
 
     return 0;
@@ -580,6 +577,11 @@ static int apbridgea_audio_start_tx(struct apbridgea_audio_info *info,
         (info->flags & APBRIDGEA_AUDIO_FLAG_TX_STARTED)) {
         return -EPROTO;
     }
+
+    info->tx_rb_headroom = sizeof(struct apbridga_audio_rb_hdr) +
+                           sizeof(struct gb_operation_hdr) +
+                           sizeof(struct gb_audio_send_data_request);
+    info->tx_rb_total_size = info->tx_rb_headroom + info->tx_data_size;
 
     info->rx_rb = ring_buf_alloc_ring(APBRIDGEA_AUDIO_RING_ENTRIES_TX, 0, 0, 0,
                                       apbridgea_audio_rb_alloc,
@@ -609,6 +611,8 @@ err_shutdown_receiver:
 err_free_ring:
     ring_buf_free_ring(info->rx_rb, apbridgea_audio_rb_free, info);
     info->rx_rb = NULL;
+    info->tx_rb_headroom = 0;
+    info->tx_rb_total_size = 0;
 
     return ret;
 }
@@ -626,6 +630,8 @@ static int apbridgea_audio_stop_tx(struct apbridgea_audio_info *info)
 
     ring_buf_free_ring(info->rx_rb, apbridgea_audio_rb_free, info);
     info->rx_rb = NULL;
+    info->tx_rb_headroom = 0;
+    info->tx_rb_total_size = 0;
 
     return 0;
 }
