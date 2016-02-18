@@ -281,9 +281,9 @@ static int unipro_dma_tx_callback(struct device *dev, void *chan,
             unipro_xfer_dequeue_descriptor(desc);
         } else {
             desc->channel = NULL;
-
-            sem_post(&worker.tx_fifo_lock);
         }
+
+        sem_post(&worker.tx_fifo_lock);
     }
 
     return retval;

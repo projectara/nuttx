@@ -50,8 +50,8 @@ enum tsb_dma_op_state {
     TSB_DMA_OP_STATE_QUEUED,
     TSB_DMA_OP_STATE_STARTING,
     TSB_DMA_OP_STATE_RUNNING,
-    TSB_DMA_OP_STATE_COMPLETING,
     TSB_DMA_OP_STATE_COMPLETED,
+    TSB_DMA_OP_STATE_DEQUEUED,
     TSB_DMA_OP_STATE_ERROR,
     TSB_DMA_OP_STATE_UNDEFINED
 };
@@ -162,7 +162,7 @@ static void *tsb_dma_process_completed_op(void *arg)
                 uint32_t callback_events = dma_op->op.callback_events;
 
                 if ((callback_events & DEVICE_DMA_CALLBACK_EVENT_COMPLETE) &&
-                    (dma_op->state = TSB_DMA_OP_STATE_COMPLETED)) {
+                    (dma_op->state == TSB_DMA_OP_STATE_COMPLETED)) {
                     dma_op->op.callback(dev, &dma_info->chans[chan_id],
                             (void *) &dma_op->op,
                             DEVICE_DMA_CALLBACK_EVENT_COMPLETE,
@@ -170,7 +170,7 @@ static void *tsb_dma_process_completed_op(void *arg)
                 }
 
                 if ((callback_events & DEVICE_DMA_CALLBACK_EVENT_ERROR) &&
-                    (dma_op->state = TSB_DMA_OP_STATE_ERROR)) {
+                    (dma_op->state == TSB_DMA_OP_STATE_ERROR)) {
                     dma_op->op.callback(dev, &dma_info->chans[chan_id],
                             (void *) &dma_op->op,
                             DEVICE_DMA_CALLBACK_EVENT_ERROR,
@@ -407,7 +407,7 @@ static int tsb_dma_chan_free(struct device *dev, void *chan)
                 struct device_dma_op *dev_op = &dma_op->op;
                 list_del(node);
 
-                dma_op->state = DEVICE_DMA_CALLBACK_EVENT_DEQUEUED;
+                dma_op->state = TSB_DMA_OP_STATE_DEQUEUED;
                 if ((dev_op->callback != NULL) &&
                     (dev_op->callback_events &
                             DEVICE_DMA_CALLBACK_EVENT_DEQUEUED)) {
@@ -658,7 +658,7 @@ int tsb_dma_callback(struct device *dev, struct tsb_dma_chan *dma_chan,
         /* Make sure the op is in either starting or running state. */
         if ((dma_op->state == TSB_DMA_OP_STATE_STARTING)
                 || (dma_op->state == TSB_DMA_OP_STATE_RUNNING)) {
-            dma_op->state = TSB_DMA_OP_STATE_COMPLETING;
+            dma_op->state = TSB_DMA_OP_STATE_COMPLETED;
 
             list_del(next_op);
             list_add(&info->completed_queue, next_op);
