@@ -74,6 +74,7 @@ int gb_svc_protocol_version(void) {
     op_resp = gb_operation_get_response_op(op_req);
     if (!op_resp) {
         gb_operation_destroy(op_req);
+        dbg_error("protocol error during SVC protocol version\n");
         return GB_OP_PROTOCOL_BAD;
     }
     version_response = gb_operation_get_request_payload(op_resp);
@@ -94,21 +95,34 @@ int gb_svc_protocol_version(void) {
 int gb_svc_hello(uint8_t ap_intf_id) {
     struct gb_operation *op_req;
     struct gb_svc_hello_request *req;
+    int rc;
 
     op_req = gb_operation_create(g_svc_cport, GB_SVC_TYPE_HELLO,
                                  sizeof(*req));
     if (!op_req) {
-        return -EPROTO;
+        dbg_error("Can't create SVC Hello operation\n");
+        return -ENOMEM;
     }
 
     req = gb_operation_get_request_payload(op_req);
     req->endo_id = cpu_to_le16(GB_ENDO_ID);
     req->interface_id = ap_intf_id;
 
-    gb_operation_send_request_sync(op_req);
-    gb_operation_destroy(op_req);
+    rc = gb_operation_send_request_sync(op_req);
+    if (rc) {
+        dbg_error("Error during SVC Hello operation: %d\n", rc);
+        goto err_send;
+    }
 
-    return 0;
+    rc = gb_operation_get_request_result(op_req);
+    if (rc) {
+        dbg_error("Error status retrieved from SVC Hello result: %d\n",
+                  rc);
+    }
+
+ err_send:
+    gb_operation_destroy(op_req);
+    return rc;
 }
 
 int gb_svc_intf_hotplug(uint32_t intf_id, uint32_t ddbl1_mfr_id,

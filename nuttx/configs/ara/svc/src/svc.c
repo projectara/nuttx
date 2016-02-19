@@ -636,13 +636,15 @@ static int svc_handle_ap(void) {
     /*
      * Now start the SVC protocol handshake.
      */
-    gb_svc_protocol_version();
+    rc = gb_svc_protocol_version();
+    if (rc) {
+        return rc;
+    }
+
     /*
      * Tell the AP what kind of endo it's in, and the AP's intf_id.
      */
-    gb_svc_hello(svc->ap_intf_id);
-
-    return 0;
+    return gb_svc_hello(svc->ap_intf_id);
 }
 
 static int svc_handle_hot_unplug(uint8_t portid) {
