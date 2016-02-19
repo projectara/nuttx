@@ -141,7 +141,7 @@ static void apbridge_unipro_evt_handler(enum unipro_event evt)
 {
     switch (evt) {
     case UNIPRO_EVT_LUP_DONE:
-        tsb_unipro_set_init_status(INIT_STATUS_OPERATING);
+        tsb_unipro_set_init_status(INIT_STATUS_S3FW_BOOT_FINISHED);
         /*
          * Tell the SVC that the AP Module is ready.
          * Don't execute this job from interrupt because it can take a while.
