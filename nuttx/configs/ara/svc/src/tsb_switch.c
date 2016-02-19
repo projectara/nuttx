@@ -2787,6 +2787,7 @@ void switch_exit(struct tsb_switch *sw)
         break;
     case SWITCH_REV_ES3:
         tsb_switch_es3_exit(sw);
+        break;
     default:
         dbg_error("Unsupported switch revision: %u\n", sw->pdata->rev);
         break;
