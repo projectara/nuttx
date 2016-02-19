@@ -276,12 +276,14 @@ dwc_otg_dev_dma_desc_t *dwc_otg_ep_alloc_desc_chain(dwc_dma_t * dma_desc_addr,
 						    uint32_t count)
 {
 #if defined(CONFIG_MM_BUFRAM_ALLOCATOR)
+    size_t size;
     size_t page_count;
     void *ptr;
 
-    page_count =
-        bufram_size_to_page_count(count * sizeof(dwc_otg_dev_dma_desc_t));
+    size = count * sizeof(dwc_otg_dev_dma_desc_t);
+    page_count = bufram_size_to_page_count(size);
     ptr = bufram_page_alloc(page_count);
+    memset(ptr, 0, size);
 
     if (dma_desc_addr) {
         *dma_desc_addr = (dwc_dma_t) ptr;
