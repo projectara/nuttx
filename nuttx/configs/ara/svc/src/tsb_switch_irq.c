@@ -28,6 +28,7 @@
 
 #include "tsb_switch.h"
 
+#define DBG_COMP ARADBG_SWITCH
 #include <stddef.h>
 #include <nuttx/unipro/unipro.h>
 #include "stm32.h"
