@@ -130,6 +130,7 @@ int tsb_unipro_mbox_send(uint32_t val);
 #define INIT_STATUS_FALLLBACK_TRUSTED_UNIPRO_BOOT_FINISHED   (10 << 24)
 #define INIT_STATUS_FALLLBACK_UNTRUSTED_UNIPRO_BOOT_FINISHED (11 << 24)
 #define INIT_STATUS_RESUMED_FROM_STANDBY                     (12 << 24)
+#define INIT_STATUS_S3FW_BOOT_FINISHED                       (16 << 24)
 #define INIT_STATUS_FAILED                                   (0x80000000)
 #define INIT_STATUS_ERROR_MASK                               (0x80000000)
 #define INIT_STATUS_STATUS_MASK                              (0x7f000000)
