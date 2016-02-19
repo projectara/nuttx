@@ -444,6 +444,7 @@ static int apbridgea_audio_send_data_completion(int status, const void *buf,
 {
     struct ring_buf *rb = priv;
     struct apbridga_audio_rb_hdr *rb_hdr;
+    irqstate_t flags;
 
     rb_hdr = ring_buf_get_buf(rb);
 
@@ -452,12 +453,16 @@ static int apbridgea_audio_send_data_completion(int status, const void *buf,
         return 0;
     }
 
+    flags = irqsave();
+
     rb_hdr->not_acked--;
 
     if (!rb_hdr->not_acked) {
         ring_buf_reset(rb);
         ring_buf_pass(rb);
     }
+
+    irqrestore(flags);
 
     return 0;
 }
