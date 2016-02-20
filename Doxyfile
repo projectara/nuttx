@@ -773,8 +773,8 @@ WARN_LOGFILE           =
 INPUT  = nuttx/include/nuttx/device.h
 INPUT  += nuttx/include/nuttx/device_table.h
 INPUT  += nuttx/include/nuttx/device_hid.h
+INPUT  += nuttx/include/nuttx/device_i2c.h
 INPUT  += nuttx/include/nuttx/gpio.h
-INPUT  += nuttx/include/nuttx/i2c.h
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding. Doxygen uses
