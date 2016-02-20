@@ -35,6 +35,7 @@
 #include <nuttx/greybus/greybus.h>
 #include <nuttx/unipro/unipro.h>
 #include <nuttx/device.h>
+#include <nuttx/greybus/timesync.h>
 #include <apps/greybus-utils/manifest.h>
 
 #include "control-gb.h"
@@ -257,6 +258,75 @@ out:
     return GB_OP_SUCCESS;
 }
 
+static uint8_t gb_control_timesync_enable(struct gb_operation *operation)
+{
+    uint8_t     count;
+    uint64_t    frame_time;
+    uint32_t    strobe_delay;
+    uint32_t    refclk;
+    struct gb_control_timesync_enable_request *request;
+    int retval;
+
+    if (gb_operation_get_request_payload_size(operation) < sizeof(*request)) {
+        gb_error("dropping short message\n");
+        return GB_OP_INVALID;
+    }
+
+    request = gb_operation_get_request_payload(operation);
+    count = request->count;
+    frame_time = le64_to_cpu(request->frame_time);
+    strobe_delay = le32_to_cpu(request->strobe_delay);
+    refclk = le32_to_cpu(request->refclk);
+
+    retval = timesync_enable(count, frame_time, strobe_delay, refclk);
+    return gb_errno_to_op_result(retval);
+}
+
+static uint8_t gb_control_timesync_disable(struct gb_operation *operation)
+{
+    int retval;
+
+    retval = timesync_disable();
+    return gb_errno_to_op_result(retval);
+}
+
+static uint8_t gb_control_timesync_authoritative(struct gb_operation *operation)
+{
+    uint64_t frame_time[GB_TIMESYNC_MAX_STROBES];
+    struct gb_control_timesync_authoritative_request *request;
+    int i;
+    int retval;
+
+    if (gb_operation_get_request_payload_size(operation) < sizeof(*request)) {
+        gb_error("dropping short message\n");
+        return GB_OP_INVALID;
+    }
+
+    request = gb_operation_get_request_payload(operation);
+
+    for (i = 0; i < GB_TIMESYNC_MAX_STROBES; i++)
+        frame_time[i] = le64_to_cpu(request->frame_time[i]);
+
+    retval = timesync_authoritative(frame_time);
+    return gb_errno_to_op_result(retval);
+}
+
+static uint8_t gb_control_timesync_get_last_event(struct gb_control *operation)
+{
+    uint64_t frame_time;
+    struct gb_control_timesync_get_last_event_response *response;
+    int retval;
+
+    response = gb_operation_alloc_response(operation, sizeof(*response));
+    if (!response)
+        return GB_OP_NO_MEMORY;
+
+    retval = timesync_get_last_event(&frame_time);
+    if (!retval)
+        response->frame_time = cpu_to_le64(frame_time);
+    return gb_errno_to_op_result(retval);
+}
+
 static struct gb_operation_handler gb_control_handlers[] = {
     GB_HANDLER(GB_CONTROL_TYPE_PROTOCOL_VERSION, gb_control_protocol_version),
     GB_HANDLER(GB_CONTROL_TYPE_GET_MANIFEST_SIZE, gb_control_get_manifest_size),
@@ -267,6 +337,10 @@ static struct gb_operation_handler gb_control_handlers[] = {
     /* XXX SW-4136: see control-gb.h */
     /*GB_HANDLER(GB_CONTROL_TYPE_INTF_POWER_STATE_SET, gb_control_intf_pwr_set),
     GB_HANDLER(GB_CONTROL_TYPE_BUNDLE_POWER_STATE_SET, gb_control_bundle_pwr_set),*/
+    GB_HANDLER(GB_CONTROL_TYPE_TIMESYNC_ENABLE, gb_control_timesync_enable),
+    GB_HANDLER(GB_CONTROL_TYPE_TIMESYNC_DISABLE, gb_control_timesync_disable),
+    GB_HANDLER(GB_CONTROL_TYPE_TIMESYNC_AUTHORITATIVE, gb_control_timesync_authoritative),
+    GB_HANDLER(GB_CONTROL_TYPE_TIMESYNC_GET_LAST_EVENT, gb_control_timesync_get_last_event),
 };
 
 struct gb_driver control_driver = {

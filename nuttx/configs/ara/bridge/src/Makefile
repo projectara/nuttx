@@ -29,7 +29,7 @@
 -include $(TOPDIR)/Make.defs
 include $(TOPDIR)/configs/ara/common/Make.defs
 
-CFLAGS		+= -I$(TOPDIR)/sched -I$(ARACOMMON_INCLUDE)
+CFLAGS		+= -I$(TOPDIR)/sched -I$(ARACOMMON_INCLUDE) -I$(TOPDIR)/drivers
 
 ASRCS		=
 AOBJS		= $(ASRCS:.S=$(OBJEXT))
@@ -37,6 +37,7 @@ AOBJS		= $(ASRCS:.S=$(OBJEXT))
 CSRCS		= up_boot.c
 CSRCS		+= board-ara.c
 CSRCS		+= bridge_wakeup.c
+CSRCS		+= timesync.c
 
 ifeq ($(CONFIG_ARA_BRIDGE_BOARD_ARA_DEVBOARD),y)
 CSRCS		+= board-ara-devboard.c

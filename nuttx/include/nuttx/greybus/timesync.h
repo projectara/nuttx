@@ -25,40 +25,33 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include <stdint.h>
-#include <sys/types.h>
-#include <nuttx/gpio.h>
-#include <tsb_scm.h>
-#include <nuttx/greybus/timesync.h>
 
-#include "bridge_wakeup.h"
+#ifndef  _TIMESYNC_H_
+#define  _TIMESYNC_H_
 
-#ifdef CONFIG_APBRIDGEA
-    /* QLIN_DB3_SPK_MODULE-SA-EE20151009A.pdf page 4/5 - APB1_BOOTRET_AND_GATE */
-    #define WD_PIN       23
-#else
-    /* QLIN-MAIN-BD-SD-2016208c.pdf page 40/60 - WAKE_MOD */
-    #define WD_PIN       25
-#endif
+#include <nuttx/greybus/greybus.h>
 
-/* TODO: hook some actions to this event handler */
-static int wakeup_irq_event(int irq, FAR void *context) {
-    gpio_irq_mask(WD_PIN);
-    timesync_strobe_handler();
-    gpio_irq_unmask(WD_PIN);
+/* TimeSync finite state machine */
+enum timesync_state {
+        TIMESYNC_STATE_INVALID       = 0,
+        TIMESYNC_STATE_INACTIVE      = 1,
+        TIMESYNC_STATE_SYNCING       = 2,
+        TIMESYNC_STATE_ACTIVE        = 3,
+        TIMESYNC_STATE_DEBUG_ACTIVE  = 4,
+};
 
-    return OK;
-}
+int timesync_enable(uint8_t strobe_count, uint64_t frame_time,
+                    uint32_t strobe_delay, uint32_t refclk);
+int timesync_disable(void);
+int timesync_authoritative(uint64_t *frame_time);
+int timesync_get_last_event(uint64_t *frame_time);
 
-int bridge_wakeup_init(void) {
+int timesync_strobe_handler(void);
+int timesync_init(void);
+void timesync_exit(void);
 
-    gpio_activate(WD_PIN);
-    gpio_direction_in(WD_PIN);
-    gpio_irq_mask(WD_PIN);
-    gpio_irq_settriggering(WD_PIN, IRQ_TYPE_EDGE_RISING);
-    gpio_irq_attach(WD_PIN, wakeup_irq_event);
-    gpio_irq_unmask(WD_PIN);
+/* This returns the frame-time */
+uint64_t timesync_get_frame_time(void);
+int timesync_get_state(void);
 
-    return 0;
-}
-
+#endif	/* _TIMESYNC_H_ */

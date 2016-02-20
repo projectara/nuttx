@@ -70,6 +70,8 @@
 #include <arch/board/apbridgea_gadget.h>
 #include <arch/board/apbridgea_audio.h>
 #include <nuttx/greybus/greybus_timestamp.h>
+#include <nuttx/greybus/timesync.h>
+#include <greybus/control-gb.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -1443,6 +1445,69 @@ static int apbridgea_audio_vendor_request_out(struct usbdev_s *dev, uint8_t req,
 }
 #endif
 
+static int timesync_enable_vendor_request_out(struct usbdev_s *dev, uint8_t req,
+                                              uint16_t index, uint16_t value,
+                                              void *buf, uint16_t len)
+{
+    uint8_t     count;
+    uint64_t    frame_time;
+    uint32_t    strobe_delay;
+    uint32_t    refclk;
+    struct gb_control_timesync_enable_request *request;
+
+    if (len != sizeof(struct gb_control_timesync_enable_request))
+        return -EINVAL;
+
+    request = buf;
+    count = request->count;
+    frame_time = le64_to_cpu(request->frame_time);
+    strobe_delay = le32_to_cpu(request->strobe_delay);
+    refclk = le32_to_cpu(request->refclk);
+
+    return timesync_enable(count, frame_time, strobe_delay, refclk);
+}
+
+static int timesync_disable_vendor_request_out(struct usbdev_s *dev, uint8_t req,
+                                               uint16_t index, uint16_t value,
+                                               void *buf, uint16_t len)
+{
+    return timesync_disable();
+}
+
+static int timesync_authoritative_vendor_request_out(struct usbdev_s *dev, uint8_t req,
+                                                     uint16_t index, uint16_t value,
+                                                     void *buf, uint16_t len)
+{
+    uint64_t frame_time[GB_TIMESYNC_MAX_STROBES];
+    struct gb_control_timesync_authoritative_request *request;
+    int i;
+
+    if (len != sizeof(struct gb_control_timesync_authoritative_request))
+        return -EINVAL;
+
+    request = buf;
+    for (i = 0; i < GB_TIMESYNC_MAX_STROBES; i++)
+        frame_time[i] = le64_to_cpu(request->frame_time[i]);
+
+    return timesync_authoritative(frame_time);
+}
+
+static int timesync_get_last_event_request_in(struct usbdev_s *dev, uint8_t req,
+                                              uint16_t index, uint16_t value,
+                                              void *buf, uint16_t len)
+{
+    uint64_t frame_time;
+    struct gb_control_timesync_get_last_event_response *response = buf;
+    int retval;
+
+    retval = timesync_get_last_event(&frame_time);
+    if (!retval) {
+        response->frame_time = cpu_to_le64(frame_time);
+        retval = sizeof(*response);
+    }
+    return retval;
+}
+
 /****************************************************************************
  * Name: usbclass_setup
  *
@@ -1696,6 +1761,18 @@ int usbdev_apbinitialize(struct device *dev,
                                 apbridgea_audio_vendor_request_out))
         goto errout_vendor_req;
 #endif
+    if (register_vendor_request(APBRIDGE_WOREQUEST_TIMESYNC_ENABLE, VENDOR_REQ_DATA,
+                                timesync_enable_vendor_request_out))
+        goto errout_vendor_req;
+    if (register_vendor_request(APBRIDGE_WOREQUEST_TIMESYNC_DISABLE, VENDOR_REQ_OUT,
+                                timesync_disable_vendor_request_out))
+        goto errout_vendor_req;
+    if (register_vendor_request(APBRIDGE_WOREQUEST_TIMESYNC_AUTHORITATIVE, VENDOR_REQ_DATA,
+                                timesync_authoritative_vendor_request_out))
+        goto errout_vendor_req;
+    if (register_vendor_request(APBRIDGE_ROREQUEST_TIMESYNC_GET_LAST_EVENT, VENDOR_REQ_IN,
+                                timesync_get_last_event_request_in))
+        goto errout_vendor_req;
 
     /* Allocate the structures needed */
 

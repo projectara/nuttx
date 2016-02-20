@@ -40,6 +40,7 @@
 #include <nuttx/util.h>
 #include <nuttx/usb.h>
 #include <nuttx/device_lights.h>
+#include <nuttx/greybus/timesync.h>
 
 #include "tsb_scm.h"
 #include "up_arch.h"
@@ -184,4 +185,5 @@ void ara_module_init(void)
     csi_tx_srv_init();
 #endif
     bridge_wakeup_init();
+    timesync_init();
 }
