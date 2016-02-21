@@ -788,6 +788,32 @@ int stm32_unconfiggpio(uint32_t cfgset)
 }
 
 /****************************************************************************
+ * Name: stm32_gpio_set_port_pins
+ *
+ * Description:
+ *  Set the selected pin mask to true or false. Leave other pins alone
+ *
+ ****************************************************************************/
+void stm32_gpio_set_port_pins(uint32_t port, uint32_t pinmask, bool on)
+{
+  uint32_t base;
+  uint32_t reg;
+
+  port = port >> GPIO_PORT_SHIFT;
+  pinmask &= 0x0000FFFF;
+
+  if (port < STM32_NGPIO_PORTS)
+    {
+      base = g_gpiobase[port];
+      if (on)
+        reg = pinmask;
+      else
+        reg = pinmask << 16;
+      putreg32(reg, base + STM32_GPIO_BSRR_OFFSET);
+    }
+}
+
+/****************************************************************************
  * Name: stm32_gpiowrite
  *
  * Description:

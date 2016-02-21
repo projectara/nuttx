@@ -490,6 +490,15 @@ EXTERN int stm32_set_pupd(uint32_t cfgset, uint32_t pull_type);
 
 EXTERN int stm32_unconfiggpio(uint32_t cfgset);
 
+/****************************************************************************
+ * Name: stm32_gpio_set_port_pins
+ *
+ * Description:
+ *  Set the selected pin mask to true or false. Leave other pins alone
+ *
+ ****************************************************************************/
+EXTERN void stm32_gpio_set_port_pins(uint32_t port, uint32_t pinmask, bool on);
+
 /************************************************************************************
  * Name: stm32_gpiowrite
  *
