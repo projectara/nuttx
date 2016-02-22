@@ -60,7 +60,7 @@ struct greybus {
     struct greybus_driver *drv;
 };
 
-struct greybus g_greybus = {
+static struct greybus g_greybus = {
     .cports = LIST_INIT(g_greybus.cports),
 };
 
