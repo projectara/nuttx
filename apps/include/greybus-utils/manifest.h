@@ -34,6 +34,7 @@
 struct gb_cport {
     struct list_head list;
     int id;
+    int bundle;
     int protocol;
 };
 

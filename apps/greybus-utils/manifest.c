@@ -270,6 +270,7 @@ static int identify_descriptor(struct greybus_descriptor *desc, size_t size,
             if (!release) {
                 cport = alloc_cport();
                 cport->id = desc->cport.id;
+                cport->bundle = desc->cport.bundle;
                 cport->protocol = desc->cport.protocol_id;
                 gb_debug("cport_id = %d\n", cport->id);
             } else {
