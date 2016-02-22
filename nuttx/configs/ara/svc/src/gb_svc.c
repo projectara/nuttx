@@ -472,15 +472,56 @@ static uint8_t gb_svc_intf_pwr_enable(struct gb_operation *operation)
 {
     struct gb_svc_intf_pwr_enable_request *request;
     struct gb_svc_intf_pwr_enable_response *response;
+    struct interface *iface;
+    int status;
+
+    if (gb_operation_get_request_payload_size(operation) < sizeof(*request)) {
+        gb_error("dropping short message\n");
+        return GB_OP_INVALID;
+    }
 
     response = gb_operation_alloc_response(operation, sizeof(*response));
     if (!response)
         return GB_OP_NO_MEMORY;
+    response->result_code = GB_SVC_INTF_PWR_FAIL;
 
     request = gb_operation_get_request_payload(operation);
-    (void)request;
 
-    return GB_OP_PROTOCOL_BAD;
+    iface = interface_get(request->intf_id);
+    if (!iface) {
+        return GB_OP_INVALID;
+    }
+
+    /*
+     * FIXME SW-3026: this is a hack. Eventually the whole procedure will be
+     * handled via separate greybus commands, but for now only two of them
+     * are specified: SVC Interface Power Enable and SVC Interface Reference
+     * Clock Enable.
+     *
+     * For a proper module bring-up we also need to generate the wakeup event,
+     * enable the switch port and send the unipro linkup request to the switch.
+     *
+     * In order to get the basic module suspend ready for feature complete we
+     * handle the whole procedure using the already existing code available
+     * in interface.c.
+     */
+    switch (request->enable) {
+    case GB_SVC_INTF_PWR_ENABLE:
+        status = interface_power_on(iface);
+        break;
+    case GB_SVC_INTF_PWR_DISABLE:
+        status = interface_power_off(iface);
+        break;
+    default:
+        return GB_OP_INVALID;
+    }
+
+    if (status) {
+        return gb_errno_to_op_result(status);
+    }
+
+    response->result_code = GB_SVC_INTF_PWR_OK;
+    return GB_OP_SUCCESS;
 }
 
 static uint8_t gb_svc_intf_refclk_enable(struct gb_operation *operation)
@@ -495,7 +536,16 @@ static uint8_t gb_svc_intf_refclk_enable(struct gb_operation *operation)
     request = gb_operation_get_request_payload(operation);
     (void)request;
 
-    return GB_OP_PROTOCOL_BAD;
+    /*
+     * FIXME SW-3026: this is a hack for feature complete deadline. The SVC
+     * Interface Power Enable operation handles the reference clock as well,
+     * while this handler always returns 0.
+     *
+     * See gb_svc_intf_pwr_enable() handler.
+     */
+    response->result_code = GB_SVC_INTF_REFCLK_OK;
+
+    return GB_OP_SUCCESS;
 }
 
 static struct gb_operation_handler gb_svc_handlers[] = {
