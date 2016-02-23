@@ -121,7 +121,9 @@ struct capture_info {
     /** Number of frames to capture */
     uint16_t    num_frames;
     /** Capture  request settings */
-    uint8_t     *settings;
+    const uint8_t *settings;
+    /** Size of the settings data in bytes */
+    size_t      settings_size;
 };
 
 /**
