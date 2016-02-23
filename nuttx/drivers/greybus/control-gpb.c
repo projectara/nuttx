@@ -182,8 +182,8 @@ static uint8_t gb_control_intf_pwr_set(struct gb_operation *operation)
 
 static uint8_t gb_control_bundle_pwr_set(struct gb_operation *operation)
 {
-    struct gb_control_intf_pwr_set_request *request;
-    struct gb_control_intf_pwr_set_response *response;
+    struct gb_control_bundle_pwr_set_request *request;
+    struct gb_control_bundle_pwr_set_response *response;
 
     response = gb_operation_alloc_response(operation, sizeof(*response));
     if (!response)
