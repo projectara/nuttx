@@ -403,8 +403,26 @@ int interface_power_on(struct interface *iface)
         return rc;
     }
 
-    wd_start(&iface->linkup_wd, LINKUP_WD_DELAY, interface_linkup_timeout, 1,
-             iface);
+    /*
+     * HACK (SW-2591)
+     *
+     * There are issues with cold boot support for built-in
+     * (non-ejectable) interfaces which are leading to a significant
+     * percentage of boots failing to result in a working UniPro
+     * network.
+     *
+     * Skip the watchdog and linkup retries while those are being
+     * debugged. The race condition which this watchdog is intended to
+     * avoid doesn't happen as often, so not dealing with it actually
+     * leads to better behavior for now.
+     */
+    if (iface->ejectable) {
+        wd_start(&iface->linkup_wd, LINKUP_WD_DELAY, interface_linkup_timeout, 1,
+                 iface);
+    } else {
+        dbg_info("%s: skipping linkup watchdog for interface %s\n",
+                 __func__, iface->name);
+    }
 
     /* Enable Switch port */
     rc = switch_enable_port(svc->sw, iface->switch_portid, true);
@@ -429,6 +447,13 @@ int interface_power_on(struct interface *iface)
 
 void interface_cancel_linkup_wd(struct interface *iface)
 {
+    if (!iface->ejectable) {
+        /*
+         * HACK (SW-2591): see interface_power_on() comment with this
+         * issue tag.
+         */
+        return;
+    }
     dbg_verbose("Canceling linkup watchdog for '%s'\n", iface->name);
     wd_cancel(&iface->linkup_wd);
 }
