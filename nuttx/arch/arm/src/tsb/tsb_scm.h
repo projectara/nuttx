@@ -239,8 +239,9 @@ enum tsb_rev_id {
      CLK_MASK(TSB_CLK_I2CS)    | \
      CLK_MASK(TSB_CLK_UARTP)   | \
      CLK_MASK(TSB_CLK_UARTS)   | \
-     CLK_MASK(TSB_CLK_GPIO))
-
+     CLK_MASK(TSB_CLK_GPIO)    | \
+     CLK_MASK(TSB_CLK_SPIP)    | \
+     CLK_MASK(TSB_CLK_SPIS))
 
 uint32_t tsb_get_debug_reg(uint32_t reg);
 void tsb_clk_init(void);
