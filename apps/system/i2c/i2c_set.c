@@ -228,48 +228,29 @@ int i2ccmd_set(FAR struct i2ctool_s *i2ctool, int argc, FAR char **argv)
 int i2ctool_set(FAR struct i2ctool_s *i2ctool, FAR struct i2c_dev_s *dev,
                 uint8_t regaddr, uint16_t value)
 {
-  struct i2c_msg_s msg[2];
-  union
-  {
-    uint16_t data16;
-    uint8_t  data8;
-  } u;
+  struct i2c_msg_s msg;
+  uint8_t buffer[3];
   int ret;
 
   /* Set up data structures */
-
-  msg[0].addr   = i2ctool->addr;
-  msg[0].flags  = 0;
-  msg[0].buffer = &regaddr;
-  msg[0].length = 1;
-
-  msg[1].addr   = i2ctool->addr;
-  msg[1].flags  = 0;
+  msg.addr  = i2ctool->addr;
+  msg.flags = 0;
+  buffer[0] = regaddr;
   if (i2ctool->width == 8)
     {
-      u.data8       = (uint8_t)value;
-      msg[1].buffer = &u.data8;
-      msg[1].length = 1;
+      buffer[1]  = value & 0xff;
+      msg.length = 2;
     }
   else
     {
-      u.data16      = value;
-      msg[1].buffer = (uint8_t*)&u.data16;
-      msg[1].length = 2;
+      /* I2C is big-endian */
+      buffer[1]  = (value >> 8) & 0xff;
+      buffer[2]  = value & 0xff;
+      msg.length = 3;
     }
+  msg.buffer = buffer;
 
-  if (i2ctool->start)
-    {
-      ret = I2C_TRANSFER(dev, &msg[0], 1);
-      if (ret == OK)
-        {
-          ret = I2C_TRANSFER(dev, &msg[1], 1);
-        }
-    }
-  else
-    {
-      ret = I2C_TRANSFER(dev, msg, 2);
-    }
+  ret = I2C_TRANSFER(dev, &msg, 1);
 
   return ret;
 }
