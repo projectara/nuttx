@@ -111,6 +111,9 @@ struct hid_info {
     /** Hid input event callback function */
     hid_event_callback event_callback;
 
+    /** Private data passed to event_callbacks */
+    void *event_data;
+
     /** Exclusive access for operation */
     sem_t lock;
 };
