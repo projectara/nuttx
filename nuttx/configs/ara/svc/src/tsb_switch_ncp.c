@@ -26,6 +26,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#define DBG_COMP ARADBG_SWITCH
 #include "tsb_switch.h"
 
 #include <stdbool.h>
