@@ -550,7 +550,7 @@ static int tsb_i2s_start_clocks(struct tsb_i2s_info *info)
         i2s_clk_sel |= TSB_CG_BRIDGE_I2S_CLOCK_SELECTOR_MASTER_CLOCK_SEL;
     }
 
-    if (info->mclk_role == DEVICE_I2S_ROLE_SLAVE)
+    if (info->bclk_role == DEVICE_I2S_ROLE_SLAVE)
         i2s_clk_sel |= TSB_CG_BRIDGE_I2S_CLOCK_SELECTOR_LR_BCLK_SEL;
 
     /* This write starts MCLK & BCLK (not WCLK) if they are clock masters */
