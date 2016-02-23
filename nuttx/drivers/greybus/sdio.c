@@ -365,11 +365,13 @@ static uint8_t gb_sdio_protocol_transfer(struct gb_operation *operation)
  * the cooperation device driver, attach callback, create buffers etc.
  *
  * @param cport CPort number.
+ * @param bundle Greybus bundle handle
  * @return 0 on success, negative errno on error.
  */
-static int gb_sdio_init(unsigned int cport)
+static int gb_sdio_init(unsigned int cport, struct gb_bundle *bundle)
 {
     int ret;
+
 
     info = zalloc(sizeof(*info));
     if (info == NULL) {
@@ -405,9 +407,10 @@ err_free_info:
  * This function can be called when protocol terminated.
  *
  * @param cport CPort number.
+ * @param bundle Greybus bundle handle
  * @return None.
  */
-static void gb_sdio_exit(unsigned int cport)
+static void gb_sdio_exit(unsigned int cport, struct gb_bundle *bundle)
 {
     DEBUGASSERT(cport == info->cport);
 
@@ -442,8 +445,9 @@ static struct gb_driver sdio_driver = {
  * @brief Register Greybus SDIO protocol
  *
  * @param cport cport number
+ * @param bundle Bundle number.
  */
-void gb_sdio_register(int cport)
+void gb_sdio_register(int cport, int bundle)
 {
-    gb_register_driver(cport, &sdio_driver);
+    gb_register_driver(cport, bundle, &sdio_driver);
 }

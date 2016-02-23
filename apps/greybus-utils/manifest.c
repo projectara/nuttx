@@ -38,22 +38,22 @@
 
 #include "greybus_manifest.h"
 
-extern void gb_control_register(int cport);
-extern void gb_gpio_register(int cport);
-extern void gb_i2c_register(int cport);
-extern void gb_power_supply_register(int cport);
-extern void gb_loopback_register(int cport);
-extern void gb_vibrator_register(int cport);
-extern void gb_usb_register(int cport);
-extern void gb_pwm_register(int cport);
-extern void gb_spi_register(int cport);
-extern void gb_uart_register(int cport);
-extern void gb_hid_register(int cport);
-extern void gb_lights_register(int cport);
-extern void gb_sdio_register(int cport);
-extern void gb_camera_register(int cport);
-extern void gb_audio_mgmt_register(int cport);
-extern void gb_audio_data_register(int cport);
+extern void gb_control_register(int cport, int bundle);
+extern void gb_gpio_register(int cport, int bundle);
+extern void gb_i2c_register(int cport, int bundle);
+extern void gb_power_supply_register(int cport, int bundle);
+extern void gb_loopback_register(int cport, int bundle);
+extern void gb_vibrator_register(int cport, int bundle);
+extern void gb_usb_register(int cport, int bundle);
+extern void gb_pwm_register(int cport, int bundle);
+extern void gb_spi_register(int cport, int bundle);
+extern void gb_uart_register(int cport, int bundle);
+extern void gb_hid_register(int cport, int bundle);
+extern void gb_lights_register(int cport, int bundle);
+extern void gb_sdio_register(int cport, int bundle);
+extern void gb_camera_register(int cport, int bundle);
+extern void gb_audio_mgmt_register(int cport, int bundle);
+extern void gb_audio_data_register(int cport, int bundle);
 
 struct greybus {
     struct list_head cports;
@@ -100,119 +100,121 @@ void enable_cports(void)
     struct list_head *iter;
     struct gb_cport *gb_cport;
     __attribute__((unused)) int cport_id;
+    __attribute__((unused)) int bundle_id;
     __attribute__((unused)) int protocol;
     list_foreach(&g_greybus.cports, iter) {
         gb_cport = list_entry(iter, struct gb_cport, list);
         cport_id = gb_cport->id;
+        bundle_id = gb_cport->bundle;
         protocol = gb_cport->protocol;
 
 #ifdef CONFIG_GREYBUS_CONTROL_PROTOCOL
         if (protocol == GREYBUS_PROTOCOL_CONTROL) {
             gb_info("Registering CONTROL greybus driver.\n");
-            gb_control_register(cport_id);
+            gb_control_register(cport_id, bundle_id);
         }
 #endif
 
 #ifdef CONFIG_GREYBUS_GPIO_PHY
         if (protocol == GREYBUS_PROTOCOL_GPIO) {
             gb_info("Registering GPIO greybus driver.\n");
-            gb_gpio_register(cport_id);
+            gb_gpio_register(cport_id, bundle_id);
         }
 #endif
 
 #ifdef CONFIG_GREYBUS_I2C_PHY
         if (protocol == GREYBUS_PROTOCOL_I2C) {
             gb_info("Registering I2C greybus driver.\n");
-            gb_i2c_register(cport_id);
+            gb_i2c_register(cport_id, bundle_id);
         }
 #endif
 
 #ifdef CONFIG_GREYBUS_POWER_SUPPLY
         if (protocol == GREYBUS_PROTOCOL_POWER_SUPPLY) {
             gb_info("Registering POWER_SUPPLY greybus driver.\n");
-            gb_power_supply_register(cport_id);
+            gb_power_supply_register(cport_id, bundle_id);
         }
 #endif
 
 #ifdef CONFIG_GREYBUS_LOOPBACK
         if (protocol == GREYBUS_PROTOCOL_LOOPBACK) {
             gb_info("Registering Loopback greybus driver.\n");
-            gb_loopback_register(cport_id);
+            gb_loopback_register(cport_id, bundle_id);
         }
 #endif
 
 #ifdef CONFIG_GREYBUS_VIBRATOR
         if (protocol == GREYBUS_PROTOCOL_VIBRATOR) {
             gb_info("Registering VIBRATOR greybus driver.\n");
-            gb_vibrator_register(cport_id);
+            gb_vibrator_register(cport_id, bundle_id);
         }
 #endif
 
 #ifdef CONFIG_GREYBUS_USB_HOST_PHY
         if (protocol == GREYBUS_PROTOCOL_USB) {
             gb_info("Registering USB greybus driver.\n");
-            gb_usb_register(cport_id);
+            gb_usb_register(cport_id, bundle_id);
         }
 #endif
 
 #ifdef CONFIG_GREYBUS_PWM_PHY
         if (protocol == GREYBUS_PROTOCOL_PWM) {
             gb_info("Registering PWM greybus driver.\n");
-            gb_pwm_register(cport_id);
+            gb_pwm_register(cport_id, bundle_id);
         }
 #endif
 
 #ifdef CONFIG_GREYBUS_SPI_PHY
         if (protocol == GREYBUS_PROTOCOL_SPI) {
             gb_info("Registering SPI greybus driver.\n");
-            gb_spi_register(cport_id);
+            gb_spi_register(cport_id, bundle_id);
         }
 #endif
 
 #ifdef CONFIG_GREYBUS_UART_PHY
         if (protocol == GREYBUS_PROTOCOL_UART) {
             gb_info("Registering Uart greybus driver. id= %d\n", cport_id);
-            gb_uart_register(cport_id);
+            gb_uart_register(cport_id, bundle_id);
         }
 #endif
 
 #ifdef CONFIG_GREYBUS_HID
         if (protocol == GREYBUS_PROTOCOL_HID) {
             gb_info("Registering HID greybus driver. id= %d\n", cport_id);
-            gb_hid_register(cport_id);
+            gb_hid_register(cport_id, bundle_id);
         }
 #endif
 
 #ifdef CONFIG_GREYBUS_LIGHTS
         if (protocol == GREYBUS_PROTOCOL_LIGHTS) {
             gb_info("Registering Lights greybus driver. id= %d\n", cport_id);
-            gb_lights_register(cport_id);
+            gb_lights_register(cport_id, bundle_id);
         }
 #endif
 
 #ifdef CONFIG_GREYBUS_SDIO_PHY
         if (protocol == GREYBUS_PROTOCOL_SDIO) {
             gb_info("Registering SDIO greybus driver.\n");
-            gb_sdio_register(cport_id);
+            gb_sdio_register(cport_id, bundle_id);
         }
 #endif
 
 #ifdef CONFIG_GREYBUS_CAMERA
         if (protocol == GREYBUS_PROTOCOL_CAMERA_MGMT) {
             gb_info("Registering Camera greybus driver. id= %d\n", cport_id);
-            gb_camera_register(cport_id);
+            gb_camera_register(cport_id, bundle_id);
         }
 #endif
 
 #ifdef CONFIG_GREYBUS_AUDIO
         if (protocol == GREYBUS_PROTOCOL_AUDIO_MGMT) {
             gb_info("Registering Audio MGMT greybus driver.\n");
-            gb_audio_mgmt_register(cport_id);
+            gb_audio_mgmt_register(cport_id, bundle_id);
         }
 
         if (protocol == GREYBUS_PROTOCOL_AUDIO_DATA) {
             gb_info("Registering Audio DATA greybus driver.\n");
-            gb_audio_data_register(cport_id);
+            gb_audio_data_register(cport_id, bundle_id);
         }
 #endif
     }

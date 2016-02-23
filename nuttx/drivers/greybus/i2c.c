@@ -166,7 +166,7 @@ static uint8_t gb_i2c_protocol_transfer(struct gb_operation *operation)
     return gb_errno_to_op_result(ret);
 }
 
-static int gb_i2c_init(unsigned int cport)
+static int gb_i2c_init(unsigned int cport, struct gb_bundle *bundle)
 {
     i2c_info = zalloc(sizeof(*i2c_info));
     if (!i2c_info) {
@@ -187,7 +187,7 @@ static int gb_i2c_init(unsigned int cport)
     return 0;
 }
 
-static void gb_i2c_exit(unsigned int cport)
+static void gb_i2c_exit(unsigned int cport, struct gb_bundle *bundle)
 {
     if (i2c_info->dev) {
         device_close(i2c_info->dev);
@@ -212,8 +212,8 @@ static struct gb_driver gb_i2c_driver = {
     .op_handlers_count = ARRAY_SIZE(gb_i2c_handlers),
 };
 
-void gb_i2c_register(int cport)
+void gb_i2c_register(int cport, int bundle)
 {
-    gb_register_driver(cport, &gb_i2c_driver);
+    gb_register_driver(cport, bundle, &gb_i2c_driver);
 }
 

@@ -607,9 +607,10 @@ static void hid_receiver_callback_deinit(void)
  * @brief Greybus HID protocol initialize function
  *
  * @param cport CPort number
+ * @param bundle Greybus bundle handle
  * @return 0 on success, negative errno on error
  */
-static int gb_hid_init(unsigned int cport)
+static int gb_hid_init(unsigned int cport, struct gb_bundle *bundle)
 {
     int ret;
 
@@ -665,8 +666,9 @@ err_hid_init:
  * @brief Greybus HID protocol deinitialize function
  *
  * @param cport CPort number
+ * @param bundle Greybus bundle handle
  */
-static void gb_hid_exit(unsigned int cport)
+static void gb_hid_exit(unsigned int cport, struct gb_bundle *bundle)
 {
     if (!hid_info)
         return;
@@ -706,8 +708,9 @@ static struct gb_driver gb_hid_driver = {
  * @brief Register Greybus HID protocol
  *
  * @param cport CPort number
+ * @param bundle Bundle number.
  */
-void gb_hid_register(int cport)
+void gb_hid_register(int cport, int bundle)
 {
-    gb_register_driver(cport, &gb_hid_driver);
+    gb_register_driver(cport, bundle, &gb_hid_driver);
 }

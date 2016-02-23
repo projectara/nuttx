@@ -430,9 +430,10 @@ static uint8_t gb_camera_flush(struct gb_operation *operation)
  * cooperation device driver and create buffers etc.
  *
  * @param cport CPort number
+ * @param bundle Greybus bundle handle
  * @return 0 on success, negative errno on error
  */
-static int gb_camera_init(unsigned int cport)
+static int gb_camera_init(unsigned int cport, struct gb_bundle *bundle)
 {
     int ret;
 
@@ -470,10 +471,11 @@ err_free_info:
  *
  * This function is called when protocol terminated.
  *
- * @param operation The pointer to structure of gb_operation.
+ * @param cport CPort number
+ * @param bundle Greybus bundle handle
  * @return None.
  */
-static void gb_camera_exit(unsigned int cport)
+static void gb_camera_exit(unsigned int cport, struct gb_bundle *bundle)
 {
     DEBUGASSERT(cport == info->cport);
 
@@ -508,8 +510,9 @@ static struct gb_driver gb_camera_driver = {
  * @brief Register Greybus Camera Protocol
  *
  * @param cport CPort number.
+ * @param bundle Bundle number.
  */
-void gb_camera_register(int cport)
+void gb_camera_register(int cport, int bundle)
 {
-    gb_register_driver(cport, &gb_camera_driver);
+    gb_register_driver(cport, bundle, &gb_camera_driver);
 }

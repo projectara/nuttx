@@ -103,7 +103,7 @@ static struct gb_driver gb_vibrator_driver = {
     .op_handlers_count = ARRAY_SIZE(gb_vibrator_handlers),
 };
 
-void gb_vibrator_register(int cport)
+void gb_vibrator_register(int cport, int bundle)
 {
-    gb_register_driver(cport, &gb_vibrator_driver);
+    gb_register_driver(cport, bundle, &gb_vibrator_driver);
 }

@@ -211,9 +211,9 @@ struct gb_driver control_driver = {
     .op_handlers_count = ARRAY_SIZE(gb_control_handlers),
 };
 
-void gb_control_register(int cport)
+void gb_control_register(int cport, int bundle)
 {
-    gb_register_driver(cport, &control_driver);
+    gb_register_driver(cport, bundle, &control_driver);
     unipro_enable_fct_tx_flow(cport);
     gb_listen(cport);
 }
