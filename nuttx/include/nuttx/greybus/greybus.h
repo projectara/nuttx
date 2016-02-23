@@ -256,4 +256,6 @@ struct  i2c_dev_s *gb_i2c_get_dev(void);
 
 uint8_t gb_errno_to_op_result(int err);
 
+struct gb_bundle *gb_bundle_get_by_id(unsigned int bundle_id);
+
 #endif /* _GREYBUS_H_ */

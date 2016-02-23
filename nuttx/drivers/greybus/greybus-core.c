@@ -1127,3 +1127,12 @@ int gb_notify(unsigned cport, enum gb_event event)
 
     return 0;
 }
+
+struct gb_bundle *gb_bundle_get_by_id(unsigned int bundle_id)
+{
+    if (bundle_id > manifest_get_max_bundle_id()) {
+        return NULL;
+    }
+
+    return g_bundle[bundle_id];
+}
