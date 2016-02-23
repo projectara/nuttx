@@ -77,6 +77,16 @@ enum device_state {
 
 struct device;
 
+/** Device driver power management operations */
+struct device_pm_ops {
+    /** Put the device into a low-power mode (preserving the state). */
+    int (*suspend)(struct device *dev);
+    /** Power-off the device. */
+    int (*poweroff)(struct device *dev);
+    /** Wake-up the device from a low-power mode. */
+    int (*resume)(struct device *dev);
+};
+
 /** Device driver operations */
 struct device_driver_ops {
     /** Probe the device ``dev``; Return 0 on success, !=0 on error */
@@ -101,6 +111,8 @@ struct device_driver {
     char *desc;
     /** Device driver's operations */
     struct device_driver_ops *ops;
+    /** Device driver's power management operations */
+    struct device_pm_ops *pm;
     /** Device driver's private data */
     void *priv;
 };
