@@ -943,6 +943,15 @@ uint8_t gb_operation_get_request_result(struct gb_operation *operation)
     return hdr->result;
 }
 
+struct gb_bundle *gb_operation_get_bundle(struct gb_operation *operation)
+{
+    if (!operation) {
+        return NULL;
+    }
+
+    return operation->bundle;
+}
+
 int gb_init(struct gb_transport_backend *transport)
 {
     size_t num_bundles = manifest_get_max_bundle_id() + 1;
