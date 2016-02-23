@@ -505,10 +505,38 @@ static int tsb_i2s_config_hw(struct tsb_i2s_info *info)
     return 0;
 }
 
+static uint32_t tsb_i2s_clk_selector_bits(uint32_t *mclk_slave,
+                                          uint32_t *lr_bclk_slave,
+                                          uint32_t *mask)
+{
+    if (tsb_get_rev_id() == tsb_rev_es2) {
+        *mclk_slave = TSB_CG_BRIDGE_I2S_CLOCK_SELECTOR_MASTER_CLOCK_SEL_ES2;
+        *lr_bclk_slave = TSB_CG_BRIDGE_I2S_CLOCK_SELECTOR_LR_BCLK_SEL_ES2;
+        *mask = TSB_CG_BRIDGE_I2S_CLOCK_SELECTOR_MASK_ES2;
+    } else if (tsb_get_rev_id() == tsb_rev_es3) {
+        *mclk_slave = TSB_CG_BRIDGE_I2S_CLOCK_SELECTOR_MASTER_CLOCK_SEL_ES3 |
+                      TSB_CG_BRIDGE_I2S_CLOCK_SELECTOR_MASTER_CLOCK_MUX_ES3;
+        *lr_bclk_slave = TSB_CG_BRIDGE_I2S_CLOCK_SELECTOR_LR_BCLK_SEL_ES3 |
+                         TSB_CG_BRIDGE_I2S_CLOCK_SELECTOR_LR_BCLK_MUX_ES3;
+        *mask = TSB_CG_BRIDGE_I2S_CLOCK_SELECTOR_MASK_ES3;
+    } else {
+        return -EIO;
+    }
+
+    return 0;
+}
+
 static int tsb_i2s_start_clocks(struct tsb_i2s_info *info)
 {
     uint32_t bclk_freq, i2s_clk_sel = 0;
+    uint32_t mclk_slave_bits, lr_bclk_slave_bits, i2s_clk_sel_mask;
     int ret;
+
+    ret = tsb_i2s_clk_selector_bits(&mclk_slave_bits, &lr_bclk_slave_bits,
+                                    &i2s_clk_sel_mask);
+    if (ret) {
+        return ret;
+    }
 
     if (info->mclk_role == DEVICE_I2S_ROLE_MASTER) {
         bclk_freq = tsb_i2s_calc_bclk(&info->pcm);
@@ -547,16 +575,16 @@ static int tsb_i2s_start_clocks(struct tsb_i2s_info *info)
          * BCLK that is 1/4 the frequency of MCLK.  I2S spec needs to
          * be changed to handle slave mode.
          */
-        i2s_clk_sel |= TSB_CG_BRIDGE_I2S_CLOCK_SELECTOR_MASTER_CLOCK_SEL;
+        i2s_clk_sel |= mclk_slave_bits;
     }
 
     if (info->bclk_role == DEVICE_I2S_ROLE_SLAVE)
-        i2s_clk_sel |= TSB_CG_BRIDGE_I2S_CLOCK_SELECTOR_LR_BCLK_SEL;
+        i2s_clk_sel |= lr_bclk_slave_bits;
 
     /* This write starts MCLK & BCLK (not WCLK) if they are clock masters */
     tsb_i2s_write_field(info, TSB_I2S_BLOCK_BRIDGE,
-                        TSB_CG_BRIDGE_I2S_CLOCK_SELECTOR,
-                        TSB_CG_BRIDGE_I2S_CLOCK_SELECTOR_MASK, i2s_clk_sel);
+                        TSB_CG_BRIDGE_I2S_CLOCK_SELECTOR, i2s_clk_sel_mask,
+                        i2s_clk_sel);
 
     return 0;
 
@@ -569,12 +597,19 @@ err_close_pll:
 
 static void tsb_i2s_stop_clocks(struct tsb_i2s_info *info)
 {
+    uint32_t mclk_slave_bits, lr_bclk_slave_bits, i2s_clk_sel_mask;
+    int ret;
+
+    ret = tsb_i2s_clk_selector_bits(&mclk_slave_bits, &lr_bclk_slave_bits,
+                                    &i2s_clk_sel_mask);
+    if (ret) {
+        return;
+    }
+
     /* Make MCLK & BCLK/WCLK slaves to stop their output */
     tsb_i2s_write_field(info, TSB_I2S_BLOCK_BRIDGE,
-                        TSB_CG_BRIDGE_I2S_CLOCK_SELECTOR,
-                        TSB_CG_BRIDGE_I2S_CLOCK_SELECTOR_MASK,
-                        TSB_CG_BRIDGE_I2S_CLOCK_SELECTOR_MASTER_CLOCK_SEL |
-                            TSB_CG_BRIDGE_I2S_CLOCK_SELECTOR_LR_BCLK_SEL);
+                        TSB_CG_BRIDGE_I2S_CLOCK_SELECTOR, i2s_clk_sel_mask,
+                        mclk_slave_bits | lr_bclk_slave_bits);
 
     if (info->mclk_role == DEVICE_I2S_ROLE_MASTER) {
         device_pll_stop(info->pll_dev);
