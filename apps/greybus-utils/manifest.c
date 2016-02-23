@@ -58,6 +58,7 @@ extern void gb_audio_data_register(int cport);
 struct greybus {
     struct list_head cports;
     struct greybus_driver *drv;
+    size_t max_bundle_id;
 };
 
 static struct greybus g_greybus = {
@@ -263,6 +264,7 @@ static int identify_descriptor(struct greybus_descriptor *desc, size_t size,
         break;
     case GREYBUS_TYPE_BUNDLE:
         expected_size += sizeof(struct greybus_descriptor_bundle);
+        g_greybus.max_bundle_id = MAX(g_greybus.max_bundle_id, desc->bundle.id);
         break;
     case GREYBUS_TYPE_CPORT:
         expected_size += sizeof(struct greybus_descriptor_cport);
@@ -446,4 +448,9 @@ int get_manifest_size(void)
     struct greybus_manifest_header *mh = get_manifest_blob();
 
     return mh ? le16_to_cpu(mh->size) : 0;
+}
+
+size_t manifest_get_max_bundle_id(void)
+{
+    return g_greybus.max_bundle_id;
 }
