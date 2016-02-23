@@ -118,8 +118,6 @@ struct capture_info {
     uint32_t    request_id;
     /** Bitmask of the streams included in the capture request */
     uint8_t     streams;
-    /** Must be set to zero */
-    uint8_t     padding;
     /** Number of frames to capture */
     uint16_t    num_frames;
     /** Capture  request settings */

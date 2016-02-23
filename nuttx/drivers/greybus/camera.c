@@ -342,6 +342,11 @@ static uint8_t gb_camera_capture(struct gb_operation *operation)
 
     request = gb_operation_get_request_payload(operation);
 
+    if (request->padding != 0) {
+        gb_error("invalid padding value\n");
+        return GB_OP_INVALID;
+    }
+
     capt_req = malloc(sizeof(*capt_req));
     if(!capt_req) {
         return GB_OP_NO_MEMORY;
@@ -349,12 +354,10 @@ static uint8_t gb_camera_capture(struct gb_operation *operation)
 
     capt_req->request_id = le32_to_cpu(request->request_id);
     capt_req->streams = request->streams;
-    capt_req->padding = request->padding;
     capt_req->num_frames = le32_to_cpu(request->num_frames);
 
     lldbg("    request_id = %d \n", capt_req->request_id);
     lldbg("    streams = %d \n", capt_req->streams);
-    lldbg("    padding = %d \n", capt_req->padding);
     lldbg("    num_frames = %d \n", capt_req->num_frames);
 
     ret = device_camera_capture(info->dev, capt_req);
