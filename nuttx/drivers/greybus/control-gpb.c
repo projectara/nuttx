@@ -34,6 +34,7 @@
 #include <nuttx/greybus/debug.h>
 #include <nuttx/greybus/greybus.h>
 #include <nuttx/unipro/unipro.h>
+#include <nuttx/device.h>
 #include <apps/greybus-utils/manifest.h>
 
 #include "control-gb.h"
@@ -184,15 +185,60 @@ static uint8_t gb_control_bundle_pwr_set(struct gb_operation *operation)
 {
     struct gb_control_bundle_pwr_set_request *request;
     struct gb_control_bundle_pwr_set_response *response;
+    struct device_pm_ops *pm_ops;
+    struct gb_bundle *bundle;
+    struct device *dev;
+    int status = 0;
 
     response = gb_operation_alloc_response(operation, sizeof(*response));
     if (!response)
         return GB_OP_NO_MEMORY;
 
     request = gb_operation_get_request_payload(operation);
-    (void)request;
 
-    return GB_OP_PROTOCOL_BAD;
+    bundle = gb_bundle_get_by_id(request->bundle_id);
+    if (bundle == NULL) {
+        return GB_OP_INVALID;
+    }
+
+    dev = bundle->dev;
+    pm_ops = dev->driver->pm;
+    if (!pm_ops) {
+        gb_info("pm operations not supported by %s driver\n", dev->name);
+        response->result_code = GB_CONTROL_PWR_OK;
+        return GB_OP_SUCCESS;
+    }
+
+    switch (request->pwr_state) {
+    case GB_CONTROL_PWR_STATE_OFF:
+        if (pm_ops->poweroff) {
+            gb_info("poweroff not supported by %s driver\n", dev->name);
+            status = pm_ops->poweroff(dev);
+        }
+        break;
+    case GB_CONTROL_PWR_STATE_SUSPEND:
+        if (pm_ops->suspend) {
+            gb_info("suspend not supported by %s driver\n", dev->name);
+            status = pm_ops->suspend(dev);
+        }
+        break;
+    case GB_CONTROL_PWR_STATE_ON:
+        if (pm_ops->resume) {
+            gb_info("resume not supported by %s driver\n", dev->name);
+            status = pm_ops->resume(dev);
+        }
+        break;
+    default:
+        return GB_OP_PROTOCOL_BAD;
+    }
+
+    if (status) {
+        response->result_code = GB_CONTROL_PWR_FAIL;
+        return gb_errno_to_op_result(status);
+    }
+
+    response->result_code = GB_CONTROL_PWR_OK;
+    return GB_OP_SUCCESS;
 }
 
 static struct gb_operation_handler gb_control_handlers[] = {
