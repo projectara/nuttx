@@ -958,6 +958,11 @@ int gb_init(struct gb_transport_backend *transport)
 
     cport_count = unipro_cport_count();
     g_cport = zalloc(sizeof(struct gb_cport_driver) * cport_count);
+    if (!g_cport) {
+        free(g_bundle);
+        return -ENOMEM;
+    }
+
     for (i = 0; i < cport_count; i++) {
         sem_init(&g_cport[i].rx_fifo_lock, 0, 0);
         list_init(&g_cport[i].rx_fifo);
