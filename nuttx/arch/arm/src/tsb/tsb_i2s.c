@@ -510,9 +510,12 @@ static int tsb_i2s_start_clocks(struct tsb_i2s_info *info)
     uint32_t bclk_freq, i2s_clk_sel = 0;
     int ret;
 
-    bclk_freq = tsb_i2s_calc_bclk(&info->pcm);
-
     if (info->mclk_role == DEVICE_I2S_ROLE_MASTER) {
+        bclk_freq = tsb_i2s_calc_bclk(&info->pcm);
+        if (bclk_freq <= 0) {
+            return -EINVAL;
+        }
+
         info->pll_dev = device_open(DEVICE_TYPE_PLL_HW, TSB_I2S_PLLA_ID);
         if (!info->pll_dev)
             return -EIO;
