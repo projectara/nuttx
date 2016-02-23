@@ -228,11 +228,6 @@ size_t gb_operation_get_request_payload_size(struct gb_operation *operation);
 uint8_t gb_operation_get_request_result(struct gb_operation *operation);
 int greybus_rx_handler(unsigned int, void*, size_t);
 
-void gb_control_register(int cport);
-void gb_gpio_register(int cport);
-void gb_i2c_register(int cport);
-void gb_pwm_register(int cport);
-void gb_uart_register(int cport);
 int gb_i2c_set_dev(struct i2c_dev_s *dev);
 struct  i2c_dev_s *gb_i2c_get_dev(void);
 
