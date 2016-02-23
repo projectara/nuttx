@@ -1524,6 +1524,12 @@ static int switch_set_pair_attr(struct tsb_switch *sw,
     return 0;
 }
 
+int switch_cport_connect(struct tsb_switch *sw, uint8_t port_id,
+                         uint16_t cport_id)
+{
+    return switch_set_port_l4attr(sw, port_id, T_CONNECTIONSTATE, cport_id, 1);
+}
+
 static int switch_cport_connect_prepare(struct tsb_switch *sw,
                                         struct unipro_connection *c) {
     int e2efc_enabled = (!!(c->flags & CPORT_FLAGS_E2EFC) == 1);
@@ -1677,13 +1683,6 @@ static int switch_cport_connect_prepare(struct tsb_switch *sw,
                               TSB_MAXSEGMENTCONFIG,
                               CPORT_DEFAULT_TSB_MAXSEGMENTCONFIG,
                               CPORT_DEFAULT_TSB_MAXSEGMENTCONFIG);
-    if (rc) {
-        return rc;
-    }
-    /*
-     * Establish the connections!
-     */
-    rc = switch_set_pair_attr(sw, c, T_CONNECTIONSTATE, 1, 1);
     if (rc) {
         return rc;
     }

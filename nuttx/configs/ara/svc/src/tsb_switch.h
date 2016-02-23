@@ -586,7 +586,8 @@ int switch_connection_create(struct tsb_switch *sw,
                              struct unipro_connection *conn);
 int switch_connection_destroy(struct tsb_switch *sw,
                               struct unipro_connection *c);
-
+int switch_cport_connect(struct tsb_switch *sw, uint8_t port_id,
+                         uint16_t cport_id);
 
 int switch_configure_link(struct tsb_switch *sw,
                           uint8_t port_id,
