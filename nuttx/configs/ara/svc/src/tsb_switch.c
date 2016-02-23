@@ -1524,8 +1524,8 @@ static int switch_set_pair_attr(struct tsb_switch *sw,
     return 0;
 }
 
-static int switch_cport_connect(struct tsb_switch *sw,
-                                struct unipro_connection *c) {
+static int switch_cport_connect_prepare(struct tsb_switch *sw,
+                                        struct unipro_connection *c) {
     int e2efc_enabled = (!!(c->flags & CPORT_FLAGS_E2EFC) == 1);
     int csd_enabled = (!!(c->flags & CPORT_FLAGS_CSD_N) == 0);
     int rc = 0;
@@ -1875,7 +1875,7 @@ int switch_connection_create(struct tsb_switch *sw,
              c->tc,
              c->flags);
 
-    rc = switch_cport_connect(sw, c);
+    rc = switch_cport_connect_prepare(sw, c);
     if (rc) {
         switch_cport_disconnect(sw,
                                 c->port_id0,
