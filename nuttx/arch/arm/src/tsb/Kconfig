@@ -93,7 +93,7 @@ config ARCH_CHIP_DEVICE_PWM
 
 config ARCH_CHIP_DEVICE_SPI_BITBANG
 	bool "SPI Bit-Bang driver support"
-	depends on ARCH_CHIP_DEVICE_SPI
+	depends on !ARCH_CHIP_DEVICE_SPI
 	select DEVICE_CORE
 	---help---
 		TSB SPI Bit-Bang Device Driver
