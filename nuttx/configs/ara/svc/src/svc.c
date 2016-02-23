@@ -408,11 +408,16 @@ int svc_connection_create(uint8_t intf1_id, uint16_t cport1_id,
         return rc;
     }
 
-    rc = switch_cport_connect(sw, c.port_id0, c.cport_id0);
-    if (rc) {
-        dbg_error("Failed to enable connection to [p=%u,c=%u].\n",
-                  c.port_id0, c.cport_id0);
-        return rc;
+    /*
+     * Let's connect the ap side first: SW-1231
+     */
+    if (intf1_id == svc->ap_intf_id) {
+        rc = switch_cport_connect(sw, c.port_id0, c.cport_id0);
+        if (rc) {
+            dbg_error("Failed to enable connection to [p=%u,c=%u].\n",
+                      c.port_id0, c.cport_id0);
+            return rc;
+        }
     }
 
     rc = switch_cport_connect(sw, c.port_id1, c.cport_id1);
@@ -420,6 +425,15 @@ int svc_connection_create(uint8_t intf1_id, uint16_t cport1_id,
         dbg_error("Failed to enable connection to [p=%u,c=%u].\n", c.port_id1,
                   c.cport_id1);
         return rc;
+    }
+
+    if (intf1_id != svc->ap_intf_id) {
+        rc = switch_cport_connect(sw, c.port_id0, c.cport_id0);
+        if (rc) {
+            dbg_error("Failed to enable connection to [p=%u,c=%u].\n",
+                      c.port_id0, c.cport_id0);
+            return rc;
+        }
     }
 
     /*
@@ -1211,11 +1225,16 @@ int svc_connect_interfaces(struct interface *iface1, uint16_t cportid1,
         goto error_exit;
     }
 
-    rc = switch_cport_connect(sw, con.port_id0, con.cport_id0);
-    if (rc) {
-        dbg_error("Failed to enable connection to [p=%u,c=%u].\n",
-                  con.port_id0, con.cport_id0);
-        goto error_exit;
+    /*
+     * Let's connect the ap side first: SW-1231
+     */
+    if (interface_get_id_by_portid(iface1->switch_portid) == svc->ap_intf_id) {
+        rc = switch_cport_connect(sw, con.port_id0, con.cport_id0);
+        if (rc) {
+            dbg_error("Failed to enable connection to [p=%u,c=%u].\n",
+                      con.port_id0, con.cport_id0);
+            goto error_exit;
+        }
     }
 
     rc = switch_cport_connect(sw, con.port_id1, con.cport_id1);
@@ -1223,6 +1242,15 @@ int svc_connect_interfaces(struct interface *iface1, uint16_t cportid1,
         dbg_error("Failed to enable connection to [p=%u,c=%u].\n", con.port_id1,
                   con.cport_id1);
         goto error_exit;
+    }
+
+    if (interface_get_id_by_portid(iface1->switch_portid) != svc->ap_intf_id) {
+        rc = switch_cport_connect(sw, con.port_id0, con.cport_id0);
+        if (rc) {
+            dbg_error("Failed to enable connection to [p=%u,c=%u].\n",
+                      con.port_id0, con.cport_id0);
+            goto error_exit;
+        }
     }
 
  error_exit:
