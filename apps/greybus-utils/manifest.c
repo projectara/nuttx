@@ -269,6 +269,9 @@ static int identify_descriptor(struct greybus_descriptor *desc, size_t size,
         if (desc_size >= expected_size) {
             if (!release) {
                 cport = alloc_cport();
+                if (!cport)
+                    return -ENOMEM;
+
                 cport->id = desc->cport.id;
                 cport->bundle = desc->cport.bundle;
                 cport->protocol = desc->cport.protocol_id;
