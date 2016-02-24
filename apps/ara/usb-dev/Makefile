@@ -39,6 +39,10 @@ STACKSIZE = 2048
 ASRCS =
 MAINSRC = usb.c
 
+ifeq ($(CONFIG_USB_DUMP),y)
+MAINSRC += dwc_otg_pcd_debug.c
+endif
+
 CONFIG_ARA_USB_PROGNAME ?= usb$(EXEEXT)
 PROGNAME = $(CONFIG_ARA_USB_PROGNAME)
 

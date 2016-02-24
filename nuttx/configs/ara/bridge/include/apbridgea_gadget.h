@@ -58,6 +58,7 @@ enum ep_mapping {
 };
 
 struct apbridge_dev_s *get_apbridge_dev(void);
+struct usbdev_ep_s *get_apbridge_ep(struct apbridge_dev_s *priv, int epnum);
 
 int rx_transfer(struct apbridge_dev_s *dev, unsigned cportid,
                 const void *payload, size_t size);

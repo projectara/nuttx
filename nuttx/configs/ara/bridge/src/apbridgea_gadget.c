@@ -397,6 +397,13 @@ static inline struct apbridge_dev_s *ep_to_apbridge(struct usbdev_ep_s *ep)
     return (struct apbridge_dev_s *)ep->priv;
 }
 
+struct usbdev_ep_s *get_apbridge_ep(struct apbridge_dev_s *priv, int epnum)
+{
+    if (epnum >= APBRIDGE_MAX_ENDPOINTS)
+        return NULL;
+    return priv->ep[epnum];
+}
+
 static unsigned int ep_to_cportid(struct usbdev_ep_s *ep)
 {
     struct apbridge_dev_s *priv;
