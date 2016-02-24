@@ -65,6 +65,7 @@ struct dma_channel {
     void *chan;
     void *req;
     unsigned int cportid;
+    uint32_t saved_tx_water_mark;
 };
 
 struct unipro_xfer_descriptor {
@@ -245,14 +246,14 @@ static int unipro_dma_tx_callback(struct device *dev, void *chan,
             retval = device_atabl_connect_cport_to_req(unipro_dma.atabl_dev,
                              desc->cport->cportid, desc_chan->req);
             if (retval != OK) {
-                lldbg("Error: Failed to connect cport to REQn\n");
+                lldbg("unipro: Failed to connect cport to REQn\n");
             }
         }
         retval = device_atabl_activate_req(unipro_dma.atabl_dev,
                                            desc_chan->req);
 
         if (retval) {
-            lldbg("Error: Failed to activate cport %d on REQn\n",
+            lldbg("unipro: Failed to activate cport %d on REQn\n",
                   desc->cport->cportid);
             return retval;
         } else {
@@ -266,7 +267,6 @@ static int unipro_dma_tx_callback(struct device *dev, void *chan,
 
             unipro_dma_tx_set_eom_flag(desc->cport);
 
-            list_del(&desc->list);
             device_dma_op_free(unipro_dma.dev, op);
 
             if (desc->callback != NULL) {
@@ -282,6 +282,69 @@ static int unipro_dma_tx_callback(struct device *dev, void *chan,
         } else {
             desc->channel = NULL;
         }
+
+        sem_post(&worker.tx_fifo_lock);
+    }
+
+    if (tsb_get_rev_id() == tsb_rev_es2) {
+        return retval;
+    }
+
+    /*
+     * The following only valid on es3 or later chips.
+     */
+    if (event & DEVICE_DMA_CALLBACK_EVENT_ERROR) {
+        struct dma_channel *desc_chan = desc->channel;
+
+        if (device_atabl_req_is_activated(unipro_dma.atabl_dev,
+                                          desc_chan->req)) {
+            unsigned int cportid = desc_chan->cportid;
+
+            /*
+             * save the current water mark setting and write 0 to it based
+             * on Toshiba's document.
+             */
+            desc_chan->saved_tx_water_mark =
+                    unipro_read(REG_TX_BUFFER_SPACE_OFFSET_REG(cportid));
+            unipro_write(REG_TX_BUFFER_SPACE_OFFSET_REG(cportid), 0);
+
+            return DEVICE_DMA_ERROR_DMA_FAILED;
+        } else {
+            return OK;
+        }
+    }
+
+    if (event & DEVICE_DMA_CALLBACK_EVENT_RECOVERED) {
+        struct dma_channel *desc_chan = desc->channel;
+        uint32_t count;
+
+        for (count = 0; count < 100; count++) {
+            if (device_atabl_req_is_activated(unipro_dma.atabl_dev,
+                                              desc_chan->req) == 0) {
+                break;
+            }
+        }
+
+        /*
+         * restore the saved water mark setting based on Toshiba's document.
+         */
+        unipro_write(REG_TX_BUFFER_SPACE_OFFSET_REG(desc_chan->cportid),
+                     desc_chan->saved_tx_water_mark);
+
+        device_atabl_transfer_completed(unipro_dma.atabl_dev,
+                                        desc_chan->req);
+
+        return OK;
+    }
+
+    if (event & DEVICE_DMA_CALLBACK_EVENT_DEQUEUED) {
+        device_dma_op_free(unipro_dma.dev, op);
+
+        if (desc->callback != NULL) {
+            desc->callback(0, desc->data, desc->priv);
+        }
+
+        unipro_xfer_dequeue_descriptor(desc);
 
         sem_post(&worker.tx_fifo_lock);
     }
@@ -322,11 +385,14 @@ static int unipro_dma_xfer(struct unipro_xfer_descriptor *desc,
     dma_op->callback_events = DEVICE_DMA_CALLBACK_EVENT_COMPLETE;
     if (tsb_get_rev_id() != tsb_rev_es2) {
        dma_op->callback_events |=  DEVICE_DMA_CALLBACK_EVENT_START;
+       dma_op->callback_events |=  DEVICE_DMA_CALLBACK_EVENT_ERROR;
+       dma_op->callback_events |=  DEVICE_DMA_CALLBACK_EVENT_RECOVERED;
+       dma_op->callback_events |=  DEVICE_DMA_CALLBACK_EVENT_DEQUEUED;
     }
     dma_op->sg_count = 1;
     dma_op->sg[0].len = xfer_len;
 
-    DBG_UNIPRO("xfer: chan=%u, len=%zu\n", channel->id, xfer_len);
+    DBG_UNIPRO("xfer: chan=%u, len=%u\n", channel->cportid, xfer_len);
 
     cport_buf = desc->cport->tx_buf;
     xfer_buf = (void*) desc->data;
@@ -470,7 +536,7 @@ int unipro_tx_init(void)
 
     unipro_dma.dev = device_open(DEVICE_TYPE_DMA_HW, 0);
     if (!unipro_dma.dev) {
-        lldbg("Failed to open DMA driver.\n");
+        lldbg("unipro: Failed to open DMA driver.\n");
         return -ENODEV;
     }
 
@@ -497,7 +563,7 @@ int unipro_tx_init(void)
          */
         unipro_dma.atabl_dev = device_open(DEVICE_TYPE_ATABL_HW, 0);
         if (!unipro_dma.atabl_dev) {
-            lldbg("Failed to open ATABL driver.\n");
+            lldbg("unipro: Failed to open ATABL driver.\n");
 
             device_close(unipro_dma.dev);
             return -ENODEV;
@@ -569,7 +635,7 @@ int unipro_tx_init(void)
 
     retval = pthread_create(&worker.thread, NULL, unipro_tx_worker, NULL);
     if (retval) {
-        lldbg("Failed to create worker thread: %s.\n", strerror(errno));
+        lldbg("unipro: Failed to create worker thread: %s.\n", strerror(errno));
         goto error_worker_create;
     }
 

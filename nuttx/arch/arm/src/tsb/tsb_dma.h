@@ -57,6 +57,8 @@ extern int gdmac_chan_alloc(struct device *dev,
 extern int gdmac_chan_free(struct device *dev, struct tsb_dma_chan *tsb_chan);
 extern int gdmac_start_op(struct device *dev, struct tsb_dma_chan *tsb_chan,
         struct device_dma_op *op, enum device_dma_error *error);
+extern int gdmac_recover_from_op_error(struct device *dev,
+        struct tsb_dma_chan *tsb_chan);
 extern int gdmac_chan_check_op_params(struct device *dev,
         struct tsb_dma_chan *tsb_chan, struct device_dma_op *op);
 

@@ -75,11 +75,23 @@
 #define DEVICE_DMA_INC_AUTO                 BIT(0)
 #define DEVICE_DMA_INC_NOAUTO               BIT(1)
 
-/* Event that the callback should be called for */
+/* Events that the callback should be called
+ * DEVICE_DMA_CALLBACK_EVENT_START     - A callback event before GDMAC start
+ *                                       transfer
+ * DEVICE_DMA_CALLBACK_EVENT_COMPLETE  - A callback event after gdmac
+ *                                       completed transfer without error
+ * DEVICE_DMA_CALLBACK_EVENT_DEQUEUED  - A callback event after an op is
+ *                                       removed from the channel queue.
+ * DEVICE_DMA_CALLBACK_EVENT_ERROR     - A callback event when gdmac error
+ *                                       occured during data transfer.
+ * DEVICE_DMA_CALLBACK_EVENT_RECOVERED - A callback event after a channel
+ *                                       recovery routine is executed.
+ */
 #define DEVICE_DMA_CALLBACK_EVENT_START     BIT(0)
 #define DEVICE_DMA_CALLBACK_EVENT_COMPLETE  BIT(1)
 #define DEVICE_DMA_CALLBACK_EVENT_DEQUEUED  BIT(2)
 #define DEVICE_DMA_CALLBACK_EVENT_ERROR     BIT(3)
+#define DEVICE_DMA_CALLBACK_EVENT_RECOVERED BIT(4)
 
 /* Alignments for the source and destination address */
 #define DEVICE_DMA_ALIGNMENT_8              BIT(0)

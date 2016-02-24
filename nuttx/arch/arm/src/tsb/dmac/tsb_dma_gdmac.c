@@ -345,6 +345,11 @@ struct __attribute__((__packed__)) pl330_end_code {
     uint8_t pad1[DMA_END_SIZE];
 };
 
+struct __attribute__((__packed__)) pl330_flushp_code {
+    GDMAC_INSTR_DMAFLUSHP(flush_peripheral);
+    uint8_t pad1[DMA_END_SIZE];
+};
+
 struct mem_to_mem_chan {
     uint32_t burst_size;
     uint32_t burst_len;
@@ -365,6 +370,7 @@ struct mem_to_unipro_chan {
     uint32_t align_mask;
     uint32_t ccr_base_value;
     uint32_t perihperal_id;
+    struct pl330_flushp_code *flush_code;
     /* Channel program. */
     struct mem2unipro_pl330_code pl330_code[0];
 };
@@ -403,12 +409,15 @@ typedef int (*gdmac_transfer)(struct device *dev, struct tsb_dma_chan *chan,
 
 typedef void (*gdmac_release_channel)(struct tsb_dma_chan *chan);
 
+typedef void (*gdmac_error_handler)(struct tsb_dma_chan *chan);
+
 struct gdmac_chan {
     struct tsb_dma_chan tsb_chan;
     struct device *gdmac_dev;
     unsigned int end_of_tx_event;
     gdmac_transfer do_dma_transfer;
     gdmac_release_channel release_channel;
+    gdmac_error_handler error_handler;
 
     uint32_t burst_size;
     uint32_t burst_len;
@@ -492,6 +501,11 @@ static const uint8_t gdmac_mem2unipro_program[] = {
         DMASTPB(0),
         DMAWMB,
         DMAFLUSHP(0),
+    };
+
+static const uint8_t gdmac_mem2unipro_flushp[] = {
+        DMAFLUSHP(0),
+        DMAEND,
     };
 #endif
 
@@ -597,7 +611,7 @@ static inline uint32_t gsmac_bit_to_pos(uint32_t value)
     uint32_t index = 0;
 
     if (value == 0) {
-        lldbg("Error: value shouldn't be %x\n", value);
+        lldbg("gdmac: value shouldn't be %x\n", value);
         return 0;
     }
 
@@ -652,11 +666,89 @@ static inline void dma_execute_instruction(uint8_t* insn)
 
 static bool inline dma_start_thread(uint8_t thread_id, uint8_t* program_addr)
 {
+    irqstate_t flags;
     uint8_t go_instr[] = { DMAGO(thread_id, ns, program_addr) };
+    struct tsb_dma_gdmac_dbg_regs *dbg_regs;
+    uint32_t count = 0;
 
+    dbg_regs =
+        (struct tsb_dma_gdmac_dbg_regs *)GDMAC_DBG_REGS_ADDRESS;
+
+    flags = irqsave();
     dma_execute_instruction(&go_instr[0]);
 
-    return true;
+    while (((getreg32(&dbg_regs->dbg_status) & 0x01) != 0) &&
+           (count++ < 1000)) {
+    }
+
+    irqrestore(flags);
+
+    return (count < 1000) ? true : false;
+}
+
+static bool gdmac_kill_manager_thread(void)
+{
+    struct tsb_dma_gdmac_dbg_regs *dbg_regs =
+            (struct tsb_dma_gdmac_dbg_regs*) GDMAC_DBG_REGS_ADDRESS;
+    uint32_t value;
+    uint32_t count = 0;
+
+    value = (DMAKILL << 16);
+    putreg32(value, &dbg_regs->dbg_inst_0);
+
+    value = 0;
+    putreg32(value, &dbg_regs->dbg_inst_1);
+
+    /* Get going */
+    putreg32(0, &dbg_regs->dbg_cmd);
+
+    while (((getreg32(&dbg_regs->dbg_status) & 0x01) != 0) &&
+           (count++ < 1000)) {
+    }
+
+    return (count < 1000) ? true : false;
+}
+
+static bool gdmac_kill_channel_thread(uint32_t chan)
+{
+    struct tsb_dma_gdmac_dbg_regs *dbg_regs =
+            (struct tsb_dma_gdmac_dbg_regs*) GDMAC_DBG_REGS_ADDRESS;
+    uint32_t value;
+    uint32_t count = 0;
+
+    value = (DMAKILL << 16) | chan << 8 | 0x1;
+    putreg32(value, &dbg_regs->dbg_inst_0);
+
+    value = 0;
+    putreg32(value, &dbg_regs->dbg_inst_1);
+
+    /* Get going */
+    putreg32(0, &dbg_regs->dbg_cmd);
+
+    while (((getreg32(&dbg_regs->dbg_status) & 0x01) != 0) &&
+           (count++ < 1000)) {
+    }
+
+    return (count < 1000) ? true : false;
+}
+
+static void gdmac_wait_for_channel_completed(struct tsb_dma_chan *tsb_chan)
+{
+    struct tsb_dma_gdmac_channel_status_regs *channel_regs;
+    uint32_t loop_count;
+    uint32_t csr;
+
+    channel_regs =
+        (struct tsb_dma_gdmac_channel_status_regs*)GDMAC_CHANNEL_REGS_ADDRESS;
+
+    for (loop_count = 0; loop_count < 1000; loop_count++) {
+        csr = getreg32(&channel_regs[tsb_chan->chan_id].csr);
+        if ((csr & 0x07) == 0) {
+            break;
+        }
+    }
+
+    return;
 }
 
 int gdmac_irq_handler(int irq, void *context)
@@ -668,7 +760,7 @@ int gdmac_irq_handler(int irq, void *context)
     (void) context;
 
     if (event_id == GDMAC_INVALID_EVENT) {
-        lldbg("Error: invalid irq %d\n", irq);
+        lldbg("gdmac: invalid irq %d\n", irq);
         return OK;
     }
 
@@ -681,7 +773,7 @@ int gdmac_irq_handler(int irq, void *context)
         tsb_dma_callback(gdmac_chan->gdmac_dev, &gdmac_chan->tsb_chan,
                 event_entry->event);
     } else {
-        lldbg("received invalid DMA interrupt(%d)\n", irq);
+        lldbg("gdmac: received invalid DMA interrupt(%d)\n", irq);
     }
 
     return OK;
@@ -711,7 +803,7 @@ static int gdmac_mem2mem_transfer(struct device *dev,
     int retval = OK;
 
     if (op->sg_count > GDMAC_MAX_DESC) {
-        lldbg("Error: too many descriptors.");
+        lldbg("gdmac: too many descriptors.");
         return -EINVAL;
     }
 
@@ -892,7 +984,7 @@ int tsb_gdmac_allocal_mem2Mem_chan(struct device *dev,
             DEVICE_DMA_CALLBACK_EVENT_COMPLETE, &gdmac_chan->end_of_tx_event);
     if (retval != OK) {
         bufram_free(gdmac_chan);
-        lldbg("Unable to allocate GDMAC event(s).\n");
+        lldbg("gdmac: Unable to allocate GDMAC event(s).\n");
         return retval;
     }
 
@@ -956,7 +1048,7 @@ int tsb_gdmac_allocal_mem2Mem_chan(struct device *dev,
     retval = irq_attach(GDMAC_EVENT_TO_IRQN(gdmac_chan->end_of_tx_event),
             gdmac_irq_handler);
     if (retval != OK) {
-        lldbg("Failed to attach interrupt %d.\n",
+        lldbg("gdmac: Failed to attach interrupt %d.\n",
                 GDMAC_EVENT_TO_IRQN(gdmac_chan->end_of_tx_event));
         return -EIO;
     } else {
@@ -970,6 +1062,7 @@ int tsb_gdmac_allocal_mem2Mem_chan(struct device *dev,
     /* Set the transfer and transfer done handlers */
     gdmac_chan->do_dma_transfer = gdmac_mem2mem_transfer;
     gdmac_chan->release_channel = gdmac_mem2mem_release_channel;
+    gdmac_chan->error_handler = NULL;
     gdmac_chan->gdmac_dev = dev;
 
     *tsb_chan = &gdmac_chan->tsb_chan;
@@ -978,6 +1071,23 @@ int tsb_gdmac_allocal_mem2Mem_chan(struct device *dev,
 }
 
 #ifdef INCLUDE_MEM2UNIPRO_SUPPORT
+void gdmac_mem2unipro_error_handler(struct tsb_dma_chan *tsb_chan)
+{
+    struct gdmac_chan *gdmac_chan =
+            containerof(tsb_chan, struct gdmac_chan, tsb_chan);
+    struct mem_to_unipro_chan *mem2unipro_chan = &gdmac_chan->mem2unipro_chan;
+    bool retval;
+
+    retval = dma_start_thread(tsb_chan->chan_id,
+                              (uint8_t *)mem2unipro_chan->flush_code);
+
+    if (retval == false) {
+        lldbg("gdmac: failed to start recovery channel program.\n");
+    }
+
+    return;
+}
+
 void gdmac_mem2unipro_release_channel(struct tsb_dma_chan *tsb_chan)
 {
     struct gdmac_chan *gdmac_chan =
@@ -1007,7 +1117,7 @@ static int gdmac_mem2unipro_transfer(struct device *dev,
     int retval = OK;
 
     if (op->sg_count > GDMAC_MAX_DESC) {
-        lldbg("Error: too many descriptors.");
+        lldbg("gdmac: too many descriptors.");
         return -EINVAL;
     }
 
@@ -1110,10 +1220,11 @@ int tsb_gdmac_allocal_mem2unipro_chan(struct device *dev,
     uint32_t burst_size;
     uint32_t burst_len;
     uint32_t ccr_transfer_size;
+    uint8_t  *flush_code;
 
     gdmac_chan = bufram_alloc(sizeof(struct gdmac_chan) +
             GDMAC_MAX_DESC * sizeof(struct mem2unipro_pl330_code) +
-            sizeof(struct pl330_end_code));
+            sizeof(struct pl330_end_code) + sizeof(struct pl330_flushp_code));
     if (gdmac_chan == NULL) {
         return -ENOMEM;
     }
@@ -1123,7 +1234,7 @@ int tsb_gdmac_allocal_mem2unipro_chan(struct device *dev,
             DEVICE_DMA_CALLBACK_EVENT_COMPLETE, &gdmac_chan->end_of_tx_event);
     if (retval != OK) {
         bufram_free(gdmac_chan);
-        lldbg("Unable to allocate GDMAC event(s).\n");
+        lldbg("gdmac: Unable to allocate GDMAC event(s).\n");
         return retval;
     }
 
@@ -1143,6 +1254,10 @@ int tsb_gdmac_allocal_mem2unipro_chan(struct device *dev,
     }
     memcpy(&pl330_code[desc_index],
            &gdmac_pl330_end_code[0], sizeof(gdmac_pl330_end_code));
+    flush_code = (uint8_t *)&pl330_code[desc_index];
+    flush_code += sizeof(gdmac_pl330_end_code);
+    memcpy(flush_code,
+           &gdmac_mem2unipro_flushp[0], sizeof(gdmac_mem2unipro_flushp));
 
     burst_size = mem2unipro_chan->burst_size = params->transfer_size;
     burst_len = mem2unipro_chan->burst_len =
@@ -1174,6 +1289,10 @@ int tsb_gdmac_allocal_mem2unipro_chan(struct device *dev,
         pl330_code++;
     }
 
+    mem2unipro_chan->flush_code = (struct pl330_flushp_code *)flush_code;
+    mem2unipro_chan->flush_code->flush_peripheral.value =
+            mem2unipro_chan->perihperal_id << 3;
+
     /* Set end of transfer event. */
     ((struct pl330_end_code *)pl330_code)->end_of_tx_event.value |=
         (gdmac_chan->end_of_tx_event << 3);
@@ -1182,7 +1301,7 @@ int tsb_gdmac_allocal_mem2unipro_chan(struct device *dev,
     retval = irq_attach(GDMAC_EVENT_TO_IRQN(gdmac_chan->end_of_tx_event),
             gdmac_irq_handler);
     if (retval != OK) {
-        lldbg("Failed to attach interrupt %d.\n",
+        lldbg("gdmac: Failed to attach interrupt %d.\n",
                 GDMAC_EVENT_TO_IRQN(gdmac_chan->end_of_tx_event));
         return -EIO;
     } else {
@@ -1196,6 +1315,7 @@ int tsb_gdmac_allocal_mem2unipro_chan(struct device *dev,
     /* Set the transfer and transfer done handlers */
     gdmac_chan->do_dma_transfer = gdmac_mem2unipro_transfer;
     gdmac_chan->release_channel = gdmac_mem2unipro_release_channel;
+    gdmac_chan->error_handler = gdmac_mem2unipro_error_handler;
     gdmac_chan->gdmac_dev = dev;
 
     *tsb_chan = &gdmac_chan->tsb_chan;
@@ -1232,7 +1352,7 @@ static int gdmac_mem2io_transfer(struct device *dev,
                           { .instr = {DMAWFP(interface_id, B)} };
 
      if (op->sg_count != 1) {
-         lldbg("Error: sg_count != 1.");
+         lldbg("gdmac: sg_count != 1.");
          return -EINVAL;
      }
 
@@ -1261,7 +1381,7 @@ static int gdmac_mem2io_transfer(struct device *dev,
           */
          store_len = (uint32_t)sg->dst_addr & align_mask;
          if (store_len != 0) {
-             lldbg("Error: Destination address must be aligned.\n");
+             lldbg("gdmac: Destination address must be aligned.\n");
              return -EINVAL;
          }
 
@@ -1449,7 +1569,7 @@ int tsb_gdmac_allocal_mem2io_chan(struct device *dev,
             DEVICE_DMA_CALLBACK_EVENT_COMPLETE, &gdmac_chan->end_of_tx_event);
     if (retval != OK) {
         bufram_free(gdmac_chan);
-        lldbg("Unable to allocate GDMAC event(s).\n");
+        lldbg("gdmac: Unable to allocate GDMAC event(s).\n");
         return retval;
     }
 
@@ -1517,7 +1637,7 @@ int tsb_gdmac_allocal_mem2io_chan(struct device *dev,
     retval = irq_attach(GDMAC_EVENT_TO_IRQN(gdmac_chan->end_of_tx_event),
             gdmac_irq_handler);
     if (retval != OK) {
-        lldbg("Failed to attach interrupt %d.\n",
+        lldbg("gdmac: Failed to attach interrupt %d.\n",
                 GDMAC_EVENT_TO_IRQN(gdmac_chan->end_of_tx_event));
         return -EIO;
     } else {
@@ -1531,6 +1651,7 @@ int tsb_gdmac_allocal_mem2io_chan(struct device *dev,
     /* Set the transfer and transfer done handlers */
     gdmac_chan->do_dma_transfer = gdmac_mem2io_transfer;
     gdmac_chan->release_channel = gdmac_mem2io_release_channel;
+    gdmac-chan->error_handler = NULL;
     gdmac_chan->gdmac_dev = dev;
 
     *tsb_chan = &gdmac_chan->tsb_chan;
@@ -1591,7 +1712,7 @@ static int gdmac_io2mem_transfer(struct device *dev,
           */
          load_len = (uint32_t)sg->src_addr & align_mask;
          if (load_len != 0) {
-             lldbg("Error: Destination address must be aligned.\n");
+             lldbg("gdmac: Destination address must be aligned.\n");
              return -EINVAL;
          }
 
@@ -1763,7 +1884,7 @@ int tsb_gdmac_allocal_io2mem_chan(struct device *dev,
             DEVICE_DMA_CALLBACK_EVENT_COMPLETE, &gdmac_chan->end_of_tx_event);
     if (retval != OK) {
         bufram_free(gdmac_chan);
-        lldbg("Unable to allocate GDMAC event(s).\n");
+        lldbg("gdmac: Unable to allocate GDMAC event(s).\n");
         return retval;
     }
 
@@ -1825,7 +1946,7 @@ int tsb_gdmac_allocal_io2mem_chan(struct device *dev,
     retval = irq_attach(GDMAC_EVENT_TO_IRQN(gdmac_chan->end_of_tx_event),
             gdmac_irq_handler);
     if (retval != OK) {
-        lldbg("Failed to attach interrupt %d.\n",
+        lldbg("gdmac: Failed to attach interrupt %d.\n",
                 GDMAC_EVENT_TO_IRQN(gdmac_chan->end_of_tx_event));
         return -EIO;
     } else {
@@ -1839,6 +1960,7 @@ int tsb_gdmac_allocal_io2mem_chan(struct device *dev,
     /* Set the transfer and transfer done handlers */
     gdmac_chan->do_dma_transfer = gdmac_io2mem_transfer;
     gdmac_chan->release_channel = gdmac_io2mem_release_channel;
+    gdmac-chan->error_handler = NULL;
     gdmac_chan->gdmac_dev = dev;
 
     *tsb_chan = &gdmac_chan->tsb_chan;
@@ -1911,7 +2033,7 @@ int gdmac_chan_alloc(struct device *dev, struct device_dma_params *params,
     }
 #endif
 
-    lldbg("user requested not supported DMA channel.\n");
+    lldbg("gdmac: user requested not supported DMA channel.\n");
 
     return retval;
 }
@@ -1932,40 +2054,70 @@ int gdmac_start_op(struct device *dev, struct tsb_dma_chan *tsb_chan,
     return retval;
 }
 
+int gdmac_recover_from_op_error(struct device *dev,
+                                struct tsb_dma_chan *tsb_chan)
+{
+    int retval = OK;
+    struct gdmac_chan *gdmac_chan =
+            containerof(tsb_chan, struct gdmac_chan, tsb_chan);
+
+    if (tsb_dma_callback(gdmac_chan->gdmac_dev,
+                         &gdmac_chan->tsb_chan,
+                         DEVICE_DMA_CALLBACK_EVENT_ERROR) &&
+            (gdmac_chan->error_handler != NULL)) {
+        gdmac_chan->error_handler(&gdmac_chan->tsb_chan);
+
+        tsb_dma_callback(gdmac_chan->gdmac_dev,
+                         &gdmac_chan->tsb_chan,
+                         DEVICE_DMA_CALLBACK_EVENT_RECOVERED);
+
+        gdmac_wait_for_channel_completed(&gdmac_chan->tsb_chan);
+
+        tsb_dma_callback(gdmac_chan->gdmac_dev,
+                         &gdmac_chan->tsb_chan,
+                         DEVICE_DMA_CALLBACK_EVENT_DEQUEUED);
+    }
+
+    return retval;
+}
+
 int gdmac_irq_abort_handler(int irq, void *context)
 {
     struct tsb_dma_gdmac_control_regs *control_regs =
             (struct tsb_dma_gdmac_control_regs*) GDMAC_CONTROL_REGS_ADDRESS;
-    struct tsb_dma_gdmac_dbg_regs *dbg_regs =
-            (struct tsb_dma_gdmac_dbg_regs*) GDMAC_DBG_REGS_ADDRESS;
+    uint32_t fsrd = getreg32(&control_regs->fsrd);
     uint32_t fsrc = getreg32(&control_regs->fsrc);
     uint32_t chan, index;
-    uint32_t value;
 
-    if (fsrc == 0) {
-        lldbg("Unexpected FSRC value %x\n", fsrc);
-        return OK;
-    }
+    if (fsrd & 0x1) {
+        lldbg("gdmac: Unexpected FTRD value %x\n", getreg32(&control_regs->ftrd));
+        gdmac_kill_manager_thread();
+        DEBUGASSERT(0);
+    } else {
+        if (fsrc == 0) {
+            lldbg("gdmac: Unexpected FSRC value %x\n", fsrc);
+            return OK;
+        }
 
-    chan = gsmac_bit_to_pos(fsrc) & 0x07;
+        chan = gsmac_bit_to_pos(fsrc) & 0x07;
+        if (gdmac_kill_channel_thread(chan) != true) {
+            lldbg("gdmac: failed to kill channel %d\n", chan);
+            DEBUGASSERT(0);
+            return OK;
+        }
 
-    value = (DMAKILL << 16) | chan << 8 | 0x01;
-    putreg32(value, &dbg_regs->dbg_inst_0);
-    putreg32(0, &dbg_regs->dbg_inst_1);
+        for (index = 0; index < GDMAC_NUMBER_OF_EVENTS; index++) {
+            struct gdmac_chan *gdmac_chan;
 
-    /* Get going */
-    putreg32(0, &dbg_regs->dbg_cmd);
+            gdmac_chan = gdmac_event_to_chan_map[index].dma_chan;
 
-    for (index = 0; index < GDMAC_NUMBER_OF_EVENTS; index++) {
-        struct gdmac_chan *gdmac_chan;
+            if ((gdmac_chan != NULL) &&
+                (gdmac_chan->tsb_chan.chan_id == chan)) {
 
-        gdmac_chan = gdmac_event_to_chan_map[index].dma_chan;
-        if ((gdmac_chan != NULL) &&
-            (gdmac_chan->tsb_chan.chan_id == chan)) {
-            tsb_dma_callback(gdmac_chan->gdmac_dev, &gdmac_chan->tsb_chan,
-                    DEVICE_DMA_ERROR_DMA_FAILED);
-
-            break;
+                gdmac_recover_from_op_error(gdmac_chan->gdmac_dev,
+                                            &gdmac_chan->tsb_chan);
+                break;
+            }
         }
     }
 
@@ -2001,7 +2153,7 @@ int gdmac_init_controller(struct device *dev)
 
     retval = tsb_gdmac_extract_resources(dev, &gdmac_resource_info);
     if (retval != OK) {
-        lldbg("Failed to retrieve GDMAC resource.\n");
+        lldbg("gdmac: Failed to retrieve GDMAC resource.\n");
         return retval;
     }
 
@@ -2011,7 +2163,7 @@ int gdmac_init_controller(struct device *dev)
 
     retval = irq_attach(TSB_IRQ_GDMACABORT, gdmac_irq_abort_handler);
     if (retval != OK) {
-        lldbg("Failed to attach GDMAC Abort interrupt.\n");
+        lldbg("gdmac: Failed to attach GDMAC Abort interrupt.\n");
         return retval;
     } else {
         up_enable_irq(TSB_IRQ_GDMACABORT);
@@ -2030,7 +2182,7 @@ void gdmac_deinit_controller(struct device *dev)
 
     retval = irq_attach(TSB_IRQ_GDMACABORT, NULL);
     if (retval != OK) {
-        lldbg("Failed to detach GDMAC Abort interrupt.\n");
+        lldbg("gdmac: Failed to detach GDMAC Abort interrupt.\n");
     }
 
     return;
