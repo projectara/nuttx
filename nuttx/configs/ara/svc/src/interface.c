@@ -52,7 +52,7 @@
 #define POWER_OFF_TIME_IN_US                        (500000)
 #define WAKEOUT_PULSE_DURATION_IN_US                (100000)
 #define MODULE_PORT_WAKEOUT_PULSE_DURATION_IN_US    (500000)
-#define LINKUP_WD_DELAY_IN_MS                       (120)
+#define LINKUP_WD_DELAY_IN_MS                       (100)
 #define LINKUP_WD_DELAY        ((LINKUP_WD_DELAY_IN_MS * CLOCKS_PER_SEC) / 1000)
 
 static struct interface **interfaces;
