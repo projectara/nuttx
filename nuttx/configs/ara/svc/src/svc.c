@@ -51,18 +51,18 @@
 #include "vreg.h"
 #include "gb_svc.h"
 
-#define SVCD_PRIORITY      (40)
-#define SVCD_STACK_SIZE    (2048)
-#define SVC_PROTOCOL_CPORT_ID    (4)
-#define MODULE_CONTROL_CPORT_ID  (0)
-#define MODULE_FIRMWARE_CPORT_ID (1)
+#define SVCD_PRIORITY               (40)
+#define SVCD_STACK_SIZE             (2048)
+#define SVC_PROTOCOL_CPORT_ID       (4)
+#define MODULE_CONTROL_CPORT_ID     (0)
+#define MODULE_FIRMWARE_CPORT_ID    (1)
 
 static struct svc the_svc;
 struct svc *svc = &the_svc;
 
-#define SVC_EVENT_TYPE_READY_AP       0x1
-#define SVC_EVENT_TYPE_READY_OTHER    0x2
-#define SVC_EVENT_TYPE_HOT_UNPLUG     0x3
+#define SVC_EVENT_TYPE_READY_AP     0x1
+#define SVC_EVENT_TYPE_READY_OTHER  0x2
+#define SVC_EVENT_TYPE_HOT_UNPLUG   0x3
 
 struct svc_event_ready_other {
     uint8_t port;
