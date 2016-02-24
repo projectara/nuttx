@@ -223,8 +223,10 @@ int tsb_switch_event_notify(struct tsb_switch *sw,
     return 0;
 }
 
-static void switch_port_irq_reenable_hack(struct tsb_switch *sw, uint8_t port) {
+static void switch_port_irq_reenable(struct tsb_switch *sw, uint8_t port)
+{
     uint32_t attr_value;
+
     /*
      * We got interrupted, but something inside the switch
      * disabled the interrupt source. This happens if e.g. a port
@@ -311,10 +313,18 @@ int switch_irq_handler(struct tsb_switch *sw) {
             irq_fifo_rx(sw, 5);
         }
 
-        // Handle Unipro interrupts: read the Unipro ports interrupt status
+        /*
+         * Handle Unipro interrupts: read the interrupt status on
+         * enabled Unipro ports.
+         * SW-1527: Read the interrupt status on a disabled port returns
+         * the error 0x23 (DISABLED_TARGET) and generates a new IRQ (!)
+         */
         for (i = 0; i < SWITCH_PORT_MAX; i++) {
             if (sw->rdata->rflags & TSB_SWITCH_RFLAG_REENABLE_PORT_IRQ_HACK) {
-                switch_port_irq_reenable_hack(sw, (uint8_t)i);
+                if (interface_get_power_state(interface_get_by_portid(i)) ==
+                    ARA_IFACE_PWR_UP) {
+                    switch_port_irq_reenable(sw, (uint8_t)i);
+                }
             }
 
             // If Unipro interrupt pending, read the interrupt status attribute
