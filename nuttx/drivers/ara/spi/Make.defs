@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2016 Google, Inc.
+# Copyright (c) 2016 Google Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,5 +26,10 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-source drivers/ara/audio/Kconfig
-source drivers/ara/spi/Kconfig
+ifeq ($(CONFIG_DRIVERS_ARA_SPI_BOARD),y)
+CSRCS += spi_board.c
+endif
+
+DEPPATH += --dep-path ara/spi
+VPATH += :ara/spi
+CFLAGS += ${shell $(INCDIR) $(INCDIROPT) "$(CC)" $(TOPDIR)$(DELIM)drivers$(DELIM)ara$(DELIM)spi}
