@@ -425,6 +425,9 @@
 /* Register offset definition */
 #define REG_OFFSET 0x02
 
+/* UniPro register time definition */
+#define UNIPRO_REGISTER_TIME 500000 /* 500ms */
+
 /* SDIO buffer structure */
 struct sdio_buffer
 {
@@ -469,6 +472,8 @@ struct tsb_sdio_info {
     sem_t write_sem;
     /** Read semaphore */
     sem_t read_sem;
+    /** Card detect semaphore */
+    sem_t card_detect_sem;
     /** DMA handler */
     void *dma;
     /** SDIO IRQ number */
@@ -489,6 +494,8 @@ struct tsb_sdio_info {
     pthread_t write_data_thread;
     /** Read data thread handle */
     pthread_t read_data_thread;
+    /** Card detect thread handle */
+    pthread_t card_detect_thread;
     /** Write complete callback function*/
     sdio_transfer_callback write_callback;
     /** Read complete callback function*/
@@ -1524,6 +1531,36 @@ static void *sdio_read_data_thread(void *data)
 }
 
 /**
+ * @brief SDIO card detect thread
+ *
+ * This is the thread for card detection.
+ *
+ * @return None.
+ */
+static void *sdio_card_detect_thread(void *data)
+{
+    struct tsb_sdio_info *info = data;
+
+    while (1) {
+        sem_wait(&info->card_detect_sem);
+        if (info->thread_abort) {
+            /* Exit sdio_card_detect_thread loop */
+            break;
+        }
+
+        if (info->pre_card_event != info->card_event) {
+            if (info->callback) {
+                usleep(UNIPRO_REGISTER_TIME);
+                info->callback(info->card_event);
+            }
+            info->pre_card_event = info->card_event;
+        }
+    }
+
+    return NULL;
+}
+
+/**
  * @brief Get capabilities of SD host controller
  *
  * This function is to get capabilities of SD host controller. The
@@ -2025,6 +2062,12 @@ static int tsb_sdio_dev_open(struct device *dev)
         goto err_write_pthread_join;
     }
 
+    ret = pthread_create(&info->card_detect_thread, NULL,
+                         sdio_card_detect_thread, info);
+    if (ret) {
+        goto err_read_pthread_join;
+    }
+
     usleep(REGISTER_INTERVAL);
     value = gpio_get_value(info->cd_pin_number);
 
@@ -2042,20 +2085,19 @@ static int tsb_sdio_dev_open(struct device *dev)
         sdio_reg_bit_set(info->sdio_reg_base, CLOCK_SWRST_TIMEOUT_CONTROL,
                          SD_CLOCK_ENABLE);
         info->card_event = HC_SDIO_CARD_INSERTED;
-        if (info->pre_card_event != info->card_event) {
-            if (info->callback) {
-                info->callback(info->card_event);
-            }
-            info->pre_card_event = info->card_event;
-        }
+        sem_post(&info->card_detect_sem);
     }
 
     irqrestore(flags);
 
     return 0;
 
-err_write_pthread_join:
+err_read_pthread_join:
     info->thread_abort = true;
+    sem_post(&info->read_sem);
+    /* Wait for read_data_thread completed */
+    pthread_join(info->read_data_thread, NULL);
+err_write_pthread_join:
     sem_post(&info->write_sem);
     /* Wait for write_data_thread completed */
     pthread_join(info->write_data_thread, NULL);
@@ -2112,8 +2154,11 @@ static void tsb_sdio_dev_close(struct device *dev)
                      SD_CLOCK_ENABLE);
 
     info->thread_abort = true;
+    sem_post(&info->card_detect_sem);
     sem_post(&info->read_sem);
     sem_post(&info->write_sem);
+    /* Wait for card_detect_thread completed */
+    pthread_join(info->card_detect_thread, NULL);
     /* Wait for read_data_thread completed */
     pthread_join(info->read_data_thread, NULL);
     /* Wait for write_data_thread completed */
@@ -2195,11 +2240,16 @@ static int tsb_sdio_dev_probe(struct device *dev)
         goto err_destroy_write_sem;
     }
 
+    ret = sem_init(&info->card_detect_sem, 0, 0);
+    if (ret) {
+        goto err_destroy_read_sem;
+    }
+
     flags = irqsave();
 
     ret = irq_attach(info->sdio_irq, sdio_irq_handler);
     if (ret) {
-        goto err_destroy_read_sem;
+        goto err_destroy_card_detect_sem;
     }
 
     up_enable_irq(info->sdio_irq);
@@ -2212,8 +2262,10 @@ static int tsb_sdio_dev_probe(struct device *dev)
 
     return 0;
 
-err_destroy_read_sem:
+err_destroy_card_detect_sem:
     irqrestore(flags);
+    sem_destroy(&info->card_detect_sem);
+err_destroy_read_sem:
     sem_destroy(&info->read_sem);
 err_destroy_write_sem:
     sem_destroy(&info->write_sem);
@@ -2257,6 +2309,7 @@ static void tsb_sdio_dev_remove(struct device *dev)
     flags = irqsave();
     up_disable_irq(info->sdio_irq);
     irq_detach(info->sdio_irq);
+    sem_destroy(&info->card_detect_sem);
     sem_destroy(&info->read_sem);
     sem_destroy(&info->write_sem);
     sem_destroy(&info->cmd_sem);
