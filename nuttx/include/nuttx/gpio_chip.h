@@ -31,6 +31,7 @@
 
 #include <stdint.h>
 #include <nuttx/irq.h>
+#include <nuttx/gpio.h>
 
 struct gpio_ops_s
 {
