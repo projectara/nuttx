@@ -65,6 +65,7 @@ ifeq ($(CONFIG_GPIO),y)
 
 CSRCS += gpio_chip.c
 CSRCS += debounce.c
+CSRCS += fixed_gpio.c
 
 ifeq ($(CONFIG_GPIO_TCA64XX),y)
     CSRCS += tca64xx.c
