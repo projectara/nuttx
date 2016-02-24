@@ -100,8 +100,10 @@ static int interface_config(struct interface *iface)
     }
 
     /* Init power state */
-    iface->power_state = rc_pwr ? ARA_IFACE_PWR_ERROR : ARA_IFACE_PWR_DOWN;
-    iface->refclk_state = rc_clk ? ARA_IFACE_PWR_ERROR : ARA_IFACE_PWR_DOWN;
+    atomic_init(&iface->power_state,
+                rc_pwr ? ARA_IFACE_PWR_ERROR : ARA_IFACE_PWR_DOWN);
+    atomic_init(&iface->refclk_state,
+                rc_clk ? ARA_IFACE_PWR_ERROR : ARA_IFACE_PWR_DOWN);
 
     return rc_pwr ? rc_pwr : rc_clk ? rc_clk : 0;
 }
@@ -128,9 +130,9 @@ static int interface_refclk_enable(struct interface *iface)
     if (rc) {
         dbg_error("Failed to enable the reference clock for interface %s: %d\n",
                   iface->name, rc);
-        iface->refclk_state = ARA_IFACE_PWR_ERROR;
+        atomic_init(&iface->refclk_state, ARA_IFACE_PWR_ERROR);
     } else {
-        iface->refclk_state = ARA_IFACE_PWR_UP;
+        atomic_init(&iface->refclk_state, ARA_IFACE_PWR_UP);
     }
 
     return rc;
@@ -159,9 +161,9 @@ static int interface_refclk_disable(struct interface *iface)
     if (rc) {
         dbg_error("Failed to disable the reference clock for interface %s: %d\n",
                   iface->name, rc);
-        iface->refclk_state = ARA_IFACE_PWR_ERROR;
+        atomic_init(&iface->refclk_state, ARA_IFACE_PWR_ERROR);
     } else {
-        iface->refclk_state = ARA_IFACE_PWR_DOWN;
+        atomic_init(&iface->refclk_state, ARA_IFACE_PWR_DOWN);
     }
 
     return rc;
@@ -189,9 +191,9 @@ static int interface_power_enable(struct interface *iface)
     rc = vreg_get(iface->vsys_vreg);
     if (rc) {
         dbg_error("Failed to enable interface %s: %d\n", iface->name, rc);
-        iface->power_state = ARA_IFACE_PWR_ERROR;
+        atomic_init(&iface->power_state, ARA_IFACE_PWR_ERROR);
     } else {
-        iface->power_state = ARA_IFACE_PWR_UP;
+        atomic_init(&iface->power_state, ARA_IFACE_PWR_UP);
     }
 
     return rc;
@@ -220,9 +222,9 @@ static int interface_power_disable(struct interface *iface)
     rc = vreg_put(iface->vsys_vreg);
     if (rc) {
         dbg_error("Failed to disable interface %s: %d\n", iface->name, rc);
-        iface->power_state = ARA_IFACE_PWR_ERROR;
+        atomic_init(&iface->power_state, ARA_IFACE_PWR_ERROR);
     } else {
-        iface->power_state = ARA_IFACE_PWR_DOWN;
+        atomic_init(&iface->power_state, ARA_IFACE_PWR_DOWN);
     }
 
     return rc;
@@ -288,14 +290,13 @@ int interface_generate_wakeout(struct interface *iface, bool assert,
  * @param iface Interface whose power state to retrieve
  * @return iface's power state, or ARA_IFACE_PWR_ERROR if iface == NULL.
  */
-static enum ara_iface_pwr_state
-interface_get_power_state(struct interface *iface)
+enum ara_iface_pwr_state interface_get_power_state(struct interface *iface)
 {
     if (!iface) {
         return ARA_IFACE_PWR_ERROR;
     }
 
-    return iface->power_state;
+    return atomic_get(&iface->power_state);
 }
 
 /**
@@ -310,7 +311,7 @@ interface_get_refclk_state(struct interface *iface)
         return ARA_IFACE_PWR_ERROR;
     }
 
-    return iface->refclk_state;
+    return atomic_get(&iface->refclk_state);
 }
 
 
