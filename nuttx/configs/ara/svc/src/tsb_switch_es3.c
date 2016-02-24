@@ -343,6 +343,7 @@ done:
 
 struct __attribute__ ((__packed__)) srpt_read_status_report {
     unsigned char raw[SRPT_REPORT_SIZE];
+    size_t rx_entry_size;// number of entries in the RX buffers
     size_t rx_fifo_size; // number of bytes available in the rx buffer
     size_t tx_fifo_size; // bytes available for enqueue in the tx buffer
 };
@@ -395,27 +396,31 @@ static int es3_read_status(struct tsb_switch *sw,
 
     /* Fill in the report and parse useful fields */
     if (status) {
-        size_t fifo_max_size;
+        size_t fifo_max_size, rx_entry_max_size;
 
         memcpy(status, rpt, SRPT_REPORT_SIZE);
 
         switch (cport) {
         case SWITCH_FIFO_NCP:
             fifo_max_size = SWITCH_CPORT_NCP_FIFO_SIZE;
+            rx_entry_max_size = SWITCH_CPORT_NCP_ENTRY_SIZE;
             break;
         case SWITCH_FIFO_DATA4:
         case SWITCH_FIFO_DATA5:
         default:
             fifo_max_size = SWITCH_CPORT_DATA_FIFO_SIZE;
+            rx_entry_max_size = SWITCH_CPORT_DATA_ENTRY_SIZE;
             break;
         }
 
         status->tx_fifo_size = rpt->raw[7] * 8;
         status->rx_fifo_size = fifo_max_size -
                                ((rpt->raw[10] << 8) | rpt->raw[11]);
+        status->rx_entry_size = rx_entry_max_size -
+                                ((rpt->raw[8] << 8) | rpt->raw[9]);
 
-        dbg_insane("SRPT: TX%u, RX%u\n", status->tx_fifo_size,
-                   status->rx_fifo_size);
+        dbg_insane("SRPT: TX%u, RX%u(%u)\n", status->tx_fifo_size,
+                   status->rx_fifo_size, status->rx_entry_size);
     }
 
     return 0;
@@ -583,7 +588,7 @@ static int es3_irq_fifo_rx(struct tsb_switch *sw, unsigned int cportid) {
     struct sw_es3_priv *priv = sw->priv;
     struct es3_cport *cport;
     struct srpt_read_status_report rpt;
-    size_t len;
+    size_t len, rx_entries;
     int rc;
 
     switch (cportid) {
@@ -599,35 +604,41 @@ static int es3_irq_fifo_rx(struct tsb_switch *sw, unsigned int cportid) {
 
     pthread_mutex_lock(&cport->lock);
 
-    rc = es3_read_status(sw, cportid, &rpt);
-    if (rc) {
-        rc = -EIO;
-        goto fill_done;
-    }
-    /* Get the raw RX len */
-    len = rpt.rx_fifo_size;
+    do {
+        rc = es3_read_status(sw, cportid, &rpt);
+        if (rc) {
+            rc = -EIO;
+            break;
+        }
+        /* Get the raw RX len */
+        len = rpt.rx_fifo_size;
+        rx_entries = rpt.rx_entry_size;
 
-    /*
-     * Drain the fifo data.
-     * Pass the raw RX len and get the actual session data length back.
-     */
-    rc = es3_session_read(sw, cportid, cport->rxbuf, &len);
-    if (rc) {
-        dbg_error("%s: read failed: %d\n", __func__, rc);
-        rc = -EIO;
-        goto fill_done;
-    }
-    dbg_verbose("RX Data (%u):\n", len);
-    dbg_print_buf(ARADBG_VERBOSE, cport->rxbuf, len);
+        if (!len && !rx_entries) {
+            break;
+        }
 
-fill_done:
+        /*
+         * Drain the fifo data.
+         * Pass the raw RX len and get the actual session data length back.
+         */
+        rc = es3_session_read(sw, cportid, cport->rxbuf, &len);
+        if (rc) {
+            dbg_error("%s: read failed: %d\n", __func__, rc);
+            rc = -EIO;
+            break;
+        }
+        dbg_verbose("RX Data[%u] (%u):\n", rx_entries, len);
+        dbg_print_buf(ARADBG_VERBOSE, cport->rxbuf, len);
+
+        /* Give it to unipro. */
+        unipro_if_rx(cportid, cport->rxbuf, len);
+    } while (rx_entries);
+
     pthread_mutex_unlock(&cport->lock);
     if (rc) {
         return rc;
     }
-
-    /* Give it to unipro. */
-    unipro_if_rx(cportid, cport->rxbuf, len);
 
     return 0;
 }

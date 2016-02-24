@@ -277,6 +277,8 @@
 #define SWITCH_CPORT_DATA_MAX_PAYLOAD   (272)
 #define SWITCH_CPORT_NCP_FIFO_SIZE      (256)
 #define SWITCH_CPORT_DATA_FIFO_SIZE     (576)
+#define SWITCH_CPORT_NCP_ENTRY_SIZE     (32)
+#define SWITCH_CPORT_DATA_ENTRY_SIZE    (576)
 
 /* Switch FIFOs for SVC communication over SPI */
 #define SWITCH_FIFO_NCP   (0x03)
