@@ -87,6 +87,7 @@ SUBDIRS += svc
 SUBDIRS += svc_power
 SUBDIRS += time
 SUBDIRS += unipro
+SUBDIRS += usb-dev
 SUBDIRS += usb-host
 SUBDIRS += version
 
@@ -117,6 +118,7 @@ CNTXTDIRS += svc
 CNTXTDIRS += svc_power
 CNTXTDIRS += time
 CNTXTDIRS += unipro
+CNTXTDIRS += usb-dev
 CNTXTDIRS += usb-host
 CNTXTDIRS += version
 endif
