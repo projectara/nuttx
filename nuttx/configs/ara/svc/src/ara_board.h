@@ -64,6 +64,8 @@ enum hwid {
 #define U4550_GPIO_CHIP_NR      16
 #define U4570_GPIO_CHIP_START   (U4550_GPIO_CHIP_START + U4550_GPIO_CHIP_NR)
 #define U4570_GPIO_CHIP_NR      16
+#define FIXED_0_GPIO_CHIP_START (U4570_GPIO_CHIP_START + U4570_GPIO_CHIP_NR)
+#define FIXED_0_GPIO_CHIP_NR    1
 
 /* GPIO Chip pin number macro */
 #define STM32_GPIO_PIN(p)       (STM32_GPIO_CHIP_BASE + (p))
@@ -73,6 +75,7 @@ enum hwid {
 #define U701_GPIO_PIN(p)        (U701_GPIO_CHIP_START + (p))
 #define U4550_GPIO_PIN(p)       (U4550_GPIO_CHIP_START + (p))
 #define U4570_GPIO_PIN(p)       (U4570_GPIO_CHIP_START + (p))
+#define FIXED_0_GPIO_PIN        FIXED_0_GPIO_CHIP_START /* only one "GPIO" */
 
 /* ES2-specific repurposing of attributes */
 #define ES2_MBOX_ACK_ATTR       T_TSTSRCINTERMESSAGEGAP

@@ -209,10 +209,9 @@
  *
  * Only APB1 is in use, and WD8B is reserved for time sync.
  *
- ** ----------------------------------------------------------------------
+ * ----------------------------------------------------------------------
  *
- * HOWEVER, we still rely on APB2 during the QA and factory line
- * testing process, so DO NOT DELETE IT.
+ * HOWEVER, we might eventually support APB2, so leave it here.
  *
  * ----------------------------------------------------------------------
  */
@@ -232,8 +231,9 @@ static struct vreg_data apb2_refclk_vreg_data[] = {
 DECLARE_MODULE_PORT_INTERFACE(apb1, "apb1", apb1_vsys_vreg_data,
                               apb1_refclk_vreg_data, 3, WD_8A_DET,
                               ARA_IFACE_WD_ACTIVE_HIGH, false, 0);
-DECLARE_MODULE_PORT_INTERFACE(apb2, "apb2", apb2_vsys_vreg_data,
-                              apb2_refclk_vreg_data, 1, WD_8B_DET,
+DECLARE_MODULE_PORT_INTERFACE(apb2, "apb2_warning_deactivated",
+                              apb2_vsys_vreg_data, apb2_refclk_vreg_data, 1,
+                              FIXED_0_GPIO_PIN,
                               ARA_IFACE_WD_ACTIVE_HIGH, false, 0);
 
 /*
