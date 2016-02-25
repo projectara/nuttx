@@ -26,38 +26,52 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _GPIO_CHIP_H_
-#define _GPIO_CHIP_H_
+#ifndef _NUTTX_GPIO_FIXED_H_
+#define _NUTTX_GPIO_FIXED_H_
 
 #include <stdint.h>
-#include <nuttx/irq.h>
-#include <nuttx/gpio.h>
 
-struct gpio_ops_s
-{
-    int (*get_direction)(void *driver_data, uint8_t which);
-    void (*direction_in)(void *driver_data, uint8_t which);
-    void (*direction_out)(void *driver_data, uint8_t which, uint8_t value);
-    int (*activate)(void *driver_data, uint8_t which);
-    uint8_t (*get_value)(void *driver_data, uint8_t which);
-    void (*set_value)(void *driver_data, uint8_t which, uint8_t value);
-    int (*deactivate)(void *driver_data, uint8_t which);
-    uint8_t (*line_count)(void *driver_data);
-    int (*irqattach)(void *driver_data, uint8_t which, xcpt_t isr,
-                     uint8_t base);
-    int (*set_triggering)(void *driver_data, uint8_t which, int trigger);
-    int (*mask_irq)(void *driver_data, uint8_t which);
-    int (*unmask_irq)(void *driver_data, uint8_t which);
-    int (*clear_interrupt)(void *driver_data, uint8_t which);
-    int (*set_pull)(void *driver_data, uint8_t which,
-                    enum gpio_pull_type pull_type);
-    enum gpio_pull_type (*get_pull)(void *driver_data, uint8_t which);
-    int (*set_debounce)(void *driver_data, uint8_t which, uint16_t delay);
-};
+/**
+ * @file nuttx/gpio_fixed.h
+ * @brief "Fixed" GPIO chip support
+ *
+ * This API can be used to create GPIO chips which simulate a single
+ * GPIO with a fixed, or constant, value.
+ *
+ * These can be useful when a GPIO handle is needed by some API, but a
+ * physical GPIO isn't available in hardware.
+ */
 
-int register_gpio_chip(struct gpio_ops_s *ops, int base, void *driver_data);
-int unregister_gpio_chip(void *driver_data);
+/**
+ * @brief Register a GPIO chip with a fixed value
+ *
+ * The GPIO chip will have exactly one GPIO line, which will report a
+ * constant value when read. No actual GPIOs are used -- the resulting
+ * GPIO chip is a software simulation only.
+ *
+ * Unsupported:
+ *   - output (writes and direction-out requests are ignored,
+ *     and errors may be logged)
+ *   - pull-ups and pull-downs
+ *   - level-triggered IRQs with the same value as the one the
+ *     gpio is fixed to
+ *
+ * @param value Value the single GPIO in the GPIO chip should
+ *              return when read.
+ * @param base  Base address of GPIO chip
+ * @return      Zero on success, negative on error
+ * @see fixed_gpio_deinit()
+ */
+int fixed_gpio_init(uint8_t value, int base);
+
+/**
+ * @brief Deregister a fixed GPIO chip
+ *
+ * Remove a previously-registered fixed GPIO chip.
+ *
+ * @param base Base GPIO number of fixed GPIO chip to deregister
+ * @see fixed_gpio_init()
+ */
+void fixed_gpio_deinit(int base);
 
 #endif
-
-
