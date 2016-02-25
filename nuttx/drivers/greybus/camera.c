@@ -327,6 +327,7 @@ static uint8_t gb_camera_capture(struct gb_operation *operation)
 {
     struct gb_camera_capture_request *request;
     struct capture_info *capt_req;
+    size_t request_size;
     int ret;
 
     lldbg("gb_camera_capture() + \n");
@@ -335,12 +336,18 @@ static uint8_t gb_camera_capture(struct gb_operation *operation)
         return GB_OP_INVALID;
     }
 
-    if (gb_operation_get_request_payload_size(operation) < sizeof(*request)) {
+    request_size = gb_operation_get_request_payload_size(operation);
+    if (request_size < sizeof(*request)) {
         gb_error("dropping short message\n");
         return GB_OP_INVALID;
     }
 
     request = gb_operation_get_request_payload(operation);
+
+    if (request->padding != 0) {
+        gb_error("invalid padding value\n");
+        return GB_OP_INVALID;
+    }
 
     capt_req = malloc(sizeof(*capt_req));
     if(!capt_req) {
@@ -349,13 +356,14 @@ static uint8_t gb_camera_capture(struct gb_operation *operation)
 
     capt_req->request_id = le32_to_cpu(request->request_id);
     capt_req->streams = request->streams;
-    capt_req->padding = request->padding;
     capt_req->num_frames = le32_to_cpu(request->num_frames);
+    capt_req->settings = request->settings;
+    capt_req->settings_size = request_size - sizeof(*request);
 
     lldbg("    request_id = %d \n", capt_req->request_id);
     lldbg("    streams = %d \n", capt_req->streams);
-    lldbg("    padding = %d \n", capt_req->padding);
     lldbg("    num_frames = %d \n", capt_req->num_frames);
+    lldbg("    settings_size = %u\n", capt_req->settings_size);
 
     ret = device_camera_capture(info->dev, capt_req);
     if (ret) {
