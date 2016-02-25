@@ -1936,87 +1936,6 @@ int switch_connection_destroy(struct tsb_switch *sw,
 }
 
 /*
- * Determine if a link power mode ought to be taken to slow or slow
- * auto mode before reconfiguration in an HS gear, series B.
- */
-static bool switch_ok_for_series_change(enum unipro_pwr_mode mode) {
-    switch (mode) {
-    case UNIPRO_FAST_MODE:  /* fall through */
-    case UNIPRO_FASTAUTO_MODE:
-        return false;
-    case UNIPRO_SLOW_MODE:
-    case UNIPRO_SLOWAUTO_MODE:
-        return true;
-    default:
-        dbg_warn("%s(): unexpected/invalid power mode: 0x%x\n",
-                 __func__, mode);
-        return false;
-    }
-}
-
-/*
- * Prepare a link for a change to its M-PHY RATE series.
- */
-static int switch_prep_for_series_change(struct tsb_switch *sw,
-                                         uint8_t port_id,
-                                         const struct unipro_link_cfg *cfg,
-                                         uint32_t *pwr_mode) {
-    int rc;
-    const struct unipro_pwr_cfg *tx = &cfg->upro_tx_cfg;
-    const struct unipro_pwr_cfg *rx = &cfg->upro_rx_cfg;
-    bool tx_unchanged = (tx->upro_mode == UNIPRO_MODE_UNCHANGED);
-    bool rx_unchanged = (rx->upro_mode == UNIPRO_MODE_UNCHANGED);
-    uint32_t cur_pwr_mode;
-    enum unipro_pwr_mode cur_tx_pwr_mode;
-    enum unipro_pwr_mode cur_rx_pwr_mode;
-
-    /* Sanity checks. */
-    if (cfg->upro_hs_ser == UNIPRO_HS_SERIES_UNCHANGED) {
-        dbg_error("%s(): invoked when no HS series change is required\n",
-                  __func__);
-        return -EINVAL;
-    }
-    if (!(tx->upro_mode == UNIPRO_FAST_MODE ||
-          tx->upro_mode == UNIPRO_FASTAUTO_MODE ||
-          rx->upro_mode == UNIPRO_FAST_MODE ||
-          rx->upro_mode == UNIPRO_FASTAUTO_MODE)) {
-        dbg_error("%s(): invoked for non-fast RX/TX power modes %d/%d\n",
-                  __func__, tx->upro_mode, rx->upro_mode);
-        return -EINVAL;
-    }
-
-    /* Grab the current power mode. */
-    rc = switch_dme_get(sw, port_id, PA_PWRMODE, UNIPRO_SELINDEX_NULL,
-                        &cur_pwr_mode);
-    if (rc) {
-        dbg_error("%s(): can't check current power mode state\n", __func__);
-        return rc;
-    }
-
-    /* It's illegal to leave power modes unchanged when setting
-     * PA_HSSeries, but we can set the mode to the same value. Use
-     * that to respect the caller's intent to leave a mode
-     * unchanged. */
-    *pwr_mode = (tx_unchanged ? cur_pwr_mode & 0x0f : tx->upro_mode)
-              | (rx_unchanged ? cur_pwr_mode & 0xf0 : rx->upro_mode << 4);
-
-    /* If both directions of the current mode are ready for the
-     * change; there's nothing more to do.
-     *
-     * Otherwise, the "least common denominator" preparation is to
-     * bring the entire link to PWM-G1, with one active lane in each
-     * direction. */
-    cur_tx_pwr_mode = (enum unipro_pwr_mode)(cur_pwr_mode & 0xf);
-    cur_rx_pwr_mode = (enum unipro_pwr_mode)((cur_pwr_mode >> 4) & 0xf);
-    if (switch_ok_for_series_change(cur_tx_pwr_mode) &&
-        switch_ok_for_series_change(cur_rx_pwr_mode)) {
-        return 0;
-    } else {
-        return switch_configure_link_pwm(sw, port_id, 1, 1, 0);
-    }
-}
-
-/*
  * Sanity check an HS or PWM configuration.
  */
 static int switch_active_cfg_is_sane(const struct unipro_pwr_cfg *pcfg,
@@ -2481,10 +2400,6 @@ int switch_configure_link(struct tsb_switch *sw,
      *
      * Handle that properly before setting PA_HSSERIES. */
     if (cfg->upro_hs_ser != UNIPRO_HS_SERIES_UNCHANGED) {
-        rc = switch_prep_for_series_change(sw, port_id, cfg, &pwr_mode);
-        if (rc) {
-            goto out;
-        }
         rc = switch_dme_set(sw, port_id, PA_HSSERIES, UNIPRO_SELINDEX_NULL,
                             cfg->upro_hs_ser);
         if (rc) {
