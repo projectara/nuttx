@@ -37,6 +37,7 @@
 #include <nuttx/unipro/unipro.h>
 #include <nuttx/greybus/greybus.h>
 #include <nuttx/ring_buf.h>
+#include <nuttx/bufram.h>
 #include <arch/byteorder.h>
 
 #include <arch/board/audio_apbridgea.h>
@@ -50,6 +51,8 @@
 
 #define APBRIDGEA_AUDIO_I2S_CHANNELS            2 /* Don't ever change */
 #define APBRIDGEA_AUDIO_RING_ENTRIES_TX         8
+
+#define APBRIDGEA_AUDIO_UNIPRO_ALIGNMENT        8 /* Should come from unipro */
 
 #define APBRIDGEA_AUDIO_FLAG_SET_CONFIG         BIT(0)
 #define APBRIDGEA_AUDIO_FLAG_TX_DATA_SIZE_SET   BIT(1)
@@ -68,6 +71,8 @@ struct apbridgea_audio_info {
     struct device       *i2s_dev;
     struct ring_buf     *rx_rb;
     unsigned int        tx_data_size;
+    size_t              tx_rb_headroom;
+    size_t              tx_rb_total_size;
     struct list_head    cport_list;
     struct list_head    list;
 };
@@ -82,6 +87,12 @@ struct apbridgea_audio_demux_entry {
     void                        *buf;
     uint16_t                    len;
     struct list_head            list;
+};
+
+/* Must be multiple of APBRIDGEA_AUDIO_UNIPRO_ALIGNMENT bytes in size */
+struct apbridga_audio_rb_hdr {
+    uint32_t    not_acked;
+    uint8_t     pad[APBRIDGEA_AUDIO_UNIPRO_ALIGNMENT - sizeof(uint32_t)];
 };
 
 static atomic_t request_id;
@@ -439,21 +450,26 @@ static int apbridgea_audio_send_data_completion(int status, const void *buf,
                                                 void *priv)
 {
     struct ring_buf *rb = priv;
-    unsigned int *countp;
+    struct apbridga_audio_rb_hdr *rb_hdr;
+    irqstate_t flags;
 
-    countp = ring_buf_get_buf(rb);
+    rb_hdr = ring_buf_get_buf(rb);
 
-    if (*countp == 0) { /* Should never happen */
-        lowsyslog("%s: count of zero\n", __func__);
+    if (!rb_hdr->not_acked) { /* Should never happen */
+        lowsyslog("%s: not_acked of zero\n", __func__);
         return 0;
     }
 
-    (*countp)--;
+    flags = irqsave();
 
-    if (*countp == 0) {
+    rb_hdr->not_acked--;
+
+    if (!rb_hdr->not_acked) {
         ring_buf_reset(rb);
         ring_buf_pass(rb);
     }
+
+    irqrestore(flags);
 
     return 0;
 }
@@ -462,30 +478,30 @@ static void apbridgea_audio_send_data(struct apbridgea_audio_info *info,
                                       struct ring_buf *rb)
 {
     struct apbridgea_audio_cport *cport;
+    struct apbridga_audio_rb_hdr *rb_hdr;
     struct gb_operation_hdr *gb_hdr;
     struct list_head *iter;
-    unsigned int *countp;
     int ret;
 
-    countp = ring_buf_get_buf(rb);
+    rb_hdr = ring_buf_get_buf(rb);
     gb_hdr = ring_buf_get_priv(rb);
 
     gb_hdr->id = cpu_to_le16(atomic_inc(&request_id));
     if (gb_hdr->id == 0) /* ID 0 is for request with no response */
         gb_hdr->id = cpu_to_le16(atomic_inc(&request_id));
 
-    *countp = 0;
+    rb_hdr->not_acked = 0;
 
     list_foreach(&info->cport_list, iter) {
         cport = list_entry(iter, struct apbridgea_audio_cport, list);
 
-        (*countp)++;
+        rb_hdr->not_acked++;
 
         ret = unipro_send_async(cport->data_cportid, gb_hdr,
                                 le16_to_cpu(gb_hdr->size),
                                 apbridgea_audio_send_data_completion, rb);
         if (ret) {
-            (*countp)--;
+            rb_hdr->not_acked--;
         }
     }
 }
@@ -509,41 +525,49 @@ static void apbridgea_audio_i2s_rx_cb(struct ring_buf *rb,
 
 /*
  * Each ring buffer entry will point to a memory area containing:
- * - A count field used by apbridgea_audio_send_data_completion() to
- *   tell when the last UniPro send has completed and the rb entry
- *   can be passed back to the i2s driver;
+ * - A ring buffer data header containing:
+ *   - a 4-byte count field used by apbridgea_audio_send_data_completion()
+ *     to tell when the last UniPro send has completed and the rb entry
+ *     can be passed back to the i2s driver;
+ *   - four bytes of padding so the following Greybus message is 8-byte
+ *     aligned when the ring buffer data header is 8-byte aligned.
  * - The Greybus Audio Data Message containing:
  *   - the Greybus header;
  *   - the Greybus Audio Data Message header;
  *   - the audio data.
+ * - Whatever extra space there is from the allocation.
  *
  * The value returned by ring_buf_get_buf() points to this area.
  * The private area (ring_buf_get_priv()/ring_buf_set_priv()) is
  * used to point to the Greybus Audio Data Message.
+ *
+ * The data area will be allocated from BUFRAM to make it safe for the
+ * UniPro subsystem to DMA the Greybus message.  Another requirement for
+ * DMA is that the Greybus message be 8-byte aligned.
  */
 static int apbridgea_audio_rb_alloc(struct ring_buf *rb, void *arg)
 {
     struct apbridgea_audio_info *info = arg;
+    struct apbridga_audio_rb_hdr *rb_hdr;
     struct gb_operation_hdr *gb_hdr;
-    size_t headroom, total_size;
     void *buf;
 
-    headroom = sizeof(unsigned int) + sizeof(*gb_hdr) +
-               sizeof(struct gb_audio_send_data_request);
-    total_size = headroom + info->tx_data_size;
-
-    buf = malloc(total_size);
+    buf = bufram_page_alloc(bufram_size_to_page_count(info->tx_rb_total_size));
     if (!buf) {
         return -ENOMEM;
     }
 
-    memset(buf, 0, headroom);
+    if ((int)buf % APBRIDGEA_AUDIO_UNIPRO_ALIGNMENT) {
+        return -EIO;
+    }
 
-    gb_hdr = buf + sizeof(unsigned int);
-    gb_hdr->size = cpu_to_le16(total_size - sizeof(unsigned int));
+    memset(buf, 0, info->tx_rb_headroom);
+
+    gb_hdr = buf + sizeof(*rb_hdr);
+    gb_hdr->size = cpu_to_le16(info->tx_rb_total_size - sizeof(*rb_hdr));
     gb_hdr->type = GB_AUDIO_TYPE_SEND_DATA;
 
-    ring_buf_init(rb, buf, headroom, info->tx_data_size);
+    ring_buf_init(rb, buf, info->tx_rb_headroom, info->tx_data_size);
     ring_buf_set_priv(rb, gb_hdr);
 
     return 0;
@@ -551,7 +575,10 @@ static int apbridgea_audio_rb_alloc(struct ring_buf *rb, void *arg)
 
 static void apbridgea_audio_rb_free(struct ring_buf *rb, void *arg)
 {
-    free(ring_buf_get_buf(rb));
+    struct apbridgea_audio_info *info = arg;
+
+    bufram_page_free(ring_buf_get_buf(rb),
+                     bufram_size_to_page_count(info->tx_rb_total_size));
 }
 
 /* "Transmitting" means receiving from I2S and transmitting over UniPro */
@@ -569,6 +596,11 @@ static int apbridgea_audio_start_tx(struct apbridgea_audio_info *info,
         (info->flags & APBRIDGEA_AUDIO_FLAG_TX_STARTED)) {
         return -EPROTO;
     }
+
+    info->tx_rb_headroom = sizeof(struct apbridga_audio_rb_hdr) +
+                           sizeof(struct gb_operation_hdr) +
+                           sizeof(struct gb_audio_send_data_request);
+    info->tx_rb_total_size = info->tx_rb_headroom + info->tx_data_size;
 
     info->rx_rb = ring_buf_alloc_ring(APBRIDGEA_AUDIO_RING_ENTRIES_TX, 0, 0, 0,
                                       apbridgea_audio_rb_alloc,
@@ -598,6 +630,8 @@ err_shutdown_receiver:
 err_free_ring:
     ring_buf_free_ring(info->rx_rb, apbridgea_audio_rb_free, info);
     info->rx_rb = NULL;
+    info->tx_rb_headroom = 0;
+    info->tx_rb_total_size = 0;
 
     return ret;
 }
@@ -615,6 +649,8 @@ static int apbridgea_audio_stop_tx(struct apbridgea_audio_info *info)
 
     ring_buf_free_ring(info->rx_rb, apbridgea_audio_rb_free, info);
     info->rx_rb = NULL;
+    info->tx_rb_headroom = 0;
+    info->tx_rb_total_size = 0;
 
     return 0;
 }
@@ -744,6 +780,13 @@ int apbridgea_audio_init(void)
 {
     struct apbridgea_audio_info *info;
     int ret;
+
+    if (sizeof(struct apbridga_audio_rb_hdr) %
+        APBRIDGEA_AUDIO_UNIPRO_ALIGNMENT) {
+        lowsyslog("%s: apbridga_audio_rb_hdr wrong size: %u\n", __func__,
+                  sizeof(struct apbridga_audio_rb_hdr));
+        return -EIO;
+    }
 
     info = zalloc(sizeof(*info));
     if (!info) {
