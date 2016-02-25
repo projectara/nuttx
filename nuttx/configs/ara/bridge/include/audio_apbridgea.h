@@ -75,6 +75,9 @@
 #define AUDIO_APBRIDGEA_PCM_RATE_176400             BIT(11)
 #define AUDIO_APBRIDGEA_PCM_RATE_192000             BIT(12)
 
+#define AUDIO_APBRIDGEA_DIRECTION_TX                BIT(0)
+#define AUDIO_APBRIDGEA_DIRECTION_RX                BIT(1)
+
 struct audio_apbridgea_hdr {
     __u8    type;
     __le16  i2s_port;
@@ -90,11 +93,13 @@ struct audio_apbridgea_set_config_request {
 struct audio_apbridgea_register_cport_request {
     struct audio_apbridgea_hdr  hdr;
     __le16                      cport;
+    __u8                        direction;
 } __packed;
 
 struct audio_apbridgea_unregister_cport_request {
     struct audio_apbridgea_hdr  hdr;
     __le16                      cport;
+    __u8                        direction;
 } __packed;
 
 struct audio_apbridgea_set_tx_data_size_request {

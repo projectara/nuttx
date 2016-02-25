@@ -79,6 +79,7 @@ struct apbridgea_audio_info {
 
 struct apbridgea_audio_cport {
     uint16_t                    data_cportid;
+    uint8_t                     direction;
     struct apbridgea_audio_info *info;
     struct list_head            list;
 };
@@ -346,43 +347,44 @@ static int apbridgea_audio_register_cport(struct apbridgea_audio_info *info,
     irqstate_t flags;
     int ret;
 
+    req->direction &= (AUDIO_APBRIDGEA_DIRECTION_TX |
+                       AUDIO_APBRIDGEA_DIRECTION_RX);
+
+    if (!data_cportid || !req->direction) {
+        return -EINVAL;
+    }
+
     cport = apbridgea_audio_find_cport(info, data_cportid);
-    if (cport) {
-        return -EBUSY;
-    }
-
-    /* TODO: There can be multiple tx CPorts but only one rx CPort active. */
-
-    cport = malloc(sizeof(*cport));
     if (!cport) {
-        return -ENOMEM;
+        cport = malloc(sizeof(*cport));
+        if (!cport) {
+            return -ENOMEM;
+        }
+
+        cport->data_cportid = data_cportid;
+        cport->info = info;
+        list_init(&cport->list);
+
+        flags = irqsave();
+
+        ret = map_offloaded_cport(get_apbridge_dev(), data_cportid,
+                                  apbridgea_audio_from_unipro,
+                                  apbridgea_audio_from_usb);
+        if (ret) {
+            irqrestore(flags);
+            free(cport);
+            lowsyslog("%s: can't offload cport: %u\n", __func__, data_cportid);
+            return ret;
+        }
+
+        list_add(&info->cport_list, &cport->list);
+
+        irqrestore(flags);
     }
 
-    cport->data_cportid = data_cportid;
-    cport->info = info;
-    list_init(&cport->list);
-
-    flags = irqsave();
-
-    /* Make all incoming UniPro messages go to apbridgea_audio_rx_handler */
-    ret = map_offloaded_cport(get_apbridge_dev(), data_cportid,
-                              apbridgea_audio_from_unipro,
-                              apbridgea_audio_from_usb);
-    if (ret) {
-        goto err_free_cport;
-    }
-
-    list_add(&info->cport_list, &cport->list);
-
-    irqrestore(flags);
+    cport->direction |= req->direction;
 
     return 0;
-
-err_free_cport:
-    irqrestore(flags);
-    free(cport);
-
-    return ret;
 }
 
 static int apbridgea_audio_unregister_cport(struct apbridgea_audio_info *info,
@@ -394,29 +396,35 @@ static int apbridgea_audio_unregister_cport(struct apbridgea_audio_info *info,
     irqstate_t flags;
     int ret;
 
-    cport = apbridgea_audio_find_cport(info, data_cportid);
-    if (!cport) {
+    req->direction &= (AUDIO_APBRIDGEA_DIRECTION_TX |
+                       AUDIO_APBRIDGEA_DIRECTION_RX);
+
+    if (!data_cportid || !req->direction) {
         return -EINVAL;
     }
 
-    flags = irqsave();
+    cport = apbridgea_audio_find_cport(info, data_cportid);
+    if (cport) {
+        cport->direction &= ~req->direction;
 
-    ret = unmap_offloaded_cport(get_apbridge_dev(), data_cportid);
-    if (ret) {
-        goto err_irqrestore;
+        if (!cport->direction) {
+            flags = irqsave();
+
+            list_del(&cport->list);
+
+            ret = unmap_offloaded_cport(get_apbridge_dev(), data_cportid);
+            if (ret) {
+                lowsyslog("%s: can't unoffload cport: %u\n", __func__,
+                          data_cportid);
+            }
+
+            irqrestore(flags);
+
+            free(cport);
+        }
     }
 
-    list_del(&cport->list);
-
-    irqrestore(flags);
-
-    free(cport);
     return 0;
-
-err_irqrestore:
-    irqrestore(flags);
-
-    return ret;
 }
 
 static int apbridgea_audio_set_tx_data_size(struct apbridgea_audio_info *info,
@@ -494,13 +502,15 @@ static void apbridgea_audio_unipro_tx(struct apbridgea_audio_info *info,
     list_foreach(&info->cport_list, iter) {
         cport = list_entry(iter, struct apbridgea_audio_cport, list);
 
-        rb_hdr->not_acked++;
+        if (cport->direction & AUDIO_APBRIDGEA_DIRECTION_TX) {
+            rb_hdr->not_acked++;
 
-        ret = unipro_send_async(cport->data_cportid, gb_hdr,
-                                le16_to_cpu(gb_hdr->size),
-                                apbridgea_audio_unipro_tx_cb, rb);
-        if (ret) {
-            rb_hdr->not_acked--;
+            ret = unipro_send_async(cport->data_cportid, gb_hdr,
+                                    le16_to_cpu(gb_hdr->size),
+                                    apbridgea_audio_unipro_tx_cb, rb);
+            if (ret) {
+                rb_hdr->not_acked--;
+            }
         }
     }
 }
