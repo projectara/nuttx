@@ -32,10 +32,12 @@
 #include <nuttx/greybus/types.h>
 
 /* SPI Protocol Operation Types */
-#define GB_SPI_PROTOCOL_VERSION     0x01    /* Protocol Version */
-#define GB_SPI_TYPE_MASTER_CONFIG   0x02    /* Get config for SPI master */
-#define GB_SPI_TYPE_DEVICE_CONFIG   0x03    /* Get config for SPI device */
-#define GB_SPI_PROTOCOL_TRANSFER    0x04    /* Transfer */
+#define GB_SPI_PROTOCOL_VERSION             0x01    /* Protocol Version */
+#define GB_SPI_PROTOCOL_MODE                0x02    /* Mode */
+#define GB_SPI_PROTOCOL_FLAGS               0x03    /* Flags */
+#define GB_SPI_PROTOCOL_BITS_PER_WORD_MASK  0x04    /* Bits per word mask */
+#define GB_SPI_PROTOCOL_NUM_CHIPSELECT      0x05    /* Number of Chip-select */
+#define GB_SPI_PROTOCOL_TRANSFER            0x06    /* Transfer */
 
 /* SPI Protocol Mode Bit Masks */
 #define GB_SPI_MODE_CPHA        0x01    /* clock phase */
@@ -61,63 +63,47 @@ struct gb_spi_proto_version_response {
 } __packed;
 
 /**
- * SPI Protocol master configure response
+ * SPI Protocol Mode Response
  */
-struct gb_spi_master_config_response {
-    /** bit per word */
-    __le32  bpw_mask;
-    /** minimum Transfer speed in Hz */
-    __le32  min_speed_hz;
-    /** maximum Transfer speed in Hz */
-    __le32  max_speed_hz;
-    /** mode bit */
-    __le16  mode;
-    /** flag bit */
-    __le16  flags;
-    /** supported chip number */
-    __u8  num_chipselect;
+struct gb_spi_mode_response {
+    __le16  mode; /**< Greybus SPI Protocol Mode Bit Masks */
 } __packed;
 
 /**
- * SPI Protocol device configure request
+ * SPI Protocol Flags Response
  */
-struct gb_spi_device_config_request{
-    /** required chip number */
-    __u8    chip_select;
+struct gb_spi_flags_response {
+    __le16  flags; /**< Greybus SPI Protocol Flags Bit Masks */
 } __packed;
 
 /**
- * SPI Protocol device configure response
+ * SPI Protocol Bits Per Word Mask Response
  */
-struct gb_spi_device_config_response {
-    /** mode be set in device */
-    __le16  mode;
-    /** bit per word be set in device */
-    __u8    bpw;
-    /** max speed be set in device */
-    __le32  max_speed_hz;
-    /** SPI device type */
-	__u8	device_type;
-    /** chip name */
-    __u8    name[32];
+struct gb_spi_bpw_response {
+    __le32  bits_per_word_mask; /**< Bits per word mask of the SPI master */
 } __packed;
 
 /**
- * SPI transfer descriptor
+ * Number of Chip Selects Response
+ */
+struct gb_spi_chipselect_response {
+    __le16  num_chipselect; /**< Maximum number of chip select pins */
+} __packed;
+
+/**
+ * SPI Protocol gb_spi_transfer descriptor
  */
 struct gb_spi_transfer_desc {
-    /** speed for setting this an op */
+    /** Transfer speed in Hz */
     __le32  speed_hz;
-    /** length to read and/or write */
+    /** Size of data to transfer */
     __le32  len;
     /** Wait period after completion of transfer */
     __le16  delay_usecs;
     /** Toggle chip select pin after this transfer completes */
     __u8    cs_change;
-    /** Select bits per word for this transfer */
+    /** Select bits per word for this trnasfer */
     __u8    bits_per_word;
-    /** Bit Mask indicating Read (0x01) and/or Write (0x02) transfer type */
-    __u8    rdwr;
 } __packed;
 
 /**
