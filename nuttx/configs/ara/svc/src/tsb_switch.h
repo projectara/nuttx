@@ -111,6 +111,28 @@
 #define NCP_QOSATTRGETREQ           (0x52)
 #define NCP_QOSATTRGETCNF           (0x53)
 
+/* NCP commands return codes */
+#define NCP_RC_SUCCESS                      (0x00)
+#define NCP_RC_INVALID_ATTRIBUTE            (0x01)
+#define NCP_RC_INVALID_CPORTID              (0x01)
+#define NCP_RC_TIMEOUT                      (0x01)
+#define NCP_RC_INVALID_ATTRIBUTE_VALUE      (0x02)
+#define NCP_RC_INVALID_SOURCE_PORTID        (0x02)
+#define NCP_RC_READ_ONLY_ATTRIBUTE          (0x03)
+#define NCP_RC_WRITE_ONLY_ATTRIBUTE         (0x04)
+#define NCP_RC_BAD_INDEX                    (0x05)
+#define NCP_RC_LOCKED_ATTRIBUTE             (0x06)
+#define NCP_RC_BAD_TEST_FEATURE_INDEX       (0x07)
+#define NCP_RC_PEER_COMMUNICATION_FAILURE   (0x08)
+#define NCP_RC_BUSY                         (0x09)
+#define NCP_RC_DME_FAILURE                  (0x0A)
+#define NCP_RC_INVALID_PORTID               (0x20)
+#define NCP_RC_CPORT_DISABLE_FAILURE        (0x21)
+#define NCP_RC_INVALID_COMMAND_LENGTH       (0x22)
+#define NCP_RC_DISABLED_TARGET              (0x23)
+#define NCP_RC_TARGET_NO_RESPONSE           (0x24)
+#define NCP_RC_INVALID_PEER_ACCESS          (0x25)
+
 /* System registers, accessible via switch_sys_ctrl_set, switch_sys_ctrl_get */
 #define SC_SOFTRESET                (0x0000)
 #define SC_SOFTRESETRELEASE         (0x0100)
