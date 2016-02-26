@@ -446,8 +446,7 @@ static int apbridgea_audio_set_tx_data_size(struct apbridgea_audio_info *info,
     return 0;
 }
 
-static int apbridgea_audio_send_data_completion(int status, const void *buf,
-                                                void *priv)
+static int apbridgea_audio_unipro_tx_cb(int status, const void *buf, void *priv)
 {
     struct ring_buf *rb = priv;
     struct apbridga_audio_rb_hdr *rb_hdr;
@@ -474,7 +473,7 @@ static int apbridgea_audio_send_data_completion(int status, const void *buf,
     return 0;
 }
 
-static void apbridgea_audio_send_data(struct apbridgea_audio_info *info,
+static void apbridgea_audio_unipro_tx(struct apbridgea_audio_info *info,
                                       struct ring_buf *rb)
 {
     struct apbridgea_audio_cport *cport;
@@ -499,7 +498,7 @@ static void apbridgea_audio_send_data(struct apbridgea_audio_info *info,
 
         ret = unipro_send_async(cport->data_cportid, gb_hdr,
                                 le16_to_cpu(gb_hdr->size),
-                                apbridgea_audio_send_data_completion, rb);
+                                apbridgea_audio_unipro_tx_cb, rb);
         if (ret) {
             rb_hdr->not_acked--;
         }
@@ -513,7 +512,7 @@ static void apbridgea_audio_i2s_rx_cb(struct ring_buf *rb,
 
     if (event == DEVICE_I2S_EVENT_RX_COMPLETE) {
         if (info->flags & APBRIDGEA_AUDIO_FLAG_TX_STARTED) {
-            apbridgea_audio_send_data(info, rb);
+            apbridgea_audio_unipro_tx(info, rb);
             return;
         }
     } else if (event != DEVICE_I2S_EVENT_NONE) {
