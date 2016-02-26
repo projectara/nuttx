@@ -49,8 +49,8 @@
 #define GB_UART_VERSION_MAJOR   0
 #define GB_UART_VERSION_MINOR   1
 
-/* Reserved operations for rx data buffer. */
-#define MAX_RX_OPERATION        5
+/* Reserved buffer for rx data. */
+#define MAX_RX_BUF_NUMBER       5
 #define MAX_RX_BUF_SIZE         256
 
 /* The id of error in protocol operating. */
@@ -58,19 +58,17 @@
 #define GB_UART_EVENT_DEVICE_ERROR      2
 
 /**
- * The buffer in operation structure.
+ * The buffer node structure.
  */
-struct op_node {
+struct buf_node {
     /** queue entry */
     sq_entry_t          entry;
-    /** pointer to operation */
-    struct gb_operation *operation;
-    /** pointer to size of request in operation */
-    uint16_t            *data_size;
-    /** pointer to flags of request in operation */
-    uint8_t             *data_flags;
-    /** pointer to buffer of request in operation */
-    uint8_t             *buffer;
+    /** size of receiver data */
+    uint16_t            data_size;
+    /** flags of receiver data */
+    uint8_t             data_flags;
+    /** buffer of receiver data */
+    uint8_t             buffer[];
 };
 
 /**
@@ -93,17 +91,17 @@ struct gb_uart_info {
     /** status change thread handle */
     pthread_t           status_thread;
     /* data receiving */
-    /** available operation queue */
+    /** available buffer queue */
     sq_queue_t          free_queue;
-    /** received data operation queue */
+    /** received data buffer queue */
     sq_queue_t          data_queue;
-    /** operation node in receiving */
-    struct op_node      *rx_node;
-    /** buffer size in operation */
+    /** buffer node in receiving */
+    struct buf_node      *rx_node;
+    /** buffer size for recevier */
     int                 rx_buf_size;
-    /** amount of operations */
+    /** amount of buffer */
     int                 entries;
-    /** flag for requesting a free operation in callback */
+    /** flag for requesting a free buffer in callback */
     int                 require_node;
     /** semaphore for notifying data received */
     sem_t               rx_sem;
@@ -125,7 +123,7 @@ static struct gb_uart_info *info = NULL;
  * @param node The pointer to node.
  * @return None.
  */
-static void put_node_back(sq_queue_t *queue, struct op_node *node)
+static void put_node_back(sq_queue_t *queue, struct buf_node *node)
 {
     irqstate_t flags = irqsave();
 
@@ -140,9 +138,9 @@ static void put_node_back(sq_queue_t *queue, struct op_node *node)
  * @param queue The target queue.
  * @return A pointer to the node or NULL for no node to get.
  */
-static struct op_node *get_node_from(sq_queue_t *queue)
+static struct buf_node *get_node_from(sq_queue_t *queue)
 {
-    struct op_node *node = NULL;
+    struct buf_node *node = NULL;
     irqstate_t flags = irqsave();
 
     if (sq_empty(queue)) {
@@ -150,7 +148,7 @@ static struct op_node *get_node_from(sq_queue_t *queue)
         return NULL;
     }
 
-    node = (struct op_node *)sq_remfirst(queue);
+    node = (struct buf_node *)sq_remfirst(queue);
     irqrestore(flags);
 
     return node;
@@ -183,70 +181,53 @@ static void uart_report_error(int error, const char *func_name)
 }
 
 /**
- * @brief Free operations
+ * @brief Free buffers
  *
- * This funciton destroy operations and node memory.
+ * This funciton frees buffers and nodes memory.
  *
  * @param queue Target queue.
  * @return None.
  */
-static void uart_free_op(sq_queue_t *queue)
+static void uart_free_buf(sq_queue_t *queue)
 {
-    struct op_node *node = NULL;
+    struct buf_node *node = NULL;
 
     node = get_node_from(queue);
     while (node) {
-        gb_operation_destroy(node->operation);
         free(node);
         node = get_node_from(queue);
     }
 }
 
 /**
- * @brief Allocate operations for receiver buffers
+ * @brief Allocate receiver buffers
  *
- * This function is allocating operation and use them as receiving buffers.
+ * This function is allocating receiving buffers.
  *
  * @param max_nodes Maximum nodes.
  * @param buf_size Buffer size in operation.
  * @param queue Target queue.
- * @return 0 for success, -errno for failures.
+ * @return 0 for success, errno for failures.
  */
-static int uart_alloc_op(int max_nodes, int buf_size, sq_queue_t *queue)
+static int uart_alloc_buf(int max_nodes, int buf_size, sq_queue_t *queue)
 {
-    struct gb_operation *operation = NULL;
-    struct gb_uart_receive_data_request *request = NULL;
-    struct op_node *node = NULL;
+    struct buf_node *node = NULL;
     int i = 0;
 
     for (i = 0; i < max_nodes; i++) {
-        operation = gb_operation_create(info->cport,
-                                        GB_UART_PROTOCOL_RECEIVE_DATA,
-                                        sizeof(*request) + buf_size);
-        if (!operation) {
-            goto err_free_op;
-        }
-
-        node = malloc(sizeof(struct op_node));
+        node = malloc(sizeof(*node) + buf_size);
         if (!node) {
-            gb_operation_destroy(operation);
-            goto err_free_op;
+            /*
+             * It may have some buffers already be allocated, caller should
+             * free them.
+             */
+            return ENOMEM;
+            /* Keeping consistency with Nuttx APIs, so returns positive num */
         }
-        node->operation = operation;
-
-        request = gb_operation_get_request_payload(operation);
-        node->data_size = &request->size;
-        node->data_flags = &request->flags;
-        node->buffer = request->data;
         put_node_back(queue, node);
     }
 
     return 0;
-
-err_free_op:
-    uart_free_op(queue);
-
-    return -ENOMEM;
 }
 
 /**
@@ -289,7 +270,7 @@ static void uart_ls_callback(uint8_t ls)
  *
  * This function Must be called from interrupt context.
  *
- * It put the current operation to received queue and gets another operation to
+ * It put the current buffer to received queue and gets another buffer to
  * continue receiving. Then notifies rx thread to process.
  *
  * @param buffer Data buffer.
@@ -299,11 +280,11 @@ static void uart_ls_callback(uint8_t ls)
  */
 static void uart_rx_callback(uint8_t *buffer, int length, int error)
 {
-    struct op_node *node;
+    struct buf_node *node;
     int ret;
     uint8_t flags = 0;
 
-    *info->rx_node->data_size = cpu_to_le16(length);
+    info->rx_node->data_size = length;
 
     if (error & LSR_OE) {
         flags |= GB_UART_RECV_FLAG_OVERRUN;
@@ -317,7 +298,7 @@ static void uart_rx_callback(uint8_t *buffer, int length, int error)
     if (error & LSR_BI) {
         flags |= GB_UART_RECV_FLAG_BREAK;
     }
-    *info->rx_node->data_flags = flags;
+    info->rx_node->data_flags = flags;
 
     put_node_back(&info->data_queue, info->rx_node);
     /* notify rx thread to process this data*/
@@ -335,7 +316,8 @@ static void uart_rx_callback(uint8_t *buffer, int length, int error)
     }
 
     info->rx_node = node;
-    ret = device_uart_start_receiver(info->dev, node->buffer, info->rx_buf_size,
+    ret = device_uart_start_receiver(info->dev, node->buffer,
+                                     info->rx_buf_size,
                                      NULL, NULL, uart_rx_callback);
     if (ret) {
         uart_report_error(GB_UART_EVENT_PROTOCOL_ERROR, __func__);
@@ -415,7 +397,7 @@ static void *uart_status_thread(void *data)
  *
  * This function is the thread for processing data receiving tasks. When
  * it wake up, it checks the receiving queue for processing the come in data.
- * If protocol is running out of operation, once it gets a free operation,
+ * If protocol is running out of buffer, as soon as it gets a free buffer,
  * it passes to driver for continuing the receiving.
  *
  * @param data The regular thread data.
@@ -423,7 +405,9 @@ static void *uart_status_thread(void *data)
  */
 static void *uart_rx_thread(void *data)
 {
-    struct op_node *node = NULL;
+    struct gb_operation *operation = NULL;
+    struct gb_uart_receive_data_request *request = NULL;
+    struct buf_node *node = NULL;
     int ret;
 
     while (1) {
@@ -435,9 +419,22 @@ static void *uart_rx_thread(void *data)
 
         node = get_node_from(&info->data_queue);
         if (node) {
-            ret = gb_operation_send_request(node->operation, NULL, false);
-            if (ret) {
+            operation = gb_operation_create(info->cport,
+                                           GB_UART_PROTOCOL_RECEIVE_DATA,
+                                           sizeof(*request) + node->data_size);
+            if (!operation) {
                 uart_report_error(GB_UART_EVENT_PROTOCOL_ERROR, __func__);
+            } else {
+                request = gb_operation_get_request_payload(operation);
+                request->size = cpu_to_le16(node->data_size);
+                request->flags = node->data_flags;
+                memcpy(request->data, node->buffer, node->data_size);
+
+                ret = gb_operation_send_request(operation, NULL, false);
+                if (ret) {
+                    uart_report_error(GB_UART_EVENT_PROTOCOL_ERROR, __func__);
+                }
+                gb_operation_destroy(operation);
             }
             put_node_back(&info->free_queue, node);
         }
@@ -530,7 +527,7 @@ err_destroy_ms_ls_op:
  * @brief Releases resources for receiver thread.
  *
  * Terminates the thread for receiver and releases the system resouces and
- * operations allocated by uart_receiver_cb_init().
+ * buffers allocated by uart_receiver_cb_init().
  *
  * @param None.
  * @return None.
@@ -545,16 +542,16 @@ static void uart_receiver_cb_deinit(void)
 
     sem_destroy(&info->rx_sem);
 
-    uart_free_op(&info->data_queue);
-    uart_free_op(&info->free_queue);
+    uart_free_buf(&info->data_queue);
+    uart_free_buf(&info->free_queue);
 }
 
 /**
  * @brief Receiving data process initialization
  *
  * This function allocates OS resource to support the data receiving
- * function. It allocates two types of operations for undetermined length of
- * data. The semaphore works as message queue and all tasks are done in the
+ * function. It allocates buffers for receiving data.
+ * The semaphore works as message queue and all tasks are done in the
  * thread.
  *
  * @param None.
@@ -567,17 +564,17 @@ static int uart_receiver_cb_init(void)
     sq_init(&info->free_queue);
     sq_init(&info->data_queue);
 
-    info->entries = MAX_RX_OPERATION;
+    info->entries = MAX_RX_BUF_NUMBER;
     info->rx_buf_size = MAX_RX_BUF_SIZE;
 
-    ret = uart_alloc_op(info->entries, info->rx_buf_size, &info->free_queue);
+    ret = uart_alloc_buf(info->entries, info->rx_buf_size, &info->free_queue);
     if (ret) {
-        return ret;
+        goto err_free_data_buf;
     }
 
     ret = sem_init(&info->rx_sem, 0, 0);
     if (ret) {
-        goto err_free_data_op;
+        goto err_free_data_buf;
     }
 
     ret = pthread_create(&info->rx_thread, NULL, uart_rx_thread, info);
@@ -589,8 +586,8 @@ static int uart_receiver_cb_init(void)
 
 err_destroy_rx_sem:
     sem_destroy(&info->rx_sem);
-err_free_data_op:
-    uart_free_op(&info->free_queue);
+err_free_data_buf:
+    uart_free_buf(&info->free_queue);
 
     return -ret;
 }
