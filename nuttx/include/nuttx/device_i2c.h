@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2016 Google Inc.
  * All rights reserved.
  *
@@ -25,36 +25,56 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * @author Joel Porquet
  */
 
 #ifndef __INCLUDE_NUTTX_DEVICE_I2C_H
 #define __INCLUDE_NUTTX_DEVICE_I2C_H
 
+/**
+ * @file nuttx/device_i2c.h
+ * @brief I2C API
+ * @author Joel Porquet
+ */
+
 #include <errno.h>
+#include <stdint.h>
+
 #include <nuttx/device.h>
 
+/** I2C Device type */
 #define DEVICE_TYPE_I2C_HW  "i2c"
 
 /** @defgroup I2C_FLAGS I2C flags
  * @{
  */
-#define I2C_FLAG_READ       0x0001 /** Read data, from slave to master */
-#define I2C_FLAG_TEN        0x0002 /** Ten bit addressing */
-#define I2C_FLAG_NORESTART  0x0080 /** Do not start transfer with (re-)start */
+/** Read data, from slave to master */
+#define I2C_FLAG_READ       0x0001
+/** Ten bit addressing */
+#define I2C_FLAG_TEN        0x0002
+/** Do not start transfer with (re-)start */
+#define I2C_FLAG_NORESTART  0x0080
 /** @} */
 
 /** I2C request structure */
 struct device_i2c_request {
-    uint16_t addr;      /**< Slave address */
-    uint16_t flags;     /**< Flags (@see I2C_FLAGS) */
-    uint8_t *buffer;    /**< Buffer for data to transfer (read or write) */
-    int length;         /**< Size of the buffer */
+    /** Slave address */
+    uint16_t addr;
+    /** \ref I2C_FLAGS */
+    uint16_t flags;
+    /** Buffer for data to transfer (read or write) */
+    uint8_t *buffer;
+    /** Size of the buffer */
+    int length;
 };
 
 /** I2C device driver operations */
 struct device_i2c_type_ops {
-    /** Perform I2C transfers */
+    /** Perform I2C transfers
+     * @param dev Pointer to the I2C device controller
+     * @param requests List of I2C requests
+     * @param count Number of I2C requests
+     * @return 0 on success, negative errno on failure
+     */
     int (*transfer)(struct device *dev, struct device_i2c_request *requests,
             uint32_t count);
 };
@@ -62,10 +82,10 @@ struct device_i2c_type_ops {
 /**
  * @brief Perform I2C transfers
  *
- * @param dev Pointer to structure of device data
- * @param requests List of I2C requests (@see struct device_i2c_request)
+ * @param dev Pointer to the I2C device controller
+ * @param requests List of I2C requests
  * @param count Number of I2C requests
- * @return 0 on success, negative errno on error
+ * @return 0 on success, negative errno on failure
  */
 static inline int device_i2c_transfer(struct device *dev, struct
         device_i2c_request *requests, uint32_t count)
@@ -75,10 +95,10 @@ static inline int device_i2c_transfer(struct device *dev, struct
     if (!device_is_open(dev)) {
         return -ENODEV;
     }
-    if (DEVICE_DRIVER_GET_OPS(dev, i2c)->transfer) {
-        return DEVICE_DRIVER_GET_OPS(dev, i2c)->transfer(dev, requests, count);
+    if (!DEVICE_DRIVER_GET_OPS(dev, i2c)->transfer) {
+        return -ENOSYS;
     }
-    return -ENOSYS;
+    return DEVICE_DRIVER_GET_OPS(dev, i2c)->transfer(dev, requests, count);
 }
 
 #endif /* __INCLUDE_NUTTX_DEVICE_I2C_H */
