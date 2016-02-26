@@ -51,6 +51,7 @@
 
 #define APBRIDGEA_AUDIO_I2S_CHANNELS            2 /* Don't ever change */
 #define APBRIDGEA_AUDIO_RING_ENTRIES_TX         8
+#define APBRIDGEA_AUDIO_RING_ENTRIES_RX         8
 
 #define APBRIDGEA_AUDIO_UNIPRO_ALIGNMENT        8 /* Should come from unipro */
 
@@ -69,10 +70,18 @@ struct apbridgea_audio_info {
     unsigned int        flags;
     uint16_t            i2s_port;
     struct device       *i2s_dev;
+
     struct ring_buf     *tx_rb;
     unsigned int        tx_data_size;
     size_t              tx_rb_headroom;
     size_t              tx_rb_total_size;
+
+    struct ring_buf     *rx_rb;
+    unsigned int        rx_data_size;
+    uint8_t             *rx_dummy_data;
+    uint16_t            rx_data_cportid;
+    unsigned int        rx_rb_count;
+
     struct list_head    cport_list;
     struct list_head    list;
 };
@@ -96,6 +105,9 @@ struct apbridga_audio_rb_hdr {
     uint8_t     pad[APBRIDGEA_AUDIO_UNIPRO_ALIGNMENT - sizeof(uint32_t)];
 };
 
+static void apbridgea_audio_i2s_tx(struct apbridgea_audio_info *info,
+                                   uint8_t *data);
+
 static atomic_t request_id;
 
 static pthread_t apbridgea_audio_demux_thread;
@@ -113,6 +125,27 @@ static struct apbridgea_audio_info *apbridgea_audio_find_info(uint16_t i2s_port)
         info = list_entry(iter, struct apbridgea_audio_info, list);
 
         if (info->i2s_port == i2s_port) {
+            return info;
+        }
+    }
+
+    return NULL;
+}
+
+static struct apbridgea_audio_info *apbridgea_audio_find_rx_info(
+                                                      uint16_t rx_data_cportid)
+{
+    struct apbridgea_audio_info *info;
+    struct list_head *iter;
+
+    if (!rx_data_cportid) {
+        return NULL;
+    }
+
+    list_foreach(&apbridgea_audio_info_list, iter) {
+        info = list_entry(iter, struct apbridgea_audio_info, list);
+
+        if (info->rx_data_cportid == rx_data_cportid) {
             return info;
         }
     }
@@ -333,7 +366,19 @@ static int apbridgea_audio_from_usb(unsigned int cportid, void *buf, size_t len)
 static int apbridgea_audio_from_unipro(unsigned int cportid, void *buf,
                                        size_t len)
 {
-    /* TODO: Implement receive data processing */
+    struct apbridgea_audio_info *info;
+    size_t hdr_size;
+
+    info = apbridgea_audio_find_rx_info(cportid);
+    if (info && (info->flags & APBRIDGEA_AUDIO_FLAG_RX_STARTED)) {
+        hdr_size = sizeof(struct gb_operation_hdr) +
+                   sizeof(struct gb_audio_send_data_request);
+
+        if (len == (hdr_size + info->rx_data_size)) {
+            apbridgea_audio_i2s_tx(info, buf + hdr_size);
+        }
+    }
+
     unipro_rxbuf_free(cportid, buf);
     return 0;
 }
@@ -382,6 +427,12 @@ static int apbridgea_audio_register_cport(struct apbridgea_audio_info *info,
         irqrestore(flags);
     }
 
+    if (!info->rx_data_cportid &&
+        (req->direction & AUDIO_APBRIDGEA_DIRECTION_RX)) {
+
+        info->rx_data_cportid = data_cportid;
+    }
+
     cport->direction |= req->direction;
 
     return 0;
@@ -405,6 +456,12 @@ static int apbridgea_audio_unregister_cport(struct apbridgea_audio_info *info,
 
     cport = apbridgea_audio_find_cport(info, data_cportid);
     if (cport) {
+        if ((data_cportid == info->rx_data_cportid) &&
+            (req->direction & AUDIO_APBRIDGEA_DIRECTION_RX)) {
+
+            info->rx_data_cportid = 0;
+        }
+
         cport->direction &= ~req->direction;
 
         if (!cport->direction) {
@@ -670,18 +727,134 @@ static int apbridgea_audio_stop_tx(struct apbridgea_audio_info *info)
 static int apbridgea_audio_set_rx_data_size(struct apbridgea_audio_info *info,
                                             void *buf, uint16_t len)
 {
-    return -ENOSYS;
+    struct audio_apbridgea_set_rx_data_size_request *req = buf;
+    uint16_t size;
+
+    if (!req || (len < sizeof(*req))) {
+        return -EINVAL;
+    }
+
+    if (info->flags & APBRIDGEA_AUDIO_FLAG_RX_STARTED) {
+        return -EPROTO;
+    }
+
+    size = le16_to_cpu(req->size);
+
+    /* Size must be a multiple of 4 (required by i2s FIFO) */
+    if (!size || (size % 4)) {
+        return -EINVAL;
+    }
+
+    info->rx_data_size = size;
+    info->flags |= APBRIDGEA_AUDIO_FLAG_RX_DATA_SIZE_SET;
+
+    return 0;
+}
+
+static void apbridgea_audio_i2s_tx(struct apbridgea_audio_info *info,
+                                   uint8_t *data)
+{
+    ring_buf_reset(info->rx_rb);
+
+    memcpy(ring_buf_get_tail(info->rx_rb), data, info->rx_data_size);
+
+    ring_buf_put(info->rx_rb, info->rx_data_size);
+    ring_buf_pass(info->rx_rb);
+
+    info->rx_rb = ring_buf_get_next(info->rx_rb);
+
+    info->rx_rb_count++;
+}
+
+static void apbridgea_audio_i2s_tx_cb(struct ring_buf *rb,
+                                      enum device_i2s_event event, void *arg)
+{
+    struct apbridgea_audio_info *info = arg;
+
+    if (event == DEVICE_I2S_EVENT_TX_COMPLETE) {
+        info->rx_rb_count--;
+
+        /* Prevent underrun by adding an entry with dummy data */
+        if (!info->rx_rb_count) {
+            apbridgea_audio_i2s_tx(info, info->rx_dummy_data);
+            lowsyslog("%s: RX underrun\n", __func__);
+        }
+    } else if (event != DEVICE_I2S_EVENT_NONE) {
+        lowsyslog("%s: bad event from i2s ctlr: %u\n", __func__, event);
+    }
 }
 
 /* "Receiving" means receiving from UniPro and transmitting over I2S */
 static int apbridgea_audio_start_rx(struct apbridgea_audio_info *info)
 {
-    return -ENOSYS;
+    int ret;
+
+    if (!AUDIO_IS_CONFIGURED(info, RX) ||
+        (info->flags & APBRIDGEA_AUDIO_FLAG_RX_STARTED)) {
+        return -EPROTO;
+    }
+
+    info->rx_rb = ring_buf_alloc_ring(APBRIDGEA_AUDIO_RING_ENTRIES_RX, 0,
+                                      info->rx_data_size, 0, NULL, NULL, NULL);
+    if (!info->rx_rb) {
+        return -ENOMEM;
+    }
+
+    info->rx_dummy_data = zalloc(info->rx_data_size);
+    if (!info->rx_dummy_data) {
+        ret = -ENOMEM;
+        goto err_free_ring;
+    }
+
+    ret = device_i2s_prepare_transmitter(info->i2s_dev, info->rx_rb,
+                                         apbridgea_audio_i2s_tx_cb, info);
+    if (ret) {
+        goto err_free_dummy;
+    }
+
+    /* Prime the ring with one empty entry */
+    apbridgea_audio_i2s_tx(info, info->rx_dummy_data);
+
+    info->flags |= APBRIDGEA_AUDIO_FLAG_RX_STARTED;
+
+    ret = device_i2s_start_transmitter(info->i2s_dev);
+    if (ret) {
+        goto err_shutdown_receiver;
+    }
+
+    return 0;
+
+err_shutdown_receiver:
+    info->flags &= ~APBRIDGEA_AUDIO_FLAG_RX_STARTED;
+    device_i2s_shutdown_receiver(info->i2s_dev);
+err_free_dummy:
+    free(info->rx_dummy_data);
+    info->rx_dummy_data = NULL;
+err_free_ring:
+    ring_buf_free_ring(info->rx_rb, apbridgea_audio_rb_free, info);
+    info->rx_rb = NULL;
+
+    return ret;
 }
 
 static int apbridgea_audio_stop_rx(struct apbridgea_audio_info *info)
 {
-    return -ENOSYS;
+    if (!(info->flags & APBRIDGEA_AUDIO_FLAG_RX_STARTED)) {
+        return -EPROTO;
+    }
+
+    info->flags &= ~APBRIDGEA_AUDIO_FLAG_RX_STARTED;
+
+    device_i2s_stop_transmitter(info->i2s_dev);
+    device_i2s_shutdown_transmitter(info->i2s_dev);
+
+    free(info->rx_dummy_data);
+    info->rx_dummy_data = NULL;
+
+    ring_buf_free_ring(info->rx_rb, NULL, NULL);
+    info->rx_rb = NULL;
+
+    return 0;
 }
 
 static void *apbridgea_audio_demux(void *ignored)
