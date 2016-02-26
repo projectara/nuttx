@@ -179,7 +179,7 @@ void ara_module_init(void)
     bdb_driver_register();
 #endif
 
-#ifdef CONFIG_APBRIDGEA
+#if defined(CONFIG_APBRIDGEA) && defined(CONFIG_ARCH_CHIP_DEVICE_CSI)
     csi_tx_srv_init();
 #endif
 }

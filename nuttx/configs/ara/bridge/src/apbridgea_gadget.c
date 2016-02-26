@@ -1399,6 +1399,7 @@ static int latency_tag_dis_vendor_request_out(struct usbdev_s *dev, uint8_t req,
     return ret;
 }
 
+#ifdef CONFIG_ARCH_CHIP_DEVICE_CSI
 static int csi_tx_control_vendor_request_out(struct usbdev_s *dev, uint8_t req,
                                              uint16_t index, uint16_t value,
                                              void *buf, uint16_t len)
@@ -1425,6 +1426,7 @@ static int csi_tx_control_vendor_request_out(struct usbdev_s *dev, uint8_t req,
 
     return csi_tx_srv_start(ctrl->csi_id, &cfg);
 }
+#endif
 
 #ifdef CONFIG_APBRIDGEA_AUDIO
 static int apbridgea_audio_vendor_request_out(struct usbdev_s *dev, uint8_t req,
@@ -1673,9 +1675,11 @@ int usbdev_apbinitialize(struct device *dev,
     if (register_vendor_request(APBRIDGE_ROREQUEST_LATENCY_TAG_DIS, VENDOR_REQ_OUT,
                                 latency_tag_dis_vendor_request_out))
         goto errout_vendor_req;
+#ifdef CONFIG_ARCH_CHIP_DEVICE_CSI
     if (register_vendor_request(APBRIDGE_RWREQUEST_CSI_TX_CONTROL, VENDOR_REQ_DATA,
                                 csi_tx_control_vendor_request_out))
         goto errout_vendor_req;
+#endif
     if (register_vendor_request(APBRIDGE_WOREQUEST_SET_REQUEST_COUNT, VENDOR_REQ_OUT,
                                 set_request_count_vendor_request_out))
         goto errout_vendor_req;
