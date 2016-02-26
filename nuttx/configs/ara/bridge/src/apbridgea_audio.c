@@ -69,7 +69,7 @@ struct apbridgea_audio_info {
     unsigned int        flags;
     uint16_t            i2s_port;
     struct device       *i2s_dev;
-    struct ring_buf     *rx_rb;
+    struct ring_buf     *tx_rb;
     unsigned int        tx_data_size;
     size_t              tx_rb_headroom;
     size_t              tx_rb_total_size;
@@ -605,14 +605,14 @@ static int apbridgea_audio_start_tx(struct apbridgea_audio_info *info,
                            sizeof(struct gb_audio_send_data_request);
     info->tx_rb_total_size = info->tx_rb_headroom + info->tx_data_size;
 
-    info->rx_rb = ring_buf_alloc_ring(APBRIDGEA_AUDIO_RING_ENTRIES_TX, 0, 0, 0,
+    info->tx_rb = ring_buf_alloc_ring(APBRIDGEA_AUDIO_RING_ENTRIES_TX, 0, 0, 0,
                                       apbridgea_audio_rb_alloc,
                                       apbridgea_audio_rb_free, info);
-    if (!info->rx_rb) {
+    if (!info->tx_rb) {
         return -ENOMEM;
     }
 
-    ret = device_i2s_prepare_receiver(info->i2s_dev, info->rx_rb,
+    ret = device_i2s_prepare_receiver(info->i2s_dev, info->tx_rb,
                                       apbridgea_audio_i2s_rx_cb, info);
     if (ret) {
         goto err_free_ring;
@@ -631,8 +631,8 @@ static int apbridgea_audio_start_tx(struct apbridgea_audio_info *info,
 err_shutdown_receiver:
     device_i2s_shutdown_receiver(info->i2s_dev);
 err_free_ring:
-    ring_buf_free_ring(info->rx_rb, apbridgea_audio_rb_free, info);
-    info->rx_rb = NULL;
+    ring_buf_free_ring(info->tx_rb, apbridgea_audio_rb_free, info);
+    info->tx_rb = NULL;
     info->tx_rb_headroom = 0;
     info->tx_rb_total_size = 0;
 
@@ -650,8 +650,8 @@ static int apbridgea_audio_stop_tx(struct apbridgea_audio_info *info)
 
     info->flags &= ~APBRIDGEA_AUDIO_FLAG_TX_STARTED;
 
-    ring_buf_free_ring(info->rx_rb, apbridgea_audio_rb_free, info);
-    info->rx_rb = NULL;
+    ring_buf_free_ring(info->tx_rb, apbridgea_audio_rb_free, info);
+    info->tx_rb = NULL;
     info->tx_rb_headroom = 0;
     info->tx_rb_total_size = 0;
 
