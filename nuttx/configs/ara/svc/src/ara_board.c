@@ -39,7 +39,6 @@
 #include <nuttx/config.h>
 #include <nuttx/arch.h>
 #include <nuttx/gpio.h>
-#include <nuttx/gpio_fixed.h>
 
 #include <errno.h>
 
@@ -193,30 +192,16 @@ struct ara_board_info *ara_board_init(void) {
         }
     }
 
-    /*
-     * Register a GPIO chip with one pin that always reads zero, for
-     * use as needed.
-     */
-    if (fixed_gpio_init(0, FIXED_0_GPIO_CHIP_START) ||
-        gpio_activate(FIXED_0_GPIO_PIN)) {
-        dbg_error("%s(): failed to init fixed-zero GPIO chip\n", __func__);
-        goto err_uninit_i2c;
-    }
-    gpio_direction_in(FIXED_0_GPIO_PIN);
-
     /* Run the board specific code */
     if (board_info->board_init) {
         if (board_info->board_init(board_info)) {
             dbg_error("%s(): Failed to initalize board\n", __func__);
-            goto err_uninit_fix0;
+            goto err_uninit_i2c;
         }
     }
 
     /* Return the board specific info */
     return board_info;
-
- err_uninit_fix0:
-    fixed_gpio_deinit(FIXED_0_GPIO_CHIP_START);
 
  err_uninit_i2c:
     /* Done in reverse order to account for possible IRQ chaining. */
@@ -240,8 +225,6 @@ void ara_board_exit(void) {
     if (board_info->board_exit) {
         board_info->board_exit(board_info);
     }
-
-    fixed_gpio_deinit(FIXED_0_GPIO_CHIP_START);
 
     /*
      * First unregister the TCA64xx I/O Expanders and associated I2C bus(ses).
