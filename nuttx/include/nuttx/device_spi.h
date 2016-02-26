@@ -58,13 +58,6 @@
 #define SPI_FLAG_NO_RX              0x0002      /* can’t do buffer read */
 #define SPI_FLAG_NO_TX              0x0004      /* can’t do buffer write */
 
-#define SPI_XFER_READ               0x01
-#define SPI_XFER_WRITE              0x02
-
-#define SPI_DEV_TYPE                0x00
-#define SPI_NOR_TYPE                0x01
-#define SPI_MODALIAS_TYPE           0x02
-
 /* error code */
 #define SUCCESS                     0
 
@@ -99,34 +92,15 @@ struct device_spi_transfer {
 /**
  * SPI hardware capabilities info
  */
-struct master_spi_caps {
-    /** number of bits per word supported */
-    uint32_t bpw;
-    /** minimum Transfer speed in Hz */
-    uint32_t min_speed_hz;
-    /** maximum Transfer speed in Hz */
-    uint32_t max_speed_hz;
+struct device_spi_caps {
     /** bit masks of supported SPI protocol mode */
     uint16_t modes;
     /** bit masks of supported SPI protocol flags */
     uint16_t flags;
+    /** number of bits per word supported */
+    uint32_t bpw;
     /** number of chip select pins supported */
     uint16_t csnum;
-    /** maximum divider supported */
-    uint16_t max_div;
-};
-
-struct device_spi_cfg {
-    /** mode be set in device */
-    uint16_t mode;
-    /** bit per word be set in device */
-    uint8_t bpw;
-    /** max speed be set in device */
-    uint32_t max_speed_hz;
-    /** SPI device type */
-    uint8_t device_type;
-    /** chip name */
-    uint8_t name[32];
 };
 
 /**
@@ -138,22 +112,19 @@ struct device_spi_type_ops {
     /** Unlock SPI bus for exclusive access */
     int (*unlock)(struct device *dev);
     /** Enable the SPI chip select pin */
-    int (*select)(struct device *dev, uint8_t devid);
+    int (*select)(struct device *dev, int devid);
     /** Disable the SPI chip select pin */
-    int (*deselect)(struct device *dev, uint8_t devid);
+    int (*deselect)(struct device *dev, int devid);
     /** Configure SPI clock */
-    int (*setfrequency)(struct device *dev, uint8_t cs, uint32_t *frequency);
+    int (*setfrequency)(struct device *dev, uint32_t *frequency);
     /** Configure SPI mode */
-    int (*setmode)(struct device *dev, uint8_t cs, uint8_t mode);
+    int (*setmode)(struct device *dev, uint16_t mode);
     /** Set the number of bits per word in transmission */
-    int (*setbits)(struct device *dev, uint8_t cs, uint8_t nbits);
+    int (*setbits)(struct device *dev, int nbits);
     /** Exchange a block of data from SPI */
     int (*exchange)(struct device *dev, struct device_spi_transfer *transfer);
     /** Get SPI device driver hardware capabilities information */
-    int (*get_master_caps)(struct device *dev, struct master_spi_caps *caps);
-    /** Get configuration parameters from chip */
-    int (*get_device_cfg)(struct device *dev, uint8_t cs,
-                          struct device_spi_cfg *dev_cfg);
+    int (*getcaps)(struct device *dev, struct device_spi_caps *caps);
 };
 
 /**
@@ -201,7 +172,7 @@ static inline int device_spi_unlock(struct device *dev)
  * @param devid identifier of a selected SPI slave device
  * @return 0 on success, negative errno on error
  */
-static inline int device_spi_select(struct device *dev, uint8_t devid)
+static inline int device_spi_select(struct device *dev, int devid)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -221,7 +192,7 @@ static inline int device_spi_select(struct device *dev, uint8_t devid)
  * @param devid identifier of a selected SPI slave device
  * @return 0 on success, negative errno on error
  */
-static inline int device_spi_deselect(struct device *dev, uint8_t devid)
+static inline int device_spi_deselect(struct device *dev, int devid)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -241,7 +212,7 @@ static inline int device_spi_deselect(struct device *dev, uint8_t devid)
  * @param frequency SPI frequency requested (unit: Hz)
  * @return 0 on success, negative errno on error
  */
-static inline int device_spi_setfrequency(struct device *dev, uint8_t cs,
+static inline int device_spi_setfrequency(struct device *dev,
                                           uint32_t *frequency)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
@@ -250,8 +221,7 @@ static inline int device_spi_setfrequency(struct device *dev, uint8_t cs,
         return -ENODEV;
     }
     if (DEVICE_DRIVER_GET_OPS(dev, spi)->setfrequency) {
-        return DEVICE_DRIVER_GET_OPS(dev, spi)->setfrequency(dev, cs,
-                                                             frequency);
+        return DEVICE_DRIVER_GET_OPS(dev, spi)->setfrequency(dev, frequency);
     }
     return -ENOSYS;
 }
@@ -263,8 +233,7 @@ static inline int device_spi_setfrequency(struct device *dev, uint8_t cs,
  * @param mode SPI protocol mode requested
  * @return 0 on success, negative errno on error
  */
-static inline int device_spi_setmode(struct device *dev, uint8_t cs,
-                                     uint8_t mode)
+static inline int device_spi_setmode(struct device *dev, uint16_t mode)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -272,7 +241,7 @@ static inline int device_spi_setmode(struct device *dev, uint8_t cs,
         return -ENODEV;
     }
     if (DEVICE_DRIVER_GET_OPS(dev, spi)->setmode) {
-        return DEVICE_DRIVER_GET_OPS(dev, spi)->setmode(dev, cs, mode);
+        return DEVICE_DRIVER_GET_OPS(dev, spi)->setmode(dev, mode);
     }
     return -ENOSYS;
 }
@@ -286,8 +255,7 @@ static inline int device_spi_setmode(struct device *dev, uint8_t cs,
  *        depends on hardware supported.
  * @return 0 on success, negative errno on error
  */
-static inline int device_spi_setbits(struct device *dev, uint8_t cs,
-                                     uint8_t nbits)
+static inline int device_spi_setbits(struct device *dev, int nbits)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -295,7 +263,7 @@ static inline int device_spi_setbits(struct device *dev, uint8_t cs,
         return -ENODEV;
     }
     if (DEVICE_DRIVER_GET_OPS(dev, spi)->setbits) {
-        return DEVICE_DRIVER_GET_OPS(dev, spi)->setbits(dev, cs, nbits);
+        return DEVICE_DRIVER_GET_OPS(dev, spi)->setbits(dev, nbits);
     }
     return -ENOSYS;
 }
@@ -329,40 +297,16 @@ static inline int device_spi_exchange(struct device *dev,
  *             information.
  * @return 0 on success, negative errno on error
  */
-static inline int device_spi_get_master_caps(struct device *dev,
-                                             struct master_spi_caps *caps)
+static inline int device_spi_getcaps(struct device *dev,
+                                     struct device_spi_caps *caps)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
     if (!device_is_open(dev)) {
         return -ENODEV;
     }
-    if (DEVICE_DRIVER_GET_OPS(dev, spi)->get_master_caps) {
-        return DEVICE_DRIVER_GET_OPS(dev, spi)->get_master_caps(dev, caps);
-    }
-    return -ENOSYS;
-}
-
-/**
- * @brief SPI device configuration
- *
- * @param dev pointer to structure of device data
- * @param cs required chip number
- * @param dev_cfg pointer to the device_spi_cfg structure to receive the
- *                specific chip of configuration.
- * @return 0 on success, negative errno on error
- */
-static inline int device_spi_get_device_cfg(struct device *dev, uint8_t cs,
-                                            struct device_spi_cfg *dev_cfg)
-{
-    DEVICE_DRIVER_ASSERT_OPS(dev);
-
-    if (!device_is_open(dev)) {
-        return -ENODEV;
-    }
-    if (DEVICE_DRIVER_GET_OPS(dev, spi)->get_master_caps) {
-        return DEVICE_DRIVER_GET_OPS(dev, spi)->get_device_cfg(dev, cs,
-                                                               dev_cfg);
+    if (DEVICE_DRIVER_GET_OPS(dev, spi)->getcaps) {
+        return DEVICE_DRIVER_GET_OPS(dev, spi)->getcaps(dev, caps);
     }
     return -ENOSYS;
 }
