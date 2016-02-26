@@ -26,6 +26,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -47,6 +48,9 @@ enum {
 #ifdef CONFIG_USB_DUMP
     DUMP,
 #endif
+#ifdef CONFIG_USB_LOG
+    LOG,
+#endif
     MAX_CMD,
 };
 
@@ -54,6 +58,9 @@ static const struct command commands[] = {
     [HELP] = {'h', "help", "print this usage and exit"},
 #ifdef CONFIG_USB_DUMP
     [DUMP] = {'d', "dump", "dump usb device registers"},
+#endif
+#ifdef CONFIG_USB_LOG
+    [LOG] = {'l', "log", "set dwc otg driver log level"},
 #endif
 };
 
@@ -132,6 +139,39 @@ static int usb_dump(int argc, char *argv[])
 }
 #endif /* CONFIG_USB_DUMP */
 
+#ifdef CONFIG_USB_LOG
+extern uint32_t g_dbg_lvl;
+
+static void usb_log_usage(int exit_status)
+{
+    printf("usb %s <level_bitmask>:\n", commands[LOG].longc);
+    exit(exit_status);
+}
+
+static int usb_log(int argc, char *argv[])
+{
+    char **args = argv + 1;
+    int level;
+    int rc = 0;
+    argc--;
+
+    if (argc < 2 || !strcmp(args[1], "-h")) {
+        usb_log_usage(EXIT_FAILURE);
+    }
+
+    rc = sscanf(args[1], "%x", &level);
+    if (rc != 1) {
+        printf("A valid log level is expected\n");
+        usb_log_usage(EXIT_FAILURE);
+    }
+
+    /* TODO: check the value */
+    g_dbg_lvl = level;
+
+    return rc;
+}
+#endif
+
 #ifdef CONFIG_BUILD_KERNEL
 int main(int argc, FAR char *argv[])
 #else
@@ -169,6 +209,11 @@ int usb_main(int argc, char *argv[])
 #ifdef CONFIG_USB_DUMP
     case DUMP:
         rc = usb_dump(argc, argv);
+        break;
+#endif
+#ifdef CONFIG_USB_LOG
+    case LOG:
+        rc = usb_log(argc, argv);
         break;
 #endif
     default:

@@ -49,6 +49,10 @@ config USB_DUMP_VERBOSE
 	depends on USB_DUMP
 	default n
 
+config USB_LOG
+	bool "Enable an option to select the log level"
+	depends on ARA_USB_DEBUG
+
 config ARA_USB_PROGNAME
 	string "Program name"
 	default "usb"

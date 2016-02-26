@@ -61,6 +61,10 @@
 #define DWC_NENDPOINTS        (16)
 #define EP0                   (0)
 
+#ifndef CONFIG_ARA_USB_LOG_LEVEL
+#define CONFIG_ARA_USB_LOG_LEVEL 0
+#endif
+
 struct dwc_usbdev_ep_s {
     struct usbdev_ep_s ep;
     struct usbdev_s *usbdev;
@@ -840,7 +844,7 @@ static int tsb_usb_pcd_open(struct device *dev)
     }
 
     device_set_private(dev, &g_usbdev);
-    SET_DEBUG_LEVEL(DBG_ANY);
+    SET_DEBUG_LEVEL(CONFIG_ARA_USB_LOG_LEVEL);
 
     if (up_usbinitialize_core(priv))
         goto fail;

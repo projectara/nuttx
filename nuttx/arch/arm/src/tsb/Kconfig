@@ -202,6 +202,13 @@ config ARA_USB_DEBUG
 	depends on ARCH_CHIP_USB_PCD || ARCH_CHIP_USB_HCD
 	depends on !DWC_QUIET
 
+config ARA_USB_LOG_LEVEL
+	int "USB PCD initial log level"
+	depends on ARA_USB_DEBUG
+	default 0
+	---help---
+		See dwc_otg_dbg.h for the value to set.
+
 config ARCH_CHIP_DEVICE_PLL
 	bool
 	default n
