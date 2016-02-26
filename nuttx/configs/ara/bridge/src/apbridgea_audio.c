@@ -511,16 +511,19 @@ static void apbridgea_audio_i2s_rx_cb(struct ring_buf *rb,
 {
     struct apbridgea_audio_info *info = arg;
 
-    if (!(info->flags & APBRIDGEA_AUDIO_FLAG_TX_STARTED) ||
-        (event != DEVICE_I2S_EVENT_RX_COMPLETE)) {
-
-        ring_buf_reset(rb);
-        ring_buf_pass(rb);
-
-        return;
+    if (event == DEVICE_I2S_EVENT_RX_COMPLETE) {
+        if (info->flags & APBRIDGEA_AUDIO_FLAG_TX_STARTED) {
+            apbridgea_audio_send_data(info, rb);
+            return;
+        }
+    } else if (event != DEVICE_I2S_EVENT_NONE) {
+        lowsyslog("%s: bad event from i2s ctlr: %u\n", __func__, event);
     }
 
-    apbridgea_audio_send_data(info, rb);
+    if (ring_buf_is_consumers(rb)) {
+        ring_buf_reset(rb);
+        ring_buf_pass(rb);
+    }
 }
 
 /*
