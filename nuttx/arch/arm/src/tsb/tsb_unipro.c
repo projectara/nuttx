@@ -777,7 +777,7 @@ int unipro_disable_fct_tx_flow(unsigned int cport)
 
     reg = CPB_TX_E2EFC_EN_REG(cport);
 
-    unipro_write(reg, unipro_read(reg) & ~(cport % 32));
+    unipro_write(reg, unipro_read(reg) & ~(1 << (cport % 32)));
     return 0;
 }
 
@@ -791,7 +791,7 @@ int unipro_enable_fct_tx_flow(unsigned int cport)
 
     reg = CPB_TX_E2EFC_EN_REG(cport);
 
-    unipro_write(reg, unipro_read(reg) | (cport % 32));
+    unipro_write(reg, unipro_read(reg) | (1 << (cport % 32)));
     return 0;
 }
 
