@@ -92,7 +92,7 @@ out:
 
 /**
  * @brief Manage the regulator state; Turn it on when needed
- * @returns: 0 on success, <0 on error
+ * @return 0 on success, <0 on error
  */
 int vreg_get(struct vreg *vreg) {
     unsigned int i;
@@ -138,7 +138,7 @@ int vreg_get(struct vreg *vreg) {
 
 /**
  * @brief Manage the regulator state; Turn it off when unused
- * @returns: 0 on success, <0 on error
+ * @return 0 on success, <0 on error
  */
 int vreg_put(struct vreg *vreg) {
     unsigned int i;

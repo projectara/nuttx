@@ -49,9 +49,9 @@
 #include "tsb_switch.h"
 #include "vreg.h"
 
-#define SWITCH_SPI_INIT_DELAY_US   (700)
+#define SWITCH_SPI_INIT_DELAY_US    (700)
 
-#define SWITCH_SPI_FREQUENCY 13000000
+#define SWITCH_SPI_FREQUENCY        13000000
 
 #define IRQ_WORKER_DEFPRIO          50
 #define IRQ_WORKER_STACKSIZE        2048
@@ -2636,7 +2636,7 @@ static int switch_post_init_comm(struct tsb_switch *sw)
 /**
  * @brief Initialize the switch and set default SVC<->Switch route
  * @param sw pdata platform-specific data for this switch
- * @returns pointer to initialized switch instance on success, NULL on error
+ * @return pointer to initialized switch instance on success, NULL on error
  */
 struct tsb_switch *switch_init(struct tsb_switch_data *pdata) {
     struct tsb_switch *sw ;

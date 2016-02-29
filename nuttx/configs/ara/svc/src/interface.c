@@ -74,7 +74,7 @@ static int interface_config(struct interface *iface)
     int rc_pwr, rc_clk;
 
     dbg_verbose("Configuring interface %s.\n",
-            iface->name ? iface->name : "unknown");
+                iface->name ? iface->name : "unknown");
 
     /* Configure default state for the regulator pins */
     rc_pwr = vreg_config(iface->vsys_vreg);
@@ -267,7 +267,7 @@ int interface_generate_wakeout(struct interface *iface, bool assert,
         /* First uninstall the interrupt handler on the pin */
         interface_uninstall_wd_handler(&iface->detect_in);
         /* Then configure the pin as output and assert it */
-	gpio_direction_out(iface->detect_in.gpio, polarity ? 0 : 1);
+        gpio_direction_out(iface->detect_in.gpio, polarity ? 0 : 1);
 
         /* Keep the line asserted for the given duration */
         up_udelay(pulse_len);
@@ -494,7 +494,7 @@ const char *interface_get_name(struct interface *iface)
 /**
  * @brief Get the interface struct from the index, as specified in the MDK.
  *        Index 0 is for the first interface (aka 'A').
- * @returns: interface* on success, NULL on error
+ * @return interface* on success, NULL on error
  */
 struct interface* interface_get(uint8_t index)
 {
@@ -507,7 +507,7 @@ struct interface* interface_get(uint8_t index)
 
 /**
  * @brief           Return the interface struct from the name
- * @returns: interface* on success, NULL on error
+ * @return interface* on success, NULL on error
  */
 struct interface* interface_get_by_name(const char *name)
 {
@@ -525,7 +525,7 @@ struct interface* interface_get_by_name(const char *name)
 
 /**
  * @brief           Return the interface struct from the port_id
- * @returns: interface* on success, NULL on error
+ * @return interface* on success, NULL on error
  */
 struct interface* interface_get_by_portid(uint8_t port_id)
 {
@@ -756,7 +756,7 @@ enum hotplug_state interface_get_hotplug_state(struct interface *iface)
 
 /**
  * @brief Get the interface struct from the Wake & Detect gpio
- * @returns: interface* on success, NULL on error
+ * @return interface* on success, NULL on error
  */
 static struct interface* interface_get_by_wd(uint32_t gpio)
 {
@@ -1072,7 +1072,7 @@ static int interface_install_wd_handler(struct interface *iface,
     struct wd_data *wd = &iface->detect_in;
     if (wd->gpio) {
         gpio_direction_in(wd->gpio);
-	gpio_set_pull(wd->gpio, GPIO_PULL_TYPE_PULL_NONE);
+        gpio_set_pull(wd->gpio, GPIO_PULL_TYPE_PULL_NONE);
         if (check_for_unplug) {
             interface_check_unplug_during_wake_out(iface);
         }
@@ -1141,7 +1141,7 @@ int interface_forcibly_eject(struct interface *ifc, uint32_t delay)
  * @param interfaces table of interfaces to initialize
  * @param nr_ints number of interfaces to initialize
  * @param nr_spring_ints number of spring interfaces
- * @returns: 0 on success, <0 on error
+ * @return 0 on success, <0 on error
  */
 int interface_early_init(struct interface **ints,
                          size_t nr_ints, size_t nr_spring_ints) {
@@ -1187,7 +1187,7 @@ int interface_early_init(struct interface **ints,
  * @param interfaces table of interfaces to initialize
  * @param nr_ints number of interfaces to initialize
  * @param nr_spring_ints number of spring interfaces
- * @returns: 0 on success, <0 on error
+ * @return 0 on success, <0 on error
  * @sideeffects: leaves interfaces powered off on error.
  */
 int interface_init(struct interface **ints,
