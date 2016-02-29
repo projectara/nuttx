@@ -159,7 +159,7 @@ static struct vreg_data apb1_refclk_vreg_data[] = {
 };
 
 static struct vreg_data apb2_refclk_vreg_data[] = {
-    /* INIT_MODULE_CLK_DATA(REFCLK_APB2_EN), */
+    INIT_MODULE_CLK_DATA(REFCLK_APB2_EN),
 };
 
 /*
@@ -231,9 +231,8 @@ static struct vreg_data module_5_refclk_vreg_data[] = {
 DECLARE_MODULE_PORT_INTERFACE(apb1, "apb1", apb1_vsys_vreg_data,
                               apb1_refclk_vreg_data, 3, WD8A_DET,
                               ARA_IFACE_WD_ACTIVE_HIGH, false, 0);
-DECLARE_MODULE_PORT_INTERFACE(apb2, "apb2_warning_deactivated",
-                              apb2_vsys_vreg_data, apb2_refclk_vreg_data, 1,
-                              FIXED_0_GPIO_PIN,
+DECLARE_MODULE_PORT_INTERFACE(apb2, "apb2", apb2_vsys_vreg_data,
+                              apb2_refclk_vreg_data, 1, WD8B_DET,
                               ARA_IFACE_WD_ACTIVE_HIGH, false, 0);
 DECLARE_MODULE_PORT_INTERFACE(module_1, "module_1", module_1_vsys_vreg_data,
                               module_1_refclk_vreg_data, 13, WD_1_DET,
