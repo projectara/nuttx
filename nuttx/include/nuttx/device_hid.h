@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Google, Inc.
+ * Copyright (c) 2015-2016 Google, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -88,12 +88,12 @@ typedef int (*hid_event_callback)(struct device *dev, void *data,
 
 /** HID device driver operations */
 struct device_hid_type_ops {
-    /** Power on a HID device
+    /** Power on an HID device
      * @param dev The device to power on
      * @return 0 on success, !=0 on failure
      */
     int (*power_on)(struct device *dev);
-    /** Power off a HID device
+    /** Power off an HID device
      * @param dev The device to power off
      * @return 0 on success, !=0 on failure
      */
@@ -110,7 +110,7 @@ struct device_hid_type_ops {
      * @return 0 on success, !=0 on failure
      */
     int (*get_report_descriptor)(struct device *dev, uint8_t *desc);
-    /** Get a HID report's length by its type and identifier
+    /** Get an HID report's length by its type and identifier
      * @param dev The device whose HID report's length to return
      * @param report_type The HID report's type
      * @param report_d The HID report's identifier
@@ -127,7 +127,7 @@ struct device_hid_type_ops {
      */
     int (*get_maximum_report_length)(struct device *dev,
                                      enum hid_report_type report_type);
-    /** Get a HID input or feature report
+    /** Get an HID input or feature report
      * @param dev The device whose HID input/feature report to return
      * @param report_type The HID report's type (input or feature)
      * @param report_id The HID report's identifier
@@ -137,7 +137,7 @@ struct device_hid_type_ops {
      */
     int (*get_report)(struct device *dev, enum hid_report_type report_type,
                       uint8_t report_id, uint8_t *data, uint16_t len);
-    /** Set a HID output or feature report
+    /** Set an HID output or feature report
      * @param dev The device whose HID output/feature report to set
      * @param report_type The HID report's type (output or feature)
      * @param report_id The HID report's identifier
@@ -147,7 +147,7 @@ struct device_hid_type_ops {
      */
     int (*set_report)(struct device *dev, enum hid_report_type report_type,
                       uint8_t report_id, uint8_t *data, uint16_t len);
-    /** Register a HID event callback function
+    /** Register an HID event callback function
      * @param dev The device creating the event
      * @param data Private data passed to the callback
      * @param callback The callback function to be called on an event
@@ -164,7 +164,7 @@ struct device_hid_type_ops {
 };
 
 /**
- * @brief Power on a HID device
+ * @brief Power on an HID device
  * @param dev The device to power on
  * @return 0 on success, !=0 on failure
  */
@@ -184,7 +184,7 @@ static inline int device_hid_power_on(struct device *dev)
 }
 
 /**
- * @brief Power off a HID device
+ * @brief Power off an HID device
  * @param dev The device to power off
  * @return 0 on success, !=0 on failure
  */
@@ -226,7 +226,7 @@ static inline int device_hid_get_descriptor(struct device *dev,
 }
 
 /**
- * @brief Get a HID report's length by its type and identifier
+ * @brief Get an HID report's length by its type and identifier
  * @param dev The device whose HID report's length to return
  * @param report_type The HID report's type
  * @param report_id The HID report's identifier
@@ -297,7 +297,7 @@ static inline int device_hid_get_report_descriptor(struct device *dev,
 }
 
 /**
- * @brief Get a HID input or feature report
+ * @brief Get an HID input or feature report
  * @param dev The device whose HID input/feature report to return
  * @param report_type The HID report's type (input or feature)
  * @param report_id The HID report's identifier
@@ -325,7 +325,7 @@ static inline int device_hid_get_report(struct device *dev,
 }
 
 /**
- * @brief Set a HID output or feature report
+ * @brief Set an HID output or feature report
  * @param dev The device whose HID output/feature report to set
  * @param report_type The HID report's type (output or feature)
  * @param report_id The HID report's identifier
@@ -353,7 +353,7 @@ static inline int device_hid_set_report(struct device *dev,
 }
 
 /**
- * @brief Register a HID event callback function
+ * @brief Register an HID event callback function
  * @param dev The device creating the event
  * @param data User private data (will be passed to the callback)
  * @param callback The callback function to be called on an event

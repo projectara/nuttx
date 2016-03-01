@@ -89,13 +89,23 @@ struct device_pm_ops {
 
 /** Device driver operations */
 struct device_driver_ops {
-    /** Probe the device ``dev``; Return 0 on success, !=0 on error */
+    /** Probe a device
+     * @param dev Pointer to the device to probe
+     * @return 0 on success, negative errno on failure
+     */
     int (*probe)(struct device *dev);
-    /** Remove the device ``dev`` */
+    /** Remove a device
+     * @param dev Pointer to the device to remove
+     */
     void (*remove)(struct device *dev);
-    /** Open the device ``dev``; Return 0 on success, !=0 on error */
+    /** Open a device
+     * @param dev Pointer to the device to open
+     * @return 0 on success, negative errno on failure
+     */
     int (*open)(struct device *dev);
-    /** Close the device ``dev`` */
+    /** Close a device
+     * @param dev Pointer to the device to close
+     */
     void (*close)(struct device *dev);
     /** Device type operations */
     void *type_ops;
