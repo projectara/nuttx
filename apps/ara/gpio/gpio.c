@@ -294,9 +294,16 @@ int gpio_main(int argc, char *argv[])
     if (argc > max_gpios) {
         argc = max_gpios;
     }
-    printf("GPIOs:");
     for (i = 0; i < argc; i++) {
         gpios[i] = (uint8_t)atoi(argv[2 + i]);
+        if (!gpio_is_valid(gpios[i])) {
+            printf("GPIO %u is invalid.\n", gpios[i]);
+            rc = EXIT_FAILURE;
+            goto done;
+        }
+    }
+    printf("GPIOs:");
+    for (i = 0; i < argc; i++) {
         printf(" %u", gpios[i]);
     }
     printf("\n");
