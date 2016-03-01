@@ -36,6 +36,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/clock.h>
 #include <nuttx/gpio.h>
+#include <nuttx/power/pm.h>
 
 #include <time.h>
 #include <sys/time.h>
@@ -791,7 +792,9 @@ static int interface_wd_delay_check(struct wd_data *wd, uint32_t delay)
     if (!work_available(&wd->work)) {
         return 0;
     }
-
+#ifdef CONFIG_PM
+    pm_activity(7);
+#endif
     /* Schedule the work to run after the debounce timeout */
     return work_queue(HPWORK, &wd->work, interface_wd_delayed_handler, wd,
                       MSEC2TICK(delay));

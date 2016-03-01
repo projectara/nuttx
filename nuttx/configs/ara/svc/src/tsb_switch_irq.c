@@ -35,6 +35,8 @@
 #include <sys/wait.h>
 #include <ara_debug.h>
 
+#include <nuttx/power/pm.h>
+
 #define SWITCH_IRQ_MAX    16
 
 /* TSB attributes fields values */
@@ -139,7 +141,9 @@ static int switch_hard_irq_handler(int irq, void *context, void *priv)
     }
 
     switch_post_irq(sw);
-
+#ifdef CONFIG_PM
+    pm_activity(9);
+#endif
     return 0;
 }
 

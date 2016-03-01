@@ -233,7 +233,7 @@
 /* Power management definitions */
 
 #if defined(CONFIG_PM) && !defined(CONFIG_PM_SERIAL_ACTIVITY)
-#  define CONFIG_PM_SERIAL_ACTIVITY 10
+#  define CONFIG_PM_SERIAL_ACTIVITY 9
 #endif
 
 #ifdef USE_SERIALDRIVER

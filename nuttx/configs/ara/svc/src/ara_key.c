@@ -40,6 +40,7 @@
 #include <nuttx/gpio.h>
 #include <nuttx/gpio/debounce.h>
 #include <nuttx/wqueue.h>
+#include <nuttx/power/pm.h>
 
 #include "ara_board.h"
 #include "ara_key.h"
@@ -136,7 +137,9 @@ static int ara_key_irqhandler(int irq, void *context)
 
 out:
     irqrestore(flags);
-
+#ifdef CONFIG_PM
+    pm_activity(9);
+#endif
     return OK;
 }
 
