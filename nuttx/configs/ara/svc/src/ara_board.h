@@ -123,6 +123,10 @@ struct ara_board_info {
     uint8_t ara_key_gpio;
     bool ara_key_rising_edge;
     bool ara_key_configured;
+
+    /* latch vregs */
+    struct vreg *vlatch_vdd;
+    struct vreg *latch_ilim;
 };
 
 struct ara_board_info *ara_board_init(void);
