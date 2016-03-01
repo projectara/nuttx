@@ -1217,6 +1217,17 @@ int interface_init(struct interface **ints,
             if (interface_power_on(ifc) < 0) {
                 dbg_error("Failed to power ON interface %s\n", ifc->name);
             }
+            /*
+             * SW-3364. Unipro port interrupts need to be enabled initially
+             * for the LinkUp and Mailbox IRQs to be signalled by the Switch.
+             * Later the port interrupts are enabled and disabled as part of
+             * the hotplug/unplug sequence.
+             */
+            if (switch_port_irq_enable(svc->sw, ifc->switch_portid, true)) {
+                dbg_error("Failed to enable port IRQs for interface %s\n",
+                          ifc->name);
+                return rc;
+            }
             break;
         case HOTPLUG_ST_UNPLUGGED:
             /* Port unplugged, power OFF the interface */
