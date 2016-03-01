@@ -71,6 +71,10 @@ ifeq ($(CONFIG_GPIO_TCA64XX),y)
     CSRCS += tca64xx.c
 endif
 
+ifeq ($(CONFIG_GPIO_ARA_CPLD),y)
+    CSRCS += ara_cpld.c
+endif
+
 endif
 
 # Include gpio driver build support

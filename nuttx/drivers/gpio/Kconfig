@@ -38,3 +38,9 @@ config GPIO_TCA64XX
 	select I2C
 	select I2C_TRANSFER
 	default n
+
+config GPIO_ARA_CPLD
+	bool "ARA CPLD GPIO expander"
+	select I2C
+	select I2C_TRANSFER
+	default n
