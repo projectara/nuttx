@@ -126,6 +126,14 @@ static int event_linkup(struct tsb_switch_event *ev) {
     int rc = 0;
     char *linkup_result;
     struct interface *iface;
+    bool release_mutex;
+
+    rc = pthread_mutex_lock(&svc->lock);
+    if (rc != 0 && rc != EDEADLK) {
+        return rc;
+    }
+
+    release_mutex = !rc;
 
     switch (ev->linkup.val) {
     case SW_LINKUP_INITIATE:
@@ -150,10 +158,11 @@ static int event_linkup(struct tsb_switch_event *ev) {
     if (!iface) {
         dbg_error("%s: No interface for portId %d\n", __func__,
                   ev->linkup.port);
+        if (release_mutex) {
+            pthread_mutex_unlock(&svc->lock);
+        }
         return -EINVAL;
     }
-
-    pthread_mutex_lock(&svc->lock);
 
     switch (ev->linkup.val) {
     case SW_LINKUP_INITIATE:
@@ -184,7 +193,9 @@ static int event_linkup(struct tsb_switch_event *ev) {
         rc = -EINVAL;
     }
 
-    pthread_mutex_unlock(&svc->lock);
+    if (release_mutex) {
+        pthread_mutex_unlock(&svc->lock);
+    }
 
     return rc;
 }
