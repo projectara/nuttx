@@ -411,13 +411,13 @@ static int tsb_atabl_req_is_activated(struct device *dev, void *req)
     start_reg = atabl_read(info, ATABL_REG(gdmac_reqn_start, reqn->req_id));
     if (reqn->state != TSB_ATABL_REQ_STATE_RUNNING) {
         if ((start_reg & ATABL_GDMAC_HANDSHAKE_START) != 0) {
-            lldbg("SW internal state doesn't match with HW.\n");
+            lldbg("atabl: SW internal state doesn't match with HW.\n");
         }
         return 0;
     }
 
     if ((start_reg & ATABL_GDMAC_HANDSHAKE_START) == 0) {
-        reqn->state = TSB_ATABL_REQ_STATE_ALLOCATED;
+        reqn->state = TSB_ATABL_REQ_STATE_CONNECTED;
         return 0;
     }
 

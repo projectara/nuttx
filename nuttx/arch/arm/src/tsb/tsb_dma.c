@@ -123,9 +123,7 @@ static int tsb_dma_restart_chan(struct device *dev,
                     dma_op->state = TSB_DMA_OP_STATE_RUNNING;
                 }
             } else {
-                lldbg("failed to start op.\n");
-                dma_op->error = DEVICE_DMA_ERROR_DMA_FAILED;
-                dma_op->state = TSB_DMA_OP_STATE_ERROR;
+                gdmac_recover_from_op_error(dev, dma_chan);
             }
         }
         break;
@@ -157,14 +155,14 @@ static void *tsb_dma_process_completed_op(void *arg)
             chan_id = dma_op->chan_id;
 
             if (dma_op->op.callback == NULL) {
-                lldbg("Invalid callback\n");
+                lldbg("gdmac: gdmac: Invalid callback\n");
             } else {
                 uint32_t callback_events = dma_op->op.callback_events;
 
                 if ((callback_events & DEVICE_DMA_CALLBACK_EVENT_COMPLETE) &&
                     (dma_op->state == TSB_DMA_OP_STATE_COMPLETED)) {
                     dma_op->op.callback(dev, &dma_info->chans[chan_id],
-                            (void *) &dma_op->op,
+                            &dma_op->op,
                             DEVICE_DMA_CALLBACK_EVENT_COMPLETE,
                             dma_op->op.callback_arg);
                 }
@@ -172,8 +170,16 @@ static void *tsb_dma_process_completed_op(void *arg)
                 if ((callback_events & DEVICE_DMA_CALLBACK_EVENT_ERROR) &&
                     (dma_op->state == TSB_DMA_OP_STATE_ERROR)) {
                     dma_op->op.callback(dev, &dma_info->chans[chan_id],
-                            (void *) &dma_op->op,
+                            &dma_op->op,
                             DEVICE_DMA_CALLBACK_EVENT_ERROR,
+                            dma_op->op.callback_arg);
+                }
+
+                if ((callback_events & DEVICE_DMA_CALLBACK_EVENT_DEQUEUED) &&
+                    (dma_op->state == TSB_DMA_OP_STATE_DEQUEUED)) {
+                    dma_op->op.callback(dev, &dma_info->chans[chan_id],
+                            &dma_op->op,
+                            DEVICE_DMA_CALLBACK_EVENT_DEQUEUED,
                             dma_op->op.callback_arg);
                 }
             }
@@ -569,7 +575,7 @@ static int tsb_dma_enqueue(struct device *dev, void *chan,
     /* Check the op if there is any alignment issue */
     retval = gdmac_chan_check_op_params(dev, dma_chan, op);
     if (retval != DEVICE_DMA_ERROR_NONE) {
-        lldbg("Failed in parameters check.\n");
+        lldbg("gdmac: Failed in parameters check.\n");
         dma_op->error = retval;
 
         return -EINVAL;
@@ -644,6 +650,7 @@ int tsb_dma_callback(struct device *dev, struct tsb_dma_chan *dma_chan,
 {
     struct tsb_dma_info *info = device_get_private(dev);
     struct list_head *next_op;
+    int retval = OK;
 
     /* This routine runs in the interrupt context, so there is no other
      * thread would manipulate the the op other than the user callback
@@ -658,17 +665,43 @@ int tsb_dma_callback(struct device *dev, struct tsb_dma_chan *dma_chan,
         /* Make sure the op is in either starting or running state. */
         if ((dma_op->state == TSB_DMA_OP_STATE_STARTING)
                 || (dma_op->state == TSB_DMA_OP_STATE_RUNNING)) {
-            dma_op->state = TSB_DMA_OP_STATE_COMPLETED;
+            switch (event) {
+                case DEVICE_DMA_CALLBACK_EVENT_COMPLETE:
+                    dma_op->state = TSB_DMA_OP_STATE_COMPLETED;
 
-            list_del(next_op);
-            list_add(&info->completed_queue, next_op);
+                    list_del(next_op);
+                    list_add(&info->completed_queue, next_op);
 
-            sem_post(&info->op_completed_sem);
+                    sem_post(&info->op_completed_sem);
+                    break;
+                case DEVICE_DMA_CALLBACK_EVENT_ERROR:
+                case DEVICE_DMA_CALLBACK_EVENT_RECOVERED:
+                    if ((dma_op->op.callback_events & event) &&
+                        (dma_op->op.callback != NULL)) {
+                        retval = dma_op->op.callback(dev,
+                                     &info->chans[dma_chan->chan_id],
+                                     &dma_op->op,
+                                     event,
+                                     dma_op->op.callback_arg);
+                    }
+                    break;
+                case DEVICE_DMA_CALLBACK_EVENT_DEQUEUED:
+                    dma_op->state = TSB_DMA_OP_STATE_DEQUEUED;
+
+                    list_del(next_op);
+                    list_add(&info->completed_queue, next_op);
+
+                    sem_post(&info->op_completed_sem);
+                    break;
+                default:
+                    ldbg("gdmac: Unexpected event %x\n", event);
+                    break;
+            }
         }
         break;
     }
 
-    return OK;
+    return retval;
 }
 
 static struct device_dma_type_ops tsb_dma_type_ops = {
