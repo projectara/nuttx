@@ -45,6 +45,7 @@ config ARCH_BOARD_ARA_SVC
 	select SPI_OWNBUS
 	select SPI_EXCHANGE
 	select STM32_SPI2
+	select GPIO_ARA_CPLD
 	select ARA_SVC_MAIN
 	---help---
 		The ARA SVC is based on the STMicro STM32F4446MEY microcontroller
