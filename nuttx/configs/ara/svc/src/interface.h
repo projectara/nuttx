@@ -157,7 +157,7 @@ uint8_t interface_get_spring_count(void);
 void interface_cancel_linkup_wd(struct interface *iface);
 
 void interface_forcibly_eject_all(uint32_t delay);
-int interface_forcibly_eject(struct interface *iface, uint32_t delay);
+int interface_forcibly_eject_atomic(struct interface *iface, uint32_t delay);
 #define MOD_RELEASE_PULSE_WIDTH 1500U /* ms */
 
 const char *interface_get_name(struct interface *iface);

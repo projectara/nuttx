@@ -41,6 +41,7 @@
 #include <time.h>
 #include <sys/time.h>
 #include <errno.h>
+#include <pthread.h>
 
 #include <ara_debug.h>
 #include "interface.h"
@@ -63,6 +64,7 @@ static unsigned int nr_spring_interfaces;
 static struct work_s linkup_work;
 static struct vreg *vlatch_vdd;
 static struct vreg *latch_ilim;
+static pthread_mutex_t latch_ilim_lock = PTHREAD_MUTEX_INITIALIZER;
 
 static void interface_power_cycle(void *data);
 static void interface_uninstall_wd_handler(struct wd_data *wd);
@@ -1159,22 +1161,7 @@ uint32_t interface_pm_get_spin(struct interface *iface)
     return iface->pm->spin;
 }
 
-/**
- * @brief Toggle the MOD_RELEASE_ signal for all interfaces with such a GPIO
- *        defined
- * @param delay pulse width in ms (~10ms precision)
- */
-void interface_forcibly_eject_all(uint32_t delay)
-{
-    unsigned int i;
-    struct interface *ifc;
-
-    interface_foreach(ifc, i) {
-        interface_forcibly_eject(ifc, delay);
-    }
-}
-
-int interface_forcibly_eject(struct interface *ifc, uint32_t delay)
+static int interface_forcibly_eject(struct interface *ifc, uint32_t delay)
 {
     uint8_t gpio = ifc->release_gpio;
     struct wd_data *wd = &ifc->detect_in;
@@ -1269,6 +1256,41 @@ int interface_forcibly_eject(struct interface *ifc, uint32_t delay)
                   ifc->if_type);
         return -ENOTSUP;
     }
+
+    return retval;
+}
+
+/**
+ * @brief Toggle the MOD_RELEASE_ signal for all interfaces with such a GPIO
+ *        defined
+ * @param delay pulse width in ms (~10ms precision)
+ */
+void interface_forcibly_eject_all(uint32_t delay)
+{
+    unsigned int i;
+    struct interface *ifc;
+
+    interface_foreach(ifc, i) {
+        interface_forcibly_eject(ifc, delay);
+    }
+}
+
+int interface_forcibly_eject_atomic(struct interface *iface, uint32_t delay)
+{
+    int retval;
+
+    retval = pthread_mutex_lock(&latch_ilim_lock);
+    if (retval) {
+        return retval;
+    }
+
+    retval = interface_forcibly_eject(iface, delay);
+    if (retval) {
+        pthread_mutex_unlock(&latch_ilim_lock);
+        return retval;
+    }
+
+    retval = pthread_mutex_unlock(&latch_ilim_lock);
 
     return retval;
 }

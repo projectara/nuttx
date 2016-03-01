@@ -1864,7 +1864,7 @@ static int release(int argc, char *argv[]) {
         struct interface *iface = interface_get_by_name(iface_name);
         if (iface) {
             printf("ejecting name = %s\n", iface_name);
-            interface_forcibly_eject(iface, delay);
+            interface_forcibly_eject_atomic(iface, delay);
         } else {
             printf("ERROR: cannot find module named = %s\n", iface_name);
         }

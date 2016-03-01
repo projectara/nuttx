@@ -377,7 +377,7 @@ int svc_intf_eject(uint8_t intf_id) {
         return -EINVAL;
     }
 
-    return interface_forcibly_eject(iface, MOD_RELEASE_PULSE_WIDTH);
+    return interface_forcibly_eject_atomic(iface, MOD_RELEASE_PULSE_WIDTH);
 }
 
 /**
