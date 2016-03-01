@@ -61,6 +61,8 @@ static struct interface **interfaces;
 static unsigned int nr_interfaces;
 static unsigned int nr_spring_interfaces;
 static struct work_s linkup_work;
+static struct vreg *vlatch_vdd;
+static struct vreg *latch_ilim;
 
 static void interface_power_cycle(void *data);
 static void interface_uninstall_wd_handler(struct wd_data *wd);
@@ -85,6 +87,7 @@ static int interface_config(struct interface *iface)
     /* Configure the interfaces pin according to the interface type */
     switch (iface->if_type) {
     case ARA_IFACE_TYPE_MODULE_PORT:
+    case ARA_IFACE_TYPE_MODULE_PORT2:
         /*
          * DB3 module port:
          * The WAKEOUT pin is configured as interrupt input at handler
@@ -1128,35 +1131,98 @@ int interface_forcibly_eject(struct interface *ifc, uint32_t delay)
     uint8_t gpio = ifc->release_gpio;
     struct wd_data *wd = &ifc->detect_in;
     bool enable_power = false;
+    int retval = 0;
 
     if (!ifc->ejectable) {
         return -ENOTTY;
     }
 
+    /* Secondary interface do not contain the ejection circuitry */
+    if (ifc->if_order == ARA_IFACE_ORDER_SECONDARY) {
+        dbg_warn("Trying to eject secondary interface: %s\n", ifc->name);
+    }
+
     dbg_info("Module %s ejecting: using gpio 0x%02X\n", ifc->name, gpio);
 
-    /*
-     * HACK: if there is a module in the slot, but it isn't powered on
-     * for some reason (e.g. dummy module), enable power.
-     */
-    if (gpio_is_valid(wd->gpio)) {
-        gpio_direction_in(wd->gpio);
-        if ( (gpio_get_value(wd->gpio) == wd->polarity) &&
-                (interface_get_power_state(ifc) != ARA_IFACE_PWR_UP) ){
-            interface_power_enable(ifc);
-            enable_power = true;
+    switch (ifc->if_type) {
+    case ARA_IFACE_TYPE_MODULE_PORT:
+        /*
+         * HACK: if there is a module in the slot, but it isn't powered on
+         * for some reason (e.g. dummy module), enable power.
+         */
+        if (gpio_is_valid(wd->gpio)) {
+            gpio_direction_in(wd->gpio);
+            if ( (gpio_get_value(wd->gpio) == wd->polarity) &&
+                    (interface_get_power_state(ifc) != ARA_IFACE_PWR_UP) ){
+                interface_power_enable(ifc);
+                enable_power = true;
+            }
         }
+        break;
+
+    case ARA_IFACE_TYPE_MODULE_PORT2:
+        DEBUGASSERT(vlatch_vdd && latch_ilim);
+
+        retval = interface_power_off(ifc);
+        if (retval) {
+            dbg_error("couldn't power off interface '%s' before ejecting, aborting...\n",
+                      ifc->name);
+            return retval;
+        }
+
+        retval = vreg_get(vlatch_vdd);
+        if (retval) {
+            dbg_error("couldn't enable VLATCH_VDD_EN, aborting ejection...\n");
+            return retval;
+        }
+
+        retval = vreg_get(latch_ilim);
+        if (retval) {
+            dbg_error("couldn't enable LATCH_ILIM_EN, aborting ejection...\n");
+            vreg_put(vlatch_vdd);
+            return retval;
+        }
+        break;
+
+    case ARA_IFACE_TYPE_BUILTIN:
+        break;
+
+    default:
+        dbg_error("%s(): unsupported interface port type: %d\n", __func__,
+                  ifc->if_type);
+        return -ENOTSUP;
     }
 
     gpio_set_value(gpio, 1);
     usleep(delay * 1000);
     gpio_set_value(gpio, 0);
 
-    if (enable_power) {
-        interface_power_disable(ifc);
+    switch (ifc->if_type) {
+    case ARA_IFACE_TYPE_MODULE_PORT:
+        if (enable_power) {
+            interface_power_disable(ifc);
+        }
+        break;
+
+    case ARA_IFACE_TYPE_MODULE_PORT2:
+        retval = vreg_put(latch_ilim);
+        if (retval) {
+            vreg_put(vlatch_vdd);
+        }
+
+        retval = vreg_put(vlatch_vdd);
+        break;
+
+    case ARA_IFACE_TYPE_BUILTIN:
+        break;
+
+    default:
+        dbg_error("%s(): unsupported interface port type: %d\n", __func__,
+                  ifc->if_type);
+        return -ENOTSUP;
     }
 
-    return 0;
+    return retval;
 }
 
 /**
@@ -1165,10 +1231,13 @@ int interface_forcibly_eject(struct interface *ifc, uint32_t delay)
  * @param interfaces table of interfaces to initialize
  * @param nr_ints number of interfaces to initialize
  * @param nr_spring_ints number of spring interfaces
+ * @param vlatch VLATCH step down voltage regulator
+ * @param latch_curlim Latch current limiter
  * @return 0 on success, <0 on error
  */
-int interface_early_init(struct interface **ints,
-                         size_t nr_ints, size_t nr_spring_ints) {
+int interface_early_init(struct interface **ints, size_t nr_ints,
+                         size_t nr_spring_ints, struct vreg *vlatch,
+                         struct vreg *latch_curlim) {
     unsigned int i;
     int rc;
     int fail = 0;
@@ -1183,6 +1252,24 @@ int interface_early_init(struct interface **ints,
     interfaces = ints;
     nr_interfaces = nr_ints;
     nr_spring_interfaces = nr_spring_ints;
+    vlatch_vdd = vlatch;
+    latch_ilim = latch_curlim;
+
+    if (vlatch) {
+        rc = vreg_config(vlatch);
+        if (rc) {
+            dbg_error("Failed to initialize VLATCH_VDD: %d\n", rc);
+            return rc;
+        }
+    }
+
+    if (latch_curlim) {
+        rc = vreg_config(latch_curlim);
+        if (rc) {
+            dbg_error("Failed to initialize LATCH_ILIM: %d\n", rc);
+            return rc;
+        }
+    }
 
     interface_foreach(ifc, i) {
         rc = interface_config(ifc);
@@ -1211,11 +1298,14 @@ int interface_early_init(struct interface **ints,
  * @param interfaces table of interfaces to initialize
  * @param nr_ints number of interfaces to initialize
  * @param nr_spring_ints number of spring interfaces
+ * @param vlatch VLATCH step down voltage regulator
+ * @param latch_curlim Latch current limiter
  * @return 0 on success, <0 on error
  * @sideeffects: leaves interfaces powered off on error.
  */
-int interface_init(struct interface **ints,
-                   size_t nr_ints, size_t nr_spring_ints) {
+int interface_init(struct interface **ints, size_t nr_ints,
+                   size_t nr_spring_ints, struct vreg *vlatch,
+                   struct vreg *latch_curlim) {
     unsigned int i;
     int rc;
     struct interface *ifc;
@@ -1229,6 +1319,8 @@ int interface_init(struct interface **ints,
     interfaces = ints;
     nr_interfaces = nr_ints;
     nr_spring_interfaces = nr_spring_ints;
+    vlatch_vdd = vlatch;
+    latch_ilim = latch_curlim;
 
     interface_foreach(ifc, i) {
         /* Initialize the hotplug state */

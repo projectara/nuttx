@@ -137,10 +137,12 @@ struct interface {
              (iface);                                       \
              (idx)++, (iface) = interface_get(idx))
 
-int interface_init(struct interface**,
-                   size_t nr_interfaces, size_t nr_spring_ints);
-int interface_early_init(struct interface**,
-                         size_t nr_interfaces, size_t nr_spring_ints);
+int interface_init(struct interface**, size_t nr_interfaces,
+                   size_t nr_spring_ints, struct vreg *vlatch,
+                   struct vreg *latch_curlim);
+int interface_early_init(struct interface**, size_t nr_interfaces,
+                         size_t nr_spring_ints, struct vreg *vlatch,
+                         struct vreg *latch_curlim);
 void interface_exit(void);
 struct interface* interface_get(uint8_t index);
 struct interface* interface_get_by_name(const char *name);
