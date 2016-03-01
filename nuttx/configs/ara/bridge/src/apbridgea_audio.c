@@ -207,6 +207,7 @@ static int apbridgea_audio_convert_format(uint32_t audio_fmt, uint32_t *i2s_fmt,
         bytes = 8;
         break;
     default:
+        dbg_error("%s: invalid audio format 0x%x\n", __func__, audio_fmt);
         return -EINVAL;
     }
 
@@ -282,6 +283,7 @@ static int apbridgea_audio_convert_rate(uint32_t audio_rate, uint32_t *i2s_rate,
         freq = 192000;
         break;
     default:
+        dbg_error("%s: invalid audio rate 0x%x\n", __func__, audio_rate);
         ret = -EINVAL;
     }
 
@@ -296,6 +298,19 @@ static int apbridgea_audio_convert_rate(uint32_t audio_rate, uint32_t *i2s_rate,
     return ret;
 }
 
+static void apbridgea_audio_dump_config(struct device_i2s_pcm *pcm,
+                                        struct device_i2s_dai *dai)
+{
+    dbg_error("    pcm: format 0x%x, rate 0x%x, channels %u\n",
+              pcm->format, pcm->rate, pcm->channels);
+    dbg_error("    dai: mclk_freq %u, protocol 0x%x\n",
+              dai->mclk_freq, dai->protocol);
+    dbg_error("         wclk_polarity 0x%x, wclk_change_edge 0x%x\n",
+              dai->wclk_polarity, dai->wclk_change_edge);
+    dbg_error("         data_rx_edge 0x%x, data_tx_edge 0x%x\n",
+              dai->data_rx_edge, dai->data_tx_edge);
+}
+
 static int apbridgea_audio_set_config(struct apbridgea_audio_info *info,
                                       void *buf, uint16_t len)
 {
@@ -307,11 +322,14 @@ static int apbridgea_audio_set_config(struct apbridgea_audio_info *info,
     int ret;
 
     if (!req || (len < sizeof(*req))) {
+        dbg_error("%s: NULL req or bad length 0x%p/%u\n", __func__, req, len);
         return -EINVAL;
     }
 
     if ((info->flags & APBRIDGEA_AUDIO_FLAG_TX_STARTED) ||
         (info->flags & APBRIDGEA_AUDIO_FLAG_RX_STARTED)) {
+
+        dbg_error("%s: protocol error, flags 0x%x\n", __func__, info->flags);
         return -EPROTO;
     }
 
@@ -342,6 +360,8 @@ static int apbridgea_audio_set_config(struct apbridgea_audio_info *info,
     ret = device_i2s_set_config(info->i2s_dev, DEVICE_I2S_ROLE_MASTER, &pcm,
                                 &dai);
     if (ret) {
+        dbg_error("%s: can't set i2s MASTER config %d\n", __func__, ret);
+        apbridgea_audio_dump_config(&pcm, &dai);
         return ret;
     }
 #else
@@ -352,6 +372,8 @@ static int apbridgea_audio_set_config(struct apbridgea_audio_info *info,
     ret = device_i2s_set_config(info->i2s_dev, DEVICE_I2S_ROLE_SLAVE, &pcm,
                                 &dai);
     if (ret) {
+        dbg_error("%s: can't set i2s SLAVE config %d\n", __func__, ret);
+        apbridgea_audio_dump_config(&pcm, &dai);
         return ret;
     }
 #endif
@@ -363,6 +385,7 @@ static int apbridgea_audio_set_config(struct apbridgea_audio_info *info,
 
 static int apbridgea_audio_from_usb(unsigned int cportid, void *buf, size_t len)
 {
+    dbg_error("%s: unexpected message for cport %d\n", __func__, cportid);
     usb_release_buffer(NULL, buf);
     return 0;
 }
@@ -380,6 +403,9 @@ static int apbridgea_audio_from_unipro(unsigned int cportid, void *buf,
 
         if (len == (hdr_size + info->rx_data_size)) {
             apbridgea_audio_i2s_tx(info, buf + hdr_size);
+        } else {
+            dbg_error("%s: bad rx message from unipro, cport %u, len %u\n",
+                      __func__, cportid, len);
         }
     }
 
@@ -400,6 +426,8 @@ static int apbridgea_audio_register_cport(struct apbridgea_audio_info *info,
                        AUDIO_APBRIDGEA_DIRECTION_RX);
 
     if (!data_cportid || !req->direction) {
+        dbg_error("%s: bad cport or direction %u/0x%x\n", __func__,
+                  data_cportid, req->direction);
         return -EINVAL;
     }
 
@@ -407,6 +435,7 @@ static int apbridgea_audio_register_cport(struct apbridgea_audio_info *info,
     if (!cport) {
         cport = malloc(sizeof(*cport));
         if (!cport) {
+            dbg_error("%s: can't alloc cport struct\n", __func__);
             return -ENOMEM;
         }
 
@@ -423,7 +452,7 @@ static int apbridgea_audio_register_cport(struct apbridgea_audio_info *info,
         if (ret) {
             irqrestore(flags);
             free(cport);
-            dbg_error("%s: can't offload cport: %u\n", __func__, data_cportid);
+            dbg_error("%s: can't offload cport %u\n", __func__, data_cportid);
             return ret;
         }
 
@@ -456,34 +485,38 @@ static int apbridgea_audio_unregister_cport(struct apbridgea_audio_info *info,
                        AUDIO_APBRIDGEA_DIRECTION_RX);
 
     if (!data_cportid || !req->direction) {
+        dbg_error("%s: bad cport or direction %u/0x%x\n", __func__,
+                  data_cportid, req->direction);
         return -EINVAL;
     }
 
     cport = apbridgea_audio_find_cport(info, data_cportid);
-    if (cport) {
-        if ((data_cportid == info->rx_data_cportid) &&
-            (req->direction & AUDIO_APBRIDGEA_DIRECTION_RX)) {
+    if (!cport) {
+        dbg_error("%s: cport %u not registered\n", __func__, data_cportid);
+        return -EINVAL;
+    }
 
-            info->rx_data_cportid = 0;
+    if ((data_cportid == info->rx_data_cportid) &&
+        (req->direction & AUDIO_APBRIDGEA_DIRECTION_RX)) {
+
+        info->rx_data_cportid = 0;
+    }
+
+    cport->direction &= ~req->direction;
+
+    if (!cport->direction) {
+        flags = irqsave();
+
+        list_del(&cport->list);
+
+        ret = unmap_offloaded_cport(get_apbridge_dev(), data_cportid);
+        if (ret) {
+            dbg_error("%s: can't unoffload cport %u\n", __func__, data_cportid);
         }
 
-        cport->direction &= ~req->direction;
+        irqrestore(flags);
 
-        if (!cport->direction) {
-            flags = irqsave();
-
-            list_del(&cport->list);
-
-            ret = unmap_offloaded_cport(get_apbridge_dev(), data_cportid);
-            if (ret) {
-                dbg_error("%s: can't unoffload cport: %u\n", __func__,
-                          data_cportid);
-            }
-
-            irqrestore(flags);
-
-            free(cport);
-        }
+        free(cport);
     }
 
     return 0;
@@ -496,10 +529,12 @@ static int apbridgea_audio_set_tx_data_size(struct apbridgea_audio_info *info,
     uint16_t size;
 
     if (!req || (len < sizeof(*req))) {
+        dbg_error("%s: NULL req or bad length 0x%p/%u\n", __func__, req, len);
         return -EINVAL;
     }
 
     if (info->flags & APBRIDGEA_AUDIO_FLAG_TX_STARTED) {
+        dbg_error("%s: protocol error, flags 0x%x\n", __func__, info->flags);
         return -EPROTO;
     }
 
@@ -507,6 +542,7 @@ static int apbridgea_audio_set_tx_data_size(struct apbridgea_audio_info *info,
 
     /* Size must be a multiple of 4 (required by i2s FIFO) */
     if (!size || (size % 4)) {
+        dbg_error("%s: bad message size %u\n", __func__, size);
         return -EINVAL;
     }
 
@@ -525,7 +561,7 @@ static int apbridgea_audio_unipro_tx_cb(int status, const void *buf, void *priv)
     rb_hdr = ring_buf_get_buf(rb);
 
     if (!rb_hdr->not_acked) { /* Should never happen */
-        dbg_error("%s: not_acked of zero\n", __func__);
+        dbg_error("%s: not_acked value of zero\n", __func__);
         return 0;
     }
 
@@ -572,6 +608,8 @@ static void apbridgea_audio_unipro_tx(struct apbridgea_audio_info *info,
                                     apbridgea_audio_unipro_tx_cb, rb);
             if (ret) {
                 rb_hdr->not_acked--;
+                dbg_error("%s: can't send UniPro message on cport %u, ret %u\n",
+                          __func__, cport->data_cportid, ret);
             }
         }
     }
@@ -588,7 +626,8 @@ static void apbridgea_audio_i2s_rx_cb(struct ring_buf *rb,
             return;
         }
     } else if (event != DEVICE_I2S_EVENT_NONE) {
-        dbg_error("%s: bad event from i2s ctlr: %u\n", __func__, event);
+        dbg_error("%s: bad event %u from i2s ctlr %u, flags 0x%x\n", __func__,
+                  event, info->i2s_port, info->flags);
     }
 
     if (ring_buf_is_consumers(rb)) {
@@ -628,10 +667,12 @@ static int apbridgea_audio_rb_alloc(struct ring_buf *rb, void *arg)
 
     buf = bufram_page_alloc(bufram_size_to_page_count(info->tx_rb_total_size));
     if (!buf) {
+        dbg_error("%s: can't alloc from bufram\n", __func__);
         return -ENOMEM;
     }
 
     if ((int)buf % APBRIDGEA_AUDIO_UNIPRO_ALIGNMENT) {
+        dbg_error("%s: bad buf alignment 0x%p\n", __func__, buf);
         return -EIO;
     }
 
@@ -662,6 +703,8 @@ static int apbridgea_audio_prepare_tx(struct apbridgea_audio_info *info)
 
     if (!AUDIO_IS_CONFIGURED(info, TX) ||
         (info->flags & APBRIDGEA_AUDIO_FLAG_TX_PREPARED)) {
+
+        dbg_error("%s: protocol error, flags 0x%x\n", __func__, info->flags);
         return -EPROTO;
     }
 
@@ -674,12 +717,15 @@ static int apbridgea_audio_prepare_tx(struct apbridgea_audio_info *info)
                                       apbridgea_audio_rb_alloc,
                                       apbridgea_audio_rb_free, info);
     if (!info->tx_rb) {
+        dbg_error("%s: can't alloc ring\n", __func__);
         return -ENOMEM;
     }
 
     ret = device_i2s_prepare_receiver(info->i2s_dev, info->tx_rb,
                                       apbridgea_audio_i2s_rx_cb, info);
     if (ret) {
+        dbg_error("%s: device_i2s_prepare_receiver() failed %d\n", __func__,
+                  ret);
         goto err_free_ring;
     }
 
@@ -703,11 +749,14 @@ static int apbridgea_audio_start_tx(struct apbridgea_audio_info *info,
     int ret;
 
     if (!req || (len < sizeof(*req))) {
+        dbg_error("%s: NULL req or bad length 0x%p/%u\n", __func__, req, len);
         return -EINVAL;
     }
 
     if (!(info->flags & APBRIDGEA_AUDIO_FLAG_TX_PREPARED) ||
         (info->flags & APBRIDGEA_AUDIO_FLAG_TX_STARTED)) {
+
+        dbg_error("%s: protocol error, flags 0x%x\n", __func__, info->flags);
         return -EPROTO;
     }
 
@@ -715,6 +764,7 @@ static int apbridgea_audio_start_tx(struct apbridgea_audio_info *info,
 
     ret = device_i2s_start_receiver(info->i2s_dev);
     if (ret) {
+        dbg_error("%s: device_i2s_start_receiver() failed %d\n", __func__, ret);
         info->flags &= ~APBRIDGEA_AUDIO_FLAG_TX_STARTED;
     }
 
@@ -723,11 +773,17 @@ static int apbridgea_audio_start_tx(struct apbridgea_audio_info *info,
 
 static int apbridgea_audio_stop_tx(struct apbridgea_audio_info *info)
 {
+    int ret;
+
     if (!(info->flags & APBRIDGEA_AUDIO_FLAG_TX_STARTED)) {
+        dbg_error("%s: protocol error, flags 0x%x\n", __func__, info->flags);
         return -EPROTO;
     }
 
-    device_i2s_stop_receiver(info->i2s_dev);
+    ret = device_i2s_stop_receiver(info->i2s_dev);
+    if (ret) {
+        dbg_error("%s: device_i2s_stop_receiver() failed %d\n", __func__, ret);
+    }
 
     info->flags &= ~APBRIDGEA_AUDIO_FLAG_TX_STARTED;
 
@@ -736,12 +792,20 @@ static int apbridgea_audio_stop_tx(struct apbridgea_audio_info *info)
 
 static int apbridgea_audio_shutdown_tx(struct apbridgea_audio_info *info)
 {
+    int ret;
+
     if ((info->flags & APBRIDGEA_AUDIO_FLAG_TX_STARTED) ||
         !(info->flags & APBRIDGEA_AUDIO_FLAG_TX_PREPARED)) {
+
+        dbg_error("%s: protocol error, flags 0x%x\n", __func__, info->flags);
         return -EPROTO;
     }
 
-    device_i2s_shutdown_receiver(info->i2s_dev);
+    ret = device_i2s_shutdown_receiver(info->i2s_dev);
+    if (ret) {
+        dbg_error("%s: device_i2s_shutdown_receiver() failed %d\n", __func__,
+                  ret);
+    }
 
     info->flags &= ~APBRIDGEA_AUDIO_FLAG_TX_PREPARED;
 
@@ -760,10 +824,12 @@ static int apbridgea_audio_set_rx_data_size(struct apbridgea_audio_info *info,
     uint16_t size;
 
     if (!req || (len < sizeof(*req))) {
+        dbg_error("%s: NULL req or bad length 0x%p/%u\n", __func__, req, len);
         return -EINVAL;
     }
 
     if (info->flags & APBRIDGEA_AUDIO_FLAG_RX_STARTED) {
+        dbg_error("%s: protocol error, flags 0x%x\n", __func__, info->flags);
         return -EPROTO;
     }
 
@@ -771,6 +837,7 @@ static int apbridgea_audio_set_rx_data_size(struct apbridgea_audio_info *info,
 
     /* Size must be a multiple of 4 (required by i2s FIFO) */
     if (!size || (size % 4)) {
+        dbg_error("%s: bad message size %u\n", __func__, size);
         return -EINVAL;
     }
 
@@ -809,7 +876,8 @@ static void apbridgea_audio_i2s_tx_cb(struct ring_buf *rb,
             dbg_error("%s: RX underrun\n", __func__);
         }
     } else if (event != DEVICE_I2S_EVENT_NONE) {
-        dbg_error("%s: bad event from i2s ctlr: %u\n", __func__, event);
+        dbg_error("%s: bad event %u from i2s ctlr %u, flags 0x%x\n", __func__,
+                  event, info->i2s_port, info->flags);
     }
 }
 
@@ -820,17 +888,21 @@ static int apbridgea_audio_prepare_rx(struct apbridgea_audio_info *info)
 
     if (!AUDIO_IS_CONFIGURED(info, RX) ||
         (info->flags & APBRIDGEA_AUDIO_FLAG_RX_PREPARED)) {
+
+        dbg_error("%s: protocol error, flags 0x%x\n", __func__, info->flags);
         return -EPROTO;
     }
 
     info->rx_rb = ring_buf_alloc_ring(APBRIDGEA_AUDIO_RING_ENTRIES_RX, 0,
                                       info->rx_data_size, 0, NULL, NULL, NULL);
     if (!info->rx_rb) {
+        dbg_error("%s: can't alloc ring\n", __func__);
         return -ENOMEM;
     }
 
     info->rx_dummy_data = zalloc(info->rx_data_size);
     if (!info->rx_dummy_data) {
+        dbg_error("%s: can't alloc dummy_data\n", __func__);
         ret = -ENOMEM;
         goto err_free_ring;
     }
@@ -838,6 +910,8 @@ static int apbridgea_audio_prepare_rx(struct apbridgea_audio_info *info)
     ret = device_i2s_prepare_transmitter(info->i2s_dev, info->rx_rb,
                                          apbridgea_audio_i2s_tx_cb, info);
     if (ret) {
+        dbg_error("%s: device_i2s_prepare_transmitter() failed %d\n", __func__,
+                  ret);
         goto err_free_dummy;
     }
 
@@ -864,6 +938,8 @@ static int apbridgea_audio_start_rx(struct apbridgea_audio_info *info)
 
     if (!(info->flags & APBRIDGEA_AUDIO_FLAG_RX_PREPARED) ||
         (info->flags & APBRIDGEA_AUDIO_FLAG_RX_STARTED)) {
+
+        dbg_error("%s: protocol error, flags 0x%x\n", __func__, info->flags);
         return -EPROTO;
     }
 
@@ -871,6 +947,8 @@ static int apbridgea_audio_start_rx(struct apbridgea_audio_info *info)
 
     ret = device_i2s_start_transmitter(info->i2s_dev);
     if (ret) {
+        dbg_error("%s: device_i2s_start_transmitter() failed %d\n", __func__,
+                  ret);
         info->flags &= ~APBRIDGEA_AUDIO_FLAG_RX_STARTED;
     }
 
@@ -879,11 +957,18 @@ static int apbridgea_audio_start_rx(struct apbridgea_audio_info *info)
 
 static int apbridgea_audio_stop_rx(struct apbridgea_audio_info *info)
 {
+    int ret;
+
     if (!(info->flags & APBRIDGEA_AUDIO_FLAG_RX_STARTED)) {
+        dbg_error("%s: protocol error, flags 0x%x\n", __func__, info->flags);
         return -EPROTO;
     }
 
-    device_i2s_stop_transmitter(info->i2s_dev);
+    ret = device_i2s_stop_transmitter(info->i2s_dev);
+    if (ret) {
+        dbg_error("%s: device_i2s_stop_transmitter() failed %d\n", __func__,
+                  ret);
+    }
 
     info->flags &= ~APBRIDGEA_AUDIO_FLAG_RX_STARTED;
 
@@ -892,12 +977,20 @@ static int apbridgea_audio_stop_rx(struct apbridgea_audio_info *info)
 
 static int apbridgea_audio_shutdown_rx(struct apbridgea_audio_info *info)
 {
+    int ret;
+
     if ((info->flags & APBRIDGEA_AUDIO_FLAG_RX_STARTED) ||
         !(info->flags & APBRIDGEA_AUDIO_FLAG_RX_PREPARED)) {
+
+        dbg_error("%s: protocol error, flags 0x%x\n", __func__, info->flags);
         return -EPROTO;
     }
 
-    device_i2s_shutdown_transmitter(info->i2s_dev);
+    ret = device_i2s_shutdown_transmitter(info->i2s_dev);
+    if (ret) {
+        dbg_error("%s: device_i2s_shutdown_transmitter() failed %d\n",
+                  __func__, ret);
+    }
 
     info->flags &= ~APBRIDGEA_AUDIO_FLAG_RX_PREPARED;
 
@@ -923,6 +1016,7 @@ static void *apbridgea_audio_demux(void *ignored)
     while(1) {
         ret = sem_wait(&apbridgea_audio_demux_sem);
         if (ret != OK) {
+            dbg_error("%s: sem_wait failed %d\n", __func__, ret);
             continue;
         }
 
@@ -938,12 +1032,15 @@ static void *apbridgea_audio_demux(void *ignored)
         len = demux_entry->len;
 
         if (!pkt_hdr || (len < sizeof(*pkt_hdr))) {
+            dbg_error("%s: NULL pkt or bad length 0x%p/%u\n", __func__, pkt_hdr,
+                      len);
             free(demux_entry);
             continue;
         }
 
         info = apbridgea_audio_find_info(pkt_hdr->i2s_port);
         if (!info) {
+            dbg_error("%s: no info struct() %u\n", __func__, pkt_hdr->i2s_port);
             free(demux_entry);
             continue;
         }
@@ -989,7 +1086,7 @@ static void *apbridgea_audio_demux(void *ignored)
             ret = apbridgea_audio_shutdown_rx(info);
             break;
         default:
-            dbg_error("%s: bogus type: %u\n", __func__, pkt_hdr->type);
+            dbg_error("%s: invalid pkt type %u\n", __func__, pkt_hdr->type);
         }
 
         free(demux_entry);
@@ -1002,13 +1099,16 @@ static void *apbridgea_audio_demux(void *ignored)
 int apbridgea_audio_out_demux(void *buf, uint16_t len)
 {
     struct apbridgea_audio_demux_entry *demux_entry;
+    int ret;
 
     if (!buf || !len) {
+        dbg_error("%s: NULL buf or bad length 0x%p/%u\n", __func__, buf, len);
         return -EINVAL;
     }
 
     demux_entry = malloc(sizeof(*demux_entry) + len);
     if (!demux_entry) {
+        dbg_error("%s: can't alloc demux_entry\n", __func__);
         return -ENOMEM;
     }
 
@@ -1022,7 +1122,10 @@ int apbridgea_audio_out_demux(void *buf, uint16_t len)
     /* In irq context */
     list_add(&apbridgea_audio_demux_list, &demux_entry->list);
 
-    sem_post(&apbridgea_audio_demux_sem);
+    ret = sem_post(&apbridgea_audio_demux_sem);
+    if (ret != OK) {
+        dbg_error("%s: sem_post failed %d\n", __func__, ret);
+    }
 
     return 0;
 }
@@ -1035,13 +1138,15 @@ int apbridgea_audio_init(void)
 
     if (sizeof(struct apbridga_audio_rb_hdr) %
         APBRIDGEA_AUDIO_UNIPRO_ALIGNMENT) {
-        dbg_error("%s: apbridga_audio_rb_hdr wrong size: %u\n", __func__,
+
+        dbg_error("%s: apbridga_audio_rb_hdr wrong size %u\n", __func__,
                   sizeof(struct apbridga_audio_rb_hdr));
         return -EIO;
     }
 
     info = zalloc(sizeof(*info));
     if (!info) {
+        dbg_error("%s: can't alloc info struct\n", __func__);
         return -ENOMEM;
     }
 
@@ -1049,18 +1154,21 @@ int apbridgea_audio_init(void)
 
     info->i2s_dev = device_open(DEVICE_TYPE_I2S_HW, info->i2s_port);
     if (!info->i2s_dev) {
+        dbg_error("%s: can't open i2s ctlr()\n", __func__);
         ret = -EIO;
         goto err_free_info;
     }
 
     ret = sem_init(&apbridgea_audio_demux_sem, 0, 0);
     if (ret) {
+        dbg_error("%s: sem_init() failed %d\n", __func__, ret);
         goto err_close_i2s;
     }
 
     ret = pthread_create(&apbridgea_audio_demux_thread, NULL,
                          apbridgea_audio_demux, NULL);
     if (ret) {
+        dbg_error("%s: pthread_create() failed %d\n", __func__, ret);
         goto err_destroy_sem;
     }
 
