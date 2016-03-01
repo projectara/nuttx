@@ -139,6 +139,9 @@ static int es2_read_status(struct tsb_switch *sw,
     SPI_EXCHANGE(spi_dev, NULL, rxbuf, SRPT_SIZE);
     _switch_spi_select(sw, false);
 
+    dbg_insane("SRPT RX:\n");
+    dbg_print_buf(ARADBG_INSANE, rxbuf, SRPT_SIZE);
+
     /* Find the header */
     for (offset = 0; offset < (SRPT_SIZE - SRPT_REPORT_SIZE); offset++) {
         if (!memcmp(srpt_report_header,
@@ -175,6 +178,9 @@ static int es2_read_status(struct tsb_switch *sw,
         status->tx_fifo_size = rpt->raw[7] * 8;
         status->rx_fifo_size = fifo_max_size -
                                ((rpt->raw[10] << 8) | rpt->raw[11]);
+
+        dbg_insane("SRPT: TX%u, RX%u\n", status->tx_fifo_size,
+                   status->rx_fifo_size);
     }
 
     return 0;
@@ -268,7 +274,7 @@ out:
 static int es2_read(struct tsb_switch *sw,
                     uint8_t cportid,
                     uint8_t *rx_buf,
-                    size_t rx_size) {
+                    size_t *rx_size) {
     struct sw_es2_priv *priv = sw->priv;
     struct spi_dev_s *spi_dev = sw->spi_dev;
     uint8_t *rxbuf = cport_to_rxbuf(priv, cportid);
@@ -292,7 +298,7 @@ static int es2_read(struct tsb_switch *sw,
     // Read CNF and retry if NACK received
     do {
         // Read the CNF
-        size = ES2_SWITCH_WAIT_REPLY_LEN + rx_size + sizeof read_header;
+        size = ES2_SWITCH_WAIT_REPLY_LEN + *rx_size + sizeof read_header;
         SPI_SNDBLOCK(spi_dev, read_header, sizeof read_header);
         SPI_EXCHANGE(spi_dev, NULL, rxbuf, size - sizeof read_header);
         /* Make sure we use 16-bit frames */
@@ -300,7 +306,7 @@ static int es2_read(struct tsb_switch *sw,
             SPI_SEND(spi_dev, LNUL);
         }
 
-        dbg_insane("RX Data:\n");
+        dbg_insane("RX raw Data (%u):\n", size);
         dbg_print_buf(ARADBG_INSANE, rxbuf, size);
 
         if (!rx_buf) {
@@ -330,6 +336,8 @@ static int es2_read(struct tsb_switch *sw,
                 resp_start = &rxbuf[i];
                 size_t resp_len = resp_start[2] << 8 | resp_start[3];
                 memcpy(rx_buf, &resp_start[4], resp_len);
+                /*  Return the actual message len */
+                *rx_size = resp_len;
                 rcv_done = 1;
                 break;
             } else if (rxbuf[i] == NACK) {
@@ -369,7 +377,7 @@ static int es2_ncp_transfer(struct tsb_switch *sw,
     }
 
     /* Read the CNF */
-    rc = es2_read(sw, SWITCH_FIFO_NCP, rx_buf, rx_size);
+    rc = es2_read(sw, SWITCH_FIFO_NCP, rx_buf, &rx_size);
     if (rc) {
         dbg_error("%s() read failed: rc=%d\n", __func__, rc);
         goto done;
@@ -406,17 +414,20 @@ static int es2_irq_fifo_rx(struct tsb_switch *sw, unsigned int cportid) {
         rc = -EIO;
         goto fill_done;
     }
+    /* Get the raw RX len */
     len = rpt.rx_fifo_size;
 
     /*
      * Drain the fifo data.
+     * Pass the raw RX len and get the actual session data length back.
      */
-    rc = es2_read(sw, cportid, cport->rxbuf, len);
+    rc = es2_read(sw, cportid, cport->rxbuf, &len);
     if (rc) {
         dbg_error("%s: read failed: %d\n", __func__, rc);
         rc = -EIO;
         goto fill_done;
     }
+    dbg_verbose("RX Data (%u):\n", len);
     dbg_print_buf(ARADBG_VERBOSE, cport->rxbuf, len);
 
 fill_done:
