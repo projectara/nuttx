@@ -369,7 +369,7 @@ static bool check_valid_entry(struct tsb_switch *sw,
  * @brief Log the UniPro switch's routing table
  */
 int switch_dump_routing_table(struct tsb_switch *sw) {
-    int devid, unipro_portid;
+    int devid, unipro_portid, rc;
     uint8_t p = 0, id_mask[sw->rdata->dev_id_mask_size];
 
     dbg_info("======================================================\n");
@@ -377,7 +377,12 @@ int switch_dump_routing_table(struct tsb_switch *sw) {
     dbg_info(" [Port,DevId] -> [Port]\n");
 
     for (unipro_portid = 0; unipro_portid <= SWITCH_PORT_ID; unipro_portid++) {
-        if (switch_dev_id_mask_get(sw, unipro_portid, id_mask)) {
+        rc = switch_dev_id_mask_get(sw, unipro_portid, id_mask);
+        /* Check for error. Ignore disabled Switch ports */
+        if (rc) {
+            if (rc == NCP_RC_DISABLED_TARGET) {
+                continue;
+            }
             dbg_error("%s() Failed to retrieve routing table.\n", __func__);
             return -1;
         }
