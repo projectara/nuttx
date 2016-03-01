@@ -109,6 +109,12 @@ enum ara_iface_pwr_state {
     ARA_IFACE_PWR_UP = 1,
 };
 
+enum ara_iface_order {
+    ARA_IFACE_ORDER_UNKNOWN = 0,
+    ARA_IFACE_ORDER_PRIMARY,
+    ARA_IFACE_ORDER_SECONDARY,
+};
+
 /* Max number of LinkUp retries before the interface is shut down */
 #define INTERFACE_MAX_LINKUP_TRIES  3
 
@@ -130,6 +136,7 @@ struct interface {
     bool ejectable;
     uint8_t release_gpio;
     struct wdog_s linkup_wd;
+    enum ara_iface_order if_order;
 };
 
 #define interface_foreach(iface, idx)                       \
