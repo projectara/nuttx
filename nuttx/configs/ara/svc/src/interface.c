@@ -422,6 +422,53 @@ static void interface_linkup_timeout(int argc, uint32_t arg1, ...)
     work_queue(HPWORK, &linkup_work, interface_power_cycle, iface, 0);
 }
 
+static int interface_detect_order(struct interface *iface)
+{
+    int retval;
+
+    if (iface->if_type != ARA_IFACE_TYPE_MODULE_PORT2) {
+        iface->if_order = ARA_IFACE_ORDER_UNKNOWN;
+        return -ENOTSUP;
+    }
+
+    retval = pthread_mutex_lock(&latch_ilim_lock);
+    if (retval) {
+        return retval;
+    }
+
+    retval = vreg_get(vlatch_vdd);
+    if (retval) {
+        dbg_error("couldn't enable VLATCH_VDD_EN, aborting order detection...\n");
+        goto error_get_vlatch_vdd;
+    }
+
+    gpio_set_value(iface->release_gpio, 1);
+
+    /* since we got the latch_ilim_lock it means LATCH_ILIM_EN = 0 */
+    iface->if_order = gpio_get_value(mod_sense) ? ARA_IFACE_ORDER_SECONDARY
+                                                : ARA_IFACE_ORDER_PRIMARY;
+
+    gpio_set_value(iface->release_gpio, 0);
+
+    retval = vreg_put(vlatch_vdd);
+    if (retval) {
+        goto error_put_vlatch_vdd;
+    }
+
+    retval = pthread_mutex_unlock(&latch_ilim_lock);
+    if (retval) {
+        return retval;
+    }
+
+    return 0;
+
+error_get_vlatch_vdd:
+    iface->if_order = ARA_IFACE_ORDER_UNKNOWN;
+error_put_vlatch_vdd:
+    pthread_mutex_unlock(&latch_ilim_lock);
+    return retval;
+}
+
 /*
  * Interface power control helper, to be used by the DETECT_IN/hotplug
  * mechanism.
@@ -436,6 +483,13 @@ int interface_power_on(struct interface *iface)
 
     if (!iface) {
         return -EINVAL;
+    }
+
+    rc = interface_detect_order(iface);
+    if (rc && rc != -ENOTSUP) {
+        dbg_error("failed to detect interface order for %s: %d\n",
+                  iface->name ? iface->name : "unknown", rc);
+        return rc;
     }
 
     /* If powered OFF, power it ON now */
