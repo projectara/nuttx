@@ -145,7 +145,7 @@ static int link_test_port_v(uint8_t port,
                             int verbose) {
     struct tsb_switch *sw = svc->sw;
     struct unipro_link_cfg cfg = {
-        .upro_hs_ser = hs ? series : UNIPRO_HS_SERIES_UNCHANGED,
+        .upro_hs_ser = series,
     };
     bool auto_variant = flags & UNIPRO_LINK_CFGF_AUTO;
 
