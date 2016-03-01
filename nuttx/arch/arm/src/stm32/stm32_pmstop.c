@@ -45,6 +45,8 @@
 #include "nvic.h"
 #include "stm32_pwr.h"
 #include "stm32_pm.h"
+#include "stm32_syscfg.h"
+#include "stm32_rcc.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -118,5 +120,13 @@ int stm32_pmstop(bool lpds)
 
   asm("wfi");
 #endif
+  regval  = getreg32(NVIC_SYSCON);
+  regval &= ~(NVIC_SYSCON_SLEEPDEEP);
+  putreg32(regval, NVIC_SYSCON);
+
+#ifdef CONFIG_PM
+  stm32_clockenable();
+#endif
+
   return OK;
 }
