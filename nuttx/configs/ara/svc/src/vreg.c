@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Google Inc.
+ * Copyright (c) 2016 Google Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -85,7 +85,7 @@ int vreg_config(struct vreg *vreg) {
 
 out:
     atomic_init(&vreg->use_count, 0);
-    vreg->power_state = rc ? VREG_PWR_ERROR : VREG_PWR_DOWN;
+    atomic_init(&vreg->power_state, rc ? VREG_PWR_ERROR : VREG_PWR_DOWN);
 
     return rc;
 }
@@ -130,7 +130,7 @@ int vreg_get(struct vreg *vreg) {
     }
 
     /* Update state */
-    vreg->power_state = rc ? VREG_PWR_ERROR : VREG_PWR_UP;
+    atomic_init(&vreg->power_state, rc ? VREG_PWR_ERROR : VREG_PWR_UP);
 
     return rc;
 }
@@ -177,7 +177,7 @@ int vreg_put(struct vreg *vreg) {
         }
 
         /* Update state */
-        vreg->power_state = rc ? VREG_PWR_ERROR : VREG_PWR_DOWN;
+        atomic_init(&vreg->power_state, rc ? VREG_PWR_ERROR : VREG_PWR_DOWN);
     }
 
     return rc;
@@ -193,5 +193,5 @@ enum vreg_pwr_state vreg_get_pwr_state(struct vreg *vreg) {
         return VREG_PWR_ERROR;
     }
 
-    return vreg->power_state;
+    return atomic_get(&vreg->power_state);
 }

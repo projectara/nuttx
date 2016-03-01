@@ -117,8 +117,8 @@ struct interface {
     enum ara_iface_type if_type;
     struct vreg *vsys_vreg;
     struct vreg *refclk_vreg;
-    enum ara_iface_pwr_state power_state;
-    enum ara_iface_pwr_state refclk_state;
+    atomic_t power_state;
+    atomic_t refclk_state;
     struct pm_data *pm;
     struct wd_data detect_in;
     enum hotplug_state hp_state;
@@ -155,6 +155,7 @@ int interface_forcibly_eject(struct interface *iface, uint32_t delay);
 #define MOD_RELEASE_PULSE_WIDTH 1500U /* ms */
 
 const char *interface_get_name(struct interface *iface);
+enum ara_iface_pwr_state interface_get_power_state(struct interface *iface);
 int interface_power_off(struct interface *iface);
 int interface_power_on(struct interface *iface);
 int interface_generate_wakeout(struct interface *, bool assert, int length);

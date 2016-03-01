@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Google Inc.
+ * Copyright (c) 2016 Google Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -65,7 +65,7 @@ struct vreg {
     const char *name;
     struct vreg_data *vregs;
     size_t nr_vregs;
-    enum vreg_pwr_state power_state;
+    atomic_t power_state;
     atomic_t use_count;
 };
 
