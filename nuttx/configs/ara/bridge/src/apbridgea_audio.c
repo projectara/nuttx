@@ -357,6 +357,8 @@ static int apbridgea_audio_set_config(struct apbridgea_audio_info *info,
     dai.data_tx_edge = DEVICE_I2S_EDGE_FALLING;
     dai.data_rx_edge = DEVICE_I2S_EDGE_RISING;
 
+    dbg_verbose("%s: configuring i2s %u as MASTER\n", __func__, info->i2s_port);
+
     ret = device_i2s_set_config(info->i2s_dev, DEVICE_I2S_ROLE_MASTER, &pcm,
                                 &dai);
     if (ret) {
@@ -368,6 +370,8 @@ static int apbridgea_audio_set_config(struct apbridgea_audio_info *info,
     dai.wclk_change_edge = DEVICE_I2S_EDGE_RISING;
     dai.data_tx_edge = DEVICE_I2S_EDGE_RISING;
     dai.data_rx_edge = DEVICE_I2S_EDGE_FALLING;
+
+    dbg_verbose("%s: configuring i2s %u as SLAVE\n", __func__, info->i2s_port);
 
     ret = device_i2s_set_config(info->i2s_dev, DEVICE_I2S_ROLE_SLAVE, &pcm,
                                 &dai);
@@ -433,6 +437,9 @@ static int apbridgea_audio_register_cport(struct apbridgea_audio_info *info,
 
     cport = apbridgea_audio_find_cport(info, data_cportid);
     if (!cport) {
+        dbg_verbose("%s: allocating cport struct, cportid %u\n", __func__,
+                    data_cportid);
+
         cport = malloc(sizeof(*cport));
         if (!cport) {
             dbg_error("%s: can't alloc cport struct\n", __func__);
@@ -468,6 +475,9 @@ static int apbridgea_audio_register_cport(struct apbridgea_audio_info *info,
     }
 
     cport->direction |= req->direction;
+
+    dbg_info("%s: registered cportid %u, direction 0x%0x/0x%x\n", __func__,
+             data_cportid, req->direction, cport->direction);
 
     return 0;
 }
@@ -505,6 +515,9 @@ static int apbridgea_audio_unregister_cport(struct apbridgea_audio_info *info,
     cport->direction &= ~req->direction;
 
     if (!cport->direction) {
+        dbg_verbose("%s: freeing cport struct, cportid %u\n", __func__,
+                    data_cportid);
+
         flags = irqsave();
 
         list_del(&cport->list);
@@ -518,6 +531,9 @@ static int apbridgea_audio_unregister_cport(struct apbridgea_audio_info *info,
 
         free(cport);
     }
+
+    dbg_info("%s: unregistered cportid %u, direction 0x%x\n", __func__,
+             data_cportid, req->direction);
 
     return 0;
 }
@@ -548,6 +564,8 @@ static int apbridgea_audio_set_tx_data_size(struct apbridgea_audio_info *info,
 
     info->tx_data_size = size;
     info->flags |= APBRIDGEA_AUDIO_FLAG_TX_DATA_SIZE_SET;
+
+    dbg_verbose("%s: tx data size set to %u\n", __func__, size);
 
     return 0;
 }
@@ -731,6 +749,8 @@ static int apbridgea_audio_prepare_tx(struct apbridgea_audio_info *info)
 
     info->flags |= APBRIDGEA_AUDIO_FLAG_TX_PREPARED;
 
+    dbg_verbose("%s: TX prepared, flags 0x%x\n", __func__, info->flags);
+
     return 0;
 
 err_free_ring:
@@ -768,6 +788,8 @@ static int apbridgea_audio_start_tx(struct apbridgea_audio_info *info,
         info->flags &= ~APBRIDGEA_AUDIO_FLAG_TX_STARTED;
     }
 
+    dbg_info("%s: TX started, flags 0x%x\n", __func__, info->flags);
+
     return ret;
 }
 
@@ -786,6 +808,8 @@ static int apbridgea_audio_stop_tx(struct apbridgea_audio_info *info)
     }
 
     info->flags &= ~APBRIDGEA_AUDIO_FLAG_TX_STARTED;
+
+    dbg_info("%s: TX stopped, flags 0x%x\n", __func__, info->flags);
 
     return 0;
 }
@@ -813,6 +837,8 @@ static int apbridgea_audio_shutdown_tx(struct apbridgea_audio_info *info)
     info->tx_rb = NULL;
     info->tx_rb_headroom = 0;
     info->tx_rb_total_size = 0;
+
+    dbg_verbose("%s: TX shutdown, flags 0x%x\n", __func__, info->flags);
 
     return 0;
 }
@@ -843,6 +869,8 @@ static int apbridgea_audio_set_rx_data_size(struct apbridgea_audio_info *info,
 
     info->rx_data_size = size;
     info->flags |= APBRIDGEA_AUDIO_FLAG_RX_DATA_SIZE_SET;
+
+    dbg_verbose("%s: rx data size set to %u\n", __func__, size);
 
     return 0;
 }
@@ -920,6 +948,8 @@ static int apbridgea_audio_prepare_rx(struct apbridgea_audio_info *info)
     /* Prime the ring with one empty entry */
     apbridgea_audio_i2s_tx(info, info->rx_dummy_data);
 
+    dbg_verbose("%s: RX prepared, flags 0x%x\n", __func__, info->flags);
+
     return 0;
 
 err_free_dummy:
@@ -952,6 +982,8 @@ static int apbridgea_audio_start_rx(struct apbridgea_audio_info *info)
         info->flags &= ~APBRIDGEA_AUDIO_FLAG_RX_STARTED;
     }
 
+    dbg_info("%s: RX started, flags 0x%x\n", __func__, info->flags);
+
     return ret;
 }
 
@@ -971,6 +1003,8 @@ static int apbridgea_audio_stop_rx(struct apbridgea_audio_info *info)
     }
 
     info->flags &= ~APBRIDGEA_AUDIO_FLAG_RX_STARTED;
+
+    dbg_info("%s: RX stopped, flags 0x%x\n", __func__, info->flags);
 
     return 0;
 }
@@ -999,6 +1033,8 @@ static int apbridgea_audio_shutdown_rx(struct apbridgea_audio_info *info)
 
     ring_buf_free_ring(info->rx_rb, NULL, NULL);
     info->rx_rb = NULL;
+
+    dbg_verbose("%s: RX shutdown, flags 0x%x\n", __func__, info->flags);
 
     return 0;
 }
@@ -1047,42 +1083,55 @@ static void *apbridgea_audio_demux(void *ignored)
 
         switch (pkt_hdr->type) {
         case AUDIO_APBRIDGEA_TYPE_SET_CONFIG:
+            dbg_verbose("%s: set_config request\n", __func__);
             ret = apbridgea_audio_set_config(info, pkt_hdr, len);
             break;
         case AUDIO_APBRIDGEA_TYPE_REGISTER_CPORT:
+            dbg_verbose("%s: register_cport request\n", __func__);
             ret = apbridgea_audio_register_cport(info, pkt_hdr, len);
             break;
         case AUDIO_APBRIDGEA_TYPE_UNREGISTER_CPORT:
+            dbg_verbose("%s: unregister_cport request\n", __func__);
             ret = apbridgea_audio_unregister_cport(info, pkt_hdr, len);
             break;
         case AUDIO_APBRIDGEA_TYPE_SET_TX_DATA_SIZE:
+            dbg_verbose("%s: set_tx_data_size request\n", __func__);
             ret = apbridgea_audio_set_tx_data_size(info, pkt_hdr, len);
             break;
         case AUDIO_APBRIDGEA_TYPE_PREPARE_TX:
+            dbg_verbose("%s: prepare_tx request\n", __func__);
             ret = apbridgea_audio_prepare_tx(info);
             break;
         case AUDIO_APBRIDGEA_TYPE_START_TX:
+            dbg_verbose("%s: start_tx request\n", __func__);
             ret = apbridgea_audio_start_tx(info, pkt_hdr, len);
             break;
         case AUDIO_APBRIDGEA_TYPE_STOP_TX:
+            dbg_verbose("%s: stop_tx request\n", __func__);
             ret = apbridgea_audio_stop_tx(info);
             break;
         case AUDIO_APBRIDGEA_TYPE_SHUTDOWN_TX:
+            dbg_verbose("%s: shutdown_tx request\n", __func__);
             ret = apbridgea_audio_shutdown_tx(info);
             break;
         case AUDIO_APBRIDGEA_TYPE_SET_RX_DATA_SIZE:
+            dbg_verbose("%s: set_rx_data_size request\n", __func__);
             ret = apbridgea_audio_set_rx_data_size(info, pkt_hdr, len);
             break;
         case AUDIO_APBRIDGEA_TYPE_PREPARE_RX:
+            dbg_verbose("%s: prepare_rx request\n", __func__);
             ret = apbridgea_audio_prepare_rx(info);
             break;
         case AUDIO_APBRIDGEA_TYPE_START_RX:
+            dbg_verbose("%s: start_rx request\n", __func__);
             ret = apbridgea_audio_start_rx(info);
             break;
         case AUDIO_APBRIDGEA_TYPE_STOP_RX:
+            dbg_verbose("%s: stop_rx request\n", __func__);
             ret = apbridgea_audio_stop_rx(info);
             break;
         case AUDIO_APBRIDGEA_TYPE_SHUTDOWN_RX:
+            dbg_verbose("%s: shutdown_rx request\n", __func__);
             ret = apbridgea_audio_shutdown_rx(info);
             break;
         default:
@@ -1127,6 +1176,8 @@ int apbridgea_audio_out_demux(void *buf, uint16_t len)
         dbg_error("%s: sem_post failed %d\n", __func__, ret);
     }
 
+    dbg_insane("%s: request received from AP, len %u\n", __func__, len);
+
     return 0;
 }
 
@@ -1135,6 +1186,8 @@ int apbridgea_audio_init(void)
 {
     struct apbridgea_audio_info *info;
     int ret;
+
+    dbg_verbose("%s: initializing audio driver\n", __func__);
 
     if (sizeof(struct apbridga_audio_rb_hdr) %
         APBRIDGEA_AUDIO_UNIPRO_ALIGNMENT) {
@@ -1178,6 +1231,8 @@ int apbridgea_audio_init(void)
     list_add(&apbridgea_audio_info_list, &info->list);
 
     atomic_init(&request_id, 0);
+
+    dbg_verbose("%s: audio driver initialized\n", __func__);
 
     return 0;
 
