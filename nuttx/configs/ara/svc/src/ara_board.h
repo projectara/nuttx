@@ -129,6 +129,9 @@ struct ara_board_info {
     /* latch vregs */
     struct vreg *vlatch_vdd;
     struct vreg *latch_ilim;
+
+    /* Geometry detection GPIO */
+    uint8_t mod_sense;
 };
 
 struct ara_board_info *ara_board_init(void);
