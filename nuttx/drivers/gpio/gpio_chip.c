@@ -275,3 +275,7 @@ int gpio_irq_clear(uint8_t which)
     return -EINVAL;
 }
 
+bool gpio_is_valid(uint8_t which)
+{
+    return get_gpio_chip(&which) != NULL;
+}
