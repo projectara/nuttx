@@ -139,10 +139,10 @@ struct interface {
 
 int interface_init(struct interface**, size_t nr_interfaces,
                    size_t nr_spring_ints, struct vreg *vlatch,
-                   struct vreg *latch_curlim);
+                   struct vreg *latch_curlim, uint8_t mod_sense_gpio);
 int interface_early_init(struct interface**, size_t nr_interfaces,
                          size_t nr_spring_ints, struct vreg *vlatch,
-                         struct vreg *latch_curlim);
+                         struct vreg *latch_curlim, uint8_t mod_sense_gpio);
 void interface_exit(void);
 struct interface* interface_get(uint8_t index);
 struct interface* interface_get_by_name(const char *name);

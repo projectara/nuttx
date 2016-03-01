@@ -975,7 +975,7 @@ static int svcd_startup(void) {
     svc->board_info = info;
     rc = interface_early_init(info->interfaces, info->nr_interfaces,
                               info->nr_spring_interfaces, info->vlatch_vdd,
-                              info->latch_ilim);
+                              info->latch_ilim, info->mod_sense);
     if (rc < 0) {
         dbg_error("%s: Failed to power off interfaces\n", __func__);
         goto error0;
@@ -1011,7 +1011,7 @@ static int svcd_startup(void) {
     }
     rc = interface_init(info->interfaces, info->nr_interfaces,
                         info->nr_spring_interfaces, info->vlatch_vdd,
-                        info->latch_ilim);
+                        info->latch_ilim, info->mod_sense);
     if (rc < 0) {
         dbg_error("%s: Failed to initialize interfaces\n", __func__);
         goto error2;

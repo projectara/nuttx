@@ -65,6 +65,7 @@ static struct work_s linkup_work;
 static struct vreg *vlatch_vdd;
 static struct vreg *latch_ilim;
 static pthread_mutex_t latch_ilim_lock = PTHREAD_MUTEX_INITIALIZER;
+static uint8_t mod_sense;
 
 static void interface_power_cycle(void *data);
 static void interface_uninstall_wd_handler(struct wd_data *wd);
@@ -1303,11 +1304,12 @@ int interface_forcibly_eject_atomic(struct interface *iface, uint32_t delay)
  * @param nr_spring_ints number of spring interfaces
  * @param vlatch VLATCH step down voltage regulator
  * @param latch_curlim Latch current limiter
+ * @param mod_sense_gpio GPIO to sense the order of an interface
  * @return 0 on success, <0 on error
  */
 int interface_early_init(struct interface **ints, size_t nr_ints,
                          size_t nr_spring_ints, struct vreg *vlatch,
-                         struct vreg *latch_curlim) {
+                         struct vreg *latch_curlim, uint8_t mod_sense_gpio) {
     unsigned int i;
     int rc;
     int fail = 0;
@@ -1324,6 +1326,7 @@ int interface_early_init(struct interface **ints, size_t nr_ints,
     nr_spring_interfaces = nr_spring_ints;
     vlatch_vdd = vlatch;
     latch_ilim = latch_curlim;
+    mod_sense = mod_sense_gpio;
 
     if (vlatch) {
         rc = vreg_config(vlatch);
@@ -1370,12 +1373,13 @@ int interface_early_init(struct interface **ints, size_t nr_ints,
  * @param nr_spring_ints number of spring interfaces
  * @param vlatch VLATCH step down voltage regulator
  * @param latch_curlim Latch current limiter
+ * @param mod_sense_gpio GPIO to sense the order of an interface
  * @return 0 on success, <0 on error
  * @sideeffects: leaves interfaces powered off on error.
  */
 int interface_init(struct interface **ints, size_t nr_ints,
                    size_t nr_spring_ints, struct vreg *vlatch,
-                   struct vreg *latch_curlim) {
+                   struct vreg *latch_curlim, uint8_t mod_sense_gpio) {
     unsigned int i;
     int rc;
     struct interface *ifc;
@@ -1391,6 +1395,7 @@ int interface_init(struct interface **ints, size_t nr_ints,
     nr_spring_interfaces = nr_spring_ints;
     vlatch_vdd = vlatch;
     latch_ilim = latch_curlim;
+    mod_sense = mod_sense_gpio;
 
     interface_foreach(ifc, i) {
         /* Initialize the hotplug state */
