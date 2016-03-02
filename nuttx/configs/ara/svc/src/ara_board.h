@@ -44,6 +44,7 @@ enum hwid {
     HWID_EVT1,              /* EVT1 (ES2) */
     HWID_EVT1_5,            /* EVT1.5 (ES3) */
     HWID_EVT1_6,            /* EVT1.6 (ES2) */
+    HWID_EVT2,              /* EVT2 (ES3) */
 };
 
 /* HWID pins */
@@ -71,6 +72,7 @@ enum hwid {
 #define STM32_GPIO_PIN(p)       (STM32_GPIO_CHIP_BASE + (p))
 #define U4550_GPIO_PIN(p)       (U4550_GPIO_CHIP_START + (p))
 #define U4570_GPIO_PIN(p)       (U4570_GPIO_CHIP_START + (p))
+#define U4430_GPIO_PIN(p)       (U4430_GPIO_CHIP_START + (p))
 
 /* ES2-specific repurposing of attributes */
 #define ES2_MBOX_ACK_ATTR       T_TSTSRCINTERMESSAGEGAP
@@ -148,5 +150,6 @@ extern struct interface *db3_5_interfaces[];
 extern size_t db3_5_nr_interfaces;
 extern struct ara_board_info evt1_board_info;
 extern struct ara_board_info evt1_5_board_info;
+extern struct ara_board_info evt2_board_info;
 
 #endif
