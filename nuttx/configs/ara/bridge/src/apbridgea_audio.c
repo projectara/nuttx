@@ -57,9 +57,11 @@
 
 #define APBRIDGEA_AUDIO_FLAG_SET_CONFIG         BIT(0)
 #define APBRIDGEA_AUDIO_FLAG_TX_DATA_SIZE_SET   BIT(1)
-#define APBRIDGEA_AUDIO_FLAG_TX_STARTED         BIT(2)
-#define APBRIDGEA_AUDIO_FLAG_RX_DATA_SIZE_SET   BIT(3)
-#define APBRIDGEA_AUDIO_FLAG_RX_STARTED         BIT(4)
+#define APBRIDGEA_AUDIO_FLAG_TX_PREPARED        BIT(2)
+#define APBRIDGEA_AUDIO_FLAG_TX_STARTED         BIT(3)
+#define APBRIDGEA_AUDIO_FLAG_RX_DATA_SIZE_SET   BIT(4)
+#define APBRIDGEA_AUDIO_FLAG_RX_PREPARED        BIT(5)
+#define APBRIDGEA_AUDIO_FLAG_RX_STARTED         BIT(6)
 
 #define AUDIO_IS_CONFIGURED(_info, _type)                                   \
             (((_info)->flags & APBRIDGEA_AUDIO_FLAG_SET_CONFIG) &&          \
@@ -651,18 +653,12 @@ static void apbridgea_audio_rb_free(struct ring_buf *rb, void *arg)
 }
 
 /* "Transmitting" means receiving from I2S and transmitting over UniPro */
-static int apbridgea_audio_start_tx(struct apbridgea_audio_info *info,
-                                    void *buf, uint16_t len)
+static int apbridgea_audio_prepare_tx(struct apbridgea_audio_info *info)
 {
-    struct audio_apbridgea_start_tx_request *req = buf;
     int ret;
 
-    if (!req || (len < sizeof(*req))) {
-        return -EINVAL;
-    }
-
     if (!AUDIO_IS_CONFIGURED(info, TX) ||
-        (info->flags & APBRIDGEA_AUDIO_FLAG_TX_STARTED)) {
+        (info->flags & APBRIDGEA_AUDIO_FLAG_TX_PREPARED)) {
         return -EPROTO;
     }
 
@@ -684,23 +680,40 @@ static int apbridgea_audio_start_tx(struct apbridgea_audio_info *info,
         goto err_free_ring;
     }
 
-    info->flags |= APBRIDGEA_AUDIO_FLAG_TX_STARTED;
-
-    ret = device_i2s_start_receiver(info->i2s_dev);
-    if (ret) {
-        info->flags &= ~APBRIDGEA_AUDIO_FLAG_TX_STARTED;
-        goto err_shutdown_receiver;
-    }
+    info->flags |= APBRIDGEA_AUDIO_FLAG_TX_PREPARED;
 
     return 0;
 
-err_shutdown_receiver:
-    device_i2s_shutdown_receiver(info->i2s_dev);
 err_free_ring:
     ring_buf_free_ring(info->tx_rb, apbridgea_audio_rb_free, info);
     info->tx_rb = NULL;
     info->tx_rb_headroom = 0;
     info->tx_rb_total_size = 0;
+
+    return ret;
+}
+
+static int apbridgea_audio_start_tx(struct apbridgea_audio_info *info,
+                                    void *buf, uint16_t len)
+{
+    struct audio_apbridgea_start_tx_request *req = buf;
+    int ret;
+
+    if (!req || (len < sizeof(*req))) {
+        return -EINVAL;
+    }
+
+    if (!(info->flags & APBRIDGEA_AUDIO_FLAG_TX_PREPARED) ||
+        (info->flags & APBRIDGEA_AUDIO_FLAG_TX_STARTED)) {
+        return -EPROTO;
+    }
+
+    info->flags |= APBRIDGEA_AUDIO_FLAG_TX_STARTED;
+
+    ret = device_i2s_start_receiver(info->i2s_dev);
+    if (ret) {
+        info->flags &= ~APBRIDGEA_AUDIO_FLAG_TX_STARTED;
+    }
 
     return ret;
 }
@@ -712,9 +725,22 @@ static int apbridgea_audio_stop_tx(struct apbridgea_audio_info *info)
     }
 
     device_i2s_stop_receiver(info->i2s_dev);
-    device_i2s_shutdown_receiver(info->i2s_dev);
 
     info->flags &= ~APBRIDGEA_AUDIO_FLAG_TX_STARTED;
+
+    return 0;
+}
+
+static int apbridgea_audio_shutdown_tx(struct apbridgea_audio_info *info)
+{
+    if ((info->flags & APBRIDGEA_AUDIO_FLAG_TX_STARTED) ||
+        !(info->flags & APBRIDGEA_AUDIO_FLAG_TX_PREPARED)) {
+        return -EPROTO;
+    }
+
+    device_i2s_shutdown_receiver(info->i2s_dev);
+
+    info->flags &= ~APBRIDGEA_AUDIO_FLAG_TX_PREPARED;
 
     ring_buf_free_ring(info->tx_rb, apbridgea_audio_rb_free, info);
     info->tx_rb = NULL;
@@ -785,12 +811,12 @@ static void apbridgea_audio_i2s_tx_cb(struct ring_buf *rb,
 }
 
 /* "Receiving" means receiving from UniPro and transmitting over I2S */
-static int apbridgea_audio_start_rx(struct apbridgea_audio_info *info)
+static int apbridgea_audio_prepare_rx(struct apbridgea_audio_info *info)
 {
     int ret;
 
     if (!AUDIO_IS_CONFIGURED(info, RX) ||
-        (info->flags & APBRIDGEA_AUDIO_FLAG_RX_STARTED)) {
+        (info->flags & APBRIDGEA_AUDIO_FLAG_RX_PREPARED)) {
         return -EPROTO;
     }
 
@@ -812,21 +838,13 @@ static int apbridgea_audio_start_rx(struct apbridgea_audio_info *info)
         goto err_free_dummy;
     }
 
+    info->flags |= APBRIDGEA_AUDIO_FLAG_RX_PREPARED;
+
     /* Prime the ring with one empty entry */
     apbridgea_audio_i2s_tx(info, info->rx_dummy_data);
 
-    info->flags |= APBRIDGEA_AUDIO_FLAG_RX_STARTED;
-
-    ret = device_i2s_start_transmitter(info->i2s_dev);
-    if (ret) {
-        goto err_shutdown_receiver;
-    }
-
     return 0;
 
-err_shutdown_receiver:
-    info->flags &= ~APBRIDGEA_AUDIO_FLAG_RX_STARTED;
-    device_i2s_shutdown_receiver(info->i2s_dev);
 err_free_dummy:
     free(info->rx_dummy_data);
     info->rx_dummy_data = NULL;
@@ -837,16 +855,48 @@ err_free_ring:
     return ret;
 }
 
+static int apbridgea_audio_start_rx(struct apbridgea_audio_info *info)
+{
+    int ret;
+
+    if (!(info->flags & APBRIDGEA_AUDIO_FLAG_RX_PREPARED) ||
+        (info->flags & APBRIDGEA_AUDIO_FLAG_RX_STARTED)) {
+        return -EPROTO;
+    }
+
+    info->flags |= APBRIDGEA_AUDIO_FLAG_RX_STARTED;
+
+    ret = device_i2s_start_transmitter(info->i2s_dev);
+    if (ret) {
+        info->flags &= ~APBRIDGEA_AUDIO_FLAG_RX_STARTED;
+    }
+
+    return ret;
+}
+
 static int apbridgea_audio_stop_rx(struct apbridgea_audio_info *info)
 {
     if (!(info->flags & APBRIDGEA_AUDIO_FLAG_RX_STARTED)) {
         return -EPROTO;
     }
 
+    device_i2s_stop_transmitter(info->i2s_dev);
+
     info->flags &= ~APBRIDGEA_AUDIO_FLAG_RX_STARTED;
 
-    device_i2s_stop_transmitter(info->i2s_dev);
+    return 0;
+}
+
+static int apbridgea_audio_shutdown_rx(struct apbridgea_audio_info *info)
+{
+    if ((info->flags & APBRIDGEA_AUDIO_FLAG_RX_STARTED) ||
+        !(info->flags & APBRIDGEA_AUDIO_FLAG_RX_PREPARED)) {
+        return -EPROTO;
+    }
+
     device_i2s_shutdown_transmitter(info->i2s_dev);
+
+    info->flags &= ~APBRIDGEA_AUDIO_FLAG_RX_PREPARED;
 
     free(info->rx_dummy_data);
     info->rx_dummy_data = NULL;
@@ -908,14 +958,23 @@ static void *apbridgea_audio_demux(void *ignored)
         case AUDIO_APBRIDGEA_TYPE_SET_TX_DATA_SIZE:
             ret = apbridgea_audio_set_tx_data_size(info, pkt_hdr, len);
             break;
+        case AUDIO_APBRIDGEA_TYPE_PREPARE_TX:
+            ret = apbridgea_audio_prepare_tx(info);
+            break;
         case AUDIO_APBRIDGEA_TYPE_START_TX:
             ret = apbridgea_audio_start_tx(info, pkt_hdr, len);
             break;
         case AUDIO_APBRIDGEA_TYPE_STOP_TX:
             ret = apbridgea_audio_stop_tx(info);
             break;
+        case AUDIO_APBRIDGEA_TYPE_SHUTDOWN_TX:
+            ret = apbridgea_audio_shutdown_tx(info);
+            break;
         case AUDIO_APBRIDGEA_TYPE_SET_RX_DATA_SIZE:
             ret = apbridgea_audio_set_rx_data_size(info, pkt_hdr, len);
+            break;
+        case AUDIO_APBRIDGEA_TYPE_PREPARE_RX:
+            ret = apbridgea_audio_prepare_rx(info);
             break;
         case AUDIO_APBRIDGEA_TYPE_START_RX:
             ret = apbridgea_audio_start_rx(info);
@@ -923,6 +982,11 @@ static void *apbridgea_audio_demux(void *ignored)
         case AUDIO_APBRIDGEA_TYPE_STOP_RX:
             ret = apbridgea_audio_stop_rx(info);
             break;
+        case AUDIO_APBRIDGEA_TYPE_SHUTDOWN_RX:
+            ret = apbridgea_audio_shutdown_rx(info);
+            break;
+        default:
+            lowsyslog("%s: bogus type: %u\n", __func__, pkt_hdr->type);
         }
 
         free(demux_entry);
