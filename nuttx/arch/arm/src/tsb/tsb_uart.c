@@ -214,13 +214,13 @@ struct tsb_uart_info {
     /** Receive semaphore for blocking mode */
     sem_t           rx_sem;
     /** Modem status callback function */
-    void            (*ms_callback)(uint8_t ms);
+    uart_status_callback ms_callback;
     /** Line status callback function */
-    void            (*ls_callback)(uint8_t ls);
+    uart_status_callback ls_callback;
     /** Receive callback function */
-    void            (*rx_callback)(uint8_t *buffer, int length, int error);
+    uart_xfer_callback rx_callback;
     /** Transmit callback function */
-    void            (*tx_callback)(uint8_t *buffer, int length, int error);
+    uart_xfer_callback tx_callback;
 };
 
 /** device structure for interrupt handler */
@@ -608,8 +608,9 @@ int tsb_uart_lowsetup(int baud)
  * @param flow 0 for disable flow control, 1 for enable flow control.
  * @return 0 for success, -errno for failures.
  */
-static int tsb_uart_set_configuration(struct device *dev, int baud, int parity,
-                                      int databits, int stopbit, int flow)
+static int tsb_uart_set_configuration(struct device *dev, enum uart_baudrate baud,
+                                      enum uart_parity parity, int databits,
+                                      enum uart_stopbit stopbit, int flow)
 {
     struct tsb_uart_info *uart_info;
     uint32_t divisor;
@@ -864,7 +865,7 @@ static int tsb_uart_set_break(struct device *dev, uint8_t break_on)
 * @return 0 for success, -errno for failures.
 */
 static int tsb_uart_attach_ms_callback(struct device *dev,
-                                       void (*callback)(uint8_t ms))
+                                       uart_status_callback callback)
 {
     struct tsb_uart_info *uart_info = NULL;
 
@@ -898,7 +899,7 @@ static int tsb_uart_attach_ms_callback(struct device *dev,
 * @return 0 for success, -errno for failures.
 */
 static int tsb_uart_attach_ls_callback(struct device *dev,
-                                       void (*callback)(uint8_t ls))
+                                       uart_status_callback callback)
 {
     struct tsb_uart_info *uart_info = NULL;
 
@@ -930,8 +931,7 @@ static int tsb_uart_attach_ls_callback(struct device *dev,
 */
 static int tsb_uart_start_transmitter(struct device *dev, uint8_t *buffer,
                                       int length, void *dma, int *sent,
-                                      void (*callback)(uint8_t *buffer,
-                                                       int length, int error))
+                                      uart_xfer_callback callback)
 {
     struct tsb_uart_info *uart_info = NULL;
 
@@ -1028,8 +1028,7 @@ static int tsb_uart_stop_transmitter(struct device *dev)
 */
 static int tsb_uart_start_receiver(struct device *dev, uint8_t *buffer,
                                    int length, void *dma, int *got,
-                                   void (*callback)(uint8_t *buffer, int length,
-                                                    int error))
+                                   uart_xfer_callback callback)
 {
     struct tsb_uart_info *uart_info = NULL;
 

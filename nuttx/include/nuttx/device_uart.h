@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Google, Inc.
+ * Copyright (c) 2015-2016 Google, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,33 +29,57 @@
 #ifndef __INCLUDE_NUTTX_DEVICE_UART_H
 #define __INCLUDE_NUTTX_DEVICE_UART_H
 
-#include <nuttx/util.h>
+#include <errno.h>
+#include <stdint.h>
+
 #include <nuttx/device.h>
-#include <nuttx/ring_buf.h>
+#include <nuttx/util.h>
 
 #define DEVICE_TYPE_UART_HW                     "UART"
 
-/* Baudrate settings */
-#define BAUD_115200     115200
-#define BAUD_57600      57600
-#define BAUD_38400      38400
-#define BAUD_19200      19200
-#define BAUD_9600       9600
-#define BAUD_4800       4800
-#define BAUD_2400       2400
-#define BAUD_1800       1800
+/** UART Baudrate setting */
+enum uart_baudrate {
+    /** 115200 baud **/
+    BAUD_115200 = 115200,
+    /** 57600 baud **/
+    BAUD_57600 = 57600,
+    /** 38400 baud **/
+    BAUD_38400 = 38400,
+    /** 19200 baud **/
+    BAUD_19200 = 19200,
+    /** 9600 baud **/
+    BAUD_9600 = 9600,
+    /** 4800 baud **/
+    BAUD_4800 = 4800,
+    /** 2400 baud **/
+    BAUD_2400 = 2400,
+    /** 1800 baud **/
+    BAUD_1800 = 1800,
+};
 
-/* Parity */
-#define NO_PARITY       0x00        /* No Parity */
-#define ODD_PARITY      0x01        /* Odd Parity */
-#define EVEN_PARITY     0x02        /* Even Parity */
-#define MARK_PARITY     0x03        /* Mark Parity */
-#define SPACE_PARITY    0x04        /* Space Parity */
+/** UART Parity setting */
+enum uart_parity {
+    /** No parity */
+    NO_PARITY,
+    /** Odd parity */
+    ODD_PARITY,
+    /** Even parity */
+    EVEN_PARITY,
+    /** Mark parity */
+    MARK_PARITY,
+    /** Space parity */
+    SPACE_PARITY,
+};
 
-/* Stopbits */
-#define ONE_STOP_BIT    0x00        /* 1 Stop Bit */
-#define ONE5_STOP_BITS  0x01        /* 1.5 Stop Bit */
-#define TWO_STOP_BITS   0x02        /* 2 Stop bit */
+/** UART Stop bit setting */
+enum uart_stopbit {
+    /** One stop bit */
+    ONE_STOP_BIT,
+    /** One and a half stop bit */
+    ONE5_STOP_BITS,
+    /** two stop bit */
+    TWO_STOP_BITS,
+};
 
 /* Modem control */
 #define MCR_DTR         BIT(0)      /* Data Terminal Ready*/
@@ -85,12 +109,34 @@
 #define MSR_DCD         BIT(7)      /* Data Carrier Detect */
 
 /**
+ * @brief UART Status callback function
+ *
+ * This callback function is called upon modification of a Status Register.
+ *
+ * @param status The status register's content
+ */
+typedef void (*uart_status_callback)(uint8_t ms);
+
+/**
+ * @brief UART transmit and receive callback
+ *
+ * This callback function is called upon the completion of a transmit or receive
+ * operation.
+ *
+ * @param buffer Buffer of data (to receive or to transmit)
+ * @param length Amount of received/sent data
+ * @param error Error code upon completion
+ */
+typedef void (*uart_xfer_callback)(uint8_t *buffer, int length, int error);
+
+/**
  * UART device driver ops.
  */
 struct device_uart_type_ops {
     /** UART set_configuration() function pointer */
-    int (*set_configuration)(struct device *dev, int baud, int parity,
-                             int databits, int stopbit, int flow);
+    int (*set_configuration)(struct device *dev, enum uart_baudrate baud,
+                             enum uart_parity parity, int databits,
+                             enum uart_stopbit stopbit, int flow);
     /** UART get_modem_ctrl() function pointer */
     int (*get_modem_ctrl)(struct device *dev, uint8_t *modem_ctrl);
     /** UART set_modem_ctrl() function pointer */
@@ -102,21 +148,19 @@ struct device_uart_type_ops {
     /** UART set_break() function pointer */
     int (*set_break)(struct device *dev, uint8_t break_on);
     /** UART attach_ms_callback() function pointer */
-    int (*attach_ms_callback)(struct device *dev, void (*callback)(uint8_t ms));
+    int (*attach_ms_callback)(struct device *dev, uart_status_callback callback);
     /** UART attach_ls_callback() function pointer */
-    int (*attach_ls_callback)(struct device *dev, void (*callback)(uint8_t ls));
+    int (*attach_ls_callback)(struct device *dev, uart_status_callback callback);
     /** UART start_transmitter() function pointer */
     int (*start_transmitter)(struct device *dev, uint8_t *buffer, int length,
                              void *dma, int *sent,
-                             void (*callback)(uint8_t *buffer, int length,
-                                              int error));
+                             uart_xfer_callback callback);
     /** UART stop_transmitter() function pointer */
     int (*stop_transmitter)(struct device *dev);
     /** UART start_receiver() function pointer */
     int (*start_receiver)(struct device *dev, uint8_t*buffer, int length,
                           void *dma, int *got,
-                          void (*callback)(uint8_t *buffer, int length,
-                                           int error));
+                          uart_xfer_callback callback);
     /** UART stop_receiver() function pointer */
     int (*stop_receiver)(struct device *dev);
 };
@@ -136,9 +180,8 @@ struct device_uart_type_ops {
  * @return 0 for success, -errno for failures.
  */
 static inline int device_uart_set_configuration(struct device *dev,
-                                                int baud, int parity,
-                                                int databits, int stopbit,
-                                                int flow)
+                             enum uart_baudrate baud, enum uart_parity parity,
+                             int databits, enum uart_stopbit stopbit, int flow)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -284,7 +327,7 @@ static inline int device_uart_set_break(struct device *dev, uint8_t break_on)
  * @return 0 for success, -errno for failures.
  */
 static inline int device_uart_attach_ms_callback(struct device *dev,
-                                                 void (*callback)(uint8_t ms))
+                                                 uart_status_callback callback)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -309,7 +352,7 @@ static inline int device_uart_attach_ms_callback(struct device *dev,
  * @return 0 for success, -errno for failures.
  */
 static inline int device_uart_attach_ls_callback(struct device *dev,
-                                                 void (*callback)(uint8_t ls))
+                                                 uart_status_callback callback)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -340,8 +383,7 @@ static inline int device_uart_attach_ls_callback(struct device *dev,
  */
 static inline int device_uart_start_transmitter(struct device *dev,
                         uint8_t *buffer, int length, void *dma,
-                        int *sent, void (*callback)(uint8_t *buffer, int length,
-                                                    int error))
+                        int *sent, uart_xfer_callback callback)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -395,8 +437,7 @@ static inline int device_uart_stop_transmitter(struct device *dev)
  */
 static inline int device_uart_start_receiver(struct device *dev,
                         uint8_t* buffer, int length, void *dma,
-                        int *got, void (*callback)(uint8_t *buffer, int length,
-                                                   int error))
+                        int *got, uart_xfer_callback callback)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
