@@ -67,10 +67,6 @@ enum hwid {
 
 /* GPIO Chip pin number macro */
 #define STM32_GPIO_PIN(p)       (STM32_GPIO_CHIP_BASE + (p))
-#define U96_GPIO_PIN(p)         (U96_GPIO_CHIP_START + (p))
-#define U90_GPIO_PIN(p)         (U90_GPIO_CHIP_START + (p))
-#define U135_GPIO_PIN(p)        (U135_GPIO_CHIP_START + (p))
-#define U701_GPIO_PIN(p)        (U701_GPIO_CHIP_START + (p))
 #define U4550_GPIO_PIN(p)       (U4550_GPIO_CHIP_START + (p))
 #define U4570_GPIO_PIN(p)       (U4570_GPIO_CHIP_START + (p))
 

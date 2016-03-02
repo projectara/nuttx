@@ -34,6 +34,7 @@
  * @brief GPIO API
  */
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <nuttx/irq.h>
 
@@ -185,6 +186,19 @@ int gpio_activate(uint8_t which);
  * @return 0 on success, !=0 on failure
  */
 int gpio_deactivate(uint8_t which);
+
+/**
+ * @brief Check whether a GPIO line is valid
+ *
+ * This function can be used to check if a GPIO number is valid;
+ * i.e. if a chip has been registered for this line.
+ *
+ * It is an error to use the GPIO chip API on invalid lines.
+ *
+ * @param which GPIO to check
+ * @return true if the GPIO is valid, false otherwise
+ */
+bool gpio_is_valid(uint8_t which);
 
 #endif
 
