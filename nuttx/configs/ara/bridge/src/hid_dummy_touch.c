@@ -393,7 +393,7 @@ void touch_thread_func(void *context)
 
             if (info->event_callback) {
                 /* send touch packet to the caller */
-                info->event_callback(dev, HID_INPUT_REPORT,
+                info->event_callback(dev, info->event_data, HID_INPUT_REPORT,
                                      (uint8_t*)&tuh_info->data,
                                      sizeof(struct hid_touch_data));
             }

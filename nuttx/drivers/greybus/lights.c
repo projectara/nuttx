@@ -549,9 +549,10 @@ static uint8_t gb_lights_get_flash_fault(struct gb_operation *operation)
  * @brief Greybus Lights Protocol initialize function
  *
  * @param cport CPort number
+ * @param bundle Greybus bundle handle
  * @return 0 on success, negative errno on error
  */
-static int gb_lights_init(unsigned int cport)
+static int gb_lights_init(unsigned int cport, struct gb_bundle *bundle)
 {
     int ret;
 
@@ -588,8 +589,9 @@ err_free_info:
  * @brief Greybus Lights Protocol deinitialize function
  *
  * @param cport CPort number
+ * @param bundle Greybus bundle handle
  */
-static void gb_lights_exit(unsigned int cport)
+static void gb_lights_exit(unsigned int cport, struct gb_bundle *bundle)
 {
     device_lights_unregister_callback(lights_info->dev);
 
@@ -631,8 +633,9 @@ static struct gb_driver gb_lights_driver = {
  * @brief Register Greybus Lights Protocol
  *
  * @param cport CPort number
+ * @param bundle Bundle number.
  */
-void gb_lights_register(int cport)
+void gb_lights_register(int cport, int bundle)
 {
-    gb_register_driver(cport, &gb_lights_driver);
+    gb_register_driver(cport, bundle, &gb_lights_driver);
 }

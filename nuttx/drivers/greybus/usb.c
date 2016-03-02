@@ -120,7 +120,7 @@ static uint8_t gb_usb_hub_control(struct gb_operation *operation)
     return GB_OP_SUCCESS;
 }
 
-static int gb_usb_init(unsigned int cport)
+static int gb_usb_init(unsigned int cport, struct gb_bundle *bundle)
 {
     usbdev = device_open(DEVICE_TYPE_USB_HCD, 0);
     if (!usbdev) {
@@ -130,7 +130,7 @@ static int gb_usb_init(unsigned int cport)
     return 0;
 }
 
-static void gb_usb_exit(unsigned int cport)
+static void gb_usb_exit(unsigned int cport, struct gb_bundle *bundle)
 {
     if (usbdev) {
         device_close(usbdev);
@@ -152,7 +152,7 @@ struct gb_driver usb_driver = {
     .exit = gb_usb_exit,
 };
 
-void gb_usb_register(int cport)
+void gb_usb_register(int cport, int bundle)
 {
-    gb_register_driver(cport, &usb_driver);
+    gb_register_driver(cport, bundle, &usb_driver);
 }

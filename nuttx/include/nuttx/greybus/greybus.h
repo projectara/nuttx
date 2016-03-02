@@ -100,6 +100,12 @@ struct gb_transport_backend {
     void (*free_buf)(void *ptr);
 };
 
+struct gb_bundle {
+    int id;                     /* bundle ID */
+    struct device *dev;         /* primary bundle device */
+    void *priv;                 /* private bundle data */
+};
+
 struct gb_operation {
     unsigned int cport;
     bool has_responded;
@@ -118,6 +124,8 @@ struct gb_operation {
 
     struct gb_operation *response;
 
+    struct gb_bundle *bundle;
+
 #ifdef CONFIG_GREYBUS_FEATURE_HAVE_TIMESTAMPS
     struct timespec send_ts;
     struct timespec recv_ts;
@@ -125,8 +133,19 @@ struct gb_operation {
 };
 
 struct gb_driver {
-    int (*init)(unsigned int cport);
-    void (*exit)(unsigned int cport);
+    /*
+     * This is the callback in which all the initialization of driver-specific
+     * data should be done. The driver should create struct device and assign
+     * it to bundle->dev. The driver should store any private data it may need
+     * in bundle->priv. The same bundle object will be passed to the driver in
+     * all subsequent greybus handler callbacks calls.
+     */
+    int (*init)(unsigned int cport, struct gb_bundle *bundle);
+    /*
+     * This function is called upon driver deregistration. All private data
+     * stored in bundle should be freed and struct device should be closed.
+     */
+    void (*exit)(unsigned int cport, struct gb_bundle *bundle);
     void (*connected)(unsigned int cport);
     void (*disconnected)(unsigned int cport);
 
@@ -135,6 +154,8 @@ struct gb_driver {
     size_t stack_size;
     size_t op_handlers_count;
     const char *name;
+
+    struct gb_bundle *bundle;
 };
 
 struct gb_operation_hdr {
@@ -196,19 +217,20 @@ static inline const char *gb_handler_name(struct gb_operation_handler *handler)
 int gb_init(struct gb_transport_backend *transport);
 void gb_deinit(void);
 int gb_unipro_init(void);
-int _gb_register_driver(unsigned int cport, struct gb_driver *driver);
+int _gb_register_driver(unsigned int cport, int bundle_id,
+                        struct gb_driver *driver);
 int gb_unregister_driver(unsigned int cport);
 
-static inline int gb_register_named_driver(unsigned int cport,
+static inline int gb_register_named_driver(unsigned int cport, int bundle,
                                            struct gb_driver *driver,
                                            const char *name)
 {
     driver->name = name;
-    return _gb_register_driver(cport, driver);
+    return _gb_register_driver(cport, bundle, driver);
 }
 
-#define gb_register_driver(cport, driver) \
-    gb_register_named_driver(cport, driver, __FILE__)
+#define gb_register_driver(cport, bundle, driver) \
+    gb_register_named_driver(cport, bundle, driver, __FILE__)
 int gb_listen(unsigned int cport);
 int gb_stop_listening(unsigned int cport);
 int gb_notify(unsigned cport, enum gb_event event);
@@ -226,16 +248,14 @@ void gb_operation_ref(struct gb_operation *operation);
 void gb_operation_unref(struct gb_operation *operation);
 size_t gb_operation_get_request_payload_size(struct gb_operation *operation);
 uint8_t gb_operation_get_request_result(struct gb_operation *operation);
+struct gb_bundle *gb_operation_get_bundle(struct gb_operation *operation);
 int greybus_rx_handler(unsigned int, void*, size_t);
 
-void gb_control_register(int cport);
-void gb_gpio_register(int cport);
-void gb_i2c_register(int cport);
-void gb_pwm_register(int cport);
-void gb_uart_register(int cport);
 int gb_i2c_set_dev(struct i2c_dev_s *dev);
 struct  i2c_dev_s *gb_i2c_get_dev(void);
 
 uint8_t gb_errno_to_op_result(int err);
+
+struct gb_bundle *gb_bundle_get_by_id(unsigned int bundle_id);
 
 #endif /* _GREYBUS_H_ */

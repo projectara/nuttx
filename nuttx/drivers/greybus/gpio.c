@@ -342,8 +342,8 @@ struct gb_driver gpio_driver = {
     .op_handlers_count = ARRAY_SIZE(gb_gpio_handlers),
 };
 
-void gb_gpio_register(int cport)
+void gb_gpio_register(int cport, int bundle)
 {
     g_gpio_cport = cport;
-    gb_register_driver(cport, &gpio_driver);
+    gb_register_driver(cport, bundle, &gpio_driver);
 }

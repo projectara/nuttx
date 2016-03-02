@@ -76,12 +76,13 @@ struct hid_descriptor {
  * arises.
  *
  * @param dev The device that created the event
+ * @param data Private user data passed to the callback
  * @param report_type The HID report's type
  * @param report The HID report's content
  * @param len The length of HID report's content
  * @return 0 on success, !=0 on failure
  */
-typedef int (*hid_event_callback)(struct device *dev,
+typedef int (*hid_event_callback)(struct device *dev, void *data,
                                   enum hid_report_type report_type,
                                   uint8_t *report, uint16_t len);
 
@@ -148,10 +149,12 @@ struct device_hid_type_ops {
                       uint8_t report_id, uint8_t *data, uint16_t len);
     /** Register a HID event callback function
      * @param dev The device creating the event
+     * @param data Private data passed to the callback
      * @param callback The callback function to be called on an event
      * @return 0 on success, !=0 on failure
      */
-    int (*register_callback)(struct device *dev, hid_event_callback callback);
+    int (*register_callback)(struct device *dev, void *data,
+                             hid_event_callback callback);
     /**
      * @brief Remove the registered HID event callback function
      * @param dev The device creating the event
@@ -352,10 +355,11 @@ static inline int device_hid_set_report(struct device *dev,
 /**
  * @brief Register a HID event callback function
  * @param dev The device creating the event
+ * @param data User private data (will be passed to the callback)
  * @param callback The callback function to be called on an event
  * @return 0 on success, !=0 on failure
  */
-static inline int device_hid_register_callback(struct device *dev,
+static inline int device_hid_register_callback(struct device *dev, void *data,
                                                hid_event_callback callback)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
@@ -368,7 +372,8 @@ static inline int device_hid_register_callback(struct device *dev,
         return -ENOSYS;
     }
 
-    return DEVICE_DRIVER_GET_OPS(dev, hid)->register_callback(dev, callback);
+    return DEVICE_DRIVER_GET_OPS(dev, hid)->register_callback(dev, data,
+                                                              callback);
 }
 
 /**

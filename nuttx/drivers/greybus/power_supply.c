@@ -323,9 +323,10 @@ static uint8_t gb_power_supply_set_property(struct gb_operation *operation)
  * the cooperation device driver, attach callback, create buffers etc.
  *
  * @param cport CPort number.
+ * @param bundle Greybus bundle handle
  * @return 0 on success, negative errno on error.
  */
-static int gb_power_supply_init(unsigned int cport)
+static int gb_power_supply_init(unsigned int cport, struct gb_bundle *bundle)
 {
     int ret;
 
@@ -363,9 +364,10 @@ err_free_info:
  * This function can be called when protocol terminated.
  *
  * @param cport CPort number.
+ * @param bundle Greybus bundle handle
  * @return None.
  */
-static void gb_power_supply_exit(unsigned int cport)
+static void gb_power_supply_exit(unsigned int cport, struct gb_bundle *bundle)
 {
     DEBUGASSERT(cport == info->cport);
 
@@ -406,7 +408,7 @@ static struct gb_driver gb_power_supply_driver = {
  *
  * @param cport CPort number
  */
-void gb_power_supply_register(int cport)
+void gb_power_supply_register(int cport, int bundle)
 {
-    gb_register_driver(cport, &gb_power_supply_driver);
+    gb_register_driver(cport, bundle, &gb_power_supply_driver);
 }

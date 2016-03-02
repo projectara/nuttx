@@ -807,13 +807,15 @@ static uint8_t gb_uart_send_break(struct gb_operation *operation)
  * This function perform the protocto initialization function, such as open
  * the cooperation device driver, launch threads, create buffers etc.
  *
- * @param operation The pointer to structure of gb_operation.
+ * @param cport CPort number
+ * @param bundle Greybus bundle handle
  * @return GB_OP_SUCCESS on success, error code on failure.
  */
-static int gb_uart_init(unsigned int cport)
+static int gb_uart_init(unsigned int cport, struct gb_bundle *bundle)
 {
     int ret;
     uint8_t ms = 0, ls = 0;
+
 
     info = zalloc(sizeof(*info));
     if (info == NULL) {
@@ -888,11 +890,13 @@ err_free_info:
  *
  * This function can be called when protocol terminated.
  *
- * @param operation The pointer to structure of gb_operation.
+ * @param cport CPort number
+ * @param bundle Greybus bundle handle
  * @return None.
  */
-static void gb_uart_exit(unsigned int cport)
+static void gb_uart_exit(unsigned int cport, struct gb_bundle *bundle)
 {
+
     device_uart_attach_ls_callback(info->dev, NULL);
 
     device_uart_attach_ms_callback(info->dev, NULL);
@@ -928,11 +932,12 @@ struct gb_driver uart_driver = {
  * This function can be called by greybus to register the UART protocol.
  *
  * @param cport The number of CPort.
+ * @param bundle Bundle number.
  * @return None.
  */
-void gb_uart_register(int cport)
+void gb_uart_register(int cport, int bundle)
 {
-    gb_info("%s(): cport %d \n", __func__, cport);
-    gb_register_driver(cport, &uart_driver);
+    gb_info("%s(): cport %d bundle %d\n", __func__, cport, bundle);
+    gb_register_driver(cport, bundle, &uart_driver);
 }
 

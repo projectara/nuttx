@@ -34,6 +34,7 @@
 struct gb_cport {
     struct list_head list;
     int id;
+    int bundle;
     int protocol;
 };
 
@@ -48,6 +49,7 @@ void disable_manifest(char *name, void *priv, int device_id);
 void release_manifest_blob(void *manifest);
 struct list_head *get_manifest_cports(void);
 int get_manifest_size(void);
+size_t manifest_get_max_bundle_id(void);
 
 #endif
 

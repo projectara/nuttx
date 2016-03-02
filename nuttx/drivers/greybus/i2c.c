@@ -38,17 +38,6 @@
 
 #include "i2c-gb.h"
 
-/** Greybus I2C internal data structure */
-struct gb_i2c_info {
-    uint16_t        cport;      /**< assigned CPort number */
-    struct device   *dev;       /**< opened device driver handler */
-    char            *dev_type;  /**< device type for this device */
-    uint16_t        dev_id;     /**< Id for device in device table */
-};
-
-/** A instance of struct gb_i2c_info for internal usage */
-static struct gb_i2c_info *i2c_info = NULL;
-
 static uint8_t gb_i2c_protocol_version(struct gb_operation *operation)
 {
     struct gb_i2c_proto_version_response *response;
@@ -101,6 +90,9 @@ static uint8_t gb_i2c_protocol_transfer(struct gb_operation *operation)
     uint8_t *write_data;
     bool read_op;
     int read_count = 0;
+
+    struct gb_bundle *bundle = gb_operation_get_bundle(operation);
+    DEBUGASSERT(bundle);
 
     struct device_i2c_request *requests;
 
@@ -159,27 +151,19 @@ static uint8_t gb_i2c_protocol_transfer(struct gb_operation *operation)
         }
     }
 
-    ret = device_i2c_transfer(i2c_info->dev, requests, op_count);
+    ret = device_i2c_transfer(bundle->dev, requests, op_count);
 
     free(requests);
 
     return gb_errno_to_op_result(ret);
 }
 
-static int gb_i2c_init(unsigned int cport)
+static int gb_i2c_init(unsigned int cport, struct gb_bundle *bundle)
 {
-    i2c_info = zalloc(sizeof(*i2c_info));
-    if (!i2c_info) {
-        return -ENOMEM;
-    }
+    DEBUGASSERT(bundle);
 
-    i2c_info->cport = cport;
-    i2c_info->dev_type = DEVICE_TYPE_I2C_HW;
-    i2c_info->dev_id = 0;
-
-    i2c_info->dev = device_open(i2c_info->dev_type, i2c_info->dev_id);
-    if (!i2c_info->dev) {
-        free(i2c_info);
+    bundle->dev = device_open(DEVICE_TYPE_I2C_HW, 0);
+    if (!bundle->dev) {
         gb_info("%s(): failed to open device!\n", __func__);
         return -EIO;
     }
@@ -187,14 +171,13 @@ static int gb_i2c_init(unsigned int cport)
     return 0;
 }
 
-static void gb_i2c_exit(unsigned int cport)
+static void gb_i2c_exit(unsigned int cport, struct gb_bundle *bundle)
 {
-    if (i2c_info->dev) {
-        device_close(i2c_info->dev);
-    }
+    DEBUGASSERT(bundle);
 
-    free(i2c_info);
-    i2c_info = NULL;
+    if (bundle->dev) {
+        device_close(bundle->dev);
+    }
 }
 
 static struct gb_operation_handler gb_i2c_handlers[] = {
@@ -212,8 +195,8 @@ static struct gb_driver gb_i2c_driver = {
     .op_handlers_count = ARRAY_SIZE(gb_i2c_handlers),
 };
 
-void gb_i2c_register(int cport)
+void gb_i2c_register(int cport, int bundle)
 {
-    gb_register_driver(cport, &gb_i2c_driver);
+    gb_register_driver(cport, bundle, &gb_i2c_driver);
 }
 

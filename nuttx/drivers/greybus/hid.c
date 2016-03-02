@@ -68,9 +68,6 @@ struct gb_hid_info {
     /** assigned CPort number */
     uint16_t cport;
 
-    /** opened device driver handler */
-    struct device *dev;
-
     /** HID device of report descriptor length */
     uint16_t report_desc_len;
 
@@ -101,8 +98,6 @@ struct gb_hid_info {
     /** inform the thread should be terminated */
     int thread_stop;
 };
-
-static struct gb_hid_info *hid_info = NULL;
 
 /**
  * @brief Put the node back to queue.
@@ -177,9 +172,16 @@ static uint8_t gb_hid_get_descriptor(struct gb_operation *operation)
 {
     struct gb_hid_desc_response *response;
     struct hid_descriptor hid_desc;
+    struct gb_hid_info *hid_info;
+    struct gb_bundle *bundle;
     int ret = 0;
 
-    if (!hid_info || !hid_info->dev) {
+    bundle = gb_operation_get_bundle(operation);
+    DEBUGASSERT(bundle);
+
+    hid_info = bundle->priv;
+
+    if (!hid_info || !bundle->dev) {
         return GB_OP_UNKNOWN_ERROR;
     }
 
@@ -188,7 +190,7 @@ static uint8_t gb_hid_get_descriptor(struct gb_operation *operation)
         return GB_OP_NO_MEMORY;
     }
 
-    ret = device_hid_get_descriptor(hid_info->dev, &hid_desc);
+    ret = device_hid_get_descriptor(bundle->dev, &hid_desc);
     if (ret) {
         return GB_OP_UNKNOWN_ERROR;
     }
@@ -215,10 +217,17 @@ static uint8_t gb_hid_get_descriptor(struct gb_operation *operation)
  */
 static uint8_t gb_hid_get_report_descriptor(struct gb_operation *operation)
 {
+    struct gb_hid_info *hid_info;
+    struct gb_bundle *bundle;
     uint8_t *response;
     int ret = 0;
 
-    if (!hid_info || !hid_info->dev) {
+    bundle = gb_operation_get_bundle(operation);
+    DEBUGASSERT(bundle);
+
+    hid_info = bundle->priv;
+
+    if (!hid_info || !bundle->dev) {
         return GB_OP_UNKNOWN_ERROR;
     }
 
@@ -228,7 +237,7 @@ static uint8_t gb_hid_get_report_descriptor(struct gb_operation *operation)
         return GB_OP_NO_MEMORY;
     }
 
-    ret = device_hid_get_report_descriptor(hid_info->dev, response);
+    ret = device_hid_get_report_descriptor(bundle->dev, response);
     if (ret) {
         return GB_OP_UNKNOWN_ERROR;
     }
@@ -244,13 +253,20 @@ static uint8_t gb_hid_get_report_descriptor(struct gb_operation *operation)
  */
 static uint8_t gb_hid_power_on(struct gb_operation *operation)
 {
+    struct gb_hid_info *hid_info;
+    struct gb_bundle *bundle;
     int ret = 0;
 
-    if (!hid_info || !hid_info->dev) {
+    bundle = gb_operation_get_bundle(operation);
+    DEBUGASSERT(bundle);
+
+    hid_info = bundle->priv;
+
+    if (!hid_info || !bundle->dev) {
         return GB_OP_UNKNOWN_ERROR;
     }
 
-    ret = device_hid_power_on(hid_info->dev);
+    ret = device_hid_power_on(bundle->dev);
     if (ret) {
         return GB_OP_UNKNOWN_ERROR;
     }
@@ -266,13 +282,20 @@ static uint8_t gb_hid_power_on(struct gb_operation *operation)
  */
 static uint8_t gb_hid_power_off(struct gb_operation *operation)
 {
+    struct gb_hid_info *hid_info;
+    struct gb_bundle *bundle;
     int ret = 0;
 
-    if (!hid_info || !hid_info->dev) {
+    bundle = gb_operation_get_bundle(operation);
+    DEBUGASSERT(bundle);
+
+    hid_info = bundle->priv;
+
+    if (!hid_info || !bundle->dev) {
         return GB_OP_UNKNOWN_ERROR;
     }
 
-    ret = device_hid_power_off(hid_info->dev);
+    ret = device_hid_power_off(bundle->dev);
     if (ret) {
         return GB_OP_UNKNOWN_ERROR;
     }
@@ -295,18 +318,22 @@ static uint8_t gb_hid_power_off(struct gb_operation *operation)
 static uint8_t gb_hid_get_report(struct gb_operation *operation)
 {
     struct gb_hid_get_report_request *request;
+    struct gb_bundle *bundle;
     uint8_t *response;
     uint16_t report_len;
     int ret = 0;
 
+    bundle = gb_operation_get_bundle(operation);
     request = gb_operation_get_request_payload(operation);
+
+    DEBUGASSERT(bundle);
 
     if (gb_operation_get_request_payload_size(operation) < sizeof(*request)) {
         gb_error("dropping short message\n");
         return GB_OP_INVALID;
     }
 
-    ret = device_hid_get_report_length(hid_info->dev, request->report_type,
+    ret = device_hid_get_report_length(bundle->dev, request->report_type,
                                        request->report_id);
 
     if (ret <= 0) {
@@ -328,7 +355,7 @@ static uint8_t gb_hid_get_report(struct gb_operation *operation)
             return GB_OP_NO_MEMORY;
     }
 
-    ret = device_hid_get_report(hid_info->dev, request->report_type,
+    ret = device_hid_get_report(bundle->dev, request->report_type,
                                 request->report_id, response, report_len);
     if (ret) {
         return GB_OP_UNKNOWN_ERROR;
@@ -348,24 +375,28 @@ static uint8_t gb_hid_get_report(struct gb_operation *operation)
 static uint8_t gb_hid_set_report(struct gb_operation *operation)
 {
     struct gb_hid_set_report_request *request;
+    struct gb_bundle *bundle;
     uint16_t report_len;
     int ret = 0;
 
+    bundle = gb_operation_get_bundle(operation);
     request = gb_operation_get_request_payload(operation);
+
+    DEBUGASSERT(bundle);
 
     if (gb_operation_get_request_payload_size(operation) < sizeof(*request)) {
         gb_error("dropping short message\n");
         return GB_OP_INVALID;
     }
 
-    report_len = device_hid_get_report_length(hid_info->dev,
+    report_len = device_hid_get_report_length(bundle->dev,
                                               request->report_type,
                                               request->report_id);
     if (report_len <= 0) {
         return GB_OP_UNKNOWN_ERROR;
     }
 
-    ret = device_hid_set_report(hid_info->dev, request->report_type,
+    ret = device_hid_set_report(bundle->dev, request->report_type,
                                 request->report_id, request->report,
                                 report_len);
     if (ret) {
@@ -385,15 +416,21 @@ static uint8_t gb_hid_set_report(struct gb_operation *operation)
  * process IRQ Event request protocol.
  *
  * @param dev Pointer to structure of device data.
+ * @param data Pointer to struct gb_hid_info.
  * @param report_type HID report type.
  * @param report Pointer to a received data buffer.
  * @param len Returned buffer lenght.
  * @return None.
  */
-static int hid_event_callback_routine(struct device *dev, uint8_t report_type,
-                                      uint8_t *report, uint16_t len)
+static int hid_event_callback_routine(struct device *dev, void *data,
+                                      uint8_t report_type, uint8_t *report,
+                                      uint16_t len)
 {
+    struct gb_hid_info *hid_info;
     struct op_node *node;
+
+    DEBUGASSERT(data);
+    hid_info = data;
 
     if (!hid_info->report_node) {
         /**
@@ -439,6 +476,7 @@ static int hid_event_callback_routine(struct device *dev, uint8_t report_type,
  */
 static void *report_proc_thread(void *data)
 {
+    struct gb_hid_info *hid_info = data;
     struct op_node *node = NULL;
     int ret;
 
@@ -499,7 +537,8 @@ static void hid_free_op(sq_queue_t *queue)
  * @param queue Target queue.
  * @return 0 for success, -errno for failures.
  */
-static int hid_alloc_op(int max_nodes, int buf_size, sq_queue_t *queue)
+static int hid_alloc_op(int cport, int max_nodes,
+                        int buf_size, sq_queue_t *queue)
 {
     struct gb_operation *operation = NULL;
     struct gb_hid_input_report_request *request = NULL;
@@ -507,7 +546,7 @@ static int hid_alloc_op(int max_nodes, int buf_size, sq_queue_t *queue)
     int i = 0;
 
     for (i = 0; i < max_nodes; i++) {
-        operation = gb_operation_create(hid_info->cport,
+        operation = gb_operation_create(cport,
                                         GB_HID_TYPE_IRQ_EVENT, buf_size);
         if (!operation) {
             goto err_free_op;
@@ -544,7 +583,7 @@ err_free_op:
  * @param None.
  * @return 0 for success, -errno for failures.
  */
-static int hid_receiver_callback_init(void)
+static int hid_receiver_callback_init(struct gb_hid_info *hid_info)
 {
     int ret;
 
@@ -553,8 +592,8 @@ static int hid_receiver_callback_init(void)
 
     hid_info->entries = MAX_REPORT_OPERATIONS;
 
-    ret = hid_alloc_op(hid_info->entries, hid_info->report_buf_size,
-                       &hid_info->free_queue);
+    ret = hid_alloc_op(hid_info->cport, hid_info->entries,
+                       hid_info->report_buf_size, &hid_info->free_queue);
     if (ret) {
         return ret;
     }
@@ -589,7 +628,7 @@ err_free_data_op:
  * @param None.
  * @return None.
  */
-static void hid_receiver_callback_deinit(void)
+static void hid_receiver_callback_deinit(struct gb_hid_info *hid_info)
 {
     if (hid_info->pthread_handler != (pthread_t)0) {
         hid_info->thread_stop = 1;
@@ -607,11 +646,15 @@ static void hid_receiver_callback_deinit(void)
  * @brief Greybus HID protocol initialize function
  *
  * @param cport CPort number
+ * @param bundle Greybus bundle handle
  * @return 0 on success, negative errno on error
  */
-static int gb_hid_init(unsigned int cport)
+static int gb_hid_init(unsigned int cport, struct gb_bundle *bundle)
 {
+    struct gb_hid_info *hid_info;
     int ret;
+
+    DEBUGASSERT(bundle);
 
     hid_info = zalloc(sizeof(*hid_info));
     if (!hid_info) {
@@ -620,21 +663,21 @@ static int gb_hid_init(unsigned int cport)
 
     hid_info->cport = cport;
 
-    hid_info->dev = device_open(DEVICE_TYPE_HID_HW, 0);
-    if (!hid_info->dev) {
+    bundle->dev = device_open(DEVICE_TYPE_HID_HW, 0);
+    if (!bundle->dev) {
         gb_info("failed to open HID device!\n");
         ret = -EIO;
         goto err_hid_init;
     }
 
-    ret = device_hid_get_max_report_length(hid_info->dev, GB_HID_INPUT_REPORT);
+    ret = device_hid_get_max_report_length(bundle->dev, GB_HID_INPUT_REPORT);
     if (ret < 0) {
         goto err_device_close;
     }
 
     hid_info->report_buf_size = ret;
 
-    ret = hid_receiver_callback_init();
+    ret = hid_receiver_callback_init(hid_info);
     if (ret) {
         goto err_device_close;
     }
@@ -643,18 +686,20 @@ static int gb_hid_init(unsigned int cport)
     hid_info->report_node = node_dequeue(&hid_info->free_queue);
     hid_info->node_request = 0;
 
-    ret = device_hid_register_callback(hid_info->dev,
+    ret = device_hid_register_callback(bundle->dev, hid_info,
                                        hid_event_callback_routine);
     if (ret) {
         goto err_hid_receiver_cb_deinit;
     }
 
+    bundle->priv = hid_info;
+
     return 0;
 
 err_hid_receiver_cb_deinit:
-    hid_receiver_callback_deinit();
+    hid_receiver_callback_deinit(hid_info);
 err_device_close:
-    device_close(hid_info->dev);
+    device_close(bundle->dev);
 err_hid_init:
     free(hid_info);
 
@@ -665,17 +710,23 @@ err_hid_init:
  * @brief Greybus HID protocol deinitialize function
  *
  * @param cport CPort number
+ * @param bundle Greybus bundle handle
  */
-static void gb_hid_exit(unsigned int cport)
+static void gb_hid_exit(unsigned int cport, struct gb_bundle *bundle)
 {
+    struct gb_hid_info *hid_info;
+
+    DEBUGASSERT(bundle);
+    hid_info = bundle->priv;
+
     if (!hid_info)
         return;
 
-    device_hid_unregister_callback(hid_info->dev);
+    device_hid_unregister_callback(bundle->dev);
 
-    hid_receiver_callback_deinit();
+    hid_receiver_callback_deinit(hid_info);
 
-    device_close(hid_info->dev);
+    device_close(bundle->dev);
 
     free(hid_info);
     hid_info = NULL;
@@ -706,8 +757,9 @@ static struct gb_driver gb_hid_driver = {
  * @brief Register Greybus HID protocol
  *
  * @param cport CPort number
+ * @param bundle Bundle number.
  */
-void gb_hid_register(int cport)
+void gb_hid_register(int cport, int bundle)
 {
-    gb_register_driver(cport, &gb_hid_driver);
+    gb_register_driver(cport, bundle, &gb_hid_driver);
 }

@@ -375,7 +375,7 @@ err_setreport:
  * @param callback Callback function for event notify
  * @return 0 on success, negative errno on error
  */
-static int hid_dev_register_callback(struct device *dev,
+static int hid_dev_register_callback(struct device *dev, void *data,
                                      hid_event_callback callback)
 {
     struct hid_info *info = NULL;
@@ -391,6 +391,7 @@ static int hid_dev_register_callback(struct device *dev,
     }
 
     info->event_callback = callback;
+    info->event_data = data;
 
     return 0;
 }
@@ -416,6 +417,7 @@ static int hid_dev_unregister_callback(struct device *dev)
     }
 
     info->event_callback = NULL;
+    info->event_data = NULL;
     return 0;
 }
 

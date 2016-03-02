@@ -570,5 +570,5 @@ struct gb_driver svc_driver = {
 
 void gb_svc_register(int cport) {
     g_svc_cport = cport;
-    gb_register_driver(cport, &svc_driver);
+    gb_register_driver(cport, -1 /* dummy bundle id */, &svc_driver);
 }

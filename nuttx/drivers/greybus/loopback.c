@@ -438,7 +438,7 @@ void gb_loopback_log_exit(unsigned int cport, struct gb_operation *operation, si
 }
 #endif
 
-void gb_loopback_register(int cport)
+void gb_loopback_register(int cport, int bundle)
 {
     struct gb_loopback *loopback = zalloc(sizeof(*loopback));
     irqstate_t flags;
@@ -452,5 +452,5 @@ void gb_loopback_register(int cport)
         irqrestore(flags);
     }
     gb_timestamp_init();
-    gb_register_driver(cport, &loopback_driver);
+    gb_register_driver(cport, bundle, &loopback_driver);
 }

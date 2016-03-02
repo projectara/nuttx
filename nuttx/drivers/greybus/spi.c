@@ -324,9 +324,10 @@ spi_err:
  * @brief Greybus SPI protocol initialize function
  *
  * @param cport CPort number
+ * @param bundle Greybus bundle handle
  * @return 0 on success, negative errno on error
  */
-static int gb_spi_init(unsigned int cport)
+static int gb_spi_init(unsigned int cport, struct gb_bundle *bundle)
 {
     if (!spi_dev) {
         spi_dev = device_open(DEVICE_TYPE_SPI_HW, 0);
@@ -341,8 +342,9 @@ static int gb_spi_init(unsigned int cport)
  * @brief Greybus SPI protocol deinitialize function
  *
  * @param cport CPort number
+ * @param bundle Greybus bundle handle
  */
-static void gb_spi_exit(unsigned int cport)
+static void gb_spi_exit(unsigned int cport, struct gb_bundle *bundle)
 {
     if (spi_dev) {
         device_close(spi_dev);
@@ -373,10 +375,11 @@ static struct gb_driver gb_spi_driver = {
  * @brief Register Greybus SPI protocol
  *
  * @param cport CPort number
+ * @param bundle Bundle number.
  */
-void gb_spi_register(int cport)
+void gb_spi_register(int cport, int bundle)
 {
-    gb_register_driver(cport, &gb_spi_driver);
+    gb_register_driver(cport, bundle, &gb_spi_driver);
 }
 
 /**

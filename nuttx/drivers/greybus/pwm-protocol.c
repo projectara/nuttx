@@ -396,10 +396,11 @@ static uint8_t gb_pwm_protocol_disable(struct gb_operation *operation)
  * return by device_open().
  *
  * @param cport Assigned Cport number.
+ * @param bundle Greybus bundle handle
  *
  * @return (0) on success, error code on failure.
  */
-int gb_pwm_init(unsigned int cport)
+int gb_pwm_init(unsigned int cport, struct gb_bundle *bundle)
 {
     pwm_info = zalloc(sizeof(*pwm_info));
     if (!pwm_info) {
@@ -427,8 +428,9 @@ int gb_pwm_init(unsigned int cport)
  * initialization.
  *
  * @param cport Assigned CPort number.
+ * @param bundle Greybus bundle handle
  */
-void gb_pwm_exit(unsigned int cport)
+void gb_pwm_exit(unsigned int cport, struct gb_bundle *bundle)
 {
     if (pwm_info->dev) {
         device_close(pwm_info->dev);
@@ -473,7 +475,7 @@ static struct gb_driver gb_pwm_driver = {
  *
  * This function is called when greybus core to enable PWM of Cport.
  */
-void gb_pwm_register(int cport)
+void gb_pwm_register(int cport, int bundle)
 {
-    gb_register_driver(cport, &gb_pwm_driver);
+    gb_register_driver(cport, bundle, &gb_pwm_driver);
 }

@@ -37,6 +37,8 @@
 #include <nuttx/wdog.h>
 #include <loopback-gb.h>
 
+#include <apps/greybus-utils/manifest.h>
+
 #include <arch/atomic.h>
 #include <arch/byteorder.h>
 
@@ -72,6 +74,7 @@ struct gb_tape_record_header {
 static unsigned int cport_count;
 static atomic_t request_id;
 static struct gb_cport_driver *g_cport;
+static struct gb_bundle **g_bundle;
 static struct gb_transport_backend *transport_backend;
 static struct gb_tape_mechanism *gb_tape;
 static int gb_tape_fd = -EBADFD;
@@ -202,6 +205,8 @@ static void gb_process_request(struct gb_operation_hdr *hdr,
         gb_operation_send_response(operation, GB_OP_INVALID);
         return;
     }
+
+    operation->bundle = g_cport[operation->cport].driver->bundle;
 
     result = op_handler->handler(operation);
     gb_debug("%s: %u\n", gb_handler_name(op_handler), result);
@@ -483,16 +488,18 @@ int gb_unregister_driver(unsigned int cport)
     gb_flush_tx_fifo(cport);
 
     if (g_cport[cport].driver->exit)
-        g_cport[cport].driver->exit(cport);
+        g_cport[cport].driver->exit(cport, g_cport[cport].driver->bundle);
     g_cport[cport].driver = NULL;
 
     return 0;
 }
 
-int _gb_register_driver(unsigned int cport, struct gb_driver *driver)
+int _gb_register_driver(unsigned int cport, int bundle_id,
+                        struct gb_driver *driver)
 {
     pthread_attr_t thread_attr;
     pthread_attr_t *thread_attr_ptr = &thread_attr;
+    struct gb_bundle *bundle;
     int retval;
 
     gb_debug("Registering Greybus driver on CP%u\n", cport);
@@ -518,8 +525,36 @@ int _gb_register_driver(unsigned int cport, struct gb_driver *driver)
         return -EINVAL;
     }
 
+    if (bundle_id > manifest_get_max_bundle_id()) {
+        gb_error("invalid bundle_id: %d\n", bundle_id);
+        return -EINVAL;
+    }
+
+    if (bundle_id >= 0 && !g_bundle[bundle_id]) {
+        /*
+         * TODO We should probably add a mechanism to destroy the bundle
+         * objects allocated here, but since for now we don't really use any
+         * actual shutdown procedure we'll leave it as a TODO.
+         *
+         * Eventually we'd need some reference counting mechanism, because we
+         * call _gb_register_driver() once per used cport. We would need to
+         * know when when there are no more cports referencing given bundle
+         * and it's safe to free it.
+         */
+        bundle = zalloc(sizeof(struct gb_bundle));
+        if (!bundle)
+            return -ENOMEM;
+
+        bundle->id = bundle_id;
+        g_bundle[bundle_id] = bundle;
+    } else {
+        bundle = NULL;
+    }
+
+    driver->bundle = bundle;
+
     if (driver->init) {
-        retval = driver->init(cport);
+        retval = driver->init(cport, bundle);
         if (retval) {
             gb_error("Can not init %s\n", gb_driver_name(driver));
             return retval;
@@ -563,7 +598,7 @@ pthread_attr_setstacksize_error:
 pthread_attr_init_error:
     gb_error("Can not create thread for %s\n: ", gb_driver_name(driver));
     if (driver->exit)
-        driver->exit(cport);
+        driver->exit(cport, bundle);
     return retval;
 }
 
@@ -908,15 +943,35 @@ uint8_t gb_operation_get_request_result(struct gb_operation *operation)
     return hdr->result;
 }
 
+struct gb_bundle *gb_operation_get_bundle(struct gb_operation *operation)
+{
+    if (!operation) {
+        return NULL;
+    }
+
+    return operation->bundle;
+}
+
 int gb_init(struct gb_transport_backend *transport)
 {
+    size_t num_bundles = manifest_get_max_bundle_id() + 1;
     int i;
 
     if (!transport)
         return -EINVAL;
 
+    g_bundle = zalloc(sizeof(struct gb_bundle *) * num_bundles);
+    if (!g_bundle) {
+        return -ENOMEM;
+    }
+
     cport_count = unipro_cport_count();
     g_cport = zalloc(sizeof(struct gb_cport_driver) * cport_count);
+    if (!g_cport) {
+        free(g_bundle);
+        return -ENOMEM;
+    }
+
     for (i = 0; i < cport_count; i++) {
         sem_init(&g_cport[i].rx_fifo_lock, 0, 0);
         list_init(&g_cport[i].rx_fifo);
@@ -1071,4 +1126,13 @@ int gb_notify(unsigned cport, enum gb_event event)
     }
 
     return 0;
+}
+
+struct gb_bundle *gb_bundle_get_by_id(unsigned int bundle_id)
+{
+    if (bundle_id > manifest_get_max_bundle_id()) {
+        return NULL;
+    }
+
+    return g_bundle[bundle_id];
 }

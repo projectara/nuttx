@@ -677,6 +677,43 @@ err_close:
     sem_post(&info->mutex);
 }
 
+static int tsb_i2c_suspend(struct device *dev)
+{
+    struct tsb_i2c_info *info;
+
+    info = device_get_private(dev);
+
+    sem_wait(&info->mutex);
+
+    if (info->status != TSB_I2C_STATUS_IDLE) {
+        sem_post(&info->mutex);
+        return -EBUSY;
+    }
+
+    tsb_clk_disable(TSB_CLK_I2CP);
+    tsb_clk_disable(TSB_CLK_I2CS);
+
+    sem_post(&info->mutex);
+
+    return 0;
+}
+
+static int tsb_i2c_poweroff(struct device *dev)
+{
+    return tsb_i2c_suspend(dev);
+}
+
+static int tsb_i2c_resume(struct device *dev)
+{
+    tsb_clk_enable(TSB_CLK_I2CP);
+    tsb_clk_enable(TSB_CLK_I2CS);
+
+    tsb_reset(TSB_RST_I2CP);
+    tsb_reset(TSB_RST_I2CS);
+
+    return 0;
+}
+
 #ifdef CONFIG_PM
 static void tsb_i2c_pm_notify(struct pm_callback_s *cb,
                               enum pm_state_e pmstate)
@@ -687,11 +724,7 @@ static void tsb_i2c_pm_notify(struct pm_callback_s *cb,
 
     switch (pmstate) {
     case PM_NORMAL:
-        tsb_clk_enable(TSB_CLK_I2CP);
-        tsb_clk_enable(TSB_CLK_I2CS);
-
-        tsb_reset(TSB_RST_I2CP);
-        tsb_reset(TSB_RST_I2CS);
+        tsb_i2c_resume(NULL);
         break;
     case PM_IDLE:
     case PM_STANDBY:
@@ -860,6 +893,12 @@ static void tsb_i2c_dev_remove(struct device *dev)
     return;
 }
 
+static struct device_pm_ops tsb_i2c_pm_ops = {
+    .suspend    = tsb_i2c_suspend,
+    .poweroff   = tsb_i2c_poweroff,
+    .resume     = tsb_i2c_resume,
+};
+
 static struct device_i2c_type_ops tsb_i2c_type_ops = {
     .transfer   = tsb_i2c_transfer,
 };
@@ -877,4 +916,5 @@ struct device_driver tsb_i2c_driver = {
     .name   = "tsb_i2c",
     .desc   = "TSB I2C Driver",
     .ops    = &tsb_i2c_driver_ops,
+    .pm     = &tsb_i2c_pm_ops,
 };

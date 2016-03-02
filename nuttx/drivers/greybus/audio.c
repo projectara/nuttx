@@ -1564,7 +1564,7 @@ err_close:
     device_close(dev);
 }
 
-static int gb_audio_init(unsigned int mgmt_cport)
+static int gb_audio_init(unsigned int mgmt_cport, struct gb_bundle *bundle)
 {
     struct gb_audio_info *info;
     int ret;
@@ -1611,7 +1611,7 @@ static int gb_audio_init(unsigned int mgmt_cport)
     return 0;
 }
 
-static void gb_audio_exit(unsigned int mgmt_cport)
+static void gb_audio_exit(unsigned int mgmt_cport, struct gb_bundle *bundle)
 {
     struct gb_audio_info *info;
 
@@ -1663,9 +1663,9 @@ static struct gb_driver gb_audio_mgmt_driver = {
     .op_handlers_count  = ARRAY_SIZE(gb_audio_mgmt_handlers),
 };
 
-void gb_audio_mgmt_register(int mgmt_cport)
+void gb_audio_mgmt_register(int mgmt_cport, int bundle)
 {
-    gb_register_driver(mgmt_cport, &gb_audio_mgmt_driver);
+    gb_register_driver(mgmt_cport, bundle, &gb_audio_mgmt_driver);
 }
 
 static uint8_t gb_audio_send_data_handler(struct gb_operation *operation)
@@ -1735,7 +1735,7 @@ static struct gb_driver gb_audio_data_driver = {
     .op_handlers_count  = ARRAY_SIZE(gb_audio_data_handlers),
 };
 
-void gb_audio_data_register(int data_cport)
+void gb_audio_data_register(int data_cport, int bundle)
 {
-    gb_register_driver(data_cport, &gb_audio_data_driver);
+    gb_register_driver(data_cport, bundle, &gb_audio_data_driver);
 }
