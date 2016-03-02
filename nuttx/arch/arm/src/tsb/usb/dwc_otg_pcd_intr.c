@@ -3360,6 +3360,7 @@ static void dwc_otg_pcd_handle_noniso_bna(dwc_otg_pcd_ep_t * ep)
 		sts.d32 = dma_desc->status.d32;
 		if (sts.b.bs != BS_HOST_READY)
 			return;
+		ep->bna = 0;
 	} else {
 #endif
 		for (i = start; i < dwc_ep->desc_cnt; ++i, ++dma_desc) {
