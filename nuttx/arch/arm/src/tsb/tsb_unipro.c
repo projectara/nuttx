@@ -747,15 +747,11 @@ void unipro_init(void)
     /*
      * Disable FCT transmission. See ENG-376.
      */
-    unipro_write(CPB_TX_E2EFC_EN_0, 0x0);
+    unipro_write(CPB_TX_E2EFC_EN_0, 0);
+    unipro_write(CPB_RX_E2EFC_EN_0, 0);
     if (tsb_get_product_id() == tsb_pid_apbridge) {
-        unipro_write(CPB_TX_E2EFC_EN_1, 0x0);
-    }
-
-    /* Enable FCT RX reception - needed because of ES3's bootrom */
-    unipro_write(CPB_RX_E2EFC_EN_0, ~0);
-    if (tsb_get_product_id() == tsb_pid_apbridge) {
-        unipro_write(CPB_RX_E2EFC_EN_1, ~0);
+        unipro_write(CPB_TX_E2EFC_EN_1, 0);
+        unipro_write(CPB_RX_E2EFC_EN_1, 0);
     }
 
     irq_attach(TSB_IRQ_UNIPRO, irq_unipro);
@@ -788,6 +784,8 @@ int unipro_enable_fct_tx_flow(unsigned int cport)
 {
     uintptr_t reg;
     int retval = 0;
+    int e2efc_enabled = 0;
+    int csd_enabled = 0;
     int csv_enabled = 0;
     uint32_t flags = 0;
 
@@ -800,6 +798,8 @@ int unipro_enable_fct_tx_flow(unsigned int cport)
         lowsyslog("T_CPORTFLAGS read failed: retval = %d\n", retval);
         return retval;
     }
+    e2efc_enabled = (!!(flags & CPORT_FLAGS_E2EFC) == 1);
+    csd_enabled = (!!(flags & CPORT_FLAGS_CSD_N) == 0);
     csv_enabled = (!!(flags & CPORT_FLAGS_CSV_N) == 0);
 
     reg = CPB_RX_CSV_DIS_REG(cport);
@@ -811,8 +811,19 @@ int unipro_enable_fct_tx_flow(unsigned int cport)
     }
 
     reg = CPB_TX_E2EFC_EN_REG(cport);
+    if (e2efc_enabled) {
+        unipro_write(reg, unipro_read(reg) | (1 << (cport % 32)));
+    } else {
+        unipro_write(reg, unipro_read(reg) & ~(1 << (cport % 32)));
+    }
 
-    unipro_write(reg, unipro_read(reg) | (1 << (cport % 32)));
+    reg = CPB_RX_E2EFC_EN_REG(cport);
+    if (e2efc_enabled || csd_enabled) {
+        unipro_write(reg, unipro_read(reg) | (1 << (cport % 32)));
+    } else {
+        unipro_write(reg, unipro_read(reg) & ~(1 << (cport % 32)));
+    }
+
     return 0;
 }
 

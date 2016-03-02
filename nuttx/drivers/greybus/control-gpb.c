@@ -260,6 +260,10 @@ struct gb_driver control_driver = {
 void gb_control_register(int cport, int bundle)
 {
     gb_register_driver(cport, bundle, &control_driver);
+    unipro_attr_local_write(T_CPORTFLAGS,
+            CPORT_FLAGS_CSV_N |
+            CPORT_FLAGS_CSD_N |
+            CPORT_FLAGS_E2EFC, cport);
     unipro_enable_fct_tx_flow(cport);
     gb_listen(cport);
 }
