@@ -618,6 +618,8 @@ static void dump_regs(void) {
     REG_DBG(CPB_TX_E2EFC_EN_1);
     REG_DBG(CPB_RX_E2EFC_EN_0);
     REG_DBG(CPB_RX_E2EFC_EN_1);
+    REG_DBG(CPB_RX_CSV_DIS_0);
+    REG_DBG(CPB_RX_CSV_DIS_1);
     REG_DBG(CPORT_STATUS_0);
     REG_DBG(CPORT_STATUS_1);
     REG_DBG(CPORT_STATUS_2);
@@ -773,6 +775,9 @@ int unipro_disable_fct_tx_flow(unsigned int cport)
         return -EINVAL;
     }
 
+    reg = CPB_RX_CSV_DIS_REG(cport);
+    unipro_write(reg, unipro_read(reg) | (1 << (cport % 32)));
+
     reg = CPB_TX_E2EFC_EN_REG(cport);
 
     unipro_write(reg, unipro_read(reg) & ~(1 << (cport % 32)));
@@ -782,9 +787,27 @@ int unipro_disable_fct_tx_flow(unsigned int cport)
 int unipro_enable_fct_tx_flow(unsigned int cport)
 {
     uintptr_t reg;
+    int retval = 0;
+    int csv_enabled = 0;
+    uint32_t flags = 0;
 
     if (cport >= cport_count) {
         return -EINVAL;
+    }
+
+    retval = unipro_attr_local_read(T_CPORTFLAGS, &flags, cport);
+    if (retval) {
+        lowsyslog("T_CPORTFLAGS read failed: retval = %d\n", retval);
+        return retval;
+    }
+    csv_enabled = (!!(flags & CPORT_FLAGS_CSV_N) == 0);
+
+    reg = CPB_RX_CSV_DIS_REG(cport);
+    if (csv_enabled) {
+        unipro_write(reg, unipro_read(reg) & ~(1 << (cport % 32)));
+
+    } else {
+        unipro_write(reg, unipro_read(reg) | (1 << (cport % 32)));
     }
 
     reg = CPB_TX_E2EFC_EN_REG(cport);

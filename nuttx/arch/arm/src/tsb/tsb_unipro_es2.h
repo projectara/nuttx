@@ -177,6 +177,10 @@
 #define RX_CLK_ENA_1                           0x00000638
 #define AHS_HRESP_MODE_0                       0x0000063C
 #define AHS_HRESP_MODE_1                       0x00000640
+#define CPB_RX_CSV_DIS_0                       0x0000065C
+#define CPB_RX_CSV_DIS_1                       0x00000660
+#define CPB_RX_CSV_DIS_REG(id) \
+    (CPB_RX_CSV_DIS_0 + ((id / 32) * sizeof(uint32_t)))
 #define AHS_TIMEOUT_00                         0x00000700
 #define AHS_TIMEOUT_01                         0x00000704
 #define AHS_TIMEOUT_02                         0x00000708
