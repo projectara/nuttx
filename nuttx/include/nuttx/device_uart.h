@@ -35,6 +35,7 @@
 #include <nuttx/device.h>
 #include <nuttx/util.h>
 
+/** UART Device type */
 #define DEVICE_TYPE_UART_HW                     "UART"
 
 /** UART Baudrate setting */
@@ -81,32 +82,62 @@ enum uart_stopbit {
     TWO_STOP_BITS,
 };
 
-/* Modem control */
-#define MCR_DTR         BIT(0)      /* Data Terminal Ready*/
-#define MCR_RTS         BIT(1)      /* Request to Send */
-#define MCR_OUT1        BIT(2)      /* Out 1 */
-#define MCR_OUT2        BIT(3)      /* Out 2 */
-#define MCR_LPBK        BIT(4)      /* Loop */
+/** @defgroup UART_MCR Modem control register
+ * @{
+ */
+/** Data terminal ready */
+#define MCR_DTR         BIT(0)
+/** Request to send */
+#define MCR_RTS         BIT(1)
+/** Auxiliary user-defined output 1 */
+#define MCR_OUT1        BIT(2)
+/** Auxiliary user-defined output 2 */
+#define MCR_OUT2        BIT(3)
+/** Loopback mode select */
+#define MCR_LPBK        BIT(4)
+/* @} */
 
-/* Line status */
-#define LSR_DR          BIT(0)      /* Data Ready */
-#define LSR_OE          BIT(1)      /* Overrun Error */
-#define LSR_PE          BIT(2)      /* Parity Error */
-#define LSR_FE          BIT(3)      /* Framing Error */
-#define LSR_BI          BIT(4)      /* Break Interrupt */
-#define LSR_THRE        BIT(5)      /* Transmitter Holding Register */
-#define LSR_TEMT        BIT(6)      /* Transmitter Empty */
-#define LSR_RXFE        BIT(7)      /* Error in RCVR FIFO */
+/** @defgroup UART_LSR Line status register
+ * @{
+ */
+/** Data Ready */
+#define LSR_DR          BIT(0)
+/** Overrun Error */
+#define LSR_OE          BIT(1)
+/** Parity Error */
+#define LSR_PE          BIT(2)
+/** Framing Error */
+#define LSR_FE          BIT(3)
+/** Break Interrupt */
+#define LSR_BI          BIT(4)
+/** Transmitter Holding Register */
+#define LSR_THRE        BIT(5)
+/** Transmitter Empty */
+#define LSR_TEMT        BIT(6)
+/** Error in RCVR FIFO */
+#define LSR_RXFE        BIT(7)
+/* @} */
 
-/* Modem status */
-#define MSR_DCTS        BIT(0)      /* Delta Clear to Send */
-#define MSR_DDSR        BIT(1)      /* Delta Data Set Ready */
-#define MSR_TERI        BIT(2)      /* Trailing Edge Ring Indicator */
-#define MSR_DDCD        BIT(3)      /* Delta Data Carrier Detect */
-#define MSR_CTS         BIT(4)      /* Clear to Send */
-#define MSR_DSR         BIT(5)      /* Data Set Ready */
-#define MSR_RI          BIT(6)      /* Ring Indicator */
-#define MSR_DCD         BIT(7)      /* Data Carrier Detect */
+/** @defgroup UART_MSR Modem status register
+ * @{
+ */
+/** Delta Clear to Send */
+#define MSR_DCTS        BIT(0)
+/** Delta Data Set Ready */
+#define MSR_DDSR        BIT(1)
+/** Trailing Edge Ring Indicator */
+#define MSR_TERI        BIT(2)
+/** Delta Data Carrier Detect */
+#define MSR_DDCD        BIT(3)
+/** Clear to Send */
+#define MSR_CTS         BIT(4)
+/** Data Set Ready */
+#define MSR_DSR         BIT(5)
+/** Ring Indicator */
+#define MSR_RI          BIT(6)
+/** Data Carrier Detect */
+#define MSR_DCD         BIT(7)
+/** @} */
 
 /**
  * @brief UART Status callback function
@@ -129,59 +160,117 @@ typedef void (*uart_status_callback)(uint8_t ms);
  */
 typedef void (*uart_xfer_callback)(uint8_t *buffer, int length, int error);
 
-/**
- * UART device driver ops.
- */
+/** UART device driver operations  */
 struct device_uart_type_ops {
-    /** UART set_configuration() function pointer */
+    /** Configures a UART device
+     * @param dev Pointer to the UART device controller to configure
+     * @param baud The baud rate setting
+     * @param parity The parity setting
+     * @param databits The number of data bits (between 5 and 8)
+     * @param stopbit The stop setting
+     * @param flow 0 for disabling flow control, 1 for enabling
+     * @return 0 on success, negative errno on failure
+     */
     int (*set_configuration)(struct device *dev, enum uart_baudrate baud,
                              enum uart_parity parity, int databits,
                              enum uart_stopbit stopbit, int flow);
-    /** UART get_modem_ctrl() function pointer */
+    /** Get the Modem Control register of a UART device controller
+     * @param dev Pointer to the UART device controller whose MCR to return
+     * @param modem_ctrl The Modem Control's content to fill out \ref UART_MCR
+     * @return 0 on success, negative errno on failure
+     */
     int (*get_modem_ctrl)(struct device *dev, uint8_t *modem_ctrl);
-    /** UART set_modem_ctrl() function pointer */
+    /** Set the Modem Control register of a UART device
+     * @param dev Pointer to the UART device controller whose MCR to set
+     * @param modem_ctrl The Modem Control's content to read from \ref UART_MCR
+     * @return 0 on success, negative errno on failure
+     */
     int (*set_modem_ctrl)(struct device *dev, uint8_t *modem_ctrl);
-    /** UART get_modem_status() function pointer */
+    /** Get the Modem Status register of a UART device
+     * @param dev Pointer to the UART device controller whose MSR to return
+     * @param modem_ctrl The Modem Status's content to fill out \ref UART_MSR
+     * @return 0 on success, negative errno on failure
+     */
     int (*get_modem_status)(struct device *dev, uint8_t *modem_status);
-    /** UART get_line_status() function pointer */
+    /** Get the Line Status register of a UART device
+     * @param dev Pointer to the UART device controller whose LSR to return
+     * @param modem_ctrl The Modem Line's content to fill out \ref UART_MSR
+     * @return 0 on success, negative errno on failure
+     */
     int (*get_line_status)(struct device *dev, uint8_t *line_status);
-    /** UART set_break() function pointer */
+    /** Setup break condition on the transmit line
+     * @param dev Pointer to the UART device controller
+     * @param break_on 1 for creating break conditions, 0 otherwise
+     * @return 0 on success, negative errno on failure
+     */
     int (*set_break)(struct device *dev, uint8_t break_on);
-    /** UART attach_ms_callback() function pointer */
+    /** Register a callback on Modem Status
+     * @param dev Pointer to the UART device controller
+     * @param callback The callback function to be called on an event
+     * @return 0 on success, negative errno on failure
+     */
     int (*attach_ms_callback)(struct device *dev, uart_status_callback callback);
-    /** UART attach_ls_callback() function pointer */
+    /** Register a callback on Line Status
+     * @param dev Pointer to the UART device controller
+     * @param callback The callback function to be called on an event
+     * @return 0 on success, negative errno on failure
+     */
     int (*attach_ls_callback)(struct device *dev, uart_status_callback callback);
-    /** UART start_transmitter() function pointer */
+    /** Transmit data through the UART controller
+     * @param dev Pointer to the UART device controller
+     * @param buffer Buffer of data to transmit
+     * @param length Length of buffer in bytes
+     * @param dma DMA handle
+     * @param sent If not NULL, receives the amount of transmitted data
+     * @param callback If not NULL, the function returns and the callback is
+     * called upon termination of the transmitting operation. Otherwise the
+     * function does not return until the transmitting operation is complete.
+     * @return 0 on success, negative errno on failure
+     */
     int (*start_transmitter)(struct device *dev, uint8_t *buffer, int length,
                              void *dma, int *sent,
                              uart_xfer_callback callback);
-    /** UART stop_transmitter() function pointer */
+    /** Stop the current transmitting operation
+     * @param dev Pointer to the UART device controller
+     * @return 0 on success, negative errno on failure
+     */
     int (*stop_transmitter)(struct device *dev);
-    /** UART start_receiver() function pointer */
+    /** Receive data through the UART controller
+     * @param dev Pointer to the UART device controller
+     * @param buffer Buffer to data to receive
+     * @param length Length of buffer in bytes
+     * @param dma DMA handle
+     * @param got If not NULL, receives the amount of received data
+     * @param callback If not NULL, the function returns and the callback is
+     * called upon termination of the receiving operation. Otherwise the
+     * function does not return until the receiving operation is complete.
+     * @return 0 on success, negative errno on failure
+     */
     int (*start_receiver)(struct device *dev, uint8_t*buffer, int length,
                           void *dma, int *got,
                           uart_xfer_callback callback);
-    /** UART stop_receiver() function pointer */
+    /** Stop the current receiving operation
+     * @param dev Pointer to the UART device controller
+     * @return 0 on success, negative errno on failure
+     */
     int (*stop_receiver)(struct device *dev);
 };
 
-/**
- * @brief UART set_configuration function
- *
- * This function is used to set the baud rate, parity, data bit and stop bit
- * settings in the UART controller.
- *
- * @param dev pointer to the UART device structure
- * @param baud - the baud rate definition in Baud rate definition.
- * @param parity - the value of parity defined in Parity definition
- * @param databits - the number of data bits between 5 to 8 bits.
- * @param stopbits - the value stop bit defined in Stopbits definition
- * @param flow 0 for disable flow control, 1 for enable flow control.
- * @return 0 for success, -errno for failures.
+/** Configures a UART device
+ * @param dev Pointer to the UART device controller to configure
+ * @param baud The baud rate setting
+ * @param parity The parity setting
+ * @param databits The number of data bits (between 5 and 8)
+ * @param stopbit The stop setting
+ * @param flow 0 for disabling flow control, 1 for enabling
+ * @return 0 on success, negative errno on failure
  */
 static inline int device_uart_set_configuration(struct device *dev,
-                             enum uart_baudrate baud, enum uart_parity parity,
-                             int databits, enum uart_stopbit stopbit, int flow)
+                                                enum uart_baudrate baud,
+                                                enum uart_parity parity,
+                                                int databits,
+                                                enum uart_stopbit stopbit,
+                                                int flow)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -198,14 +287,10 @@ static inline int device_uart_set_configuration(struct device *dev,
     return -ENOSYS;
 }
 
-/**
- * @brief UART get_modem_ctrl function
- *
- * This function is to get modem control state from the UART controller.
- *
- * @param dev pointer to the UART device structure
- * @param modem_ctrl output value as bitmask of Modem control definition.
- * @return 0 for success, -errno for failures.
+/** Get the Modem Control register of a UART device controller
+ * @param dev Pointer to the UART device controller whose MCR to return
+ * @param modem_ctrl The Modem Control's content to fill out \ref UART_MCR
+ * @return 0 on success, negative errno on failure
  */
 static inline int device_uart_get_modem_ctrl(struct device *dev,
                                              uint8_t *modem_ctrl)
@@ -222,14 +307,10 @@ static inline int device_uart_get_modem_ctrl(struct device *dev,
     return -ENOSYS;
 }
 
-/**
- * @brief UART set_modem_ctrl function
- *
- * This function is to write modem control settings to UART controller.
- *
- * @param dev pointer to the UART device structure
- * @param modem_ctrl set value as bitmask of Modem control definition.
- * @return 0 for success, -errno for failures.
+/** Set the Modem Control register of a UART device
+ * @param dev Pointer to the UART device controller whose MCR to set
+ * @param modem_ctrl The Modem Control's content to read from \ref UART_MCR
+ * @return 0 on success, negative errno on failure
  */
 static inline int device_uart_set_modem_ctrl(struct device *dev,
                                              uint8_t *modem_ctrl)
@@ -246,14 +327,10 @@ static inline int device_uart_set_modem_ctrl(struct device *dev,
     return -ENOSYS;
 }
 
-/**
- * @brief UART get_modem_status function
- *
- * This function is to get modem status from the UART controller.
- *
- * @param dev pointer to the UART device structure
- * @param modem_status output value as bitmask of Modem status definition.
- * @return 0 for success, -errno for failures.
+/** Get the Modem Status register of a UART device
+ * @param dev Pointer to the UART device controller whose MSR to return
+ * @param modem_status The Modem Status's content to fill out \ref UART_MSR
+ * @return 0 on success, negative errno on failure
  */
 static inline int device_uart_get_modem_status(struct device *dev,
                                                uint8_t *modem_status)
@@ -270,14 +347,10 @@ static inline int device_uart_get_modem_status(struct device *dev,
     return -ENOSYS;
 }
 
-/**
- * @brief UART get_line_status function
- *
- * The function is to get line status from the UART controller.
- *
- * @param dev pointer to the UART device structure
- * @param line_status output value as bitmask of Line status definition.
- * @return 0 for success, -errno for failures.
+/** Get the Line Status register of a UART device
+ * @param dev Pointer to the UART device controller whose LSR to return
+ * @param line_status The Modem Line's content to fill out \ref UART_MSR
+ * @return 0 on success, negative errno on failure
  */
 static inline int device_uart_get_line_status(struct device *dev,
                                               uint8_t *line_status)
@@ -294,14 +367,10 @@ static inline int device_uart_get_line_status(struct device *dev,
     return -ENOSYS;
 }
 
-/**
- * @brief UART set_break function
- *
- * The function is to control break state of the UART controller.
- *
- * @param dev pointer to the UART device structure
- * @param break_on break state value, it should be 0 or 1.
- * @return 0 for success, -errno for failures.
+/** Setup break condition on the transmit line
+ * @param dev Pointer to the UART device controller
+ * @param break_on 1 for creating break conditions, 0 otherwise
+ * @return 0 on success, negative errno on failure
  */
 static inline int device_uart_set_break(struct device *dev, uint8_t break_on)
 {
@@ -316,15 +385,10 @@ static inline int device_uart_set_break(struct device *dev, uint8_t break_on)
     return -ENOSYS;
 }
 
-/**
- * @brief UART attach_ms_callback function
- *
- * This function registers a modem status (ms) callback function into the
- * driver.
- *
- * @param dev pointer to the UART device structure
- * @param callback null means caller doesn’t need this event.
- * @return 0 for success, -errno for failures.
+/** Register a callback on Modem Status
+ * @param dev Pointer to the UART device controller
+ * @param callback The callback function to be called on an event
+ * @return 0 on success, negative errno on failure
  */
 static inline int device_uart_attach_ms_callback(struct device *dev,
                                                  uart_status_callback callback)
@@ -341,15 +405,10 @@ static inline int device_uart_attach_ms_callback(struct device *dev,
     return -ENOSYS;
 }
 
-/**
- * @brief UART attach_ls_callback function
- *
- * The function is to register a line status (ls) callback function into the
- * driver.
- *
- * @param dev pointer to the UART device structure
- * @param callback null means caller doesn’t need this event.
- * @return 0 for success, -errno for failures.
+/** Register a callback on Line Status
+ * @param dev Pointer to the UART device controller
+ * @param callback The callback function to be called on an event
+ * @return 0 on success, negative errno on failure
  */
 static inline int device_uart_attach_ls_callback(struct device *dev,
                                                  uart_status_callback callback)
@@ -366,20 +425,17 @@ static inline int device_uart_attach_ls_callback(struct device *dev,
     return -ENOSYS;
 }
 
-/**
- * @brief UART start_transmitter function
- *
- * This function is to transmit data through the UART controller.
- * It could be blocking or non-blocking and through DMA or PIO mode.
- *
- * @param dev pointer to the UART device structure
- * @param buffer pointer of the buffer to send data to UART port.
- * @param length length of data.
- * @param dma DMA handle.
- * @param sent the length of transmitted data in block mode.
- * @param callback a callback function called when transmitting finished,
- *        timeout or errors.
- * @return 0 for success, -errno for failures.
+
+/** Transmit data through the UART controller
+ * @param dev Pointer to the UART device controller
+ * @param buffer Buffer of data to transmit
+ * @param length Length of buffer in bytes
+ * @param dma DMA handle
+ * @param sent If not NULL, receives the amount of transmitted data
+ * @param callback If not NULL, the function returns and the callback is called
+ * upon termination of the transmitting operation. Otherwise the function does
+ * not return until the transmitting operation is complete.
+ * @return 0 on success, negative errno on failure
  */
 static inline int device_uart_start_transmitter(struct device *dev,
                         uint8_t *buffer, int length, void *dma,
@@ -399,13 +455,9 @@ static inline int device_uart_start_transmitter(struct device *dev,
     return -ENOSYS;
 }
 
-/**
- * @brief UART stop_transmitter function
- *
- * This function is to stop the data transmit in blocking or non-blocking mode.
- *
- * @param dev pointer to the UART device structure
- * @return 0 for success, -errno for failures.
+/** Stop the current transmitting operation
+ * @param dev Pointer to the UART device controller
+ * @return 0 on success, negative errno on failure
  */
 static inline int device_uart_stop_transmitter(struct device *dev)
 {
@@ -420,20 +472,16 @@ static inline int device_uart_stop_transmitter(struct device *dev)
     return -ENOSYS;
 }
 
-/**
- * @brief UART start_receiver function
- *
- * The function is to receive data from UART controller. It could be
- * blocking or non-blocking and through DMA or PIO mode.
- *
- * @param dev pointer to the UART device structure
- * @param buffer pointer of the buffer to receive data from UART port.
- * @param length length of data.
- * @param dma DMA handle.
- * @param got the length of received data in blocking mode.
- * @param callback a callback function called when receiving finished, timeout
- *                 or errors.
- * @return 0 for success, -errno for failures.
+/** Receive data through the UART controller
+ * @param dev Pointer to the UART device controller
+ * @param buffer Buffer to data to receive
+ * @param length Length of buffer in bytes
+ * @param dma DMA handle
+ * @param got If not NULL, receives the amount of received data
+ * @param callback If not NULL, the function returns and the callback is called
+ * upon termination of the receiving operation. Otherwise the function does not
+ * return until the receiving operation is complete.
+ * @return 0 on success, negative errno on failure
  */
 static inline int device_uart_start_receiver(struct device *dev,
                         uint8_t* buffer, int length, void *dma,
@@ -452,13 +500,9 @@ static inline int device_uart_start_receiver(struct device *dev,
     return -ENOSYS;
 }
 
-/**
- * @brief UART stop_receiver function
- *
- * The function is to stop the data receiving in blocking or non-blocking mode.
- *
- * @param dev pointer to the UART device structure
- * @return 0 for success, -errno for failures.
+/** Stop the current receiving operation
+ * @param dev Pointer to the UART device controller
+ * @return 0 on success, negative errno on failure
  */
 static inline int device_uart_stop_receiver(struct device *dev)
 {
