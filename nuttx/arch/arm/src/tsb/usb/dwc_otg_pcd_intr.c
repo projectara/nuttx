@@ -312,9 +312,11 @@ void start_pending_requests(dwc_otg_pcd_ep_t * ep, int one_requests)
 #ifdef DWC_UTE_CFI
 		}
 #endif
+#ifdef DWC_ENHANCED_SG_DMA
 		if (one_requests != 1) {
 			init_fifo_dma_desc_chain(GET_CORE_IF(ep->pcd), ep);
 		}
+#endif
 		dwc_otg_ep_start_transfer(GET_CORE_IF(ep->pcd), &ep->dwc_ep);
 	} else if (ep->dwc_ep.type == DWC_OTG_EP_TYPE_ISOC) {
 		diepmsk_data_t intr_mask = {.d32 = 0 };
@@ -2350,13 +2352,16 @@ static void complete_ep(dwc_otg_pcd_ep_t * ep)
 					byte_count = residue;
 				} else {
 #endif
+#ifdef DWC_ENHANCED_SG_DMA
 					if (!depctl.b.epena) {
+#endif
 						for (i = 0; i < ep->dwc_ep.desc_cnt;
 						     ++i) {
 							desc_sts = dma_desc->status;
 							byte_count += desc_sts.b.bytes;
 							dma_desc++;
 						}
+#ifdef DWC_ENHANCED_SG_DMA
 					} else {
 						for (i = 0; i < ep->dwc_ep.desc_cnt;
 						     ++i) {
@@ -2368,6 +2373,7 @@ static void complete_ep(dwc_otg_pcd_ep_t * ep)
 							dma_desc++;
 						}
 					}
+#endif
 #ifdef DWC_UTE_CFI
 				}
 #endif
@@ -2393,7 +2399,9 @@ static void complete_ep(dwc_otg_pcd_ep_t * ep)
 				 *      if no, setup transfer for next portion of data
 				 */
 				if (ep->dwc_ep.xfer_len < ep->dwc_ep.total_len) {
+#ifdef DWC_ENHANCED_SG_DMA
 					ep->dwc_ep.desc_cnt = 0;
+#endif
 					dwc_otg_ep_start_transfer(core_if,
 								  &ep->dwc_ep);
 				} else if (ep->dwc_ep.sent_zlp) {
@@ -2447,17 +2455,21 @@ static void complete_ep(dwc_otg_pcd_ep_t * ep)
 					byte_count = residue;
 				} else {
 #endif
+#ifdef DWC_ENHANCED_SG_DMA
 					if (ep->dwc_ep.type == DWC_OTG_EP_TYPE_BULK) {
 						desc_sts = req->dma_desc->status;
 						byte_count += desc_sts.b.bytes;
 					} else {
+#endif
 						for (i = 0; i < ep->dwc_ep.desc_cnt;
 						     ++i) {
 							desc_sts = dma_desc->status;
 							byte_count += desc_sts.b.bytes;
 							dma_desc++;
 						}
+#ifdef DWC_ENHANCED_SG_DMA
 					}
+#endif
 #ifdef DWC_UTE_CFI
 				}
 #endif
@@ -2513,7 +2525,9 @@ static void complete_ep(dwc_otg_pcd_ep_t * ep)
 				 *      if no, setup transfer for next portion of data
 				 */
 				if (ep->dwc_ep.xfer_len < ep->dwc_ep.total_len) {
+#ifdef DWC_ENHANCED_SG_DMA
 					ep->dwc_ep.desc_cnt = 0;
+#endif
 					dwc_otg_ep_start_transfer(core_if,
 								  &ep->dwc_ep);
 				} else if (ep->dwc_ep.sent_zlp) {
@@ -2544,7 +2558,9 @@ static void complete_ep(dwc_otg_pcd_ep_t * ep)
 			 *      if no, setup transfer for next portion of data
 			 */
 			if (ep->dwc_ep.xfer_len < ep->dwc_ep.total_len) {
+#ifdef DWC_ENHANCED_SG_DMA
 				ep->dwc_ep.desc_cnt = 0;
+#endif
 				dwc_otg_ep_start_transfer(core_if, &ep->dwc_ep);
 			} else if (ep->dwc_ep.sent_zlp) {
 				/*     
@@ -2603,6 +2619,7 @@ static void complete_ep(dwc_otg_pcd_ep_t * ep)
 		ep->dwc_ep.xfer_buff = 0;
 		ep->dwc_ep.xfer_len = 0;
 
+#ifdef DWC_ENHANCED_SG_DMA
 		/* If there is a request in the queue start it.
 		 * Only start DMA with multiple requests if ep is disabled.
 		 * If ep is enabled, then DMA is still processing multiple
@@ -2617,8 +2634,11 @@ static void complete_ep(dwc_otg_pcd_ep_t * ep)
 				start_pending_requests(ep, 0);
 			}
 		} else {
+#endif
 			start_next_request(ep);
+#ifdef DWC_ENHANCED_SG_DMA
 		}
+#endif
 	}
 }
 /**
@@ -3325,7 +3345,7 @@ static void dwc_otg_pcd_handle_noniso_bna(dwc_otg_pcd_ep_t * ep)
 		start = 0;
 		dma_desc = dwc_ep->desc_addr;
 	}
-	
+#ifdef DWC_ENHANCED_SG_DMA
 	if (!dwc_ep->is_in && dwc_ep->type == DWC_OTG_EP_TYPE_BULK) {
 		ep->bna = 1;
 		dma_desc = &(dwc_ep->desc_addr[start-1]);
@@ -3340,12 +3360,15 @@ static void dwc_otg_pcd_handle_noniso_bna(dwc_otg_pcd_ep_t * ep)
 		if (sts.b.bs != BS_HOST_READY)
 			return;
 	} else {
+#endif
 		for (i = start; i < dwc_ep->desc_cnt; ++i, ++dma_desc) {
 			sts.d32 = dma_desc->status.d32;
 			sts.b.bs = BS_HOST_READY;
 			dma_desc->status.d32 = sts.d32;
 		}
+#ifdef DWC_ENHANCED_SG_DMA
 	}
+#endif
 
 	if (dwc_ep->is_in == 0) {
 		addr =
@@ -3547,7 +3570,9 @@ static void restart_transfer(dwc_otg_pcd_t * pcd, const uint32_t epnum)
 		if (epnum == 0) {
 			dwc_otg_ep0_start_transfer(core_if, &ep->dwc_ep);
 		} else {
+#ifdef DWC_ENHANCED_SG_DMA
 			ep->dwc_ep.desc_cnt = 0;
+#endif
 			dwc_otg_ep_start_transfer(core_if, &ep->dwc_ep);
 		}
 	}
@@ -4162,7 +4187,9 @@ do { \
 	dwc_otg_pcd_ep_t *ep;
 	dwc_ep_t *dwc_ep;
 	gintmsk_data_t intr_mask = {.d32 = 0 };
+#ifdef DWC_ENHANCED_SG_DMA
 	int i;
+#endif
 
 	DWC_DEBUGPL(DBG_PCDV, "%s(%p)\n", __func__, pcd);
 
@@ -4248,12 +4275,16 @@ do { \
 							} else 
 								dwc_ep->frm_overrun = 0;
 						}
+#ifdef DWC_ENHANCED_SG_DMA
 						for (i = 0; i < ep->dwc_ep.desc_cnt; i++) {
 							if (ep->dwc_ep.desc_addr[i].status.b.bs == BS_DMA_DONE) {
 							    ep->dwc_ep.desc_addr[i].status.b.bs = BS_HOST_BUSY;
+#endif
 								complete_ep(ep);
+#ifdef DWC_ENHANCED_SG_DMA
 							}
 						}
+#endif
 						if(diepint.b.nak)
 							CLEAR_IN_EP_INTR(core_if, epnum, nak);
 					}
@@ -4812,6 +4843,7 @@ exit_xfercompl:
 					if (core_if->dma_desc_enable && dwc_ep->type == DWC_OTG_EP_TYPE_ISOC) {
 						handle_xfercompl_iso_ddma(core_if->dev_if, ep);
 					} else {
+#ifdef DWC_ENHANCED_SG_DMA
 						if (ep->dwc_ep.type == DWC_OTG_EP_TYPE_BULK) {
 							int i;
 							for (i = 0; i < ep->dwc_ep.desc_cnt; i++) {
@@ -4825,8 +4857,11 @@ exit_xfercompl:
 								}
 							}
 						} else {
+#endif
 							complete_ep(ep);
+#ifdef DWC_ENHANCED_SG_DMA
 						}
+#endif
 					}
 				}
 
