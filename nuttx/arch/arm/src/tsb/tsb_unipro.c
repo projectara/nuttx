@@ -747,11 +747,15 @@ void unipro_init(void)
     /*
      * Disable FCT transmission. See ENG-376.
      */
-    unipro_write(CPB_TX_E2EFC_EN_0, 0);
-    unipro_write(CPB_RX_E2EFC_EN_0, 0);
+    unipro_write(CPB_TX_E2EFC_EN_0, 0x0);
     if (tsb_get_product_id() == tsb_pid_apbridge) {
-        unipro_write(CPB_TX_E2EFC_EN_1, 0);
-        unipro_write(CPB_RX_E2EFC_EN_1, 0);
+        unipro_write(CPB_TX_E2EFC_EN_1, 0x0);
+    }
+
+    /* Enable FCT RX reception - needed because of ES3's bootrom */
+    unipro_write(CPB_RX_E2EFC_EN_0, ~0);
+    if (tsb_get_product_id() == tsb_pid_apbridge) {
+        unipro_write(CPB_RX_E2EFC_EN_1, ~0);
     }
 
     irq_attach(TSB_IRQ_UNIPRO, irq_unipro);
@@ -772,11 +776,8 @@ int unipro_disable_fct_tx_flow(unsigned int cport)
     }
 
     reg = CPB_TX_E2EFC_EN_REG(cport);
-    unipro_write(reg, unipro_read(reg) & ~(1 << (cport % 32)));
 
-    reg = CPB_RX_E2EFC_EN_REG(cport);
     unipro_write(reg, unipro_read(reg) & ~(1 << (cport % 32)));
-
     return 0;
 }
 
@@ -789,11 +790,8 @@ int unipro_enable_fct_tx_flow(unsigned int cport)
     }
 
     reg = CPB_TX_E2EFC_EN_REG(cport);
-    unipro_write(reg, unipro_read(reg) | (1 << (cport % 32)));
 
-    reg = CPB_RX_E2EFC_EN_REG(cport);
     unipro_write(reg, unipro_read(reg) | (1 << (cport % 32)));
-
     return 0;
 }
 
