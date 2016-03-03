@@ -2076,7 +2076,27 @@ int gdmac_recover_from_op_error(struct device *dev,
         tsb_dma_callback(gdmac_chan->gdmac_dev,
                          &gdmac_chan->tsb_chan,
                          DEVICE_DMA_CALLBACK_EVENT_DEQUEUED);
+    } else {
+        tsb_dma_callback(gdmac_chan->gdmac_dev,
+                         &gdmac_chan->tsb_chan,
+                         DEVICE_DMA_CALLBACK_EVENT_DEQUEUED);
     }
+
+    return retval;
+}
+
+int gdmac_stop_op(struct device *dev, struct tsb_dma_chan *tsb_chan,
+                  struct device_dma_op *op)
+{
+    int retval = OK;
+
+    if (gdmac_kill_channel_thread(tsb_chan->chan_id) != true) {
+        lldbg("gdmac: failed to kill channel %d\n", tsb_chan->chan_id);
+        DEBUGASSERT(0);
+        return -EIO;
+    }
+
+    retval = gdmac_recover_from_op_error(dev, tsb_chan);
 
     return retval;
 }

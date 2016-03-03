@@ -638,6 +638,13 @@ static int tsb_dma_dequeue(struct device *dev, void *chan,
                     dev_op->callback_arg);
         }
         retval = OK;
+    } else {
+       if (dma_op->state == TSB_DMA_OP_STATE_RUNNING) {
+            struct device_dma_op *dev_op = &dma_op->op;
+            struct tsb_dma_chan *dma_chan = (struct tsb_dma_chan *) chan;
+
+            retval = gdmac_stop_op(dev, dma_chan, dev_op);
+        }
     }
 
     irqrestore(flags);
