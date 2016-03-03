@@ -51,6 +51,7 @@
 #include "tsb_switch.h"
 #include "tsb_switch_event.h"
 #include "svc_pm.h"
+#include "ara_board.h"
 
 #define POWER_OFF_TIME_IN_US                                (500000)
 #define MODULE_PORT_WAKEOUT_PULSE_DURATION_IN_US            (500000)
@@ -330,6 +331,7 @@ uint32_t interfaces_timesync_init(uint32_t strobe_mask)
 {
     int intf_id;
     uint32_t pin_strobe_mask = 0;
+    struct wd_data *wd;
     struct interface *iface;
 
     for (intf_id = 0; intf_id < nr_interfaces; intf_id++) {
@@ -338,6 +340,20 @@ uint32_t interfaces_timesync_init(uint32_t strobe_mask)
         if (iface->dev_id && strobe_mask & (1 << iface->dev_id)) {
             /* Wait - release the interface in fini() */
             pthread_mutex_lock(&iface->mutex);
+
+            wd = &iface->detect_in;
+            if (iface->ejectable && wd->db_state != WD_ST_ACTIVE_STABLE) {
+                dbg_error("%s state %d is not WD_ST_ACTIVE_STABLE\n",
+                          iface->name, wd->db_state);
+                #if 0
+                /*
+                 * TODO: remove if 0 when SW-4053 gets fixed
+                 * https://projectara.atlassian.net/browse/SW-4053
+                 */
+                pthread_mutex_unlock(&iface->mutex);
+                continue;
+                #endif
+            }
 
             /* Uninstall the WD handler for input */
             interface_uninstall_wd_handler(iface, &iface->detect_in);

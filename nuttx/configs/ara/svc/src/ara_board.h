@@ -36,6 +36,10 @@
 #include "tsb_switch.h"
 #include "pwr_mon.h"
 
+/* APB1/APB2 interface names */
+#define INTF_APB1                           "apb1"
+#define INTF_APB2                           "apb2"
+
 /* HWID values */
 enum hwid {
     HWID_DB3_0_1,           /* DB3.0 and 3.1 (ES2) */

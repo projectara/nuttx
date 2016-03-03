@@ -52,6 +52,7 @@
 #include "vreg.h"
 #include "gb_svc.h"
 #include <stm32_pm.h>
+#include "timesync.h"
 
 #define SVCD_PRIORITY               (40)
 #define SVCD_STACK_SIZE             (2048)
@@ -894,6 +895,14 @@ static int svc_handle_ap(void) {
     rc = switch_fct_enable(svc->sw);
     if (rc) {
         dbg_error("Failed to enable FCT on switch.\n");
+        return rc;
+    }
+
+    /*
+     * Call the timesync setup routine
+     */
+    rc = timesync_init();
+    if (rc) {
         return rc;
     }
 

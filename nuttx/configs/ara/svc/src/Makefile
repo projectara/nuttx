@@ -81,6 +81,7 @@ CSRCS		+= ara_board.c
 CSRCS		+= pwr_mon.c
 CSRCS		+= board-db3.c
 CSRCS		+= board-evt1.c
+CSRCS		+= timesync.c
 
 ifeq ($(CONFIG_NSH_ARCHINIT),y)
 CSRCS		+= up_nsh.c

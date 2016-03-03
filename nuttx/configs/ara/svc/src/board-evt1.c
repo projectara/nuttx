@@ -264,10 +264,10 @@ static struct vreg_data apb1_refclk_vreg_data[] = {
 static struct vreg_data apb2_refclk_vreg_data[] = {
 };
 
-DECLARE_MODULE_PORT_INTERFACE(apb1, "apb1", apb1_vsys_vreg_data,
+DECLARE_MODULE_PORT_INTERFACE(apb1, INTF_APB1, apb1_vsys_vreg_data,
                               apb1_refclk_vreg_data, 3, WD_8A_DET,
                               ARA_IFACE_WD_ACTIVE_HIGH, false, 0);
-DECLARE_MODULE_PORT_INTERFACE(apb2, "apb2", apb2_vsys_vreg_data,
+DECLARE_MODULE_PORT_INTERFACE(apb2, INTF_APB2, apb2_vsys_vreg_data,
                               apb2_refclk_vreg_data, 1, WD_8B_DET,
                               ARA_IFACE_WD_ACTIVE_HIGH, false, 0);
 
@@ -282,10 +282,10 @@ static struct vreg_data evt2_apb2_refclk_vreg_data[] = {
     INIT_MODULE_CLK_DATA(EVT2_REFCLK_APB2_EN),
 };
 
-DECLARE_MODULE_PORT_INTERFACE(evt2_apb1, "apb1", apb1_vsys_vreg_data,
+DECLARE_MODULE_PORT_INTERFACE(evt2_apb1, INTF_APB1, apb1_vsys_vreg_data,
                               evt2_apb1_refclk_vreg_data, 3, WD_8A_DET,
                               ARA_IFACE_WD_ACTIVE_HIGH, false, 0);
-DECLARE_MODULE_PORT_INTERFACE(evt2_apb2, "apb2", apb2_vsys_vreg_data,
+DECLARE_MODULE_PORT_INTERFACE(evt2_apb2, INTF_APB2, apb2_vsys_vreg_data,
                               evt2_apb2_refclk_vreg_data, 1, WD_8B_DET,
                               ARA_IFACE_WD_ACTIVE_HIGH, false, 0);
 
