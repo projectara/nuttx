@@ -4128,9 +4128,11 @@ void dwc_otg_ep_start_transfer(dwc_otg_core_if_t * core_if, dwc_ep_t * ep)
 								deptsiz.d32);													
 						}
 					}
-				/** DOEPDMAn Register write */
-					DWC_WRITE_REG32(&out_regs->doepdma,
-							ep->dma_desc_addr);
+					if (!depctl.b.epena) {
+					/** DOEPDMAn Register write */
+						DWC_WRITE_REG32(&out_regs->doepdma,
+								ep->dma_desc_addr);
+					}
 #ifdef DWC_UTE_CFI
 				}
 #endif
@@ -4160,12 +4162,13 @@ void dwc_otg_ep_start_transfer(dwc_otg_core_if_t * core_if, dwc_ep_t * ep)
 			}
 		}
 
-		/* EP enable */
-		depctl.b.cnak = 1;
-		depctl.b.epena = 1;
+		if (!depctl.b.epena) {
+			/* EP enable */
+			depctl.b.cnak = 1;
+			depctl.b.epena = 1;
 
-		DWC_WRITE_REG32(&out_regs->doepctl, depctl.d32);
-
+			DWC_WRITE_REG32(&out_regs->doepctl, depctl.d32);
+		}
 		DWC_DEBUGPL(DBG_PCD, "DOEPCTL=%08x DOEPTSIZ=%08x\n",
 			    DWC_READ_REG32(&out_regs->doepctl),
 			    DWC_READ_REG32(&out_regs->doeptsiz));
