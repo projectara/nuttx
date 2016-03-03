@@ -523,8 +523,6 @@ uint16_t unipro_get_tx_free_buffer_space(struct cport *cport)
 
     tx_space = 8 * (unipro_read(CPB_TX_BUFFER_SPACE_REG(cportid)) &
                     CPB_TX_BUFFER_SPACE_MASK);
-    tx_space -= 8 * (unipro_read(REG_TX_BUFFER_SPACE_OFFSET_REG(cportid)) &
-                     CPB_TX_BUFFER_SPACE_OFFSET_MASK);
 
     return tx_space;
 }
