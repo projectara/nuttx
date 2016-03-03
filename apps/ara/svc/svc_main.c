@@ -558,7 +558,8 @@ static void dme_io_usage(void) {
     printf("                      \"L2\" (Data Link layer),\n");
     printf("                      \"L3\" (Network layer),\n");
     printf("                      \"L4\" (Transport layer),\n");
-    printf("                      \"CPORTS\" (CPorts in L4),\n");
+    printf("                      \"CPn\" (CPort n in L4),\n");
+    printf("                      \"ALLCPORTS\" (All CPorts in L4),\n");
     printf("                      \"TESTFEATURE\" (Test Features in L4),\n");
     printf("                      \"DME\" (DME),\n");
     printf("                      \"TSB\" (Toshiba-specific attributes),\n");
@@ -751,8 +752,9 @@ static int dme_io(int argc, char *argv[]) {
                 attr = strtoul(optarg, &end, 16);
                 if (*end) {
                     printf("-a %s invalid: must be one of: \"all\", \"L1\", "
-                           "\"L2\", \"L3\", \"L4\", \"CPn\", \"CPORTS\", \"TESTFEATURE\", \"DME\", or a hexadecimal "
-                           "attribute\n\n", optarg);
+                           "\"L1.5\", \"L2\", \"L3\", \"L4\", \"CPn\","
+                           " \"ALLCPORTS\", \"TESTFEATURE\", \"DME\","
+                           " or a hexadecimal attribute\n\n", optarg);
                     dme_io_usage();
                     return EXIT_FAILURE;
                 }
