@@ -36,7 +36,6 @@
 
 #define GB_I2C_PROTOCOL_VERSION             0x01
 #define GB_I2C_PROTOCOL_FUNCTIONALITY       0x02
-#define GB_I2C_PROTOCOL_RETRIES             0x04
 #define GB_I2C_PROTOCOL_TRANSFER            0x05
 
 #define GB_I2C_FUNC_I2C                     0x00000001
