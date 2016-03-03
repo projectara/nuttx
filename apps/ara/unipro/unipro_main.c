@@ -99,7 +99,8 @@ static int attr_read(int argc, char **argv) {
 }
 
 static void print_usage(char **argv) {
-    printf("Usage: %s -r attr | -w attr [-s <selector] [-p]\n", argv[0]);
+    printf("Usage: %s -r attr | -w attr [-s <selector>] [-p] | "
+           "cport_reset <cport_id>\n", argv[0]);
     printf("\tOptions:\n");
     printf("\t-r\t Read an attribute\n");
     printf("\t-w\t Write an attribute\n");
@@ -156,6 +157,20 @@ int unipro_main(int argc, char **argv) {
         attr_read_argv[0] = (char*) xstr(TSB_DEBUGRXBYTECOUNT);
         attr_read_argv[1] = (char*) "0";
         return attr_read(2, attr_read_argv);
+    } else if (strcmp(op, "cport_reset") == 0) {
+        int cport;
+
+        if (argc == 3) {
+            cport = strtoul(argv[2], NULL, 10);
+
+            printf("cport_reset: start reset CP%d.\n", cport);
+            rc = unipro_reset_cport(cport, NULL, NULL);
+            printf("cport_reset: done(rc = %d).\n", rc);
+        } else {
+            printf("Invalid number of arguments.\n");
+            rc = -1;
+        }
+        exit((rc == 0) ? 0 : 1);
     }
 
     if (!strcmp(op, "read") || !strcmp(op, "r")) {
