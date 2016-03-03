@@ -161,8 +161,11 @@ static int unipro_send_tx_buffer(struct cport *cport)
         return -EINVAL;
     }
 
-    buffer->som = false;
-    buffer->byte_sent += retval;
+    /* Only update state if the CPort TX FIFO was able to accept any data */
+    if (retval > 0) {
+        buffer->som = false;
+        buffer->byte_sent += retval;
+    }
 
     if (buffer->byte_sent >= buffer->len) {
         unipro_set_eom_flag(cport);
@@ -307,8 +310,11 @@ int unipro_send(unsigned int cportid, const void *buf, size_t len)
         } else if (ret == 0) {
             continue;
         }
-        sent += ret;
-        som = false;
+        /* Only update state if the CPort TX FIFO was able to accept any data */
+        if (ret > 0) {
+            sent += ret;
+            som = false;
+        }
     }
 
     unipro_set_eom_flag(cport);
