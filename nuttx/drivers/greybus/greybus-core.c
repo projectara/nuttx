@@ -525,7 +525,7 @@ int _gb_register_driver(unsigned int cport, int bundle_id,
         return -EINVAL;
     }
 
-    if (bundle_id > manifest_get_max_bundle_id()) {
+    if (bundle_id >= 0 && bundle_id > manifest_get_max_bundle_id()) {
         gb_error("invalid bundle_id: %d\n", bundle_id);
         return -EINVAL;
     }
