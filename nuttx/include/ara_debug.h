@@ -101,6 +101,7 @@ enum {
     ARADBG_POWER           = (1 << 9),
     ARADBG_SVC             = (1 << 10),
     ARADBG_SWITCH          = (1 << 11),
+    ARADBG_AUDIO           = (1 << 12),
     ARADBG_ALL             = 0xFFFFFFFF,
 };
 
