@@ -198,9 +198,6 @@ static struct unipro_xfer_descriptor *pick_tx_descriptor(unsigned int cportid)
         if (desc->channel)
             continue;
 
-        if (!unipro_get_tx_free_buffer_space(desc->cport))
-            continue;
-
         return desc;
     }
 
