@@ -29,6 +29,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#define DBG_COMP ARADBG_AUDIO
+#include <ara_debug.h>
 #include <nuttx/irq.h>
 #include <nuttx/device.h>
 #include <nuttx/device_i2s.h>
@@ -421,7 +423,7 @@ static int apbridgea_audio_register_cport(struct apbridgea_audio_info *info,
         if (ret) {
             irqrestore(flags);
             free(cport);
-            lowsyslog("%s: can't offload cport: %u\n", __func__, data_cportid);
+            dbg_error("%s: can't offload cport: %u\n", __func__, data_cportid);
             return ret;
         }
 
@@ -474,7 +476,7 @@ static int apbridgea_audio_unregister_cport(struct apbridgea_audio_info *info,
 
             ret = unmap_offloaded_cport(get_apbridge_dev(), data_cportid);
             if (ret) {
-                lowsyslog("%s: can't unoffload cport: %u\n", __func__,
+                dbg_error("%s: can't unoffload cport: %u\n", __func__,
                           data_cportid);
             }
 
@@ -523,7 +525,7 @@ static int apbridgea_audio_unipro_tx_cb(int status, const void *buf, void *priv)
     rb_hdr = ring_buf_get_buf(rb);
 
     if (!rb_hdr->not_acked) { /* Should never happen */
-        lowsyslog("%s: not_acked of zero\n", __func__);
+        dbg_error("%s: not_acked of zero\n", __func__);
         return 0;
     }
 
@@ -586,7 +588,7 @@ static void apbridgea_audio_i2s_rx_cb(struct ring_buf *rb,
             return;
         }
     } else if (event != DEVICE_I2S_EVENT_NONE) {
-        lowsyslog("%s: bad event from i2s ctlr: %u\n", __func__, event);
+        dbg_error("%s: bad event from i2s ctlr: %u\n", __func__, event);
     }
 
     if (ring_buf_is_consumers(rb)) {
@@ -804,10 +806,10 @@ static void apbridgea_audio_i2s_tx_cb(struct ring_buf *rb,
         /* Prevent underrun by adding an entry with dummy data */
         if (!info->rx_rb_count) {
             apbridgea_audio_i2s_tx(info, info->rx_dummy_data);
-            lowsyslog("%s: RX underrun\n", __func__);
+            dbg_error("%s: RX underrun\n", __func__);
         }
     } else if (event != DEVICE_I2S_EVENT_NONE) {
-        lowsyslog("%s: bad event from i2s ctlr: %u\n", __func__, event);
+        dbg_error("%s: bad event from i2s ctlr: %u\n", __func__, event);
     }
 }
 
@@ -987,7 +989,7 @@ static void *apbridgea_audio_demux(void *ignored)
             ret = apbridgea_audio_shutdown_rx(info);
             break;
         default:
-            lowsyslog("%s: bogus type: %u\n", __func__, pkt_hdr->type);
+            dbg_error("%s: bogus type: %u\n", __func__, pkt_hdr->type);
         }
 
         free(demux_entry);
@@ -1033,7 +1035,7 @@ int apbridgea_audio_init(void)
 
     if (sizeof(struct apbridga_audio_rb_hdr) %
         APBRIDGEA_AUDIO_UNIPRO_ALIGNMENT) {
-        lowsyslog("%s: apbridga_audio_rb_hdr wrong size: %u\n", __func__,
+        dbg_error("%s: apbridga_audio_rb_hdr wrong size: %u\n", __func__,
                   sizeof(struct apbridga_audio_rb_hdr));
         return -EIO;
     }
