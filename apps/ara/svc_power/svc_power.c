@@ -319,12 +319,18 @@ static int dumpstate_func(struct interface *iface, void *context)
     if (interface_is_module_port(iface)) {
         enum wd_debounce_state db_state = iface->detect_in.db_state;
         enum wd_debounce_state last_state = iface->detect_in.last_state;
-        unsigned int detect_in_pol = iface->detect_in.polarity;
 
-        printf("\tdetect in polarity: %s\n", detect_in_pol ? "high" : "low");
+        if (iface->if_type == ARA_IFACE_TYPE_MODULE_PORT2) {
+            printf("\twake:\n");
+            printf("\t\tgpio: %u\n", iface->wake_gpio);
 
-        printf("\twake/detect:\n");
+            printf("\tdetect:\n");
+        } else {
+            printf("\twake/detect:\n");
+        }
         printf("\t\tgpio: %u\n", iface->detect_in.gpio);
+        printf("\t\tpolarity: %s\n",
+               iface->detect_in.polarity ? "high" : "low");
         printf("\t\tdb_state: %s\n",
                db_state == WD_ST_INVALID ? "invalid" :
                db_state == WD_ST_INACTIVE_DEBOUNCE ? "inactive debounce" :
