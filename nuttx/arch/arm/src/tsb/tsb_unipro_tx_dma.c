@@ -79,6 +79,8 @@ struct unipro_xfer_descriptor {
     size_t data_offset;
     void *channel;
 
+    struct device_dma_op *dma_op;
+
     struct list_head list;
 };
 
@@ -118,37 +120,42 @@ static struct dma_channel *pick_dma_channel(struct cport *cport)
     return chan;
 }
 
-static void unipro_dequeue_tx_desc(struct unipro_xfer_descriptor *desc, int status)
-{
-    irqstate_t flags;
-
-    DEBUGASSERT(desc);
-
-    flags = irqsave();
-    list_del(&desc->list);
-    irqrestore(flags);
-
-    if (desc->callback) {
-        desc->callback(status, desc->data, desc->priv);
-    }
-
-    free(desc);
-}
-
 static void unipro_flush_cport(struct cport *cport)
 {
     struct unipro_xfer_descriptor *desc;
+    struct list_head *iterator = NULL;
+    irqstate_t flags;
 
     if (list_is_empty(&cport->tx_fifo)) {
         goto reset;
     }
 
-    desc = containerof(cport->tx_fifo.next, struct unipro_xfer_descriptor, list);
+    flags = irqsave();
+    list_reverse_foreach(&cport->tx_fifo, iterator) {
+        desc = containerof(iterator, struct unipro_xfer_descriptor, list);
 
-    while (!list_is_empty(&cport->tx_fifo)) {
-        desc = containerof(cport->tx_fifo.next, struct unipro_xfer_descriptor, list);
-        unipro_dequeue_tx_desc(desc, -ECONNRESET);
+        if (desc->channel == NULL) {
+            list_del(&desc->list);
+            irqrestore(flags);
+
+            if (desc->callback) {
+                desc->callback(-ECONNRESET, desc->data, desc->priv);
+            }
+
+           free(desc);
+           flags = irqsave();
+        } else {
+            struct dma_channel *desc_chan = desc->channel;
+
+            if (desc->dma_op != NULL) {
+                device_dma_dequeue(unipro_dma.dev,
+                                   desc_chan->chan,
+                                   desc->dma_op);
+            }
+
+        }
     }
+    irqrestore(flags);
 
 reset:
     _unipro_reset_cport(cport->cportid);
@@ -391,6 +398,8 @@ static int unipro_dma_xfer(struct unipro_xfer_descriptor *desc,
     }
     dma_op->sg_count = 1;
     dma_op->sg[0].len = xfer_len;
+
+    desc->dma_op = dma_op;
 
     DBG_UNIPRO("xfer: chan=%u, len=%u\n", channel->cportid, xfer_len);
 
