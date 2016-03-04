@@ -284,6 +284,7 @@ static int unipro_dma_tx_callback(struct device *dev, void *chan,
 
             unipro_xfer_dequeue_descriptor(desc);
         } else {
+            device_dma_op_free(unipro_dma.dev, op);
             desc->channel = NULL;
         }
 
