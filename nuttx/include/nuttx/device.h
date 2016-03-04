@@ -79,23 +79,42 @@ struct device;
 
 /** Device driver power management operations */
 struct device_pm_ops {
-    /** Put the device into a low-power mode (preserving the state). */
+    /** Put the device into a low-power mode (preserving the state)
+     * @param dev Pointer to the device to put into low-power mode
+     * @return 0 on success, negative errno on failure
+     */
     int (*suspend)(struct device *dev);
-    /** Power-off the device. */
+    /** Power-off the device
+     * @param dev Pointer to the device to power off
+     * @return 0 on success, negative errno on failure
+     */
     int (*poweroff)(struct device *dev);
-    /** Wake-up the device from a low-power mode. */
+    /** Wake-up the device from a low-power mode
+     * @param dev Pointer to the device to wake up
+     * @return 0 on success, negative errno on failure
+     */
     int (*resume)(struct device *dev);
 };
 
 /** Device driver operations */
 struct device_driver_ops {
-    /** Probe the device ``dev``; Return 0 on success, !=0 on error */
+    /** Probe a device
+     * @param dev Pointer to the device to probe
+     * @return 0 on success, negative errno on failure
+     */
     int (*probe)(struct device *dev);
-    /** Remove the device ``dev`` */
+    /** Remove a device
+     * @param dev Pointer to the device to remove
+     */
     void (*remove)(struct device *dev);
-    /** Open the device ``dev``; Return 0 on success, !=0 on error */
+    /** Open a device
+     * @param dev Pointer to the device to open
+     * @return 0 on success, negative errno on failure
+     */
     int (*open)(struct device *dev);
-    /** Close the device ``dev`` */
+    /** Close a device
+     * @param dev Pointer to the device to close
+     */
     void (*close)(struct device *dev);
     /** Device type operations */
     void *type_ops;
