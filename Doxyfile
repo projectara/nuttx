@@ -774,6 +774,7 @@ INPUT  = nuttx/include/nuttx/device.h
 INPUT  += nuttx/include/nuttx/device_table.h
 INPUT  += nuttx/include/nuttx/device_hid.h
 INPUT  += nuttx/include/nuttx/device_i2c.h
+INPUT  += nuttx/include/nuttx/device_uart.h
 INPUT  += nuttx/include/nuttx/gpio.h
 
 # This tag can be used to specify the character encoding of the source files
