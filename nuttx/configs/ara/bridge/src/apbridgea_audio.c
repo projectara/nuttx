@@ -105,8 +105,10 @@ struct apbridgea_audio_demux_entry {
 
 /* Must be multiple of APBRIDGEA_AUDIO_UNIPRO_ALIGNMENT bytes in size */
 struct apbridga_audio_rb_hdr {
-    uint32_t    not_acked;
-    uint8_t     pad[APBRIDGEA_AUDIO_UNIPRO_ALIGNMENT - sizeof(uint32_t)];
+    uint32_t                    not_acked;
+    sem_t                       complete;
+    struct apbridgea_audio_info *info;
+    uint8_t                     pad[4];
 };
 
 static void apbridgea_audio_i2s_tx(struct apbridgea_audio_info *info,
@@ -574,6 +576,7 @@ static int apbridgea_audio_unipro_tx_cb(int status, const void *buf, void *priv)
 {
     struct ring_buf *rb = priv;
     struct apbridga_audio_rb_hdr *rb_hdr;
+    struct apbridgea_audio_info *info;
     irqstate_t flags;
 
     rb_hdr = ring_buf_get_buf(rb);
@@ -588,8 +591,14 @@ static int apbridgea_audio_unipro_tx_cb(int status, const void *buf, void *priv)
     rb_hdr->not_acked--;
 
     if (!rb_hdr->not_acked) {
-        ring_buf_reset(rb);
-        ring_buf_pass(rb);
+        info = rb_hdr->info;
+
+        if (info->flags & APBRIDGEA_AUDIO_FLAG_TX_PREPARED) {
+            ring_buf_reset(rb);
+            ring_buf_pass(rb);
+        } else {
+            sem_post(&rb_hdr->complete);
+        }
     }
 
     irqrestore(flags);
@@ -682,6 +691,7 @@ static int apbridgea_audio_rb_alloc(struct ring_buf *rb, void *arg)
     struct apbridga_audio_rb_hdr *rb_hdr;
     struct gb_operation_hdr *gb_hdr;
     void *buf;
+    int ret;
 
     buf = bufram_page_alloc(bufram_size_to_page_count(info->tx_rb_total_size));
     if (!buf) {
@@ -696,6 +706,16 @@ static int apbridgea_audio_rb_alloc(struct ring_buf *rb, void *arg)
 
     memset(buf, 0, info->tx_rb_headroom);
 
+    rb_hdr = buf;
+    rb_hdr->info = info;
+
+    ret = sem_init(&rb_hdr->complete, 0, 0);
+    if (ret) {
+        dbg_error("%s: can't init rb semaphore %d\n", __func__, ret);
+        ret = -EIO;
+        goto err_free_bufram;
+    }
+
     gb_hdr = buf + sizeof(*rb_hdr);
     gb_hdr->size = cpu_to_le16(info->tx_rb_total_size - sizeof(*rb_hdr));
     gb_hdr->type = GB_AUDIO_TYPE_SEND_DATA;
@@ -704,11 +724,33 @@ static int apbridgea_audio_rb_alloc(struct ring_buf *rb, void *arg)
     ring_buf_set_priv(rb, gb_hdr);
 
     return 0;
+
+err_free_bufram:
+    bufram_page_free(buf, bufram_size_to_page_count(info->tx_rb_total_size));
+
+    return ret;
 }
 
 static void apbridgea_audio_rb_free(struct ring_buf *rb, void *arg)
 {
     struct apbridgea_audio_info *info = arg;
+    struct apbridga_audio_rb_hdr *rb_hdr;
+
+    rb_hdr = ring_buf_get_buf(rb);
+
+    /*
+     * Need to wait to make sure that the UniPro subsystem is finished using
+     * the ring buffer entry (the Greybus message in the entry may have been
+     * sent to multiple modules).  Note that it is guaranteed that
+     * APBRIDGEA_AUDIO_FLAG_TX_PREPARED in info->flags is unset so we know
+     * apbridgea_audio_unipro_tx_cb() will do a sem_post() once
+     * rb_hdr->not_acked is set to zero.
+     */
+    if (rb_hdr->not_acked) {
+        sem_wait(&rb_hdr->complete);
+    }
+
+    sem_destroy(&rb_hdr->complete);
 
     bufram_page_free(ring_buf_get_buf(rb),
                      bufram_size_to_page_count(info->tx_rb_total_size));
