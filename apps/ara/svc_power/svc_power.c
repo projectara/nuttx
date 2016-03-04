@@ -351,6 +351,12 @@ static int dumpstate_func(struct interface *iface, void *context)
                iface->hp_state == HOTPLUG_ST_PLUGGED ? "plugged" :
                iface->hp_state == HOTPLUG_ST_UNPLUGGED ? "unplugged" :
                "<internal error>");
+
+        printf("\torder: %s\n",
+               iface->if_order == ARA_IFACE_ORDER_UNKNOWN ? "unknown" :
+               iface->if_order == ARA_IFACE_ORDER_PRIMARY ? "primary" :
+               iface->if_order == ARA_IFACE_ORDER_SECONDARY ? "secondary" :
+               "<internal error>");
     }
 
     return 0;
