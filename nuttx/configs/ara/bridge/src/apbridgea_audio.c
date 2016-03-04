@@ -409,6 +409,7 @@ static int apbridgea_audio_register_cport(struct apbridgea_audio_info *info,
         }
 
         cport->data_cportid = data_cportid;
+        cport->direction = 0;
         cport->info = info;
         list_init(&cport->list);
 
