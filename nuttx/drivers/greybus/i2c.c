@@ -72,16 +72,6 @@ static uint8_t gb_i2c_protocol_functionality(struct gb_operation *operation)
     return GB_OP_SUCCESS;
 }
 
-static uint8_t gb_i2c_protocol_timeout(struct gb_operation *operation)
-{
-    return GB_OP_SUCCESS;
-}
-
-static uint8_t gb_i2c_protocol_retries(struct gb_operation *operation)
-{
-    return GB_OP_SUCCESS;
-}
-
 static uint8_t gb_i2c_protocol_transfer(struct gb_operation *operation)
 {
     int i, op_count;
@@ -183,8 +173,6 @@ static void gb_i2c_exit(unsigned int cport, struct gb_bundle *bundle)
 static struct gb_operation_handler gb_i2c_handlers[] = {
     GB_HANDLER(GB_I2C_PROTOCOL_VERSION, gb_i2c_protocol_version),
     GB_HANDLER(GB_I2C_PROTOCOL_FUNCTIONALITY, gb_i2c_protocol_functionality),
-    GB_HANDLER(GB_I2C_PROTOCOL_TIMEOUT, gb_i2c_protocol_timeout),
-    GB_HANDLER(GB_I2C_PROTOCOL_RETRIES, gb_i2c_protocol_retries),
     GB_HANDLER(GB_I2C_PROTOCOL_TRANSFER, gb_i2c_protocol_transfer),
 };
 
