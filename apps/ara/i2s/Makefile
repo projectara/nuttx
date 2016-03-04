@@ -1,6 +1,6 @@
 #
 # Copyright (C) 2011-2013 Gregory Nutt. All rights reserved.
-# Copyright (c) 2015 Google Inc.
+# Copyright (c) 2015-2016 Google Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# Copyright (c) 2015 Google, Inc.
+# Copyright (c) 2015-2016 Google, Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -62,7 +62,7 @@ PRIORITY = SCHED_PRIORITY_DEFAULT
 STACKSIZE = 2048
 
 ASRCS =
-MAINSRC = i2s_test.c gen_pcm.c
+MAINSRC = i2s_test.c gen_pcm.c codec_test.c gb_mirror.c gen_samp.c voice8k.c tick8k.c
 
 CONFIG_ARA_I2S_TEST_PROGNAME ?= i2s_test$(EXEEXT)
 PROGNAME = $(CONFIG_ARA_TCA_MAIN_PROGNAME)

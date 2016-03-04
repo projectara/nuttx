@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015 Google Inc.
+* Copyright (c) 2015-2016 Google Inc.
 * All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
@@ -30,14 +30,18 @@
 #ifndef _GEN_PCM_H_
 #define _GEN_PCM_H_
 
-int gen_audio_init(uint32_t frequecy,
-                   uint32_t sample_rate,
-                   uint8_t volume);
+/* 20 step (0-100) volume log10 scale */
+extern const uint8_t log_scale[];
+extern const uint8_t log_table_size;
 
-int gen_audio_deinit(void);
+int gen_audio_sine_init(uint32_t frequency,
+                        uint32_t sample_rate,
+                        uint8_t volume);
 
-int fill_output_buff(int16_t *buffer,
-                     uint32_t *buff_size,
-                     uint8_t number_of_channels);
+int gen_audio_sine_deinit(void);
+
+int fill_output_buff_with_sine(int16_t *buffer,
+                               uint32_t *buff_size,
+                               uint8_t number_of_channels);
 
 #endif //_GEN_PCM_H_

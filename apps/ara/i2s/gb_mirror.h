@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016 Google, Inc.
+ * Copyright (c) 2016 Google, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,41 +26,45 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __I2S_TEST_H__
-#define __I2S_TEST_H__
+#ifndef __GB_MIRROR_H__
+#define __GB_MIRROR_H__
 
-struct i2s_test_stats {
-    unsigned int    tx_cnt;
-    unsigned int    tx_err_cnt;
-    unsigned int    rx_cnt;
-    unsigned int    rx_err_cnt;
-    unsigned int    rx_bad_data_cnt;
+/* structures from the original */
+struct gb_audio_info { /* One per audio Bundle */
+    bool                    initialized;
+    uint16_t                mgmt_cport;
+    struct device           *codec_dev;
+    struct list_head        dai_list;   /* list of gb_audio_dai_info structs */
+    struct list_head        list;       /* next gb_audio_info struct */
 };
 
-struct i2s_test_info {
-    uint8_t                 is_transmitter;
-    uint8_t                 is_receiver;
-    uint8_t                 is_i2s;
-    uint8_t                 is_gen_audio;
-    uint32_t                aud_frequency;
-    uint32_t                aud_volume;
-    uint8_t                 use_sample;
-    uint8_t                 use_codec;
-    uint8_t                 check_rx_data;
-    uint32_t                codec_playback_timout;
-    unsigned long           rb_entries;
-    unsigned long           samples_per_rb_entry;
-    uint16_t                left;
-    uint16_t                right;
-    struct i2s_test_stats   stats;
+struct gb_audio_dai_info {
+    uint32_t                flags;
+    uint16_t                data_cport;
+    unsigned int            dai_idx;
+    struct device           *i2s_dev;
+    uint32_t                format;
+    uint32_t                rate;
+    uint8_t                 channels;
+    uint8_t                 sig_bits;
+    unsigned int            sample_size;
+    unsigned int            sample_freq;
+
+    struct ring_buf         *tx_rb;
+    unsigned int            tx_data_size;
+    unsigned int            tx_samples_per_msg;
+    uint8_t                 *tx_dummy_data;
+
+    struct ring_buf         *rx_rb;
+    unsigned int            rx_data_size;
+    unsigned int            rx_samples_per_msg;
+
+    struct gb_audio_info    *info;      /* parent gb_audio_info struct */
+    struct list_head        list;       /* next gb_audio_dai_info struct */
 };
 
-extern sem_t i2s_test_done_sem;
-extern sem_t i2s_sample_done_sem;
-extern struct device_i2s_pcm i2s_test_pcm;
+int gb_audio_config_connection(struct gb_audio_dai_info *dai,
+                               uint32_t format, uint32_t rate,
+                               uint8_t channels, uint8_t sig_bits);
 
-int i2s_test_start_transmitter(struct i2s_test_info *info,
-                               struct device *dev);
-void i2s_test_stop_transmitter(struct device *dev);
-
-#endif /* __I2S_TEST_H__ */
+#endif /* __GB_MIRROR_H__ */

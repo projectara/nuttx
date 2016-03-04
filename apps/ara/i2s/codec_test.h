@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016 Google, Inc.
+ * Copyright (c) 2016 Google, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,41 +26,9 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __I2S_TEST_H__
-#define __I2S_TEST_H__
+#ifndef __CODEC_TEST_H__
+#define __CODEC_TEST_H__
 
-struct i2s_test_stats {
-    unsigned int    tx_cnt;
-    unsigned int    tx_err_cnt;
-    unsigned int    rx_cnt;
-    unsigned int    rx_err_cnt;
-    unsigned int    rx_bad_data_cnt;
-};
+int play_audio_via_codec(struct i2s_test_info *info);
 
-struct i2s_test_info {
-    uint8_t                 is_transmitter;
-    uint8_t                 is_receiver;
-    uint8_t                 is_i2s;
-    uint8_t                 is_gen_audio;
-    uint32_t                aud_frequency;
-    uint32_t                aud_volume;
-    uint8_t                 use_sample;
-    uint8_t                 use_codec;
-    uint8_t                 check_rx_data;
-    uint32_t                codec_playback_timout;
-    unsigned long           rb_entries;
-    unsigned long           samples_per_rb_entry;
-    uint16_t                left;
-    uint16_t                right;
-    struct i2s_test_stats   stats;
-};
-
-extern sem_t i2s_test_done_sem;
-extern sem_t i2s_sample_done_sem;
-extern struct device_i2s_pcm i2s_test_pcm;
-
-int i2s_test_start_transmitter(struct i2s_test_info *info,
-                               struct device *dev);
-void i2s_test_stop_transmitter(struct device *dev);
-
-#endif /* __I2S_TEST_H__ */
+#endif /* __CODEC_TEST_H__ */

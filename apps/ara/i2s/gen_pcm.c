@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015 Google Inc.
+* Copyright (c) 2015-2016 Google Inc.
 * All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
@@ -37,9 +37,10 @@ Generate sample sine wave data
 #include <errno.h>
 #include <string.h>
 #include <signal.h>
+#include <sys/time.h>
+#include <nuttx/time.h>
 
-
-//1k samples worth of 16bit PCM sine wave buffer
+/* 1k samples worth of 16bit PCM sine wave buffer */
 int16_t period_buffer[] = {
     201,   402,   603,   804,   1005,  1206,  1407,  1608,
     1809,  2009,  2210,  2411,  2611,  2811,  3012,  3212,
@@ -172,18 +173,30 @@ int16_t period_buffer[] = {
 
 #define NUM_SAMPLES_IN_PERIOD_BUFFER   ARRAY_SIZE(period_buffer)
 #define PCM_STREAM_SIGNATURE 0XAAADDD00
+/* range 180 TO 18000 Hz */
+#define START_SWEEP_FREQUENCY 180
+/* stop derived from volume stepping */
+#define STOP_SWEEP_FREQUENCY (100 * START_SWEEP_FREQUENCY)
+#define SWEEP_TIME_MSEC      20000
 
 struct {
     uint32_t signature;
     uint32_t frequency;
+    uint8_t sweep;
+    uint8_t sweep_step;
+    struct timeval tv_start;
     uint32_t sample_rate;
     uint8_t volume;
     uint16_t phase_inc;
     uint16_t phase_accum;
+    uint32_t past_msec_diff; /*debug timer*/
 } pcm_stream_state;
 
+#define CALC_PHASE_INC(X) ((X.frequency * NUM_SAMPLES_IN_PERIOD_BUFFER) / X.sample_rate)
+#define FREQ_OF_INC(X) ((X.phase_inc * X.sample_rate)/NUM_SAMPLES_IN_PERIOD_BUFFER)
+
 /* 20 step (0-100) volume log10 scale */
-uint8_t volume_scale[] = {
+const uint8_t log_scale[] = {
     0,
     2,
     4,
@@ -205,50 +218,63 @@ uint8_t volume_scale[] = {
     83,
     100
 };
-
+#define LOG_TABLE_SIZE (ARRAY_SIZE(log_scale))
+const uint8_t log_table_size = LOG_TABLE_SIZE;
+#define SWEEP_STEP_MSEC (SWEEP_TIME_MSEC / LOG_TABLE_SIZE)
 
 /**
 Initialize Sample Audio Output Stream
 
 @param sample_rate samples per second
-@param frequency periods of wave form per second
+@param frequency periods of wave form per second, 0 will cause a frequency sweep
 @param volume scale 0-19
 @return -EINVAL invalid argument
 @return 0 OK
 */
-int gen_audio_init(uint32_t frequency,
-                   uint32_t sample_rate,
-                   uint8_t volume)
+int gen_audio_sine_init(uint32_t frequency,
+                        uint32_t sample_rate,
+                        uint8_t volume)
 {
     int ret_value = 0;
 
-    if (volume > (ARRAY_SIZE(volume_scale) -1)) {
+    if (volume > LOG_TABLE_SIZE -1) {
         fprintf(stderr, "Volume too large %d, must be at or under: %d\n",
                 volume,
-                ARRAY_SIZE(volume_scale));
-        ret_value = -EINVAL;
-    } else if (frequency == 0) {
-        fprintf(stderr, "Frequency must be larger than 0\n");
+                LOG_TABLE_SIZE);
         ret_value = -EINVAL;
     } else if (sample_rate == 0)  {
         fprintf(stderr, "Sample Rate must be larger than 0\n");
         ret_value = -EINVAL;
     } else {
+        if (frequency == 0) {
+            pcm_stream_state.sweep = 1;
+            pcm_stream_state.sweep_step = 0;
+            pcm_stream_state.frequency = START_SWEEP_FREQUENCY;
+            gettimeofday(&pcm_stream_state.tv_start, NULL);
+            pcm_stream_state.past_msec_diff = 0;
+
+            fprintf(stderr, "Change frequency every %d mSec.\n",SWEEP_STEP_MSEC);
+        } else {
+            pcm_stream_state.sweep = 0;
+            pcm_stream_state.frequency = frequency;
+        }
+
         pcm_stream_state.signature = PCM_STREAM_SIGNATURE;
-        pcm_stream_state.frequency = frequency;
         pcm_stream_state.sample_rate = sample_rate;
-        pcm_stream_state.volume = volume_scale[volume];
+        pcm_stream_state.volume = log_scale[volume];
         pcm_stream_state.phase_accum = 0;
-        pcm_stream_state.phase_inc = (frequency * NUM_SAMPLES_IN_PERIOD_BUFFER) / sample_rate;
+        pcm_stream_state.phase_inc = CALC_PHASE_INC(pcm_stream_state);
 
         if (pcm_stream_state.phase_inc == 0) {
-            /* too slow a frequency*/
+            /* too slow of a frequency*/
             pcm_stream_state.phase_inc = 1;
         }
 
-        /* print the matching frequency */
-        printf("Closest Matching Frequency: %uHz\n",
-               (pcm_stream_state.phase_inc * sample_rate)/NUM_SAMPLES_IN_PERIOD_BUFFER);
+        if (pcm_stream_state.sweep == 0) {
+            /* print the matching frequency */
+            printf("Closest Matching Frequency: %uHz\n",
+                    FREQ_OF_INC(pcm_stream_state));
+        }
     }
 
     return ret_value;
@@ -258,19 +284,48 @@ int gen_audio_init(uint32_t frequency,
 Mark structure as unused
 @return 0 OK
 */
-int gen_audio_deinit(void)
+int gen_audio_sine_deinit(void)
 {
     int ret_value = 0;
 
     if (pcm_stream_state.signature != PCM_STREAM_SIGNATURE) {
         fprintf(stderr, "delete uninitialized\n");
     } else {
-        pcm_stream_state.signature = 0;  //just in case someone tries to use a stale structure.
+        /* just in case someone tries to use a stale structure. */
+        pcm_stream_state.signature = 0;
     }
 
     return ret_value;
 }
 
+
+/**
+check and current sweep frequency
+*/
+void update_sweep_freq(void)
+{
+    struct timeval tv_current;
+    struct timeval tv_diff;
+    uint32_t msec_diff;
+    uint8_t current_step;
+
+    gettimeofday(&tv_current, NULL);
+    timersub(&tv_current, &pcm_stream_state.tv_start, &tv_diff);
+    msec_diff = timeval_to_usec(&tv_diff)/1000;
+    msec_diff = msec_diff % SWEEP_TIME_MSEC;
+    current_step = msec_diff/SWEEP_STEP_MSEC;
+
+    if (pcm_stream_state.sweep_step != current_step) {
+        pcm_stream_state.sweep_step = current_step;
+        if (pcm_stream_state.sweep_step >= LOG_TABLE_SIZE) {
+            /* should not happen */
+            pcm_stream_state.sweep_step = 0;
+        }
+
+        pcm_stream_state.frequency = START_SWEEP_FREQUENCY * log_scale[pcm_stream_state.sweep_step];
+        pcm_stream_state.phase_inc = CALC_PHASE_INC(pcm_stream_state);
+    }
+}
 /**
 Fill in 16bit audio data
 @param buffer pointer to buffer to fill
@@ -280,16 +335,16 @@ Fill in 16bit audio data
 @return -EINVAL invalid argument
 @return positive_value  number of bytes filled
 */
-int fill_output_buff(int16_t *buffer,
-                     uint32_t *buff_size,
-                     uint8_t number_of_channels)
+int fill_output_buff_with_sine(int16_t *buffer,
+                               uint32_t *buff_size,
+                               uint8_t number_of_channels)
 {
     int ret_value = 0;
     int j;
     int16_t *p_fill;
     int16_t current_sample;
     uint32_t current_buff_size;
-    uint32_t temp_sample;
+    int32_t temp_sample;
 
     if (!buffer ||
         !buff_size ||
@@ -303,7 +358,11 @@ int fill_output_buff(int16_t *buffer,
         current_buff_size = *buff_size;
         p_fill = buffer;
 
-        while (current_buff_size > number_of_channels * sizeof(current_sample))
+        if (pcm_stream_state.sweep == 1) {
+            update_sweep_freq();
+        }
+
+        while (current_buff_size >= number_of_channels * sizeof(current_sample))
         {
             pcm_stream_state.phase_accum += pcm_stream_state.phase_inc;
             if (pcm_stream_state.phase_accum >= NUM_SAMPLES_IN_PERIOD_BUFFER) {
@@ -314,18 +373,18 @@ int fill_output_buff(int16_t *buffer,
                 current_sample = 0;
             } else {
                 temp_sample = period_buffer[pcm_stream_state.phase_accum];
-
                 current_sample = (int16_t)((temp_sample * pcm_stream_state.volume) / 100);
             }
 
             for (j = 0; j < number_of_channels; j++) {
-                *p_fill++ = current_sample;
+                *p_fill = current_sample;
+                p_fill++;
             }
 
             current_buff_size -= number_of_channels*sizeof(current_sample);
         }
 
-        //update number of filled
+        /* update number of filled */
         ret_value = *buff_size - current_buff_size;
     }
 

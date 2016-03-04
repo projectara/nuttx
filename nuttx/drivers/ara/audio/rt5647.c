@@ -1303,8 +1303,11 @@ rt5647_codec_hw_pr_write(uint32_t reg, uint32_t value)
 static int get_data_cport(unsigned int bundle_index, unsigned int dai_index,
                           uint16_t *data_cport)
 {
-    struct device *dev;
+
     int ret;
+
+#ifdef CONFIG_GREYBUS_AUDIO
+    struct device *dev;
 
     dev = device_open(DEVICE_TYPE_AUDIO_BOARD_HW, 0);
     if (!dev) {
@@ -1315,6 +1318,11 @@ static int get_data_cport(unsigned int bundle_index, unsigned int dai_index,
                                             data_cport);
 
     device_close(dev);
+#else
+    /* built for local audio testing */
+    ret = 0;
+    *data_cport = 0;
+#endif
 
     return ret;
 }
