@@ -27,3 +27,4 @@
 #
 
 include ara/audio/Make.defs
+include ara/spi/Make.defs

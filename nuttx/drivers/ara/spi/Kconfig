@@ -26,5 +26,8 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-source drivers/ara/audio/Kconfig
-source drivers/ara/spi/Kconfig
+config DRIVERS_ARA_SPI_BOARD
+	bool "SPI board support"
+	default n
+	---help---
+		A Greybus Module default has SPI Bundle.
