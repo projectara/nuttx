@@ -326,8 +326,8 @@ static int apbridgea_audio_set_config(struct apbridgea_audio_info *info,
         return -EINVAL;
     }
 
-    if ((info->flags & APBRIDGEA_AUDIO_FLAG_TX_STARTED) ||
-        (info->flags & APBRIDGEA_AUDIO_FLAG_RX_STARTED)) {
+    if ((info->flags & APBRIDGEA_AUDIO_FLAG_TX_PREPARED) ||
+        (info->flags & APBRIDGEA_AUDIO_FLAG_RX_PREPARED)) {
 
         dbg_error("%s: protocol error, flags 0x%x\n", __func__, info->flags);
         return -EPROTO;
@@ -549,7 +549,7 @@ static int apbridgea_audio_set_tx_data_size(struct apbridgea_audio_info *info,
         return -EINVAL;
     }
 
-    if (info->flags & APBRIDGEA_AUDIO_FLAG_TX_STARTED) {
+    if (info->flags & APBRIDGEA_AUDIO_FLAG_TX_PREPARED) {
         dbg_error("%s: protocol error, flags 0x%x\n", __func__, info->flags);
         return -EPROTO;
     }
@@ -854,7 +854,7 @@ static int apbridgea_audio_set_rx_data_size(struct apbridgea_audio_info *info,
         return -EINVAL;
     }
 
-    if (info->flags & APBRIDGEA_AUDIO_FLAG_RX_STARTED) {
+    if (info->flags & APBRIDGEA_AUDIO_FLAG_RX_PREPARED) {
         dbg_error("%s: protocol error, flags 0x%x\n", __func__, info->flags);
         return -EPROTO;
     }
