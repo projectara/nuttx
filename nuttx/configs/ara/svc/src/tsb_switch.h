@@ -73,6 +73,7 @@
 #define SWLCE                       (0x0024)
 #define SWLCS                       (0x0025)
 #define SPITIMER                    (0x004c)
+#define RTBITSEL                    (0x00bc)
 
 /* NCP commands */
 #define NCP_SETREQ                  (0x00)

@@ -66,8 +66,6 @@
 /* 9-byte max delay + 4-byte header + 272-byte max payload + 1-byte footer */
 #define ES3_CPORT_RX_MAX_SIZE       (9 + 4 + 272 + 1)
 
-#define RTBITSEL                    (0x00BC)
-
 /* System registers, accessible via switch_sys_ctrl_set, switch_sys_ctrl_get */
 #define SC_SYSCLOCKGATE             (0x0200)
 #define SC_SYSCLOCKENABLE           (0x0300)
