@@ -303,14 +303,14 @@ static int apbridgea_audio_convert_rate(uint32_t audio_rate, uint32_t *i2s_rate,
 static void apbridgea_audio_dump_config(struct device_i2s_pcm *pcm,
                                         struct device_i2s_dai *dai)
 {
-    dbg_error("    pcm: format 0x%x, rate 0x%x, channels %u\n",
-              pcm->format, pcm->rate, pcm->channels);
-    dbg_error("    dai: mclk_freq %u, protocol 0x%x\n",
-              dai->mclk_freq, dai->protocol);
-    dbg_error("         wclk_polarity 0x%x, wclk_change_edge 0x%x\n",
-              dai->wclk_polarity, dai->wclk_change_edge);
-    dbg_error("         data_rx_edge 0x%x, data_tx_edge 0x%x\n",
-              dai->data_rx_edge, dai->data_tx_edge);
+    dbg_verbose("    pcm: format 0x%x, rate 0x%x, channels %u\n",
+                pcm->format, pcm->rate, pcm->channels);
+    dbg_verbose("    dai: mclk_freq %u, protocol 0x%x\n",
+                dai->mclk_freq, dai->protocol);
+    dbg_verbose("         wclk_polarity 0x%x, wclk_change_edge 0x%x\n",
+                dai->wclk_polarity, dai->wclk_change_edge);
+    dbg_verbose("         data_rx_edge 0x%x, data_tx_edge 0x%x\n",
+                dai->data_rx_edge, dai->data_tx_edge);
 }
 
 static int apbridgea_audio_set_config(struct apbridgea_audio_info *info,
@@ -360,12 +360,12 @@ static int apbridgea_audio_set_config(struct apbridgea_audio_info *info,
     dai.data_rx_edge = DEVICE_I2S_EDGE_RISING;
 
     dbg_verbose("%s: configuring i2s %u as MASTER\n", __func__, info->i2s_port);
+    apbridgea_audio_dump_config(&pcm, &dai);
 
     ret = device_i2s_set_config(info->i2s_dev, DEVICE_I2S_ROLE_MASTER, &pcm,
                                 &dai);
     if (ret) {
         dbg_error("%s: can't set i2s MASTER config %d\n", __func__, ret);
-        apbridgea_audio_dump_config(&pcm, &dai);
         return ret;
     }
 #else
@@ -374,12 +374,12 @@ static int apbridgea_audio_set_config(struct apbridgea_audio_info *info,
     dai.data_rx_edge = DEVICE_I2S_EDGE_FALLING;
 
     dbg_verbose("%s: configuring i2s %u as SLAVE\n", __func__, info->i2s_port);
+    apbridgea_audio_dump_config(&pcm, &dai);
 
     ret = device_i2s_set_config(info->i2s_dev, DEVICE_I2S_ROLE_SLAVE, &pcm,
                                 &dai);
     if (ret) {
         dbg_error("%s: can't set i2s SLAVE config %d\n", __func__, ret);
-        apbridgea_audio_dump_config(&pcm, &dai);
         return ret;
     }
 #endif
