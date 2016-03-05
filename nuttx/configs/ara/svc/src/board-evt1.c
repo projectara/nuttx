@@ -819,7 +819,7 @@ static int evt1_board_init(struct ara_board_info *board_info) {
     }
 
     /* Configure the switch power supply lines. */
-    rc = vreg_config(&sw_vreg);
+    rc = vreg_config(board_info->sw_data.vreg);
     if (rc) {
         dbg_error("%s: can't configure switch regulators: %d\n", __func__, rc);
         return ERROR;
@@ -931,7 +931,7 @@ static int evt1_5_board_init(struct ara_board_info *board_info) {
     stm32_configgpio(SW_STANDBY_N);
 
     /* Configure the switch power supply lines. */
-    rc = vreg_config(&sw_vreg);
+    rc = vreg_config(board_info->sw_data.vreg);
     if (rc) {
         dbg_error("%s: can't configure switch regulators: %d\n", __func__, rc);
         return ERROR;
@@ -1065,7 +1065,7 @@ static int evt2_board_init(struct ara_board_info *board_info) {
     stm32_configgpio(SW_STANDBY_N);
 
     /* Configure the switch power supply lines. */
-    rc = vreg_config(&evt2_sw_vreg);
+    rc = vreg_config(board_info->sw_data.vreg);
     if (rc) {
         dbg_error("%s: can't configure switch regulators: %d\n", __func__, rc);
         return rc;

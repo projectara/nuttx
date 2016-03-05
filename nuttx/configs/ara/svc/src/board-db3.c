@@ -494,6 +494,8 @@ static struct io_expander_info db3_io_expanders[] = {
 };
 
 static int db3_board_init(struct ara_board_info *board_info) {
+    int rc;
+
     /*
      * Turn on the global system clock and its buffered copy (which
      * goes to the modules and the switch).
@@ -509,7 +511,11 @@ static int db3_board_init(struct ara_board_info *board_info) {
      * Configure the switch power supply lines.
      * Hold all the lines low while we turn on the power rails.
      */
-    vreg_config(&sw_vreg);
+    rc = vreg_config(board_info->sw_data.vreg);
+    if (rc) {
+        dbg_error("%s: can't configure switch regulators: %d\n", __func__, rc);
+        return ERROR;
+    }
     stm32_configgpio(db3_board_info.sw_data.gpio_reset);
     up_udelay(POWER_SWITCH_OFF_STAB_TIME_US);
 
