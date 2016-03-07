@@ -1053,18 +1053,24 @@ static void usbclass_rdcomplete(struct usbdev_ep_s *ep,
             return;
         }
         usbdclass_log_rx_time(priv, cportid);
-        drv->usb_to_unipro(priv, cportid, req->buf , req->xfrd);
-        break;
+        if (!drv->usb_to_unipro(priv, cportid, req->buf , req->xfrd))
+            return;
 
     case -ESHUTDOWN:           /* Disconnection */
         usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_RDSHUTDOWN), 0);
-        return;
+        break;
 
     default:                   /* Some other error occurred */
         usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_RDUNEXPECTED),
                  (uint16_t) - req->result);
         break;
     };
+    /*
+     * We got an error before the UniPro transfer completion so
+     * we have to give back the request to USB.
+     */
+    lowsyslog("USB to UniPro transfer failed: %d\n", req->result);
+    EP_SUBMIT(ep, req);
 }
 
 static void usbclass_wrcomplete(struct usbdev_ep_s *ep,
