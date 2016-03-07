@@ -60,8 +60,16 @@ static int usb_to_unipro(struct apbridge_dev_s *dev, unsigned cportid,
 {
     gb_dump(buf, len);
 
-    if (len < sizeof(struct gb_operation_hdr))
+    if (len < sizeof(struct gb_operation_hdr)) {
+        lowsyslog("%s: Packet smaller than Greybus header\n", __func__);
         return -EPROTO;
+    }
+
+    if (len != gb_packet_size(buf)) {
+        lowsyslog("%s: Invalid message size: %u != %u\n",
+                  __func__, len, gb_packet_size(buf));
+        return -EPROTO;
+    }
 
     return apbridge_backend.usb_to_unipro(cportid, buf, len,
                                           release_buffer, dev);
@@ -76,8 +84,16 @@ int recv_from_unipro(unsigned int cportid, void *buf, size_t len)
 
     gb_dump(buf, len);
 
-    if (len < sizeof(struct gb_operation_hdr))
+    if (len < sizeof(struct gb_operation_hdr)) {
+       lowsyslog("%s: Packet smaller than Greybus header\n", __func__);
         return -EPROTO;
+    }
+
+    if (len != gb_packet_size(buf)) {
+        lowsyslog("%s: Invalid message size: %u != %u\n",
+                  __func__, len, gb_packet_size(buf));
+        return -EPROTO;
+    }
 
     return unipro_to_usb(g_usbdev, cportid, buf, len);
 }
