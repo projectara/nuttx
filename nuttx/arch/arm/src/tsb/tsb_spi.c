@@ -38,6 +38,8 @@
 #include <nuttx/device_spi.h>
 #include <nuttx/device_spi_board.h>
 #include <nuttx/ara/spi_board.h>
+#include <nuttx/power/pm.h>
+#include <arch/tsb/pm.h>
 
 #include "up_arch.h"
 #include "tsb_scm.h"
@@ -186,8 +188,8 @@ struct tsb_spi_dev_info {
     /** configuration of spi slave device */
     struct spi_board_device_cfg *board_cfg;
 
-    /** SPI controoler power state */
-    bool spi_powered;
+    /** SPI controller power state */
+    int spi_pmstate;
 };
 
 /**
@@ -236,7 +238,7 @@ static void tsb_spi_write(uint32_t base, uint32_t addr, uint32_t val)
 static int tsb_spi_lock(struct device *dev)
 {
     struct tsb_spi_dev_info *info = NULL;
-    int ret = 0;
+    int ret = 0, loop = 0;
 
     /* check input parameters */
     if (!dev || !device_get_private(dev)) {
@@ -245,9 +247,16 @@ static int tsb_spi_lock(struct device *dev)
 
     info = device_get_private(dev);
 
-    /* SPI not powered, fail any accessing */;
-    if(!info->spi_powered) {
-        return -EIO;
+    if (info->spi_pmstate == PM_SLEEP) {
+        pm_activity(TSB_SPI_ACTIVITY);
+
+        /* SPI not powered, fail any accessing */;
+        while (info->spi_pmstate == PM_SLEEP) {
+            usleep(1000);
+            if (++loop > 10) {
+                return -EIO;
+            }
+        }
     }
 
     /* Take the semaphore (perhaps waiting) */
@@ -259,7 +268,6 @@ static int tsb_spi_lock(struct device *dev)
         return -get_errno();
     }
     info->state = TSB_SPI_STATE_LOCKED;
-
     return 0;
 }
 
@@ -936,7 +944,7 @@ static void tsb_spi_hw_deinit(struct tsb_spi_dev_info *info)
 
     tsb_clk_disable(TSB_CLK_SPIP);
     tsb_clk_disable(TSB_CLK_SPIS);
-    info->spi_powered = false;
+    info->spi_pmstate = PM_SLEEP;
 }
 
 /**
@@ -958,7 +966,7 @@ static int tsb_spi_hw_init(struct tsb_spi_dev_info *info)
     tsb_reset(TSB_RST_SPIP);
     tsb_reset(TSB_RST_SPIS);
 
-    info->spi_powered = true;
+    info->spi_pmstate = PM_NORMAL;
 
     /* Disable SPI controller */
     tsb_spi_write(info->reg_base, DW_SPI_SSIENR, 0);
@@ -1140,6 +1148,124 @@ static void tsb_spi_dev_close(struct device *dev)
     sem_post(&info->lock);
 }
 
+static int tsb_spi_suspend(struct device *dev)
+{
+    struct tsb_spi_dev_info *info;
+
+    info = device_get_private(dev);
+
+    sem_wait(&info->lock);
+
+    if (info->curr_xfer.rx_remaining) {
+        sem_post(&info->lock);
+        return -EBUSY;
+    }
+
+    tsb_clk_disable(TSB_CLK_SPIP);
+    tsb_clk_disable(TSB_CLK_SPIS);
+    info->spi_pmstate = PM_SLEEP;
+
+    sem_post(&info->lock);
+
+    return 0;
+}
+
+static int tsb_spi_poweroff(struct device *dev)
+{
+    return tsb_spi_suspend(dev);
+}
+
+static int tsb_spi_resume(struct device *dev)
+{
+    struct tsb_spi_dev_info *info;
+
+    info = device_get_private(dev);
+
+    tsb_clk_enable(TSB_CLK_SPIP);
+    tsb_clk_enable(TSB_CLK_SPIS);
+
+    info->spi_pmstate = PM_NORMAL;
+
+    return 0;
+}
+
+#ifdef CONFIG_PM
+static void tsb_spi_pm_notify(struct pm_callback_s *cb,
+                              enum pm_state_e pmstate)
+{
+    struct tsb_spi_dev_info *info = NULL;
+    struct device *dev;
+    irqstate_t flags;
+
+    dev = cb->priv;
+    info = device_get_private(dev);
+
+    flags = irqsave();
+
+    switch (pmstate) {
+    case PM_NORMAL:
+        tsb_spi_resume(dev);
+        break;
+    case PM_IDLE:
+    case PM_STANDBY:
+        /* Nothing to do in idle or standby. */
+        break;
+    case PM_SLEEP:
+        tsb_spi_suspend(dev);
+        break;
+    default:
+        /* Can never happen. */
+        PANIC();
+    }
+
+    irqrestore(flags);
+}
+
+static int tsb_spi_pm_prepare(struct pm_callback_s *cb,
+                              enum pm_state_e pmstate)
+{
+    struct tsb_spi_dev_info *info = NULL;
+    struct device *dev;
+    irqstate_t flags;
+
+    dev = cb->priv;
+    info = device_get_private(dev);
+
+    flags = irqsave();
+
+    switch (pmstate) {
+    case PM_NORMAL:
+    case PM_IDLE:
+    case PM_STANDBY:
+        /* Nothing to do in idle or standby. */
+        break;
+    case PM_SLEEP:
+        if (info->curr_xfer.rx_remaining) {
+            /* return not ready to SLEEP because exchange not complete yet */
+            return -EIO;
+        }
+        break;
+    default:
+        /* Can never happen. */
+        PANIC();
+    }
+
+    irqrestore(flags);
+    return OK;
+}
+#else
+static void tsb_spi_pm_notify(struct pm_callback_s *cb,
+                               enum pm_state_e pmstate)
+{
+
+}
+static int tsb_spi_pm_prepare(struct pm_callback_s *cb,
+                              enum pm_state_e pmstate)
+{
+    return 0;
+}
+#endif
+
 /**
  * @brief Probe SPI device
  *
@@ -1179,6 +1305,7 @@ static int tsb_spi_dev_probe(struct device *dev)
     info->reg_base = (uint32_t)r->start;
     info->dev = dev;
     info->state = TSB_SPI_STATE_CLOSED;
+    info->spi_pmstate = PM_SLEEP;
     device_set_private(dev, info);
     spi_dev = dev;
 
@@ -1186,6 +1313,10 @@ static int tsb_spi_dev_probe(struct device *dev)
     sem_init(&info->lock, 0, 1);
     sem_init(&info->xfer_completed, 0, 0);
 
+    ret = tsb_pm_register(tsb_spi_pm_prepare, tsb_spi_pm_notify, dev);
+    if (ret) {
+        goto err_freemem;
+    }
     return 0;
 
 err_freemem:
@@ -1228,6 +1359,12 @@ static void tsb_spi_dev_remove(struct device *dev)
     free(info);
 }
 
+static struct device_pm_ops tsb_spi_pm_ops = {
+    .suspend    = tsb_spi_suspend,
+    .poweroff   = tsb_spi_poweroff,
+    .resume     = tsb_spi_resume,
+};
+
 static struct device_spi_type_ops tsb_spi_type_ops = {
     .lock               = tsb_spi_lock,
     .unlock             = tsb_spi_unlock,
@@ -1254,4 +1391,5 @@ struct device_driver tsb_spi_driver = {
     .name       = "tsb_spi",
     .desc       = "TSB SPI Driver",
     .ops        = &tsb_spi_driver_ops,
+    .pm         = &tsb_spi_pm_ops,
 };
