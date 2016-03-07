@@ -219,7 +219,7 @@ static int ramlog_addchar(FAR struct ramlog_dev_s *priv, char ch)
     }
 
   /* Would the next write overflow the circular buffer? */
-
+#ifndef CONFIG_RAMLOG_OVERFLOW
   if (nexthead == priv->rl_tail)
     {
       /* Yes... Return an indication that nothing was saved in the buffer. */
@@ -227,6 +227,7 @@ static int ramlog_addchar(FAR struct ramlog_dev_s *priv, char ch)
       irqrestore(flags);
       return -EBUSY;
     }
+#endif
 
   /* No... copy the byte and re-enable interrupts */
 
