@@ -57,7 +57,7 @@
  * Unipro TX FIFO. The following strucure is used to store the info associated
  * with each Unipro TX DMA channel. Each Unipro TX DMA channel has a DMA
  * channel handler, a ATABL request, and a CPort currently mapped to request.
- * The first two items are allocated when unipro_tx_init() called. The last
+ * The first two items are allocated when unipro_tx_init_dma() called. The last
  * item, cportid, changes as new Cport is mapped to the request. 0xffff in
  * cporid indicates the request is currently unmapped.
  */
@@ -564,7 +564,7 @@ static struct unipro_tx_calltable calltable = {
     unipro_send_async_dma
 };
 
-int unipro_tx_init(struct unipro_tx_calltable **table)
+int unipro_tx_init_dma(struct unipro_tx_calltable **table)
 {
     int i;
     int retval;

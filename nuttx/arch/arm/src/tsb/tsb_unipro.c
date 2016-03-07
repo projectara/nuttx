@@ -738,7 +738,13 @@ void unipro_init(void)
         return;
     }
 
-    retval = unipro_tx_init(&tx_calltable);
+    retval =
+#if defined(CONFIG_ARCH_UNIPROTX_USE_DMA)
+        unipro_tx_init_dma(&tx_calltable);
+#else
+        unipro_tx_init_memcpy(&tx_calltable);
+#endif
+
     if (retval) {
         free(cporttable);
         cporttable = NULL;

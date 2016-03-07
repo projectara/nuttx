@@ -384,7 +384,7 @@ static struct unipro_tx_calltable calltable = {
     unipro_send_async_memcpy
 };
 
-int unipro_tx_init(struct unipro_tx_calltable **table)
+int unipro_tx_init_memcpy(struct unipro_tx_calltable **table)
 {
     int retval;
 

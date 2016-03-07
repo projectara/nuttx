@@ -72,7 +72,8 @@ struct unipro_tx_calltable {
 
 struct cport *cport_handle(unsigned int cportid);
 uint16_t unipro_get_tx_free_buffer_space(struct cport *cport);
-int unipro_tx_init(struct unipro_tx_calltable **table);
+int unipro_tx_init_memcpy(struct unipro_tx_calltable **table);
+int unipro_tx_init_dma(struct unipro_tx_calltable **table);
 int _unipro_reset_cport(unsigned int cportid);
 void unipro_reset_notify(unsigned int cportid);
 void unipro_switch_rxbuf(unsigned int cportid, void *buffer);
