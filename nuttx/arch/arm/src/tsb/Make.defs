@@ -122,9 +122,9 @@ CMN_CSRCS += tsb_es2_mphy_fixups.c
 ifeq ($(CONFIG_ARCH_UNIPROTX_USE_DMA), y)
 CMN_CSRCS += tsb_unipro_tx_dma.c
 CMN_CSRCS += tsb_atabl.c
-else
-CMN_CSRCS += tsb_unipro_tx.c
 endif
+
+CMN_CSRCS += tsb_unipro_tx.c
 
 ifeq ($(CONFIG_ARCH_CHIP_USB_HCD),y)
 CHIP_CSRCS += tsb_usb.c

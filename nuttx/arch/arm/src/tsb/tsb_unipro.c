@@ -740,10 +740,9 @@ void unipro_init(void)
 
     retval =
 #if defined(CONFIG_ARCH_UNIPROTX_USE_DMA)
-        unipro_tx_init_dma(&tx_calltable);
-#else
-        unipro_tx_init_memcpy(&tx_calltable);
+        (tsb_get_rev_id() == tsb_rev_es3) ? unipro_tx_init_dma(&tx_calltable) :
 #endif
+        unipro_tx_init_memcpy(&tx_calltable);
 
     if (retval) {
         free(cporttable);
