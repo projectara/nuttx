@@ -58,11 +58,12 @@
 #define IOEXP_U4430_I2C_ADDR    0x0a
 #define IOEXP_U4550_I2C_ADDR    0x21
 #define IOEXP_U4570_I2C_ADDR    0x20
-#define IOEXP_U4430_RESET       U4430_GPIO_PIN(17)
+#define IOEXP_U4430_RESET       U4550_GPIO_PIN(14)
 #define IOEXP1_INT_N            STM32_GPIO_PIN(GPIO_PORTE | GPIO_PIN9)
 #define EVT2_IOEXP1_INT_N       STM32_GPIO_PIN(GPIO_PORTE | GPIO_PIN10)
 #define IOEXP2_INT_N            STM32_GPIO_PIN(GPIO_PORTE | GPIO_PIN10)
 #define SVC_RST_IOEXP1          STM32_GPIO_PIN(GPIO_PORTC | GPIO_PIN14)
+#define EVT2_SVC_RST_IOEXP1     STM32_GPIO_PIN(GPIO_PORTC | GPIO_PIN3)
 #define SVC_RST_IOEXP2          STM32_GPIO_PIN(GPIO_PORTC | GPIO_PIN15)
 #define SVC_RST_IOEXP1_GPIO     (GPIO_OUTPUT | GPIO_OPENDRAIN | GPIO_PULLUP | \
                                  GPIO_PORTC | GPIO_PIN14)
@@ -118,22 +119,23 @@
  * Latch pins
  */
 #define LATCH_1_DET    STM32_GPIO_PIN(GPIO_PORTC | GPIO_PIN0)
-#define LATCH_2_DET    STM32_GPIO_PIN(GPIO_PORTC | GPIO_PIN2)
-#define LATCH_3A_DET   STM32_GPIO_PIN(GPIO_PORTC | GPIO_PIN3)
-#define LATCH_3B_DET   STM32_GPIO_PIN(GPIO_PORTC | GPIO_PIN4)
-#define LATCH_4A_DET   STM32_GPIO_PIN(GPIO_PORTC | GPIO_PIN6)
+#define LATCH_2_DET    STM32_GPIO_PIN(GPIO_PORTC | GPIO_PIN13)
+#define LATCH_3A_DET   STM32_GPIO_PIN(GPIO_PORTC | GPIO_PIN14)
+#define LATCH_3B_DET   STM32_GPIO_PIN(GPIO_PORTC | GPIO_PIN15)
+#define LATCH_4A_DET   STM32_GPIO_PIN(GPIO_PORTC | GPIO_PIN8)
 #define LATCH_4B_DET   STM32_GPIO_PIN(GPIO_PORTC | GPIO_PIN7)
 
 #define LATCH_1_DET_GPIO    (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTC | GPIO_PIN0)
-#define LATCH_2_DET_GPIO    (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTC | GPIO_PIN2)
-#define LATCH_3A_DET_GPIO   (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTC | GPIO_PIN3)
-#define LATCH_3B_DET_GPIO   (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTC | GPIO_PIN4)
-#define LATCH_4A_DET_GPIO   (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTC | GPIO_PIN6)
+#define LATCH_2_DET_GPIO    (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTC | GPIO_PIN13)
+#define LATCH_3A_DET_GPIO   (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTC | GPIO_PIN14)
+#define LATCH_3B_DET_GPIO   (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTC | GPIO_PIN15)
+#define LATCH_4A_DET_GPIO   (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTC | GPIO_PIN8)
 #define LATCH_4B_DET_GPIO   (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTC | GPIO_PIN7)
 
-#define MOD_SENSE       STM32_GPIO_PIN(GPIO_PORTE | GPIO_PIN3)
-#define LATCH_ILIM_EN   STM32_GPIO_PIN(GPIO_PORTE | GPIO_PIN7)
-#define LATCH_VDD_EN    STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN7)
+#define MOD_SENSE           STM32_GPIO_PIN(GPIO_PORTC | GPIO_PIN2)
+#define VREG_3V_ALWAYS_ON   STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN0)
+#define LATCH_ILIM_EN       STM32_GPIO_PIN(GPIO_PORTE | GPIO_PIN7)
+#define LATCH_VDD_EN        STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN2)
 
 /* Module release pins */
 #define MOD_RELEASE_1_CONFIG  (GPIO_OUTPUT | GPIO_OUTPUT_CLEAR \
@@ -142,6 +144,8 @@
                                 | GPIO_PUSHPULL | GPIO_PORTD | GPIO_PIN1)
 #define MOD_RELEASE_3A_CONFIG  (GPIO_OUTPUT | GPIO_OUTPUT_CLEAR \
                                 | GPIO_PUSHPULL | GPIO_PORTD | GPIO_PIN2)
+#define EVT2_MOD_RELEASE_3A_CONFIG (GPIO_OUTPUT | GPIO_OUTPUT_CLEAR \
+                                | GPIO_PUSHPULL | GPIO_PORTA | GPIO_PIN7)
 #define MOD_RELEASE_3B_CONFIG  (GPIO_OUTPUT | GPIO_OUTPUT_CLEAR \
                                 | GPIO_PUSHPULL | GPIO_PORTD | GPIO_PIN4)
 #define MOD_RELEASE_4A_CONFIG  (GPIO_OUTPUT | GPIO_OUTPUT_CLEAR \
@@ -154,6 +158,7 @@
 #define MOD_RELEASE_1       STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN0)
 #define MOD_RELEASE_2       STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN1)
 #define MOD_RELEASE_3A      STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN2)
+#define EVT2_MOD_RELEASE_3A STM32_GPIO_PIN(GPIO_PORTA | GPIO_PIN7)
 #define MOD_RELEASE_3B      STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN4)
 #define MOD_RELEASE_4A      STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN6)
 #define MOD_RELEASE_4B      STM32_GPIO_PIN(GPIO_PORTD | GPIO_PIN7)
@@ -185,6 +190,7 @@
                             GPIO_PORTB | GPIO_PIN12)
 
 /* VSYS enable */
+#define VSYS_EN_PULL       U4550_GPIO_PIN(12)
 #define VSYS_EN1_N         U4550_GPIO_PIN(0)
 #define VSYS_EN2_N         U4550_GPIO_PIN(2)
 #define VSYS_EN3A_N        U4550_GPIO_PIN(4)
@@ -612,7 +618,7 @@ DECLARE_MODULE_PORT_INTERFACE(evt2_module_3A, "module_3a",
                               evt1_5_module_3A_vsys_vreg_data,
                               evt2_module_3A_refclk_vreg_data, 4, WD_3A_DET,
                               ARA_IFACE_WD_ACTIVE_LOW, true,
-                              MOD_RELEASE_3A);
+                              EVT2_MOD_RELEASE_3A);
 DECLARE_MODULE_PORT_INTERFACE(evt2_module_3B, "module_3b",
                               evt1_5_module_3B_vsys_vreg_data,
                               evt2_module_3B_refclk_vreg_data, 2, WD_3B_DET,
@@ -649,6 +655,11 @@ static struct vreg_data vlatch_vdd_vreg_data[] = {
     INIT_ACTIVE_HIGH_VREG_DATA(LATCH_VDD_EN, 0),
 };
 DECLARE_VREG(vlatch_vdd_vreg, vlatch_vdd_vreg_data);
+
+static struct vreg_data vreg_3v_always_on_data[] = {
+    INIT_ACTIVE_HIGH_VREG_DATA(VREG_3V_ALWAYS_ON, 0),
+};
+DECLARE_VREG(vreg_3v_always_on, vreg_3v_always_on_data);
 
 /*
  * DB3.5 interface ports
@@ -734,7 +745,7 @@ static struct io_expander_info evt2_io_expanders[] = {
         .part      = TCA6416_PART,
         .i2c_bus   = IOEXP_I2C_BUS,
         .i2c_addr  = IOEXP_U4550_I2C_ADDR,
-        .reset     = SVC_RST_IOEXP1,
+        .reset     = EVT2_SVC_RST_IOEXP1,
         .irq       = TCA64XX_IO_UNUSED,
         .gpio_base = U4550_GPIO_CHIP_START,
     },
@@ -756,6 +767,11 @@ static struct vreg_data refclk_main_vreg_data[] = {
 };
 
 DECLARE_VREG(refclk_main_vreg, refclk_main_vreg_data);
+
+static struct vreg_data evt2_refclk_main_vreg_data[] = {
+    INIT_MODULE_CLK_DATA(REFCLK_REQ),
+};
+DECLARE_VREG(evt2_refclk_main_vreg, evt2_refclk_main_vreg_data);
 
 static int uart_msm_rx_gpio_handler(int irq, void *context)
 {
@@ -972,6 +988,13 @@ struct ara_board_info evt1_5_board_info = {
 static int evt2_board_init(struct ara_board_info *board_info) {
     int rc;
 
+    /* For now, always enable 3V_ALWAYS_ON */
+    rc = vreg_config(&vreg_3v_always_on) || vreg_get(&vreg_3v_always_on);
+    if (rc) {
+        dbg_error("%s: can't enable 3V_ALWAYS_ON: %d\n", __func__, rc);
+        return rc;
+    }
+
     /*
      * VSYS and VCHG are active high with a pull-up.
      * Initialize these lines as output low to prevent any spurious
@@ -990,6 +1013,9 @@ static int evt2_board_init(struct ara_board_info *board_info) {
     gpio_direction_out(VCHG_EN4A_N, 0);
     gpio_direction_out(VCHG_EN4B_N, 0);
 
+    /* Now that VSYS are driven we can enable VSYS_EN_PULL */
+    gpio_direction_out(VSYS_EN_PULL, 1);
+
     gpio_direction_out(IOEXP_U4430_RESET, 0);
 
     rc = ara_cpld_register(&evt2_cpld);
@@ -999,7 +1025,8 @@ static int evt2_board_init(struct ara_board_info *board_info) {
     }
 
     /* For now, just always enable REFCLK_MAIN and the buffers. */
-    rc = vreg_config(&refclk_main_vreg) || vreg_get(&refclk_main_vreg);
+    rc = vreg_config(&evt2_refclk_main_vreg) ||
+         vreg_get(&evt2_refclk_main_vreg);
     if (rc) {
         dbg_error("%s: can't start REFCLK_MAIN: %d\n", __func__, rc);
         return rc;
@@ -1038,13 +1065,10 @@ static int evt2_board_init(struct ara_board_info *board_info) {
     /* Configure the module release pins */
     stm32_configgpio(MOD_RELEASE_1_CONFIG);
     stm32_configgpio(MOD_RELEASE_2_CONFIG);
-    stm32_configgpio(MOD_RELEASE_3A_CONFIG);
+    stm32_configgpio(EVT2_MOD_RELEASE_3A_CONFIG);
     stm32_configgpio(MOD_RELEASE_3B_CONFIG);
     stm32_configgpio(MOD_RELEASE_4A_CONFIG);
     stm32_configgpio(MOD_RELEASE_4B_CONFIG);
-
-    /* Configure ARA key input pin */
-    stm32_configgpio(ARA_KEY_CONFIG);
 
     /*
      * (Module hotplug pins unconfigured. TODO, part of SW-1942.)
@@ -1079,10 +1103,6 @@ struct ara_board_info evt2_board_info = {
     .pwrmon                 = NULL,
 
     .board_init             = evt2_board_init,
-
-    .ara_key_gpio           = ARA_KEY,
-    .ara_key_rising_edge    = true,
-    .ara_key_configured     = true,
 
     .vlatch_vdd = &vlatch_vdd_vreg,
     .latch_ilim = &latch_ilim_vreg,
