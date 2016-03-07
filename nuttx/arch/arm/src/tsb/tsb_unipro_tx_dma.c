@@ -226,8 +226,7 @@ static int unipro_dma_tx_callback(struct device *dev, void *chan,
     struct unipro_xfer_descriptor *desc = arg;
     int retval = OK;
 
-    if ((event & DEVICE_DMA_CALLBACK_EVENT_START) &&
-        (tsb_get_rev_id() != tsb_rev_es2)) {
+    if (event & DEVICE_DMA_CALLBACK_EVENT_START) {
         int req_activated = 0;
         struct dma_channel *desc_chan = desc->channel;
 
@@ -278,10 +277,8 @@ static int unipro_dma_tx_callback(struct device *dev, void *chan,
                 desc->callback(0, desc->data, desc->priv);
             }
 
-            if (tsb_get_rev_id() != tsb_rev_es2) {
-                device_atabl_transfer_completed(unipro_dma.atabl_dev,
-                                                desc_chan->req);
-            }
+            device_atabl_transfer_completed(unipro_dma.atabl_dev,
+                                            desc_chan->req);
 
             unipro_xfer_dequeue_descriptor(desc);
 
@@ -303,10 +300,6 @@ static int unipro_dma_tx_callback(struct device *dev, void *chan,
             if (retval) {
                 return retval;
             }
-    }
-
-    if (tsb_get_rev_id() == tsb_rev_es2) {
-        return retval;
     }
 
     /*
@@ -380,17 +373,9 @@ static int unipro_dma_xfer(struct unipro_xfer_descriptor *desc,
     void *xfer_buf;
     struct device_dma_op *dma_op = NULL;
 
-    if (tsb_get_rev_id() == tsb_rev_es2) {
-        xfer_len = unipro_get_tx_free_buffer_space(desc->cport);
-        if (!xfer_len)
-            return -ENOSPC;
+    DEBUGASSERT(desc->data_offset == 0);
 
-        xfer_len = MIN(desc->len - desc->data_offset, xfer_len);
-    } else {
-        DEBUGASSERT(desc->data_offset == 0);
-
-        xfer_len = desc->len;
-    }
+    xfer_len = desc->len;
 
     retval = device_dma_op_alloc(unipro_dma.dev, 1, 0, &dma_op);
     if (retval != OK) {
@@ -402,12 +387,10 @@ static int unipro_dma_xfer(struct unipro_xfer_descriptor *desc,
     dma_op->callback = (void *) unipro_dma_tx_callback;
     dma_op->callback_arg = desc;
     dma_op->callback_events = DEVICE_DMA_CALLBACK_EVENT_COMPLETE;
-    if (tsb_get_rev_id() != tsb_rev_es2) {
-       dma_op->callback_events |=  DEVICE_DMA_CALLBACK_EVENT_START;
-       dma_op->callback_events |=  DEVICE_DMA_CALLBACK_EVENT_ERROR;
-       dma_op->callback_events |=  DEVICE_DMA_CALLBACK_EVENT_RECOVERED;
-       dma_op->callback_events |=  DEVICE_DMA_CALLBACK_EVENT_DEQUEUED;
-    }
+    dma_op->callback_events |=  DEVICE_DMA_CALLBACK_EVENT_START;
+    dma_op->callback_events |=  DEVICE_DMA_CALLBACK_EVENT_ERROR;
+    dma_op->callback_events |=  DEVICE_DMA_CALLBACK_EVENT_RECOVERED;
+    dma_op->callback_events |=  DEVICE_DMA_CALLBACK_EVENT_DEQUEUED;
     dma_op->sg_count = 1;
     dma_op->sg[0].len = xfer_len;
 
@@ -580,34 +563,32 @@ int unipro_tx_init_dma(struct unipro_tx_calltable **table)
         return -ENODEV;
     }
 
-    if (tsb_get_rev_id() != tsb_rev_es2) {
-        /*
-         * Setup HW hand shake threshold.
-         */
-        for (i = 0; i < unipro_cport_count(); i++) {
-            uint32_t offset_value =
-                unipro_read(REG_TX_BUFFER_SPACE_OFFSET_REG(i));
+    /*
+     * Setup HW hand shake threshold.
+     */
+    for (i = 0; i < unipro_cport_count(); i++) {
+        uint32_t offset_value =
+            unipro_read(REG_TX_BUFFER_SPACE_OFFSET_REG(i));
 
 
 #ifdef CONFIG_ARCH_UNIPROTX_DMA_WMB
-            unipro_write(REG_TX_BUFFER_SPACE_OFFSET_REG(i),
-                        offset_value | (0x10 << 8));
+        unipro_write(REG_TX_BUFFER_SPACE_OFFSET_REG(i),
+                     offset_value | (0x10 << 8));
 #else
-            unipro_write(REG_TX_BUFFER_SPACE_OFFSET_REG(i),
-                        offset_value | (0x20 << 8));
+        unipro_write(REG_TX_BUFFER_SPACE_OFFSET_REG(i),
+                     offset_value | (0x20 << 8));
 #endif
-        }
+    }
 
-        /*
-         * Open Atabl driver.
-         */
-        unipro_dma.atabl_dev = device_open(DEVICE_TYPE_ATABL_HW, 0);
-        if (!unipro_dma.atabl_dev) {
-            lldbg("unipro: Failed to open ATABL driver.\n");
+    /*
+     * Open Atabl driver.
+     */
+    unipro_dma.atabl_dev = device_open(DEVICE_TYPE_ATABL_HW, 0);
+    if (!unipro_dma.atabl_dev) {
+        lldbg("unipro: Failed to open ATABL driver.\n");
 
-            device_close(unipro_dma.dev);
-            return -ENODEV;
-        }
+        device_close(unipro_dma.dev);
+        return -ENODEV;
     }
 
     unipro_dma.max_channel = 0;
@@ -618,14 +599,12 @@ int unipro_tx_init_dma(struct unipro_tx_calltable **table)
         avail_chan = ARRAY_SIZE(unipro_dma.dma_channels);
     }
 
-    if (tsb_get_rev_id() != tsb_rev_es2) {
-        dst_device = DEVICE_DMA_DEV_UNIPRO;
+    dst_device = DEVICE_DMA_DEV_UNIPRO;
 
-        if (device_atabl_req_free_count(unipro_dma.atabl_dev) < avail_chan) {
-            device_close(unipro_dma.dev);
-            device_close(unipro_dma.atabl_dev);
-            return -ENODEV;
-        }
+    if (device_atabl_req_free_count(unipro_dma.atabl_dev) < avail_chan) {
+        device_close(unipro_dma.dev);
+        device_close(unipro_dma.atabl_dev);
+        return -ENODEV;
     }
 
     for (i = 0; i < avail_chan; i++) {
@@ -641,16 +620,14 @@ int unipro_tx_init_dma(struct unipro_tx_calltable **table)
                 .swap = DEVICE_DMA_SWAP_SIZE_NONE,
         };
 
-        if (tsb_get_rev_id() != tsb_rev_es2) {
-            if (device_atabl_req_alloc(unipro_dma.atabl_dev,
-                                        &unipro_dma.dma_channels[i].req)) {
-                 break;
-             }
-
-             chan_params.dst_devid = device_atabl_req_to_peripheral_id(
-                                        unipro_dma.atabl_dev,
-                                        unipro_dma.dma_channels[i].req);
+        if (device_atabl_req_alloc(unipro_dma.atabl_dev,
+                                    &unipro_dma.dma_channels[i].req)) {
+            break;
         }
+
+        chan_params.dst_devid = device_atabl_req_to_peripheral_id(
+                                    unipro_dma.atabl_dev,
+                                    unipro_dma.dma_channels[i].req);
 
         device_dma_chan_alloc(unipro_dma.dev, &chan_params,
                               &unipro_dma.dma_channels[i].chan);
@@ -686,10 +663,8 @@ int unipro_tx_init_dma(struct unipro_tx_calltable **table)
 error_worker_create:
 
     for (i = 0; i < unipro_dma.max_channel; i++) {
-        if (tsb_get_rev_id() != tsb_rev_es2) {
-            device_atabl_req_free(unipro_dma.atabl_dev,
-                                  &unipro_dma.dma_channels[i].req);
-        }
+        device_atabl_req_free(unipro_dma.atabl_dev,
+                              &unipro_dma.dma_channels[i].req);
 
         device_dma_chan_free(unipro_dma.dev, &unipro_dma.dma_channels[i]);
     }
@@ -697,10 +672,8 @@ error_worker_create:
     unipro_dma.max_channel = 0;
 
 error_no_channel:
-    if (tsb_get_rev_id() != tsb_rev_es2) {
-        device_close(unipro_dma.atabl_dev);
-        unipro_dma.atabl_dev = NULL;
-    }
+    device_close(unipro_dma.atabl_dev);
+    unipro_dma.atabl_dev = NULL;
 
     device_close(unipro_dma.dev);
     unipro_dma.dev = NULL;
