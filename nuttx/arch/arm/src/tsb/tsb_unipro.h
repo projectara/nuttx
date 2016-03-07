@@ -63,9 +63,16 @@ struct cport {
     struct list_head tx_fifo;
 };
 
+struct unipro_tx_calltable {
+    void (*reset_notify)(unsigned int cportid);
+    int  (*send)(unsigned int cportid, const void *buf, size_t len);
+    int  (*send_async)(unsigned int cportid, const void *buf, size_t len,
+                       unipro_send_completion_t callback, void *priv);
+};
+
 struct cport *cport_handle(unsigned int cportid);
 uint16_t unipro_get_tx_free_buffer_space(struct cport *cport);
-int unipro_tx_init(void);
+int unipro_tx_init(struct unipro_tx_calltable **table);
 int _unipro_reset_cport(unsigned int cportid);
 void unipro_reset_notify(unsigned int cportid);
 void unipro_switch_rxbuf(unsigned int cportid, void *buffer);

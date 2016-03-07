@@ -133,6 +133,29 @@ static void dump_regs(void);
 static int irq_rx_eom(int, void*);
 static int irq_unipro(int, void*);
 
+/* Pointer to Unipro TX Calltable provided upon successful init */
+static struct unipro_tx_calltable *tx_calltable;
+
+int unipro_send(unsigned int cportid, const void *buf, size_t len) {
+    return (tx_calltable && tx_calltable->send) ?
+        tx_calltable->send(cportid, buf, len) :
+        -EINVAL;
+}
+
+int unipro_send_async(unsigned int cportid, const void *buf, size_t len,
+                      unipro_send_completion_t callback, void *priv) {
+    return (tx_calltable && tx_calltable->send_async) ?
+        tx_calltable->send_async(cportid, buf, len, callback, priv) :
+        -EINVAL;
+}
+
+void unipro_reset_notify(unsigned int cportid) {
+    if (tx_calltable && tx_calltable->reset_notify) {
+        tx_calltable->reset_notify(cportid);
+    }
+}
+
+
 static uint32_t unipro_read(uint32_t offset) {
     return getreg32((volatile unsigned int*)(AIO_UNIPRO_BASE + offset));
 }
@@ -715,7 +738,7 @@ void unipro_init(void)
         return;
     }
 
-    retval = unipro_tx_init();
+    retval = unipro_tx_init(&tx_calltable);
     if (retval) {
         free(cporttable);
         cporttable = NULL;

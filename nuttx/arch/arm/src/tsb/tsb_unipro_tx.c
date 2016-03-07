@@ -213,7 +213,7 @@ static void *unipro_tx_worker(void *data)
     return NULL;
 }
 
-void unipro_reset_notify(unsigned int cportid)
+static void unipro_reset_notify_memcpy(unsigned int cportid)
 {
     /*
      * if the tx worker is blocked on the semaphore, post something on it
@@ -231,8 +231,8 @@ void unipro_reset_notify(unsigned int cportid)
  * @param[in]       callback: function called upon Tx completion
  * @param[in]       priv: optional argument passed to callback
  */
-int unipro_send_async(unsigned int cportid, const void *buf, size_t len,
-                      unipro_send_completion_t callback, void *priv)
+static int unipro_send_async_memcpy(unsigned int cportid, const void *buf, size_t len,
+                                    unipro_send_completion_t callback, void *priv)
 {
     struct cport *cport;
     struct unipro_buffer *buffer;
@@ -284,7 +284,7 @@ int unipro_send_async(unsigned int cportid, const void *buf, size_t len,
  * @param len size of data to send
  * @param 0 on success, <0 on error
  */
-int unipro_send(unsigned int cportid, const void *buf, size_t len)
+static int unipro_send_memcpy(unsigned int cportid, const void *buf, size_t len)
 {
     int ret, sent;
     bool som;
@@ -378,7 +378,13 @@ static int unipro_send_sync(unsigned int cportid,
     return (int) count;
 }
 
-int unipro_tx_init(void)
+static struct unipro_tx_calltable calltable = {
+    unipro_reset_notify_memcpy,
+    unipro_send_memcpy,
+    unipro_send_async_memcpy
+};
+
+int unipro_tx_init(struct unipro_tx_calltable **table)
 {
     int retval;
 
@@ -389,6 +395,8 @@ int unipro_tx_init(void)
         lldbg("Failed to create worker thread: %s.\n", strerror(errno));
         return retval;
     }
+
+    *table = &calltable;
 
     return 0;
 }

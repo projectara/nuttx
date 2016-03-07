@@ -475,7 +475,7 @@ static void *unipro_tx_worker(void *data)
     return NULL;
 }
 
-void unipro_reset_notify(unsigned int cportid)
+static void unipro_reset_notify_dma(unsigned int cportid)
 {
     /*
      * if the tx worker is blocked on the semaphore, post something on it
@@ -484,7 +484,7 @@ void unipro_reset_notify(unsigned int cportid)
     sem_post(&worker.tx_fifo_lock);
 }
 
-int unipro_send_async(unsigned int cportid, const void *buf, size_t len,
+static int unipro_send_async_dma(unsigned int cportid, const void *buf, size_t len,
         unipro_send_completion_t callback, void *priv)
 {
     struct cport *cport;
@@ -537,14 +537,14 @@ static int unipro_send_cb(int status, const void *buf, void *priv)
     return 0;
 }
 
-int unipro_send(unsigned int cportid, const void *buf, size_t len)
+static int unipro_send_dma(unsigned int cportid, const void *buf, size_t len)
 {
     int retval;
     struct unipro_xfer_descriptor_sync desc;
 
     sem_init(&desc.lock, 0, 0);
 
-    retval = unipro_send_async(cportid, buf, len, unipro_send_cb, &desc);
+    retval = unipro_send_async_dma(cportid, buf, len, unipro_send_cb, &desc);
     if (retval) {
         goto out;
     }
@@ -558,7 +558,13 @@ out:
     return retval;
 }
 
-int unipro_tx_init(void)
+static struct unipro_tx_calltable calltable = {
+    unipro_reset_notify_dma,
+    unipro_send_dma,
+    unipro_send_async_dma
+};
+
+int unipro_tx_init(struct unipro_tx_calltable **table)
 {
     int i;
     int retval;
@@ -672,6 +678,8 @@ int unipro_tx_init(void)
         lldbg("unipro: Failed to create worker thread: %s.\n", strerror(errno));
         goto error_worker_create;
     }
+
+    *table = &calltable;
 
     return 0;
 
