@@ -172,24 +172,24 @@ static int event_linkup(struct tsb_switch_event *ev) {
     switch (ev->linkup.val) {
     case SW_LINKUP_INITIATE:
         /* Initiate the LinkUp. The Switch will notify the result back */
-        iface->linkup_retries = 0;
+        interface_set_linkup_retries_atomic(iface, 0);
         rc = switch_link_startup(svc->sw, ev->linkup.port);
         break;
     case TSB_LINKUP_FAIL:
-        interface_cancel_linkup_wd(iface);
+        interface_cancel_linkup_wd_atomic(iface);
         /* LinkUp failed, retry until max retries count is reached */
         if (iface->linkup_retries >= INTERFACE_MAX_LINKUP_TRIES) {
-            interface_power_off(iface);
+            interface_power_off_atomic(iface);
             dbg_error("%s: Max LinkUp retry count reached for %s, aborting...\n",
                       __func__, iface->name);
             rc = -ENOLINK;
         } else {
-            iface->linkup_retries++;
+            interface_set_linkup_retries_atomic(iface, iface->linkup_retries+1);
             rc = switch_link_startup(svc->sw, ev->linkup.port);
         }
        break;
     case TSB_LINKUP_SUCCESS:
-        interface_cancel_linkup_wd(iface);
+        interface_cancel_linkup_wd_atomic(iface);
         /* LinkUp succeeded, do nothing. The mailbox handshake follows */
         break;
     default:
@@ -396,7 +396,7 @@ int svc_intf_device_id(uint8_t intf_id, uint8_t dev_id) {
         return rc;
     }
 
-    return interface_set_devid_by_id(intf_id, dev_id);
+    return interface_set_devid_by_id_atomic(intf_id, dev_id);
 }
 
 /**
@@ -808,19 +808,12 @@ static int svc_handle_module_ready(uint8_t portid) {
 static int svc_consume_hotplug_events(void)
 {
     int i;
-    irqstate_t flags;
-
-    /*
-     * Disable IRQs so that no new hotplug or hot-unplug event arrives
-     * from the detection signals.
-     */
-    flags = irqsave();
 
     for (i = 0; i < SWITCH_PORT_MAX; i++) {
-        switch (interface_consume_hotplug_state(i)) {
+        switch (interface_consume_hotplug_state_atomic(i)) {
         /* Port is plugged in, send event to the AP */
         case HOTPLUG_ST_PLUGGED:
-            svc_hot_plug(i);
+            svc_hot_plug(i, true);
             break;
         /*
          * Module not present, don't send event to the AP as the AP never got a
@@ -836,8 +829,6 @@ static int svc_consume_hotplug_events(void)
         }
     }
 
-    irqrestore(flags);
-
     return 0;
 }
 
@@ -848,7 +839,7 @@ static int svc_consume_hotplug_events(void)
  * The actual hotplug event will be sent to the AP after the
  * handshake mechanism with the bridge succeeds.
  */
-int svc_hot_plug(uint8_t portid)
+int svc_hot_plug(uint8_t portid, bool lock_interface)
 {
     bool release_mutex;
     int retval;
@@ -862,7 +853,7 @@ int svc_hot_plug(uint8_t portid)
     switch_port_irq_enable(svc->sw, portid, true);
     if (!svc->ap_initialized) {
         /* If AP is not ready yet, store the state for later retrieval */
-        interface_store_hotplug_state(portid, HOTPLUG_ST_PLUGGED);
+        interface_store_hotplug_state_atomic(portid, HOTPLUG_ST_PLUGGED, lock_interface);
     }
 
     if (release_mutex) {
@@ -875,7 +866,7 @@ int svc_hot_plug(uint8_t portid)
 /**
  * @brief Send hot_plug event from the interface detection signals
  */
-int svc_hot_unplug(uint8_t portid)
+int svc_hot_unplug(uint8_t portid, bool lock_interface)
 {
     bool release_mutex;
     struct svc_event *svc_ev;
@@ -908,7 +899,7 @@ int svc_hot_unplug(uint8_t portid)
         }
     } else {
         /* If AP is not ready yet, store the state for later retrieval */
-        interface_store_hotplug_state(portid, HOTPLUG_ST_UNPLUGGED);
+        interface_store_hotplug_state_atomic(portid, HOTPLUG_ST_UNPLUGGED, lock_interface);
     }
 
 out:

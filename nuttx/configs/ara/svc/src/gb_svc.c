@@ -560,10 +560,10 @@ static uint8_t gb_svc_intf_pwr_enable(struct gb_operation *operation)
      */
     switch (request->enable) {
     case GB_SVC_INTF_PWR_ENABLE:
-        status = interface_power_on(iface);
+        status = interface_power_on_atomic(iface);
         break;
     case GB_SVC_INTF_PWR_DISABLE:
-        status = interface_power_off(iface);
+        status = interface_power_off_atomic(iface);
         break;
     default:
         return GB_OP_INVALID;

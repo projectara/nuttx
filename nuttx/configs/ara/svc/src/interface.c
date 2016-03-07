@@ -64,12 +64,37 @@ static unsigned int nr_spring_interfaces;
 static struct work_s linkup_work;
 static struct vreg *vlatch_vdd;
 static struct vreg *latch_ilim;
-static pthread_mutex_t latch_ilim_lock = PTHREAD_MUTEX_INITIALIZER;
 static uint8_t mod_sense;
 
 static void interface_power_cycle(void *data);
-static void interface_uninstall_wd_handler(struct wd_data *wd);
+static void interface_uninstall_wd_handler(struct interface *iface,
+                                           struct wd_data *wd);
 static int interface_install_wd_handler(struct interface *iface, bool);
+
+/*
+ * Debug macros to verify the interface mutex logic - this should be removed
+ * in the long term. A thread locking a mutex that it already owns is a bug and
+ * we should fix those bugs.
+ */
+#define pthread_mutex_lock_debug(mutex) {                     \
+    int ret;                                                  \
+                                                              \
+    ret = pthread_mutex_lock(mutex);                          \
+    if (ret) {                                                \
+        PANIC();                                              \
+        while(1){};                                           \
+    }                                                         \
+}
+
+#define pthread_mutex_unlock_debug(mutex) {                   \
+    int ret;                                                  \
+                                                              \
+    ret = pthread_mutex_unlock(mutex);                        \
+    if (ret) {                                                \
+        PANIC();                                              \
+        while(1){};                                           \
+    }                                                         \
+}
 
 /**
  * @brief Configure all the voltage regulators associated with an interface
@@ -238,19 +263,19 @@ static int interface_power_disable(struct interface *iface)
     return rc;
 }
 
-
 /*
  * @brief Generate a WAKEOUT signal to wake-up/power-up modules.
  * If assert is true, keep the WAKEOUT lines asserted.
  *
  * The corresponding power supplies must already be enabled.
+ * Requires caller to hold iface->mutex
  */
-int interface_generate_wakeout(struct interface *iface, bool assert,
-                               int length)
+static int interface_generate_wakeout(struct interface *iface,
+                                             bool assert, int length)
 {
-    int rc;
     uint32_t gpio;
     bool polarity;
+    int rc = 0;
 
     if (!iface) {
         dbg_error("%s: called with null interface\n", __func__);
@@ -296,7 +321,7 @@ int interface_generate_wakeout(struct interface *iface, bool assert,
         switch (iface->if_type) {
         case ARA_IFACE_TYPE_MODULE_PORT:
             /* First uninstall the interrupt handler on the pin */
-            interface_uninstall_wd_handler(&iface->detect_in);
+            interface_uninstall_wd_handler(iface, &iface->detect_in);
             break;
 
         case ARA_IFACE_TYPE_MODULE_PORT2:
@@ -336,8 +361,24 @@ int interface_generate_wakeout(struct interface *iface, bool assert,
             return -ENOTSUP;
         }
     }
+    return rc;
+}
 
-    return 0;
+/*
+ * @brief helper function for interface_generate_wakeout ensures calling
+ *        context holds the interface mutex when calling into
+ *        interface_generate_wakeout().
+ */
+int interface_generate_wakeout_atomic(struct interface *iface, bool assert,
+                                      int length)
+{
+    int rc;
+
+    pthread_mutex_lock_debug(&iface->mutex);
+    rc = interface_generate_wakeout(iface, assert, length);
+    pthread_mutex_unlock_debug(&iface->mutex);
+
+    return rc;
 }
 
 
@@ -372,12 +413,14 @@ interface_get_refclk_state(struct interface *iface)
 
 
 /*
- * Interface power control helper, to be used by the DETECT_IN/hotplug
+ * @brief Interface power control helper, to be used by the DETECT_IN/hotplug
  * mechanism.
+ * @param Interface to power off
  *
  * Power OFF the interface
+ * Requires caller to hold iface->mutex
  */
-int interface_power_off(struct interface *iface)
+static int interface_power_off(struct interface *iface)
 {
     int rc;
 
@@ -408,13 +451,32 @@ int interface_power_off(struct interface *iface)
     return 0;
 }
 
+/*
+ * @brief interface_power_off_atomic - non-static external helper function
+ *        calls interface_power_off holding iface->mutex, then releases mutex
+ * @param Interface to power off
+ */
+int interface_power_off_atomic(struct interface *iface)
+{
+    int rc;
+
+    pthread_mutex_lock_debug(&iface->mutex);
+    rc = interface_power_off(iface);
+    pthread_mutex_unlock_debug(&iface->mutex);
+
+    return rc;
+}
+
+/*
+ * @brief linkup timeout callback
+ *        context watchdog IRQ - increment of linkup timeout accomplished
+ *        in workqueue context @ interface_power_cycle
+ */
 static void interface_linkup_timeout(int argc, uint32_t arg1, ...)
 {
     struct interface *iface = (struct interface*) arg1;
 
     DEBUGASSERT(sizeof(struct interface*) == sizeof(uint32_t));
-
-    iface->linkup_retries++;
 
     dbg_warn("Link-up took more than %d ms, turning interface '%s' OFF and ON again\n",
              LINKUP_WD_DELAY_IN_MS, iface->name);
@@ -422,6 +484,9 @@ static void interface_linkup_timeout(int argc, uint32_t arg1, ...)
     work_queue(HPWORK, &linkup_work, interface_power_cycle, iface, 0);
 }
 
+/*
+ * Requires calling context to hold iface->mutex
+ */
 static int interface_detect_order(struct interface *iface)
 {
     int retval;
@@ -429,11 +494,6 @@ static int interface_detect_order(struct interface *iface)
     if (iface->if_type != ARA_IFACE_TYPE_MODULE_PORT2) {
         iface->if_order = ARA_IFACE_ORDER_UNKNOWN;
         return -ENOTSUP;
-    }
-
-    retval = pthread_mutex_lock(&latch_ilim_lock);
-    if (retval) {
-        return retval;
     }
 
     retval = vreg_get(vlatch_vdd);
@@ -455,17 +515,11 @@ static int interface_detect_order(struct interface *iface)
         goto error_put_vlatch_vdd;
     }
 
-    retval = pthread_mutex_unlock(&latch_ilim_lock);
-    if (retval) {
-        return retval;
-    }
-
     return 0;
 
 error_get_vlatch_vdd:
     iface->if_order = ARA_IFACE_ORDER_UNKNOWN;
 error_put_vlatch_vdd:
-    pthread_mutex_unlock(&latch_ilim_lock);
     return retval;
 }
 
@@ -476,8 +530,9 @@ error_put_vlatch_vdd:
  * Power ON the interface in order to cleanly reboot the interface
  * module(s). Then an initial handshake between the module(s) and the
  * interface can take place.
+ * Requires calling context to hold iface->mutex
  */
-int interface_power_on(struct interface *iface)
+static int interface_power_on(struct interface *iface)
 {
     int rc;
 
@@ -554,9 +609,31 @@ int interface_power_on(struct interface *iface)
     }
 
     return 0;
+
 }
 
-void interface_cancel_linkup_wd(struct interface *iface)
+/*
+ * interface_power_on_atomic - non-static external helper function
+ *                             calls interface_power_on holding iface->mutex
+ *                             then releases mutex
+ */
+int interface_power_on_atomic(struct interface *iface)
+{
+    int rc;
+
+    pthread_mutex_lock_debug(&iface->mutex);
+    rc = interface_power_on(iface);
+    pthread_mutex_unlock_debug(&iface->mutex);
+
+    return rc;
+}
+
+/*
+ * Cancel a linkup - relies on the state of iface->ejectable
+ *                   and requires calling context to hold
+ *                   iface->mutex to protect iface->ejectable.
+ */
+static void interface_cancel_linkup_wd(struct interface *iface)
 {
     if (!iface->ejectable) {
         /*
@@ -569,23 +646,41 @@ void interface_cancel_linkup_wd(struct interface *iface)
     wd_cancel(&iface->linkup_wd);
 }
 
+/*
+ * interface_cancel_linkup_wd_atomic - non-static external helper function
+ *                                     calls interface_cancel_linkup_wd holding
+ *                                     iface->mutex, then releases mutex
+ */
+void interface_cancel_linkup_wd_atomic(struct interface *iface)
+{
+    pthread_mutex_lock_debug(&iface->mutex);
+    interface_cancel_linkup_wd(iface);
+    pthread_mutex_unlock_debug(&iface->mutex);
+}
+
+/*
+ * interface_power_cycle - workqueue context
+ */
 static void interface_power_cycle(void *data)
 {
     struct interface *iface = data;
     uint8_t retries;
 
+    pthread_mutex_lock_debug(&iface->mutex);
     interface_power_off(iface);
 
-    if (iface->linkup_retries >= INTERFACE_MAX_LINKUP_TRIES) {
+    if (++iface->linkup_retries >= INTERFACE_MAX_LINKUP_TRIES) {
         dbg_error("Could not link-up with '%s' in less than %d ms, aborting after %d tries\n",
                   iface->name, LINKUP_WD_DELAY_IN_MS,
                   INTERFACE_MAX_LINKUP_TRIES);
-        return;
+        goto done;
     }
 
     retries = iface->linkup_retries;
     interface_power_on(iface);
     iface->linkup_retries = retries;
+done:
+    pthread_mutex_unlock_debug(&iface->mutex);
 }
 
 /**
@@ -614,7 +709,6 @@ struct interface* interface_get(uint8_t index)
 
     return interfaces[index];
 }
-
 
 /**
  * @brief           Return the interface struct from the name
@@ -706,13 +800,31 @@ int interface_get_devid_by_id(uint8_t intf_id) {
 /**
  * @brief set a devid for a given an intf_id
  */
-int interface_set_devid_by_id(uint8_t intf_id, uint8_t dev_id) {
+int interface_set_devid_by_id_atomic(uint8_t intf_id, uint8_t dev_id) {
+    struct interface *iface;
+
     if (!intf_id || intf_id > nr_interfaces) {
         return -EINVAL;
     }
-    interfaces[intf_id - 1]->dev_id = dev_id;
+    iface = interfaces[intf_id - 1];
+
+    pthread_mutex_lock_debug(&iface->mutex);
+    iface->dev_id = dev_id;
+    pthread_mutex_unlock_debug(&iface->mutex);
 
     return 0;
+}
+
+/**
+ * @brief set iface->linkup_retries holding the iface mutex
+ *        This ensures synchronization with interface_power_cycle
+ */
+void interface_set_linkup_retries_atomic(struct interface *iface, uint8_t val)
+{
+    /* TODO resolve SW-4249 and uncomment mutex locks */
+    /* pthread_mutex_lock_debug(&iface->mutex); */
+    iface->linkup_retries = val;
+    /* pthread_mutex_unlock_debug(&iface->mutex); */
 }
 
 /**
@@ -790,11 +902,24 @@ uint8_t interface_pm_get_chan(struct interface *iface)
  * while the AP is not yet ready to accept hotplug events. This prevents
  * multiple hotplug and hot-unplug events to be sent to the AP when
  * it is ready.
+ *
+ * External facing function - atomic w/r to the pertinent interface.
+ * Note: due to a code path that can interface->svc->interface we rely on
+ * a flag called lock_interface to decide if the mutex should be taken.
+ *
+ * This is a temporary solution with the expectation that the
+ * interface->svc->interface call chain will be removed; once done the
+ * lock_interface flag should be removed and we should revert to a clean and
+ * simple:
+ * - mutex_lock();
+ * - do something
+ * - mutex_unlock();
  */
-int interface_store_hotplug_state(uint8_t port_id, enum hotplug_state hotplug)
+int interface_store_hotplug_state_atomic(uint8_t port_id, enum hotplug_state hotplug,
+                                         bool lock_interface)
 {
-    irqstate_t flags;
     int intf_id;
+    struct interface *iface;
 
     intf_id = interface_get_id_by_portid(port_id);
     if (intf_id < 0) {
@@ -802,10 +927,17 @@ int interface_store_hotplug_state(uint8_t port_id, enum hotplug_state hotplug)
                   port_id);
         return -EINVAL;
     }
+    iface = interfaces[intf_id - 1];
 
-    flags = irqsave();
-    interfaces[intf_id - 1]->hp_state = hotplug;
-    irqrestore(flags);
+    /* TODO: remove lock_interface */
+    if (lock_interface)
+        pthread_mutex_lock_debug(&iface->mutex);
+
+    iface->hp_state = hotplug;
+
+    /* TODO: remove lock_interface */
+    if (lock_interface)
+        pthread_mutex_unlock_debug(&iface->mutex);
 
     return 0;
 }
@@ -817,22 +949,26 @@ int interface_store_hotplug_state(uint8_t port_id, enum hotplug_state hotplug)
  *
  * This function is used to retrieve and clear the state of the interface
  * in order to generate an event to be sent to the AP.
+ *
+ * External facing function - atomic w/r to the pertinent interface.
+ * Called directly from svc.c.
  */
-enum hotplug_state interface_consume_hotplug_state(uint8_t port_id)
+enum hotplug_state interface_consume_hotplug_state_atomic(uint8_t port_id)
 {
     enum hotplug_state hp_state;
     int intf_id;
-    irqstate_t flags;
+    struct interface *iface;
 
     intf_id = interface_get_id_by_portid(port_id);
     if (intf_id < 0) {
         return HOTPLUG_ST_UNKNOWN;
     }
+    iface = interfaces[intf_id - 1];
 
-    flags = irqsave();
-    hp_state = interfaces[intf_id - 1]->hp_state;
-    interfaces[intf_id - 1]->hp_state = HOTPLUG_ST_UNKNOWN;
-    irqrestore(flags);
+    pthread_mutex_lock_debug(&iface->mutex);
+    hp_state = iface->hp_state;
+    iface->hp_state = HOTPLUG_ST_UNKNOWN;
+    pthread_mutex_unlock_debug(&iface->mutex);
 
     return hp_state;
 }
@@ -841,13 +977,10 @@ enum hotplug_state interface_consume_hotplug_state(uint8_t port_id)
 /**
  * @brief Get the hotplug state of an interface from the DETECT_IN signal
  */
-enum hotplug_state interface_get_hotplug_state(struct interface *iface)
+static enum hotplug_state interface_get_hotplug_state(struct interface *iface)
 {
     bool polarity, active;
     enum hotplug_state hs = HOTPLUG_ST_UNKNOWN;
-    irqstate_t flags;
-
-    flags = irqsave();
 
     if (iface->detect_in.gpio) {
         polarity = iface->detect_in.polarity;
@@ -859,11 +992,8 @@ enum hotplug_state interface_get_hotplug_state(struct interface *iface)
         }
     }
 
-    irqrestore(flags);
-
     return hs;
 }
-
 
 /**
  * @brief Get the interface struct from the Wake & Detect gpio
@@ -883,17 +1013,13 @@ static struct interface* interface_get_by_wd(uint32_t gpio)
     return NULL;
 }
 
-static int interface_wd_handler(int irq, void *context);
-static void interface_wd_delayed_handler(void *data)
-{
-    struct wd_data *wd = (struct wd_data *) data;
-
-    interface_wd_handler(wd->gpio, NULL);
-}
+static void interface_wd_delayed_handler(void *data);
 
 /* Delayed debounce check */
-static int interface_wd_delay_check(struct wd_data *wd, uint32_t delay)
+static int interface_wd_delay_check(struct interface *iface, uint32_t delay)
 {
+    struct wd_data *wd = &iface->detect_in;
+
     /*
      * If the work is already scheduled, do not schedule another one now.
      * A new one will be scheduled if more debounce is needed.
@@ -905,35 +1031,8 @@ static int interface_wd_delay_check(struct wd_data *wd, uint32_t delay)
     pm_activity(SVC_INTF_WD_DEBOUNCE_ACTIVITY);
 
     /* Schedule the work to run after the debounce timeout */
-    return work_queue(HPWORK, &wd->work, interface_wd_delayed_handler, wd,
+    return work_queue(HPWORK, &wd->work, interface_wd_delayed_handler, iface,
                       MSEC2TICK(delay));
-}
-
-/* Defer notifying the SVC about a finished debounce process until
- * we're out of IRQ context. */
-static void interface_wd_delay_notify_svc(struct interface *iface)
-{
-    int rc;
-    struct wd_data *wd = &iface->detect_in;
-    /*
-     * Just cancel anything left in the queue -- we've already decided
-     * the line is stable.
-     */
-    if (!work_available(&wd->work)) {
-        rc = work_cancel(HPWORK, &wd->work);
-        /*
-         * work_cancel() doesn't fail in the current
-         * implementation. And if it did, we'd be dead in the water
-         * anyway.
-         */
-        DEBUGASSERT(!rc);
-    }
-    /*
-     * Run the work right away. The signal is stable; there's no point
-     * in waiting.
-     */
-    rc = work_queue(HPWORK, &wd->work, interface_wd_delayed_handler, wd, 0);
-    DEBUGASSERT(!rc);
 }
 
 /*
@@ -949,16 +1048,11 @@ static void interface_wd_delay_notify_svc(struct interface *iface)
  *         In that case consecutive hotplug events are
  *         sent to the AP.
  * - Signal HOTPLUG state to the higher layer
+ * Requires calling context to hold iface->mutex
  */
 static void interface_wd_handle_active_stable(struct interface *iface)
 {
     struct wd_data *wd = &iface->detect_in;
-
-    if (up_interrupt_context()) {
-        /* Delay handling this transition to work queue context. */
-        interface_wd_delay_notify_svc(iface);
-        return;
-    }
 
     wd->db_state = WD_ST_ACTIVE_STABLE;
     dbg_verbose("W&D: got stable %s_WD Act (gpio %d)\n",
@@ -969,7 +1063,7 @@ static void interface_wd_handle_active_stable(struct interface *iface)
     }
     interface_power_on(iface);
     if (iface->switch_portid != INVALID_PORT) {
-        svc_hot_plug(iface->switch_portid);
+        svc_hot_plug(iface->switch_portid, false);
     }
     /* Save last stable state for power ON/OFF handling */
     wd->last_state = wd->db_state;
@@ -984,23 +1078,18 @@ static void interface_wd_handle_active_stable(struct interface *iface)
  * Power OFF the interface
  * Signal HOTPLUG state to the higher layer
  *
+ * Requires the calling context to hold iface->mutex
  */
 static void interface_wd_handle_inactive_stable(struct interface *iface)
 {
     struct wd_data *wd = &iface->detect_in;
-
-    if (up_interrupt_context()) {
-        /* Delay handling this transition to work queue context. */
-        interface_wd_delay_notify_svc(iface);
-        return;
-    }
 
     wd->db_state = WD_ST_INACTIVE_STABLE;
     dbg_verbose("W&D: got stable %s_WD Ina (gpio %d)\n",
                 iface->name, wd->gpio);
     interface_power_off(iface);
     if (iface->switch_portid != INVALID_PORT) {
-        svc_hot_unplug(iface->switch_portid);
+        svc_hot_unplug(iface->switch_portid, false);
     }
     /* Save last stable state for power ON/OFF handling */
     wd->last_state = wd->db_state;
@@ -1010,12 +1099,14 @@ static void interface_wd_handle_inactive_stable(struct interface *iface)
  * Debounce the single WD signal, as on DB3.
  * This handler is also handling the low power mode transitions and
  * wake-ups.
+ * Requires the calling context to hold iface->mutex ino order to protect
+ * interface->detect_in->db_state
  */
 static int interface_debounce_wd(struct interface *iface,
-                                 struct wd_data *wd,
                                  bool active)
 {
     struct timeval now, diff, timeout_tv = { 0, 0 };
+    struct wd_data *wd = &iface->detect_in;
     irqstate_t flags;
 
     flags = irqsave();
@@ -1031,7 +1122,7 @@ static int interface_debounce_wd(struct interface *iface,
         gettimeofday(&wd->debounce_tv, NULL);
         wd->db_state = active ?
                        WD_ST_ACTIVE_DEBOUNCE : WD_ST_INACTIVE_DEBOUNCE;
-        interface_wd_delay_check(wd, (active ?
+        interface_wd_delay_check(iface, (active ?
                                       WD_ACTIVATION_DEBOUNCE_TIME_MS :
                                       WD_INACTIVATION_DEBOUNCE_TIME_MS));
         break;
@@ -1046,13 +1137,13 @@ static int interface_debounce_wd(struct interface *iface,
                 interface_wd_handle_active_stable(iface);
             } else {
                 /* Check for a stable signal after the debounce timeout */
-                interface_wd_delay_check(wd, WD_ACTIVATION_DEBOUNCE_TIME_MS);
+                interface_wd_delay_check(iface, WD_ACTIVATION_DEBOUNCE_TIME_MS);
             }
         } else {
             /* Signal did change, reset the debounce timer */
             gettimeofday(&wd->debounce_tv, NULL);
             wd->db_state = WD_ST_INACTIVE_DEBOUNCE;
-            interface_wd_delay_check(wd, WD_INACTIVATION_DEBOUNCE_TIME_MS);
+            interface_wd_delay_check(iface, WD_INACTIVATION_DEBOUNCE_TIME_MS);
         }
         break;
     case WD_ST_INACTIVE_DEBOUNCE:
@@ -1066,13 +1157,13 @@ static int interface_debounce_wd(struct interface *iface,
                 interface_wd_handle_inactive_stable(iface);
             } else {
                 /* Check for a stable signal after the debounce timeout */
-                interface_wd_delay_check(wd, WD_INACTIVATION_DEBOUNCE_TIME_MS);
+                interface_wd_delay_check(iface, WD_INACTIVATION_DEBOUNCE_TIME_MS);
             }
         } else {
             /* Signal did change, reset the debounce timer */
             gettimeofday(&wd->debounce_tv, NULL);
             wd->db_state = WD_ST_ACTIVE_DEBOUNCE;
-            interface_wd_delay_check(wd, WD_ACTIVATION_DEBOUNCE_TIME_MS);
+            interface_wd_delay_check(iface, WD_ACTIVATION_DEBOUNCE_TIME_MS);
         }
         break;
     case WD_ST_ACTIVE_STABLE:
@@ -1080,7 +1171,7 @@ static int interface_debounce_wd(struct interface *iface,
             /* Signal did change, reset the debounce timer */
             gettimeofday(&wd->debounce_tv, NULL);
             wd->db_state = WD_ST_INACTIVE_DEBOUNCE;
-            interface_wd_delay_check(wd, WD_INACTIVATION_DEBOUNCE_TIME_MS);
+            interface_wd_delay_check(iface, WD_INACTIVATION_DEBOUNCE_TIME_MS);
         }
         break;
     case WD_ST_INACTIVE_STABLE:
@@ -1088,7 +1179,7 @@ static int interface_debounce_wd(struct interface *iface,
             /* Signal did change, reset the debounce timer */
             gettimeofday(&wd->debounce_tv, NULL);
             wd->db_state = WD_ST_ACTIVE_DEBOUNCE;
-            interface_wd_delay_check(wd, WD_ACTIVATION_DEBOUNCE_TIME_MS);
+            interface_wd_delay_check(iface, WD_ACTIVATION_DEBOUNCE_TIME_MS);
         }
         break;
     }
@@ -1098,48 +1189,76 @@ static int interface_debounce_wd(struct interface *iface,
     return 0;
 }
 
-/* Interface Wake & Detect handler */
-static int interface_wd_handler(int irq, void *context)
+static void interface_wd_delayed_handler(void *data)
 {
-    struct interface *iface = NULL;
-    struct wd_data *wd;
+    struct interface *iface = (struct interface *)data;
     bool polarity, active;
-    int ret;
 
-    /* Retrieve interface from the GPIO number */
+    /* Take mutex */
+    pthread_mutex_lock_debug(&iface->mutex);
+
+    /* Verify state */
+    if (!iface->handler_active)
+        goto done;
+
+    /* Get signal type, polarity, active state etc. */
+    polarity = iface->detect_in.polarity;
+    active = (gpio_get_value(iface->detect_in.gpio) == polarity);
+
+    dbg_insane("W&D: got %s DETECT_IN %s (gpio %d)\n",
+               iface->name,
+               active ? "Act" : "Ina",
+               iface->detect_in.gpio);
+
+    /* Debounce and handle state changes */
+    interface_debounce_wd(iface, active);
+
+done:
+    /* Release mutex */
+    pthread_mutex_unlock_debug(&iface->mutex);
+}
+
+/* Wake-Detect interrupt handler - IRQ context */
+static int interface_wd_irq_handler(int irq, void *context)
+{
+    struct interface *iface;
+    struct wd_data *wd;
+    int rc;
+
     iface = interface_get_by_wd(irq);
     if (!iface) {
         dbg_error("%s: cannot get interface for pin %d\n", __func__, irq);
         return -ENODEV;
     }
-
-    /* Get signal type, polarity, active state etc. */
     wd = &iface->detect_in;
-    polarity = iface->detect_in.polarity;
-    active = (gpio_get_value(irq) == polarity);
+    if (!work_available(&wd->work)) {
+        return 0;
+    }
 
-    dbg_insane("W&D: got %s DETECT_IN %s (gpio %d)\n",
-               iface->name,
-               active ? "Act" : "Ina",
-               irq);
+    rc = work_queue(HPWORK, &wd->work, interface_wd_delayed_handler, iface, 0);
+    if (rc) {
+        dbg_error("%s: unable to start work queue, rc=%d\n", __func__, rc);
+    }
 
-    /* Debounce and handle state changes */
-    ret = interface_debounce_wd(iface, wd, active);
-
-    return ret;
+    return rc;
 }
 
 /*
  * Uninstall handler for Wake & Detect pin
+ * Requires the calling context to hold iface->mutex
  */
-static void interface_uninstall_wd_handler(struct wd_data *wd)
+static void interface_uninstall_wd_handler(struct interface *iface, struct wd_data *wd)
 {
+    iface->handler_active = false;
     if (wd->gpio) {
         gpio_irq_mask(wd->gpio);
         gpio_irq_attach(wd->gpio, NULL);
     }
 }
 
+/*
+ * Requires the calling context to hold iface->mutex
+ */
 static void interface_check_unplug_during_wake_out(struct interface *iface)
 {
     enum hotplug_state hs = interface_get_hotplug_state(iface);
@@ -1166,7 +1285,7 @@ static void interface_check_unplug_during_wake_out(struct interface *iface)
          */
         dbg_warn("Possible unplug during wake out!\n");
         iface->detect_in.db_state = WD_ST_INVALID;
-        interface_debounce_wd(iface, &iface->detect_in, false);
+        interface_debounce_wd(iface, false);
     }
 }
 
@@ -1178,23 +1297,27 @@ static void interface_check_unplug_during_wake_out(struct interface *iface)
  * forcibly removed during the wake out pulse itself, we'll have
  * missed the interrupt. The check_for_unplug parameter determines
  * whether we need to check for that case here.
+ *
+ * Requires the calling context to hold iface->mutex
  */
 static int interface_install_wd_handler(struct interface *iface,
                                         bool check_for_unplug)
 {
     struct wd_data *wd = &iface->detect_in;
+
     if (wd->gpio) {
         gpio_direction_in(wd->gpio);
         gpio_set_pull(wd->gpio, GPIO_PULL_TYPE_PULL_NONE);
         if (check_for_unplug) {
             interface_check_unplug_during_wake_out(iface);
         }
+        iface->handler_active = true;
         if (gpio_irq_settriggering(wd->gpio, IRQ_TYPE_EDGE_BOTH) ||
-            gpio_irq_attach(wd->gpio, interface_wd_handler) ||
+            gpio_irq_attach(wd->gpio, interface_wd_irq_handler) ||
             gpio_irq_unmask(wd->gpio)) {
             dbg_error("Failed to attach Wake & Detect handler for pin %d\n",
                       wd->gpio);
-            interface_uninstall_wd_handler(wd);
+            interface_uninstall_wd_handler(iface, wd);
             return -EINVAL;
         }
     }
@@ -1326,7 +1449,7 @@ void interface_forcibly_eject_all(uint32_t delay)
     struct interface *ifc;
 
     interface_foreach(ifc, i) {
-        interface_forcibly_eject(ifc, delay);
+        interface_forcibly_eject_atomic(ifc, delay);
     }
 }
 
@@ -1334,18 +1457,9 @@ int interface_forcibly_eject_atomic(struct interface *iface, uint32_t delay)
 {
     int retval;
 
-    retval = pthread_mutex_lock(&latch_ilim_lock);
-    if (retval) {
-        return retval;
-    }
-
+    pthread_mutex_lock_debug(&iface->mutex);
     retval = interface_forcibly_eject(iface, delay);
-    if (retval) {
-        pthread_mutex_unlock(&latch_ilim_lock);
-        return retval;
-    }
-
-    retval = pthread_mutex_unlock(&latch_ilim_lock);
+    pthread_mutex_unlock_debug(&iface->mutex);
 
     return retval;
 }
@@ -1418,7 +1532,6 @@ int interface_early_init(struct interface **ints, size_t nr_ints,
     return 0;
 }
 
-
 /**
  * @brief Given a table of interfaces, initialize and enable all associated
  *        power supplies
@@ -1452,8 +1565,13 @@ int interface_init(struct interface **ints, size_t nr_ints,
     mod_sense = mod_sense_gpio;
 
     interface_foreach(ifc, i) {
+        pthread_mutex_init(&ifc->mutex, NULL);
+        pthread_mutex_lock_debug(&ifc->mutex);
+
         /* Initialize the hotplug state */
+        ifc->handler_active = false;
         ifc->hp_state = interface_get_hotplug_state(ifc);
+
         /* Power on/off the interface based on the DETECT_IN signal state */
         switch (ifc->hp_state) {
         case HOTPLUG_ST_PLUGGED:
@@ -1470,6 +1588,7 @@ int interface_init(struct interface **ints, size_t nr_ints,
             if (switch_port_irq_enable(svc->sw, ifc->switch_portid, true)) {
                 dbg_error("Failed to enable port IRQs for interface %s\n",
                           ifc->name);
+                pthread_mutex_unlock_debug(&ifc->mutex);
                 return rc;
             }
             break;
@@ -1488,6 +1607,9 @@ int interface_init(struct interface **ints, size_t nr_ints,
         ifc->detect_in.db_state = WD_ST_INVALID;
         ifc->detect_in.last_state = WD_ST_INVALID;
         rc = interface_install_wd_handler(ifc, false);
+
+        pthread_mutex_unlock_debug(&ifc->mutex);
+
         if (rc) {
             return rc;
         }
@@ -1513,7 +1635,9 @@ void interface_exit(void) {
 
     /* Uninstall handlers for DETECT_IN signal */
     interface_foreach(ifc, i) {
-        interface_uninstall_wd_handler(&ifc->detect_in);
+        pthread_mutex_lock_debug(&ifc->mutex);
+        interface_uninstall_wd_handler(ifc, &ifc->detect_in);
+        pthread_mutex_unlock_debug(&ifc->mutex);
     }
 
     /* Power off */
@@ -1522,7 +1646,9 @@ void interface_exit(void) {
          * Continue turning off the rest even if this one failed - just ignore
          * the return value of interface_power_off().
          */
+        pthread_mutex_lock_debug(&ifc->mutex);
         (void)interface_power_off(ifc);
+        pthread_mutex_unlock_debug(&ifc->mutex);
     }
 
     interfaces = NULL;

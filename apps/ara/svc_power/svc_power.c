@@ -184,7 +184,8 @@ static void set_power_usage(int exit_status)
 static int set_power_func(struct interface *iface, void *context)
 {
     int enable = (int)context;
-    return enable ? interface_power_on(iface) : interface_power_off(iface);
+    return enable ? interface_power_on_atomic(iface) :
+                    interface_power_off_atomic(iface);
 }
 
 static int cmd_set_power(int argc, char *argv[])
@@ -217,7 +218,7 @@ static int wakeout_func(struct interface *iface, void *context)
 {
     int length = (int) context;
 
-    return interface_generate_wakeout(iface, false, length);
+    return interface_generate_wakeout_atomic(iface, false, length);
 }
 
 static int cmd_wakeout(int argc, char *argv[])

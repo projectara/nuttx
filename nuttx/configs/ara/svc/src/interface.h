@@ -38,6 +38,7 @@
 
 #include <nuttx/wqueue.h>
 #include <nuttx/wdog.h>
+#include <pthread.h>
 
 #include "vreg.h"
 
@@ -137,6 +138,8 @@ struct interface {
     uint8_t release_gpio;
     struct wdog_s linkup_wd;
     enum ara_iface_order if_order;
+    pthread_mutex_t mutex;
+    bool handler_active;
 };
 
 #define interface_foreach(iface, idx)                       \
@@ -144,6 +147,7 @@ struct interface {
              (iface);                                       \
              (idx)++, (iface) = interface_get(idx))
 
+/* Initialization */
 int interface_init(struct interface**, size_t nr_interfaces,
                    size_t nr_spring_ints, struct vreg *vlatch,
                    struct vreg *latch_curlim, uint8_t mod_sense_gpio);
@@ -151,30 +155,21 @@ int interface_early_init(struct interface**, size_t nr_interfaces,
                          size_t nr_spring_ints, struct vreg *vlatch,
                          struct vreg *latch_curlim, uint8_t mod_sense_gpio);
 void interface_exit(void);
+
+/* Get methods */
 struct interface* interface_get(uint8_t index);
 struct interface* interface_get_by_name(const char *name);
 struct interface* interface_get_by_portid(uint8_t port_id);
 int interface_get_id_by_portid(uint8_t port_id);
 int interface_get_portid_by_id(uint8_t intf_id);
 int interface_get_devid_by_id(uint8_t intf_id);
-int interface_set_devid_by_id(uint8_t intf_id, uint8_t dev_id);
 struct interface* interface_spring_get(uint8_t index);
 uint8_t interface_get_count(void);
 uint8_t interface_get_spring_count(void);
-void interface_cancel_linkup_wd(struct interface *iface);
-
-void interface_forcibly_eject_all(uint32_t delay);
-int interface_forcibly_eject_atomic(struct interface *iface, uint32_t delay);
 #define MOD_RELEASE_PULSE_WIDTH 1500U /* ms */
 
 const char *interface_get_name(struct interface *iface);
 enum ara_iface_pwr_state interface_get_power_state(struct interface *iface);
-int interface_power_off(struct interface *iface);
-int interface_power_on(struct interface *iface);
-int interface_generate_wakeout(struct interface *, bool assert, int length);
-int interface_store_hotplug_state(uint8_t port_id, enum hotplug_state hotplug);
-enum hotplug_state interface_consume_hotplug_state(uint8_t port_id);
-enum hotplug_state interface_get_hotplug_state(struct interface *iface);
 
 /**
  * @brief Test if an interface connects to a built-in peer on the board.
@@ -198,6 +193,20 @@ static inline int interface_is_module_port(struct interface *iface) {
 uint8_t interface_pm_get_adc(struct interface *iface);
 uint8_t interface_pm_get_chan(struct interface *iface);
 uint32_t interface_pm_get_spin(struct interface *iface);
+
+/* Set methods; postfixed with _atomic() */
+int interface_set_devid_by_id_atomic(uint8_t intf_id, uint8_t dev_id);
+void interface_set_linkup_retries_atomic(struct interface *iface, uint8_t val);
+void interface_cancel_linkup_wd_atomic(struct interface *iface);
+void interface_forcibly_eject_all(uint32_t delay);
+int interface_forcibly_eject_atomic(struct interface *iface, uint32_t delay);
+int interface_power_off_atomic(struct interface *iface);
+int interface_power_on_atomic(struct interface *iface);
+int interface_generate_wakeout_atomic(struct interface *, bool assert,
+                                      int length);
+int interface_store_hotplug_state_atomic(uint8_t port_id, enum hotplug_state hotplug,
+                                         bool lock_interface);
+enum hotplug_state interface_consume_hotplug_state_atomic(uint8_t port_id);
 
 /*
  * Macro magic.
