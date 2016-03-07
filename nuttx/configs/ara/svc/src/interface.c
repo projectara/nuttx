@@ -1122,6 +1122,8 @@ void interface_forcibly_eject_all(uint32_t delay)
 int interface_forcibly_eject(struct interface *ifc, uint32_t delay)
 {
     uint8_t gpio = ifc->release_gpio;
+    struct wd_data *wd = &ifc->detect_in;
+    bool enable_power = false;
 
     if (!ifc->ejectable) {
         return -ENOTTY;
@@ -1129,9 +1131,26 @@ int interface_forcibly_eject(struct interface *ifc, uint32_t delay)
 
     dbg_info("Module %s ejecting: using gpio 0x%02X\n", ifc->name, gpio);
 
+    /*
+     * HACK: if there is a module in the slot, but it isn't powered on
+     * for some reason (e.g. dummy module), enable power.
+     */
+    if (gpio_is_valid(wd->gpio)) {
+        gpio_direction_in(wd->gpio);
+        if ( (gpio_get_value(wd->gpio) == wd->polarity) &&
+                (interface_get_power_state(ifc) != ARA_IFACE_PWR_UP) ){
+            interface_power_enable(ifc);
+            enable_power = true;
+        }
+    }
+
     gpio_set_value(gpio, 1);
     usleep(delay * 1000);
     gpio_set_value(gpio, 0);
+
+    if (enable_power) {
+        interface_power_disable(ifc);
+    }
 
     return 0;
 }
