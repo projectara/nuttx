@@ -99,8 +99,6 @@ struct tsb_spi_info {
     uint32_t frequency;
     /** hold time in microseconds */
     uint32_t holdtime;
-    /** pinshare backup value */
-    uint32_t pinshare;
 
     /** selected device id */
     int selected;
@@ -128,7 +126,6 @@ static int tsb_spi_hw_init(struct device *dev)
 {
     struct tsb_spi_info *info = NULL;
     int i = 0;
-    int retval;
 
     /* check input parameters */
     if (!dev || !device_get_private(dev)) {
@@ -136,20 +133,6 @@ static int tsb_spi_hw_init(struct device *dev)
     }
 
     info = device_get_private(dev);
-
-    retval = tsb_request_pinshare(TSB_PIN_GPIO10);
-    if (retval) {
-        lowsyslog("SPI: cannot get ownership of GPIO10 pin.\n");
-        return retval;
-    }
-
-    /* backup pinshare#5 setting */
-    info->pinshare = tsb_get_pinshare();
-
-    /* set pinshare#5 (DBG) to normal GPIO */
-    if (!(info->pinshare & TSB_PIN_GPIO10)) {
-        tsb_set_pinshare(TSB_PIN_GPIO10);
-    }
 
     /* setup GPIO pins */
     gpio_activate(SPI_SCK);
@@ -173,14 +156,11 @@ static int tsb_spi_hw_init(struct device *dev)
 /**
  * @brief Hardware de-initialization
  *
- * The function will restore original pinshare value and deactivate GPIO pins.
- *
  * @param dev pointer to structure of device data
  * @return 0 on success, negative errno on error
  */
 static int tsb_spi_hw_deinit(struct device *dev) {
     struct tsb_spi_info *info = NULL;
-    uint32_t pinshare = 0;
     int i = 0;
 
     /* check input parameters */
@@ -197,20 +177,6 @@ static int tsb_spi_hw_deinit(struct device *dev) {
     gpio_deactivate(SPI_SDO);
     gpio_deactivate(SPI_SDI);
     gpio_deactivate(SPI_SCK);
-
-    /* restore pinshare#5 setting */
-    pinshare = tsb_get_pinshare() & TSB_PIN_GPIO10; /* current setting */
-    if ((info->pinshare & TSB_PIN_GPIO10)) {
-        if (!pinshare) {
-            tsb_set_pinshare(TSB_PIN_GPIO10);
-        }
-    } else {
-        if (pinshare) {
-            tsb_clr_pinshare(TSB_PIN_GPIO10);
-        }
-    }
-
-    tsb_release_pinshare(TSB_PIN_GPIO10);
 
     return 0;
 }
