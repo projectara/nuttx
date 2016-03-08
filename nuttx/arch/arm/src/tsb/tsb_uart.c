@@ -223,6 +223,8 @@ struct tsb_uart_info {
     uart_xfer_callback tx_callback;
     /** Private data passed to event_callbacks */
     void *event_data;
+    /** Whether RTS is currently enabled **/
+    bool rts_enabled;
 };
 
 /** device structure for interrupt handler */
@@ -559,8 +561,7 @@ int tsb_uart_lowsetup(int baud)
         return -EINVAL;
     }
 
-    retval = tsb_request_pinshare(TSB_PIN_UART_RXTX | TSB_PIN_UART_CTSRTS |
-            TSB_PIN_GPIO9);
+    retval = tsb_request_pinshare(TSB_PIN_UART_RXTX);
     if (retval) {
         lowsyslog("UART: cannot get ownership of UART pin.\n");
         return retval;
@@ -568,10 +569,6 @@ int tsb_uart_lowsetup(int baud)
 
     /* enable UART RX/TX pins */
     tsb_set_pinshare(TSB_PIN_UART_RXTX);
-
-    /* enable UART CTS/RTS pins */
-    tsb_clr_pinshare(TSB_PIN_GPIO9);
-    tsb_set_pinshare(TSB_PIN_UART_CTSRTS);
 
     /* enable UART clocks */
     tsb_clk_enable(TSB_CLK_UARTP);
@@ -757,6 +754,7 @@ static int tsb_uart_get_modem_ctrl(struct device *dev, uint8_t *modem_ctrl)
 static int tsb_uart_set_modem_ctrl(struct device *dev, uint8_t *modem_ctrl)
 {
     struct tsb_uart_info *uart_info = NULL;
+    int retval;
 
     if (dev == NULL || modem_ctrl == NULL) {
         return -EINVAL;
@@ -771,9 +769,31 @@ static int tsb_uart_set_modem_ctrl(struct device *dev, uint8_t *modem_ctrl)
     }
 
     if (*modem_ctrl & MCR_RTS) {
+        retval = tsb_request_pinshare(TSB_PIN_UART_CTSRTS | TSB_PIN_GPIO9);
+        if (retval) {
+            lowsyslog("UART: cannot get ownership of UART RTS pin.\n");
+            return retval;
+        }
+
+        /* enable UART CTS/RTS pins */
+        tsb_clr_pinshare(TSB_PIN_GPIO9);
+        tsb_set_pinshare(TSB_PIN_UART_CTSRTS);
+
+        uart_info->rts_enabled = true;
         ua_reg_bit_set(uart_info->reg_base, UA_MCR, MCR_RTS);
     } else {
         ua_reg_bit_clr(uart_info->reg_base, UA_MCR, MCR_RTS);
+
+        /* make sure that we have rts enabled */
+        if (uart_info->rts_enabled) {
+            retval = tsb_release_pinshare(TSB_PIN_UART_CTSRTS | TSB_PIN_GPIO9);
+            if (retval) {
+                lowsyslog("UART: cannot release ownership of UART RTS pin.\n");
+                return retval;
+            }
+        }
+
+        uart_info->rts_enabled = false;
     }
 
     return 0;
@@ -1322,8 +1342,7 @@ err_destroy_tx_sem:
 err_free_info:
     free(uart_info);
 err_malloc_info:
-    tsb_release_pinshare(TSB_PIN_UART_RXTX | TSB_PIN_UART_CTSRTS |
-            TSB_PIN_GPIO9);
+    tsb_release_pinshare(TSB_PIN_UART_RXTX);
 
     return ret;
 }
@@ -1356,8 +1375,10 @@ static void tsb_uart_dev_remove(struct device *dev)
 
     irqrestore(flags);
 
-    tsb_release_pinshare(TSB_PIN_UART_RXTX | TSB_PIN_UART_CTSRTS |
-            TSB_PIN_GPIO9);
+    tsb_release_pinshare(TSB_PIN_UART_RXTX);
+    if (uart_info->rts_enabled) {
+        tsb_release_pinshare(TSB_PIN_UART_CTSRTS | TSB_PIN_GPIO9);
+    }
 
     free(uart_info);
 }
