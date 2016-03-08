@@ -44,8 +44,6 @@
 #define GB_SPI_VERSION_MAJOR 0
 #define GB_SPI_VERSION_MINOR 1
 
-static struct device *spi_dev = NULL;
-
 /**
  * @brief Returns the major and minor Greybus SPI protocol version number
  *        supported by the SPI master
@@ -80,8 +78,11 @@ static uint8_t gb_spi_protocol_master_config(struct gb_operation *operation)
     struct master_spi_caps caps;
     int ret = 0;
 
+    struct gb_bundle *bundle = gb_operation_get_bundle(operation);
+    DEBUGASSERT(bundle);
+
     /* get hardware capabilities */
-    ret = device_spi_get_master_caps(spi_dev, &caps);
+    ret = device_spi_get_master_caps(bundle->dev, &caps);
     if (ret) {
         return gb_errno_to_op_result(ret);
     }
@@ -119,6 +120,9 @@ static uint8_t gb_spi_protocol_device_config(struct gb_operation *operation)
     uint8_t cs;
     int ret = 0;
 
+    struct gb_bundle *bundle = gb_operation_get_bundle(operation);
+    DEBUGASSERT(bundle);
+
     request_size = gb_operation_get_request_payload_size(operation);
     if (request_size < sizeof(*request)) {
         gb_error("dropping short message\n");
@@ -129,7 +133,7 @@ static uint8_t gb_spi_protocol_device_config(struct gb_operation *operation)
     cs = request->chip_select;
 
     /* get selected chip of configuration */
-    ret = device_spi_get_device_cfg(spi_dev, cs, &dev_cfg);
+    ret = device_spi_get_device_cfg(bundle->dev, cs, &dev_cfg);
     if (ret) {
         return gb_errno_to_op_result(ret);
     }
@@ -166,9 +170,11 @@ static uint8_t gb_spi_protocol_transfer(struct gb_operation *operation)
     bool selected = false;
     int i, op_count;
     int ret = 0, errcode = GB_OP_SUCCESS;
-
     size_t request_size;
     size_t expected_size;
+
+    struct gb_bundle *bundle = gb_operation_get_bundle(operation);
+    DEBUGASSERT(bundle);
 
     request_size = gb_operation_get_request_payload_size(operation);
     if (request_size < sizeof(*request)) {
@@ -202,13 +208,13 @@ static uint8_t gb_spi_protocol_transfer(struct gb_operation *operation)
     read_buf = response->data;
 
     /* lock SPI bus */
-    ret = device_spi_lock(spi_dev);
+    ret = device_spi_lock(bundle->dev);
     if (ret) {
         return (ret == -EINVAL)? GB_OP_INVALID : GB_OP_UNKNOWN_ERROR;
     }
 
     /* set SPI mode */
-    ret = device_spi_setmode(spi_dev, request->chip_select, request->mode);
+    ret = device_spi_setmode(bundle->dev, request->chip_select, request->mode);
     if (ret) {
         goto spi_err;
     }
@@ -219,21 +225,21 @@ static uint8_t gb_spi_protocol_transfer(struct gb_operation *operation)
         freq = le32_to_cpu(desc->speed_hz);
 
         /* set SPI bits-per-word */
-        ret = device_spi_setbits(spi_dev, request->chip_select,
+        ret = device_spi_setbits(bundle->dev, request->chip_select,
                                  desc->bits_per_word);
         if (ret) {
             goto spi_err;
         }
 
         /* set SPI clock */
-        ret = device_spi_setfrequency(spi_dev, request->chip_select, &freq);
+        ret = device_spi_setfrequency(bundle->dev, request->chip_select, &freq);
         if (ret) {
             goto spi_err;
         }
 
         /* assert chip-select pin */
         if (!selected) {
-            ret = device_spi_select(spi_dev, request->chip_select);
+            ret = device_spi_select(bundle->dev, request->chip_select);
             if (ret) {
                 goto spi_err;
             }
@@ -254,7 +260,7 @@ static uint8_t gb_spi_protocol_transfer(struct gb_operation *operation)
         transfer.flags = SPI_FLAG_DMA_TRNSFER; // synchronous & DMA transfer
 
         /* start SPI transfer */
-        ret = device_spi_exchange(spi_dev, &transfer);
+        ret = device_spi_exchange(bundle->dev, &transfer);
         if (ret) {
             goto spi_err;
         }
@@ -275,7 +281,7 @@ static uint8_t gb_spi_protocol_transfer(struct gb_operation *operation)
         /* if cs_change enable, change the chip-select pin signal */
         if (desc->cs_change) {
             /* force deassert chip-select pin */
-            ret = device_spi_deselect(spi_dev, request->chip_select);
+            ret = device_spi_deselect(bundle->dev, request->chip_select);
             if (ret) {
                 goto spi_err;
             }
@@ -288,14 +294,14 @@ spi_err:
 
     if (selected) {
         /* deassert chip-select pin */
-        ret = device_spi_deselect(spi_dev, request->chip_select);
+        ret = device_spi_deselect(bundle->dev, request->chip_select);
         if (ret) {
             errcode = ret;
         }
     }
 
     /* unlock SPI bus*/
-    ret = device_spi_unlock(spi_dev);
+    ret = device_spi_unlock(bundle->dev);
     if (ret) {
         errcode = ret;
     }
@@ -316,11 +322,9 @@ spi_err:
  */
 static int gb_spi_init(unsigned int cport, struct gb_bundle *bundle)
 {
-    if (!spi_dev) {
-        spi_dev = device_open(DEVICE_TYPE_SPI_HW, 0);
-        if (!spi_dev) {
-            return -EIO;
-        }
+    bundle->dev = device_open(DEVICE_TYPE_SPI_HW, 0);
+    if (!bundle->dev) {
+        return -EIO;
     }
     return 0;
 }
@@ -333,9 +337,9 @@ static int gb_spi_init(unsigned int cport, struct gb_bundle *bundle)
  */
 static void gb_spi_exit(unsigned int cport, struct gb_bundle *bundle)
 {
-    if (spi_dev) {
-        device_close(spi_dev);
-        spi_dev = NULL;
+    if (bundle->dev) {
+        device_close(bundle->dev);
+        bundle->dev = NULL;
     }
 }
 
@@ -367,27 +371,3 @@ void gb_spi_register(int cport, int bundle)
     gb_register_driver(cport, bundle, &gb_spi_driver);
 }
 
-/**
- * @brief Set SPI device
- *
- * @param device pointer to structure of device data
- * @return 0 on success, negative errno on error
- */
-int gb_spi_set_dev(struct device *dev)
-{
-    if (!spi_dev)
-        spi_dev = dev;
-    else
-        return -EBUSY;
-    return 0;
-}
-
-/**
- * @brief Get SPI device
- *
- * @return a device pointer.
- */
-struct device *gb_spi_get_dev(void)
-{
-    return spi_dev;
-}
