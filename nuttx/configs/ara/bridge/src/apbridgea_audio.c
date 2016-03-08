@@ -701,7 +701,8 @@ static int apbridgea_audio_rb_alloc(struct ring_buf *rb, void *arg)
 
     if ((int)buf % APBRIDGEA_AUDIO_UNIPRO_ALIGNMENT) {
         dbg_error("%s: bad buf alignment 0x%p\n", __func__, buf);
-        return -EIO;
+        ret = -EIO;
+        goto err_free_bufram;
     }
 
     memset(buf, 0, info->tx_rb_headroom);
