@@ -123,7 +123,7 @@ $(COBJS): %$(OBJEXT): %.c
 	$(call COMPILE, $<, $@)
 
 %.mnfb: %.mnfs
-	manifesto $<
+	manifesto --silent -o $@ $<
 
 manifest.inc: $(MNFB)
 	xxd -i < $< > $@
