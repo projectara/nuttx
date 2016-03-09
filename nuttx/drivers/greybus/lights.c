@@ -48,14 +48,7 @@
  */
 struct gb_lights_info {
     unsigned int    cport;
-    struct device   *dev;
 };
-
-/**
- * A pointer to gb_lights_info struct that will be allocated in initial
- * function for internal data store
- */
-static struct gb_lights_info *lights_info = NULL;
 
 /**
  * @brief Event callback function for lights driver
@@ -63,14 +56,19 @@ static struct gb_lights_info *lights_info = NULL;
  * Callback for device driver event notification. This function can be called
  * when device driver need to notify the recipient of lights related events
  *
+ * @param data pointer to gb_lights_info
  * @param light_id id of light
  * @param event event type
  * @return 0 on success, negative errno on error
  */
-static int event_callback(uint8_t light_id, uint8_t event)
+static int event_callback(void *data, uint8_t light_id, uint8_t event)
 {
     struct gb_operation *operation;
     struct gb_lights_event_request *request;
+    struct gb_lights_info *lights_info;
+
+    DEBUGASSERT(data);
+    lights_info = data;
 
     operation = gb_operation_create(lights_info->cport, GB_LIGHTS_TYPE_EVENT,
                                     sizeof(*request));
@@ -124,7 +122,11 @@ static uint8_t gb_lights_protocol_version(struct gb_operation *operation)
 static uint8_t gb_lights_get_lights(struct gb_operation *operation)
 {
     struct gb_lights_get_lights_response *response;
+    struct gb_bundle *bundle;
     int ret;
+
+    bundle = gb_operation_get_bundle(operation);
+    DEBUGASSERT(bundle);
 
     response = gb_operation_alloc_response(operation, sizeof(*response));
     if (!response) {
@@ -132,7 +134,7 @@ static uint8_t gb_lights_get_lights(struct gb_operation *operation)
     }
 
     /* get hardware lights count */
-    ret = device_lights_get_lights(lights_info->dev, &response->lights_count);
+    ret = device_lights_get_lights(bundle->dev, &response->lights_count);
     if (ret) {
         return gb_errno_to_op_result(ret);
     }
@@ -154,8 +156,12 @@ static uint8_t gb_lights_get_light_config(struct gb_operation *operation)
 {
     struct gb_lights_get_light_config_request *request;
     struct gb_lights_get_light_config_response *response;
+    struct gb_bundle *bundle;
     struct light_config cfg;
     int ret;
+
+    bundle = gb_operation_get_bundle(operation);
+    DEBUGASSERT(bundle);
 
     if (gb_operation_get_request_payload_size(operation) < sizeof(*request)) {
         gb_error("dropping short message\n");
@@ -170,7 +176,7 @@ static uint8_t gb_lights_get_light_config(struct gb_operation *operation)
     }
 
     /* get hardware light config */
-    ret = device_lights_get_light_config(lights_info->dev, request->id, &cfg);
+    ret = device_lights_get_light_config(bundle->dev, request->id, &cfg);
     if (ret) {
         return gb_errno_to_op_result(ret);
     }
@@ -196,8 +202,12 @@ static uint8_t gb_lights_get_channel_config(struct gb_operation *operation)
 {
     struct gb_lights_get_channel_config_request *request;
     struct gb_lights_get_channel_config_response *response;
+    struct gb_bundle *bundle;
     struct channel_config cfg;
     int ret;
+
+    bundle = gb_operation_get_bundle(operation);
+    DEBUGASSERT(bundle);
 
     if (gb_operation_get_request_payload_size(operation) < sizeof(*request)) {
         gb_error("dropping short message\n");
@@ -212,7 +222,7 @@ static uint8_t gb_lights_get_channel_config(struct gb_operation *operation)
     }
 
     /* get hardware channel config */
-    ret = device_lights_get_channel_config(lights_info->dev, request->light_id,
+    ret = device_lights_get_channel_config(bundle->dev, request->light_id,
                                            request->channel_id, &cfg);
     if (ret) {
         return gb_errno_to_op_result(ret);
@@ -244,8 +254,12 @@ static uint8_t gb_lights_get_channel_flash_config(
 {
     struct gb_lights_get_channel_flash_config_request *request;
     struct gb_lights_get_channel_flash_config_response *response;
+    struct gb_bundle *bundle;
     struct channel_flash_config fcfg;
     int ret;
+
+    bundle = gb_operation_get_bundle(operation);
+    DEBUGASSERT(bundle);
 
     if (gb_operation_get_request_payload_size(operation) < sizeof(*request)) {
         gb_error("dropping short message\n");
@@ -260,7 +274,7 @@ static uint8_t gb_lights_get_channel_flash_config(
     }
 
     /* get hardware channel flash config */
-    ret = device_lights_get_channel_flash_config(lights_info->dev,
+    ret = device_lights_get_channel_flash_config(bundle->dev,
                                                  request->light_id,
                                                  request->channel_id, &fcfg);
     if (ret) {
@@ -290,7 +304,11 @@ static uint8_t gb_lights_get_channel_flash_config(
 static uint8_t gb_lights_set_brightness(struct gb_operation *operation)
 {
     struct gb_lights_set_brightness_request *request;
+    struct gb_bundle *bundle;
     int ret;
+
+    bundle = gb_operation_get_bundle(operation);
+    DEBUGASSERT(bundle);
 
     if (gb_operation_get_request_payload_size(operation) < sizeof(*request)) {
         gb_error("dropping short message\n");
@@ -300,7 +318,7 @@ static uint8_t gb_lights_set_brightness(struct gb_operation *operation)
     request = gb_operation_get_request_payload(operation);
 
     /* set brightness to channel */
-    ret = device_lights_set_brightness(lights_info->dev, request->light_id,
+    ret = device_lights_set_brightness(bundle->dev, request->light_id,
                                        request->channel_id,
                                        request->brightness);
     if (ret) {
@@ -323,7 +341,11 @@ static uint8_t gb_lights_set_brightness(struct gb_operation *operation)
 static uint8_t gb_lights_set_blink(struct gb_operation *operation)
 {
     struct gb_lights_set_blink_request *request;
+    struct gb_bundle *bundle;
     int ret;
+
+    bundle = gb_operation_get_bundle(operation);
+    DEBUGASSERT(bundle);
 
     if (gb_operation_get_request_payload_size(operation) < sizeof(*request)) {
         gb_error("dropping short message\n");
@@ -333,7 +355,7 @@ static uint8_t gb_lights_set_blink(struct gb_operation *operation)
     request = gb_operation_get_request_payload(operation);
 
     /* set blink to channel */
-    ret = device_lights_set_blink(lights_info->dev, request->light_id,
+    ret = device_lights_set_blink(bundle->dev, request->light_id,
                                   request->channel_id,
                                   le16_to_cpu(request->time_on_ms),
                                   le16_to_cpu(request->time_off_ms));
@@ -356,7 +378,11 @@ static uint8_t gb_lights_set_blink(struct gb_operation *operation)
 static uint8_t gb_lights_set_color(struct gb_operation *operation)
 {
     struct gb_lights_set_color_request *request;
+    struct gb_bundle *bundle;
     int ret;
+
+    bundle = gb_operation_get_bundle(operation);
+    DEBUGASSERT(bundle);
 
     if (gb_operation_get_request_payload_size(operation) < sizeof(*request)) {
         gb_error("dropping short message\n");
@@ -366,7 +392,7 @@ static uint8_t gb_lights_set_color(struct gb_operation *operation)
     request = gb_operation_get_request_payload(operation);
 
     /* set color to channel */
-    ret = device_lights_set_color(lights_info->dev, request->light_id,
+    ret = device_lights_set_color(bundle->dev, request->light_id,
                                   request->channel_id,
                                   le32_to_cpu(request->color));
     if (ret) {
@@ -389,7 +415,11 @@ static uint8_t gb_lights_set_color(struct gb_operation *operation)
 static uint8_t gb_lights_set_fade(struct gb_operation *operation)
 {
     struct gb_lights_set_fade_request *request;
+    struct gb_bundle *bundle;
     int ret;
+
+    bundle = gb_operation_get_bundle(operation);
+    DEBUGASSERT(bundle);
 
     if (gb_operation_get_request_payload_size(operation) < sizeof(*request)) {
         gb_error("dropping short message\n");
@@ -399,7 +429,7 @@ static uint8_t gb_lights_set_fade(struct gb_operation *operation)
     request = gb_operation_get_request_payload(operation);
 
     /* set fade to channel */
-    ret = device_lights_set_fade(lights_info->dev, request->light_id,
+    ret = device_lights_set_fade(bundle->dev, request->light_id,
                                  request->channel_id, request->fade_in,
                                  request->fade_out);
     if (ret) {
@@ -422,7 +452,11 @@ static uint8_t gb_lights_set_fade(struct gb_operation *operation)
 static uint8_t gb_lights_set_flash_intensity(struct gb_operation *operation)
 {
     struct gb_lights_set_flash_intensity_request *request;
+    struct gb_bundle *bundle;
     int ret;
+
+    bundle = gb_operation_get_bundle(operation);
+    DEBUGASSERT(bundle);
 
     if (gb_operation_get_request_payload_size(operation) < sizeof(*request)) {
         gb_error("dropping short message\n");
@@ -432,7 +466,7 @@ static uint8_t gb_lights_set_flash_intensity(struct gb_operation *operation)
     request = gb_operation_get_request_payload(operation);
 
     /* set flash intensity to channel */
-    ret = device_lights_set_flash_intensity(lights_info->dev, request->light_id,
+    ret = device_lights_set_flash_intensity(bundle->dev, request->light_id,
                                             request->channel_id,
                                             le32_to_cpu(request->intensity_uA));
     if (ret) {
@@ -454,7 +488,11 @@ static uint8_t gb_lights_set_flash_intensity(struct gb_operation *operation)
 static uint8_t gb_lights_set_flash_strobe(struct gb_operation *operation)
 {
     struct gb_lights_set_flash_strobe_request *request;
+    struct gb_bundle *bundle;
     int ret;
+
+    bundle = gb_operation_get_bundle(operation);
+    DEBUGASSERT(bundle);
 
     if (gb_operation_get_request_payload_size(operation) < sizeof(*request)) {
         gb_error("dropping short message\n");
@@ -464,7 +502,7 @@ static uint8_t gb_lights_set_flash_strobe(struct gb_operation *operation)
     request = gb_operation_get_request_payload(operation);
 
     /* set flash strobe to channel */
-    ret = device_lights_set_flash_strobe(lights_info->dev, request->light_id,
+    ret = device_lights_set_flash_strobe(bundle->dev, request->light_id,
                                          request->channel_id, request->state);
     if (ret) {
         return gb_errno_to_op_result(ret);
@@ -486,7 +524,11 @@ static uint8_t gb_lights_set_flash_strobe(struct gb_operation *operation)
 static uint8_t gb_lights_set_flash_timeout(struct gb_operation *operation)
 {
     struct gb_lights_set_flash_timeout_request *request;
+    struct gb_bundle *bundle;
     int ret;
+
+    bundle = gb_operation_get_bundle(operation);
+    DEBUGASSERT(bundle);
 
     if (gb_operation_get_request_payload_size(operation) < sizeof(*request)) {
         gb_error("dropping short message\n");
@@ -496,7 +538,7 @@ static uint8_t gb_lights_set_flash_timeout(struct gb_operation *operation)
     request = gb_operation_get_request_payload(operation);
 
     /* set flash timeout to channel */
-    ret = device_lights_set_flash_timeout(lights_info->dev, request->light_id,
+    ret = device_lights_set_flash_timeout(bundle->dev, request->light_id,
                                           request->channel_id,
                                           le32_to_cpu(request->timeout_us));
     if (ret) {
@@ -519,7 +561,11 @@ static uint8_t gb_lights_get_flash_fault(struct gb_operation *operation)
 {
     struct gb_lights_get_flash_fault_request *request;
     struct gb_lights_get_flash_fault_response *response;
+    struct gb_bundle *bundle;
     int ret;
+
+    bundle = gb_operation_get_bundle(operation);
+    DEBUGASSERT(bundle);
 
     if (gb_operation_get_request_payload_size(operation) < sizeof(*request)) {
         gb_error("dropping short message\n");
@@ -534,7 +580,7 @@ static uint8_t gb_lights_get_flash_fault(struct gb_operation *operation)
     }
 
     /* get hardware flash fault */
-    ret = device_lights_get_flash_fault(lights_info->dev, request->light_id,
+    ret = device_lights_get_flash_fault(bundle->dev, request->light_id,
                                         request->channel_id, &response->fault);
     if (ret) {
         return gb_errno_to_op_result(ret);
@@ -554,7 +600,10 @@ static uint8_t gb_lights_get_flash_fault(struct gb_operation *operation)
  */
 static int gb_lights_init(unsigned int cport, struct gb_bundle *bundle)
 {
+    struct gb_lights_info *lights_info;
     int ret;
+
+    DEBUGASSERT(bundle);
 
     lights_info = zalloc(sizeof(*lights_info));
     if (!lights_info) {
@@ -563,21 +612,24 @@ static int gb_lights_init(unsigned int cport, struct gb_bundle *bundle)
 
     lights_info->cport = cport;
 
-    lights_info->dev = device_open(DEVICE_TYPE_LIGHTS_HW, 0);
-    if (!lights_info->dev) {
+    bundle->dev = device_open(DEVICE_TYPE_LIGHTS_HW, 0);
+    if (!bundle->dev) {
         ret = -EIO;
         goto err_free_info;
     }
 
-    ret = device_lights_register_callback(lights_info->dev, event_callback);
+    ret = device_lights_register_callback(bundle->dev, lights_info,
+                                          event_callback);
     if (ret) {
         goto err_close_device;
     }
 
+    bundle->priv = lights_info;
+
     return 0;
 
 err_close_device:
-    device_close(lights_info->dev);
+    device_close(bundle->dev);
 
 err_free_info:
     free(lights_info);
@@ -593,9 +645,14 @@ err_free_info:
  */
 static void gb_lights_exit(unsigned int cport, struct gb_bundle *bundle)
 {
-    device_lights_unregister_callback(lights_info->dev);
+    struct gb_lights_info *lights_info;
 
-    device_close(lights_info->dev);
+    DEBUGASSERT(bundle);
+    lights_info = bundle->priv;
+
+    device_lights_unregister_callback(bundle->dev);
+
+    device_close(bundle->dev);
 
     free(lights_info);
     lights_info = NULL;

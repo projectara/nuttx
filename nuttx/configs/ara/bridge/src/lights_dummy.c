@@ -66,6 +66,7 @@ struct lights_info {
     uint8_t                 lights_count;
     struct light_info       *light_attri[LIGHTS_COUNT];
     lights_event_callback   event_callback;
+    void                    *event_data;
 };
 
 /* [FAKE] Fake channel data of lights - Beginning */
@@ -559,6 +560,7 @@ static int lights_unregister_callback(struct device *dev)
     }
 
     info->event_callback = NULL;
+    info->event_data = NULL;
 
     return 0;
 }
@@ -571,10 +573,11 @@ static int lights_unregister_callback(struct device *dev)
  * lights device driver will perform the event callback function.
  *
  * @param dev pointer to structure of device data
+ * @param data private user data passed to the callback
  * @param callback callback function for notify event
  * @return 0 on success, negative errno on error
  */
-static int lights_register_callback(struct device *dev,
+static int lights_register_callback(struct device *dev, void *data,
                                     lights_event_callback callback)
 {
     struct lights_info *info = NULL;
@@ -591,6 +594,7 @@ static int lights_register_callback(struct device *dev,
     }
 
     info->event_callback = callback;
+    info->event_data = data;
 
     return 0;
 }
@@ -761,7 +765,8 @@ static int lights_set_brightness(struct device *dev, uint8_t light_id,
     /* Test hack: send release event if brightness is set to 254 */
     if (brightness == 254) {
         if (info->event_callback) {
-            info->event_callback(light_id, LIGHTS_EVENT_LIGHT_CONFIG);
+            info->event_callback(info->event_data, light_id,
+                                 LIGHTS_EVENT_LIGHT_CONFIG);
         }
     }
 
@@ -974,6 +979,7 @@ static int lights_dev_open(struct device *dev)
     }
 
     info->event_callback = NULL;
+    info->event_data = NULL;
 
     info->state = LIGHTS_STATE_OPEN;
 
@@ -1016,6 +1022,7 @@ static void lights_dev_close(struct device *dev)
     info->lights_count = 0;
 
     info->event_callback = NULL;
+    info->event_data = NULL;
 
     info->state = LIGHTS_STATE_CLOSED;
 }

@@ -164,10 +164,13 @@ struct light_info {
 /**
  * @brief Lights event callback function
  *
+ * @param data private user data passed to the callback
+ * @param light_id id of light
  * @param event event type.
  * @return 0 on success, negative errno on error
  */
-typedef int (*lights_event_callback)(uint8_t light_id, uint8_t event);
+typedef int (*lights_event_callback)(void *data, uint8_t light_id,
+                                     uint8_t event);
 
 /**
  * Lights device driver operations
@@ -198,7 +201,7 @@ struct device_lights_type_ops {
     int (*set_fade)(struct device *dev, uint8_t light_id, uint8_t channel_id,
                     uint8_t fade_in, uint8_t fade_out);
     /** Register lights notify event */
-    int (*register_callback)(struct device *dev,
+    int (*register_callback)(struct device *dev, void *data,
                              lights_event_callback callback);
     /** Remove lights notify event */
     int (*unregister_callback)(struct device *dev);
@@ -442,10 +445,12 @@ static inline int device_lights_set_fade(struct device *dev,
  * @brief Lights register_callback() wrap function
  *
  * @param dev pointer to structure of device data
+ * @param data private user data passed to the callback
  * @param callback callback function for notify event
  * @return 0 on success, negative errno on error
  */
 static inline int device_lights_register_callback(struct device *dev,
+                                                  void *data,
                                                 lights_event_callback callback)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
@@ -454,7 +459,7 @@ static inline int device_lights_register_callback(struct device *dev,
         return -ENODEV;
     }
     if (DEVICE_DRIVER_GET_OPS(dev, lights)->register_callback) {
-        return DEVICE_DRIVER_GET_OPS(dev, lights)->register_callback(dev,
+        return DEVICE_DRIVER_GET_OPS(dev, lights)->register_callback(dev, data,
                                                                      callback);
     }
     return -ENOSYS;
