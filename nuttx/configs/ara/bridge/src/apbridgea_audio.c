@@ -792,7 +792,8 @@ static int apbridgea_audio_prepare_tx(struct apbridgea_audio_info *info)
 
     info->flags |= APBRIDGEA_AUDIO_FLAG_TX_PREPARED;
 
-    dbg_verbose("%s: TX prepared, flags 0x%x\n", __func__, info->flags);
+    dbg_verbose("%s: TX prepared (I2S RX), flags 0x%x\n", __func__,
+                info->flags);
 
     return 0;
 
@@ -825,13 +826,13 @@ static int apbridgea_audio_start_tx(struct apbridgea_audio_info *info,
 
     info->flags |= APBRIDGEA_AUDIO_FLAG_TX_STARTED;
 
+    dbg_info("%s: Starting TX (I2S RX), flags 0x%x\n", __func__, info->flags);
+
     ret = device_i2s_start_receiver(info->i2s_dev);
     if (ret) {
         dbg_error("%s: device_i2s_start_receiver() failed %d\n", __func__, ret);
         info->flags &= ~APBRIDGEA_AUDIO_FLAG_TX_STARTED;
     }
-
-    dbg_info("%s: TX started, flags 0x%x\n", __func__, info->flags);
 
     return ret;
 }
@@ -852,7 +853,7 @@ static int apbridgea_audio_stop_tx(struct apbridgea_audio_info *info)
 
     info->flags &= ~APBRIDGEA_AUDIO_FLAG_TX_STARTED;
 
-    dbg_info("%s: TX stopped, flags 0x%x\n", __func__, info->flags);
+    dbg_info("%s: TX stopped (I2S RX), flags 0x%x\n", __func__, info->flags);
 
     return 0;
 }
@@ -881,7 +882,8 @@ static int apbridgea_audio_shutdown_tx(struct apbridgea_audio_info *info)
     info->tx_rb_headroom = 0;
     info->tx_rb_total_size = 0;
 
-    dbg_verbose("%s: TX shutdown, flags 0x%x\n", __func__, info->flags);
+    dbg_verbose("%s: TX shutdown (I2S RX), flags 0x%x\n", __func__,
+                info->flags);
 
     return 0;
 }
@@ -991,7 +993,8 @@ static int apbridgea_audio_prepare_rx(struct apbridgea_audio_info *info)
     /* Prime the ring with one empty entry */
     apbridgea_audio_i2s_tx(info, info->rx_dummy_data);
 
-    dbg_verbose("%s: RX prepared, flags 0x%x\n", __func__, info->flags);
+    dbg_verbose("%s: RX prepared (I2S TX), flags 0x%x\n", __func__,
+                info->flags);
 
     return 0;
 
@@ -1018,14 +1021,14 @@ static int apbridgea_audio_start_rx(struct apbridgea_audio_info *info)
 
     info->flags |= APBRIDGEA_AUDIO_FLAG_RX_STARTED;
 
+    dbg_info("%s: Starting RX (I2S TX), flags 0x%x\n", __func__, info->flags);
+
     ret = device_i2s_start_transmitter(info->i2s_dev);
     if (ret) {
         dbg_error("%s: device_i2s_start_transmitter() failed %d\n", __func__,
                   ret);
         info->flags &= ~APBRIDGEA_AUDIO_FLAG_RX_STARTED;
     }
-
-    dbg_info("%s: RX started, flags 0x%x\n", __func__, info->flags);
 
     return ret;
 }
@@ -1047,7 +1050,7 @@ static int apbridgea_audio_stop_rx(struct apbridgea_audio_info *info)
 
     info->flags &= ~APBRIDGEA_AUDIO_FLAG_RX_STARTED;
 
-    dbg_info("%s: RX stopped, flags 0x%x\n", __func__, info->flags);
+    dbg_info("%s: RX stopped (I2S TX), flags 0x%x\n", __func__, info->flags);
 
     return 0;
 }
@@ -1077,7 +1080,8 @@ static int apbridgea_audio_shutdown_rx(struct apbridgea_audio_info *info)
     ring_buf_free_ring(info->rx_rb, NULL, NULL);
     info->rx_rb = NULL;
 
-    dbg_verbose("%s: RX shutdown, flags 0x%x\n", __func__, info->flags);
+    dbg_verbose("%s: RX shutdown (I2S TX), flags 0x%x\n", __func__,
+                info->flags);
 
     return 0;
 }
@@ -1126,55 +1130,42 @@ static void *apbridgea_audio_demux(void *ignored)
 
         switch (pkt_hdr->type) {
         case AUDIO_APBRIDGEA_TYPE_SET_CONFIG:
-            dbg_verbose("%s: set_config request\n", __func__);
             ret = apbridgea_audio_set_config(info, pkt_hdr, len);
             break;
         case AUDIO_APBRIDGEA_TYPE_REGISTER_CPORT:
-            dbg_verbose("%s: register_cport request\n", __func__);
             ret = apbridgea_audio_register_cport(info, pkt_hdr, len);
             break;
         case AUDIO_APBRIDGEA_TYPE_UNREGISTER_CPORT:
-            dbg_verbose("%s: unregister_cport request\n", __func__);
             ret = apbridgea_audio_unregister_cport(info, pkt_hdr, len);
             break;
         case AUDIO_APBRIDGEA_TYPE_SET_TX_DATA_SIZE:
-            dbg_verbose("%s: set_tx_data_size request\n", __func__);
             ret = apbridgea_audio_set_tx_data_size(info, pkt_hdr, len);
             break;
         case AUDIO_APBRIDGEA_TYPE_PREPARE_TX:
-            dbg_verbose("%s: prepare_tx request\n", __func__);
             ret = apbridgea_audio_prepare_tx(info);
             break;
         case AUDIO_APBRIDGEA_TYPE_START_TX:
-            dbg_verbose("%s: start_tx request\n", __func__);
             ret = apbridgea_audio_start_tx(info, pkt_hdr, len);
             break;
         case AUDIO_APBRIDGEA_TYPE_STOP_TX:
-            dbg_verbose("%s: stop_tx request\n", __func__);
             ret = apbridgea_audio_stop_tx(info);
             break;
         case AUDIO_APBRIDGEA_TYPE_SHUTDOWN_TX:
-            dbg_verbose("%s: shutdown_tx request\n", __func__);
             ret = apbridgea_audio_shutdown_tx(info);
             break;
         case AUDIO_APBRIDGEA_TYPE_SET_RX_DATA_SIZE:
-            dbg_verbose("%s: set_rx_data_size request\n", __func__);
             ret = apbridgea_audio_set_rx_data_size(info, pkt_hdr, len);
             break;
         case AUDIO_APBRIDGEA_TYPE_PREPARE_RX:
-            dbg_verbose("%s: prepare_rx request\n", __func__);
             ret = apbridgea_audio_prepare_rx(info);
             break;
         case AUDIO_APBRIDGEA_TYPE_START_RX:
-            dbg_verbose("%s: start_rx request\n", __func__);
             ret = apbridgea_audio_start_rx(info);
             break;
         case AUDIO_APBRIDGEA_TYPE_STOP_RX:
-            dbg_verbose("%s: stop_rx request\n", __func__);
             ret = apbridgea_audio_stop_rx(info);
             break;
         case AUDIO_APBRIDGEA_TYPE_SHUTDOWN_RX:
-            dbg_verbose("%s: shutdown_rx request\n", __func__);
             ret = apbridgea_audio_shutdown_rx(info);
             break;
         default:
