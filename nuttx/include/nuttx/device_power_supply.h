@@ -37,11 +37,13 @@
 /**
  * @brief Power supply event callback function.
  *
+ * @param data private user data passed to the callback.
  * @param psy_id Power supply identification number.
  * @param event Event type.
  * @return 0 on success, negative errno on error.
  */
-typedef int (*power_supply_event_callback)(uint8_t psy_id, uint8_t event);
+typedef int (*power_supply_event_callback)(void *data, uint8_t psy_id,
+                                           uint8_t event);
 
 /**
  * Power supply description
@@ -84,7 +86,7 @@ struct device_power_supply_type_ops {
     int (*set_property)(struct device *dev, uint8_t psy_id, uint8_t property,
                         uint32_t prop_val);
     /** Attach callback function to power supply device */
-    int (*attach_callback)(struct device *dev,
+    int (*attach_callback)(struct device *dev, void *data,
                            power_supply_event_callback callback);
 };
 
@@ -251,10 +253,12 @@ static inline int device_power_supply_set_property(struct device *dev,
  * @brief Attach callback function to power supply device.
  *
  * @param dev Pointer to structure of device.
+ * @param data private user data passed to the callback.
  * @param callback Pointer to event callback function.
  * @return 0 on success, negative errno on error.
  */
 static inline int device_power_supply_attach_callback(struct device *dev,
+                                                      void *data,
                                           power_supply_event_callback callback)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
@@ -264,6 +268,7 @@ static inline int device_power_supply_attach_callback(struct device *dev,
 
     if (DEVICE_DRIVER_GET_OPS(dev, power_supply)->attach_callback)
         return DEVICE_DRIVER_GET_OPS(dev, power_supply)->attach_callback(dev,
+                                                                         data,
                                                                      callback);
 
     return -ENOSYS;
