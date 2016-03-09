@@ -1346,6 +1346,7 @@ static void sdio_write_fifo_data(struct tsb_sdio_info *info)
     int16_t remaining = 0, i = 0;
     uint8_t *wbuf = info->write_buf.buffer;
 
+    remaining = info->write_buf.tail - info->write_buf.head;
     presentstate = sdio_getreg(info->sdio_reg_base, PRESENTSTATE);
     while (presentstate & data_mask) {
         /* Check data timeout */
@@ -1370,7 +1371,6 @@ static void sdio_write_fifo_data(struct tsb_sdio_info *info)
              * Is there at least a full uint32_t data remaining in the user
              * buffer?
              */
-            remaining = info->write_buf.tail - info->write_buf.head;
             if (remaining >= sizeof(uint32_t)) {
                 /* Yes. Write uint32_t data to the FIFO */
                 buf_port = wbuf[info->write_buf.head] |
@@ -1390,6 +1390,7 @@ static void sdio_write_fifo_data(struct tsb_sdio_info *info)
                 info->write_buf.head = info->write_buf.tail;
             }
             sdio_putreg(info->sdio_reg_base, DATAPORTREG, buf_port);
+            remaining = info->write_buf.tail - info->write_buf.head;
 
             /* More blocks? */
             if (info->write_buf.head == info->write_buf.tail) { /* No */
@@ -1398,6 +1399,7 @@ static void sdio_write_fifo_data(struct tsb_sdio_info *info)
                     info->write_callback(info->write_buf.head, info->blksz,
                                          info->write_buf.buffer, 0);
                 }
+                break;
             }
         }
         presentstate = sdio_getreg(info->sdio_reg_base, PRESENTSTATE);
@@ -1423,6 +1425,7 @@ static void sdio_read_fifo_data(struct tsb_sdio_info *info)
     int16_t remaining = 0, i = 0;
     uint8_t *rbuf = info->read_buf.buffer;
 
+    remaining = info->read_buf.tail - info->read_buf.head;
     presentstate = sdio_getreg(info->sdio_reg_base, PRESENTSTATE);
     while (presentstate & data_mask) {
         /* Check data timeout */
@@ -1447,7 +1450,6 @@ static void sdio_read_fifo_data(struct tsb_sdio_info *info)
              * Is there at least a full uint32_t data remaining in the user
              * buffer?
              */
-            remaining = info->read_buf.tail - info->read_buf.head;
             buf_port = sdio_getreg(info->sdio_reg_base, DATAPORTREG);
             if (remaining >= sizeof(uint32_t)) {
                 /* Yes. Transfer uint32_t data in FIFO to the user buffer */
@@ -1470,6 +1472,7 @@ static void sdio_read_fifo_data(struct tsb_sdio_info *info)
                 }
                 info->read_buf.head = info->read_buf.tail;
             }
+            remaining = info->read_buf.tail - info->read_buf.head;
 
             /* More blocks? */
             if (info->read_buf.head == info->read_buf.tail) { /* No */
@@ -1478,6 +1481,7 @@ static void sdio_read_fifo_data(struct tsb_sdio_info *info)
                     info->read_callback(info->read_buf.head, info->blksz,
                                         info->read_buf.buffer, 0);
                 }
+                break;
             }
         }
         presentstate = sdio_getreg(info->sdio_reg_base, PRESENTSTATE);
