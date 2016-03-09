@@ -1457,7 +1457,6 @@ static int usbclass_setup(struct usbdevclass_driver_s *driver,
 {
     struct apbridge_dev_s *priv;
     struct usbdev_req_s *req;
-    int *req_priv;
 
     uint16_t value;
     uint16_t index;
@@ -1482,18 +1481,12 @@ static int usbclass_setup(struct usbdevclass_driver_s *driver,
         return -ENODEV;
     }
 #endif
-    req_priv = kmm_malloc(sizeof(*req_priv));
-    if (!req_priv) {
-        return -ENOMEM;
-    }
     req = get_request(dev->ep0, usbclass_ep0incomplete,
-                      APBRIDGE_MXDESCLEN, req_priv);
+                      APBRIDGE_MXDESCLEN, NULL);
     if (!req) {
         lowsyslog("%s(): unable to get a request buffer\n", __func__);
         return -ENOMEM;
     }
-
-    *req_priv = USB_REQ;
 
     /* Manage enumeration and other common requests */
     ret = gadget_control_handler(priv->g_desc, dev, req, ctrl);
