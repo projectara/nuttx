@@ -234,12 +234,6 @@ struct csi_tx_control {
     __le32 lines_per_second;
 };
 
-enum ctrlreq_state {
-    USB_REQ,
-    GREYBUS_LOG,
-    GREYBUS_EP_MAPPING,
-};
-
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
