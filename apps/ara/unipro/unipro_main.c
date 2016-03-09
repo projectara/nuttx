@@ -143,9 +143,11 @@ int unipro_main(int argc, char **argv) {
             exit(1);
         }
         return 0;
+#if defined(CONFIG_ARA_UNIPRO_MAIN_INFO)
     } else if (!strcmp(op, "info")) {
         unipro_info();
         return 0;
+#endif
     } else if (!strcmp(op, "tx")) {
         attr_read_argv[0] = (char*) xstr(TSB_DEBUGTXBYTECOUNT);
         attr_read_argv[1] = (char*) "0";

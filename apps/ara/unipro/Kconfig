@@ -46,4 +46,11 @@ config ARA_UNIPRO_MAIN_PROGNAME
 		This is the name of the program that will be use when the
 		NSH ELF program is installed.
 
+config ARA_UNIPRO_MAIN_INFO
+	bool "Add info option to dump all attributes"
+	default y
+	---help---
+		Add "info" option to dump all attributes. Having unipro_info in the
+		build increase significantly the size of the binary.
+
 endif
