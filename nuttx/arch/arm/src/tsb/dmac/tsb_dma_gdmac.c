@@ -976,6 +976,7 @@ int tsb_gdmac_allocal_mem2Mem_chan(struct device *dev,
             GDMAC_MAX_DESC * sizeof(struct mem2mem_pl330_code) +
             sizeof(struct pl330_end_code));
     if (gdmac_chan == NULL) {
+        lldbg("gdmac: Unable to allocate GDMAC channel(s).\n");
         return -ENOMEM;
     }
 

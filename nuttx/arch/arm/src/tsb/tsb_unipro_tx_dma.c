@@ -251,6 +251,7 @@ static int unipro_dma_tx_callback(struct device *dev, void *chan,
                              desc->cport->cportid, desc_chan->req);
             if (retval != OK) {
                 lldbg("unipro: Failed to connect cport to REQn\n");
+                return retval;
             }
         }
         retval = device_atabl_activate_req(unipro_dma.atabl_dev,
@@ -271,7 +272,7 @@ static int unipro_dma_tx_callback(struct device *dev, void *chan,
 
             unipro_dma_tx_set_eom_flag(desc->cport);
 
-            device_dma_op_free(unipro_dma.dev, op);
+            retval = device_dma_op_free(unipro_dma.dev, op);
 
             if (desc->callback != NULL) {
                 desc->callback(0, desc->data, desc->priv);
@@ -283,11 +284,25 @@ static int unipro_dma_tx_callback(struct device *dev, void *chan,
             }
 
             unipro_xfer_dequeue_descriptor(desc);
+
+            if (retval != OK) {
+                lldbg("Failed to free DMA op: %d\n", retval);
+                goto event_complete_finally;
+            }
         } else {
             desc->channel = NULL;
+            retval = device_dma_op_free(unipro_dma.dev, op);
+            if (retval != OK) {
+                lldbg("Failed to free DMA op: %d\n", retval);
+                goto event_complete_finally;
+            }
         }
 
-        sem_post(&worker.tx_fifo_lock);
+        event_complete_finally:
+            sem_post(&worker.tx_fifo_lock);
+            if (retval) {
+                return retval;
+            }
     }
 
     if (tsb_get_rev_id() == tsb_rev_es2) {
@@ -377,12 +392,12 @@ static int unipro_dma_xfer(struct unipro_xfer_descriptor *desc,
         xfer_len = desc->len;
     }
 
-    desc->channel = channel;
     retval = device_dma_op_alloc(unipro_dma.dev, 1, 0, &dma_op);
     if (retval != OK) {
         lowsyslog("unipro: failed allocate a DMA op, retval = %d.\n", retval);
         return retval;
     }
+    desc->channel = channel;
 
     dma_op->callback = (void *) unipro_dma_tx_callback;
     dma_op->callback_arg = desc;
@@ -418,6 +433,8 @@ static int unipro_dma_xfer(struct unipro_xfer_descriptor *desc,
 
     retval = device_dma_enqueue(unipro_dma.dev, channel->chan, dma_op);
     if (retval) {
+        desc->channel = NULL;
+        device_dma_op_free(unipro_dma.dev, dma_op);
         lowsyslog("unipro: failed to start DMA transfer: %d\n", retval);
         return retval;
     }
@@ -430,6 +447,7 @@ static void *unipro_tx_worker(void *data)
     struct dma_channel *channel;
     struct unipro_xfer_descriptor *desc;
     unsigned int next_cport;
+    int rc = 0;
 
     while (1) {
         /* Block until a buffer is pending on any CPort */
@@ -440,7 +458,17 @@ static void *unipro_tx_worker(void *data)
             next_cport = desc->cport->cportid + 1;
             channel = pick_dma_channel(desc->cport);
 
-            unipro_dma_xfer(desc, channel);
+            rc = unipro_dma_xfer(desc, channel);
+            if (rc) {
+                switch (rc) {
+                    case -ENOSPC:
+                        DBG_UNIPRO("DMA TX failed for lack of TX FIFO space\n");
+                        break;
+                    default:
+                        lowsyslog("unipro: DMA transfer failed: %d\n", rc);
+                        break;
+                }
+            }
         }
     }
 
