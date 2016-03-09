@@ -2911,7 +2911,10 @@ int dwc_otg_pcd_ep_queue(dwc_otg_pcd_t * pcd, void *ep_handle,
 
 #ifdef DWC_ENHANCED_SG_DMA_OUT
 			depctl_data_t depctl;
-			depctl.d32 = DWC_READ_REG32(&GET_CORE_IF(pcd)->dev_if->out_ep_regs[ep->dwc_ep.num]->doepctl);
+			if (!ep->dwc_ep.is_in)
+				depctl.d32 = DWC_READ_REG32(&GET_CORE_IF(pcd)->dev_if->out_ep_regs[ep->dwc_ep.num]->doepctl);
+			else
+				depctl.d32 = DWC_READ_REG32(&GET_CORE_IF(pcd)->dev_if->in_ep_regs[ep->dwc_ep.num]->diepctl);
 			if (!depctl.b.epena || ep->dwc_ep.type != DWC_OTG_EP_TYPE_BULK) {
 				ep->dwc_ep.desc_cnt = 0;
 				last = req->dma_desc->status.b.l;
