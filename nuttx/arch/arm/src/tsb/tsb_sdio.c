@@ -1351,6 +1351,7 @@ static void sdio_write_fifo_data(struct tsb_sdio_info *info)
                          DAT_LINE_ACTIVE | COMMAND_INHIBIT_DAT;
     int16_t remaining = 0, i = 0;
     uint8_t *wbuf = info->write_buf.buffer;
+    uint8_t retry = 0;
 
     remaining = info->write_buf.tail - info->write_buf.head;
     presentstate = sdio_getreg(info->sdio_reg_base, PRESENTSTATE);
@@ -1366,7 +1367,11 @@ static void sdio_write_fifo_data(struct tsb_sdio_info *info)
         /* Check data error */
         if (!(presentstate & BUFFER_WRITE_ENABLE) &&
             (presentstate & WRITE_TRANSFER_ACTIVE)) {
-            break;
+            up_udelay(REGISTER_INTERVAL);
+            retry++;
+            if (retry == REGISTER_DAT_MAX_RETRY) {
+                break;
+            }
         }
 
         if (presentstate & BUFFER_WRITE_ENABLE) {
@@ -1430,6 +1435,7 @@ static void sdio_read_fifo_data(struct tsb_sdio_info *info)
                          DAT_LINE_ACTIVE | COMMAND_INHIBIT_DAT;
     int16_t remaining = 0, i = 0;
     uint8_t *rbuf = info->read_buf.buffer;
+    uint8_t retry = 0;
 
     remaining = info->read_buf.tail - info->read_buf.head;
     presentstate = sdio_getreg(info->sdio_reg_base, PRESENTSTATE);
@@ -1445,7 +1451,11 @@ static void sdio_read_fifo_data(struct tsb_sdio_info *info)
         /* Check data error */
         if (!(presentstate & BUFFER_READ_ENABLE) &&
             (presentstate & READ_TRANSFER_ACTIVE)) {
-            break;
+            up_udelay(REGISTER_INTERVAL);
+            retry++;
+            if (retry == REGISTER_DAT_MAX_RETRY) {
+                break;
+            }
         }
 
         if (presentstate & BUFFER_READ_ENABLE) {
