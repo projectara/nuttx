@@ -2457,6 +2457,7 @@ static void complete_ep(dwc_otg_pcd_ep_t * ep)
 #endif
 #ifdef DWC_ENHANCED_SG_DMA_OUT
 					if (ep->dwc_ep.type == DWC_OTG_EP_TYPE_BULK) {
+						dma_desc = req->dma_desc;
 						desc_sts = req->dma_desc->status;
 						byte_count += desc_sts.b.bytes;
 					} else {
