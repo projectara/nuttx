@@ -1178,9 +1178,13 @@ extern int dwc_otg_check_haps_status(dwc_otg_core_if_t * core_if);
 #ifdef DWC_ENHANCED_SG_DMA
 extern
 dwc_otg_dev_dma_desc_t *get_ring_dma_desc_chain(dwc_ep_t * ep, uint32_t i);
+#endif
+#ifdef DWC_ENHANCED_SG_DMA_OUT
 void init_ring_dma_desc(dwc_ep_t * ep, dwc_otg_dev_dma_desc_t *dma_desc,
 			uint32_t buf, uint32_t length);
 int invalidate_ring_entry(dwc_ep_t * ep, dwc_otg_dev_dma_desc_t *dma_desc);
+#endif
+#ifdef DWC_ENHANCED_SG_DMA_IN
 void init_fifo_dma_desc(dwc_ep_t * ep, dwc_otg_dev_dma_desc_t *dma_desc,
 			uint32_t buf, uint32_t length);
 #endif

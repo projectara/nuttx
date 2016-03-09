@@ -191,8 +191,12 @@ config ARCH_CHIP_USB_PCD
 		Synopsys USB Device Driver
 
 if ARCH_CHIP_USB_PCD
-config DWC_ENHANCED_SG_DMA
-	bool "Enable SG DMA enhancement"
+config DWC_ENHANCED_BULK_IN
+	bool "Enable SG DMA enhancement for Bulk In EP"
+	default n
+
+config DWC_ENHANCED_BULK_OUT
+	bool "Enable SG DMA enhancement for Bulk Out EP"
 	default n
 endif
 

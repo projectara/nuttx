@@ -166,6 +166,8 @@ typedef struct dwc_otg_pcd_ep {
 #ifdef DWC_ENHANCED_SG_DMA
 	struct req_list sg_dma_queue;
 	dwc_spinlock_t *sg_dma_queue_lock;
+#endif
+#ifdef DWC_ENHANCED_SG_DMA_OUT
 	uint32_t sg_dma_queue_count;
 #endif
 
@@ -173,7 +175,7 @@ typedef struct dwc_otg_pcd_ep {
 	unsigned disabling:1;
 	unsigned dma:1;
 	unsigned queue_sof:1;
-#ifdef DWC_ENHANCED_SG_DMA
+#ifdef DWC_ENHANCED_SG_DMA_OUT
 	unsigned bna:1;
 #endif
 

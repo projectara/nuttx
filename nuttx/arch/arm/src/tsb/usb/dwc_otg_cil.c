@@ -3753,7 +3753,7 @@ dwc_otg_dev_dma_desc_t *get_ring_dma_desc_chain(dwc_ep_t * ep, uint32_t i)
 }
 #endif
 
-#ifdef DWC_ENHANCED_SG_DMA
+#ifdef DWC_ENHANCED_SG_DMA_OUT
 void init_ring_dma_desc(dwc_ep_t * ep, dwc_otg_dev_dma_desc_t *dma_desc,
 			uint32_t buf, uint32_t length)
 {
@@ -3821,9 +3821,9 @@ int invalidate_ring_entry(dwc_ep_t * ep, dwc_otg_dev_dma_desc_t *dma_desc)
 
 	return 0;
 }
-#endif /* DWC_ENHANCED_SG_DMA */
+#endif /* DWC_ENHANCED_SG_DMA_OUT */
 
-#ifdef DWC_ENHANCED_SG_DMA
+#ifdef DWC_ENHANCED_SG_DMA_IN
 void init_fifo_dma_desc(dwc_ep_t * ep, dwc_otg_dev_dma_desc_t *dma_desc,
 			uint32_t buf, uint32_t length)
 {
@@ -3841,7 +3841,7 @@ void init_fifo_dma_desc(dwc_ep_t * ep, dwc_otg_dev_dma_desc_t *dma_desc,
 	}
 	dma_desc->status.b.bs = BS_HOST_READY;
 }
-#endif /* DWC_ENHANCED_SG_DMA */
+#endif /* DWC_ENHANCED_SG_DMA_IN */
 
 /**
  * This function is called when to write ISOC data into appropriate dedicated 
@@ -3983,7 +3983,7 @@ void dwc_otg_ep_start_transfer(dwc_otg_core_if_t * core_if, dwc_ep_t * ep)
 							ep->descs_dma_addr);
 				} else {
 #endif
-#ifdef DWC_ENHANCED_SG_DMA
+#ifdef DWC_ENHANCED_SG_DMA_IN
 					if (!ep->desc_cnt)
 #endif
 						init_dma_desc_chain(core_if, ep);
@@ -4112,7 +4112,7 @@ void dwc_otg_ep_start_transfer(dwc_otg_core_if_t * core_if, dwc_ep_t * ep)
 					/** This is used for interrupt out transfers*/
 					if (!ep->xfer_len)
 						ep->xfer_len = ep->total_len;
-#ifdef DWC_ENHANCED_SG_DMA
+#ifdef DWC_ENHANCED_SG_DMA_OUT
 					if (!ep->desc_cnt)
 #endif
 						init_dma_desc_chain(core_if, ep);
