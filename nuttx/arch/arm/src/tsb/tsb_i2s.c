@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2015 Google Inc.
+ * Copyright (c) 2015-2016 Google Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -60,6 +60,80 @@
  * support more than one tsb i2s controller.
  */
 struct device *saved_dev;
+
+static int tsb_i2s_irq_so_handler(int irq, void *context)
+{
+    struct tsb_i2s_info *info = device_get_private(saved_dev);
+    uint32_t intstat;
+
+    intstat = tsb_i2s_read(info, TSB_I2S_BLOCK_SO, TSB_I2S_REG_INTSTAT);
+
+    if (intstat & TSB_I2S_REG_INT_INT)
+        tsb_i2s_tx_data(info);
+    else
+        tsb_i2s_clear_irqs(info, TSB_I2S_BLOCK_SO, intstat);
+
+    return 0;
+}
+
+static int tsb_i2s_irq_si_handler(int irq, void *context)
+{
+    struct tsb_i2s_info *info = device_get_private(saved_dev);
+    uint32_t intstat;
+
+    intstat = tsb_i2s_read(info, TSB_I2S_BLOCK_SI, TSB_I2S_REG_INTSTAT);
+
+    if (intstat & TSB_I2S_REG_INT_INT) {
+        tsb_i2s_mask_irqs(info, TSB_I2S_BLOCK_SI, TSB_I2S_REG_INT_INT);
+        tsb_i2s_rx_data(info);
+    } else {
+        tsb_i2s_clear_irqs(info, TSB_I2S_BLOCK_SI, intstat);
+    }
+
+    return 0;
+}
+
+static int tsb_i2s_xfer_irq_attach(struct tsb_i2s_info *info)
+{
+    int retval = 0;
+
+    retval = irq_attach(info->so_irq, tsb_i2s_irq_so_handler);
+    if (retval) {
+        lldbg("Failed to attach I2SO irq.\n");
+        return retval;
+    }
+
+    retval = irq_attach(info->si_irq, tsb_i2s_irq_si_handler);
+    if (retval) {
+        lldbg("Failed to attach I2SI irq.\n");
+        return retval;
+    }
+
+    return retval;
+}
+
+static int tsb_i2s_xfer_irq_detach(struct tsb_i2s_info *info)
+{
+    int retval = 0;
+
+    retval = irq_detach(info->so_irq);
+    if (retval) {
+        irq_detach(info->si_irq);
+        return retval;
+    }
+
+    return irq_detach(info->si_irq);
+}
+
+int tsb_i2s_xfer_shutdown_transmitter(struct tsb_i2s_info *info)
+{
+    return 0;
+}
+
+int tsb_i2s_xfer_shutdown_receiver(struct tsb_i2s_info *info)
+{
+    return 0;
+}
 
 static int tsb_i2s_verify_pcm_support(uint8_t clk_role, struct device_i2s_pcm *pcm)
 {
@@ -275,8 +349,8 @@ int tsb_i2s_tx_is_active(struct tsb_i2s_info *info)
            (info->flags & TSB_I2S_FLAG_TX_ACTIVE);
 }
 
-static uint32_t tsb_i2s_get_block_base(struct tsb_i2s_info *info,
-                                       enum tsb_i2s_block block)
+uint32_t tsb_i2s_get_block_base(struct tsb_i2s_info *info,
+                                enum tsb_i2s_block block)
 {
     uint32_t base;
 
@@ -962,6 +1036,11 @@ static int tsb_i2s_op_prepare_receiver(struct device *dev,
     up_enable_irq(info->sierr_irq);
     up_enable_irq(info->si_irq);
 
+    ret = tsb_i2s_xfer_prepare_receiver(info);
+    if (ret) {
+        goto err_disable;
+    }
+
     info->flags |= TSB_I2S_FLAG_RX_PREPARED;
 
     sem_post(&info->lock);
@@ -1037,6 +1116,11 @@ static int tsb_i2s_op_shutdown_receiver(struct device *dev)
     up_disable_irq(info->si_irq);
     up_disable_irq(info->sierr_irq);
 
+    if (tsb_i2s_xfer_shutdown_receiver(info)) {
+        ret = -EBUSY;
+        goto err_unlock;
+    }
+
     if (!tsb_i2s_tx_is_prepared(info)) {
         tsb_i2s_stop_clocks(info);
         tsb_i2s_disable(info);
@@ -1087,6 +1171,10 @@ static int tsb_i2s_op_prepare_transmitter(struct device *dev,
     info->tx_rb = tx_rb;
     info->tx_callback = callback;
     info->tx_arg = arg;
+
+    if (tsb_i2s_xfer_prepare_transmitter(info)) {
+        goto err_disable;
+    }
 
     info->flags |= TSB_I2S_FLAG_TX_PREPARED;
 
@@ -1166,6 +1254,11 @@ static int tsb_i2s_op_shutdown_transmitter(struct device *dev)
     up_disable_irq(info->so_irq);
     up_disable_irq(info->soerr_irq);
 
+    if (tsb_i2s_xfer_shutdown_transmitter(info)) {
+        ret = -EIO;
+        goto err_unlock;
+    }
+
     if (!tsb_i2s_rx_is_prepared(info)) {
         tsb_i2s_stop_clocks(info);
         tsb_i2s_disable(info);
@@ -1195,7 +1288,10 @@ static int tsb_i2s_dev_open(struct device *dev)
         goto err_unlock;
     }
 
-    info->flags = TSB_I2S_FLAG_OPEN;
+    ret = tsb_i2s_xfer_open(info);
+    if (!ret) {
+        info->flags = TSB_I2S_FLAG_OPEN;
+    }
 
 err_unlock:
     sem_post(&info->lock);
@@ -1223,6 +1319,8 @@ static void tsb_i2s_dev_close(struct device *dev)
 
     if (tsb_i2s_tx_is_prepared(info))
         tsb_i2s_op_shutdown_transmitter(dev);
+
+    tsb_i2s_xfer_close(info);
 
     info->flags = 0;
 

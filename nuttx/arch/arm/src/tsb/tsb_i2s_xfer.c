@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2015 Google Inc.
+ * Copyright (c) 2015-2016 Google Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -45,12 +45,10 @@
 #include <nuttx/device_pll.h>
 #include <nuttx/device_i2s.h>
 #include <nuttx/ring_buf.h>
-
 #include <arch/byteorder.h>
 
 #include "up_arch.h"
 #include "tsb_scm.h"
-
 #include "tsb_i2s.h"
 
 static int tsb_i2s_drain_fifo(struct tsb_i2s_info *info,
@@ -117,7 +115,7 @@ static int tsb_i2s_fill_fifo(struct tsb_i2s_info *info,
     return ret;
 }
 
-static int tsb_i2s_rx_data(struct tsb_i2s_info *info)
+int tsb_i2s_rx_data(struct tsb_i2s_info *info)
 {
     enum device_i2s_event event = DEVICE_I2S_EVENT_NONE;
     int ret = 0;
@@ -168,7 +166,7 @@ static int tsb_i2s_rx_data(struct tsb_i2s_info *info)
     return ret;
 }
 
-static int tsb_i2s_tx_data(struct tsb_i2s_info *info)
+int tsb_i2s_tx_data(struct tsb_i2s_info *info)
 {
     enum device_i2s_event event = DEVICE_I2S_EVENT_NONE;
     int ret = 0;
@@ -331,64 +329,22 @@ void tsb_i2s_stop_transmitter(struct tsb_i2s_info *info, int is_err)
     irqrestore(flags);
 }
 
-static int tsb_i2s_irq_so_handler(int irq, void *context)
+int tsb_i2s_xfer_open(struct tsb_i2s_info *info)
 {
-    struct tsb_i2s_info *info = device_get_private(saved_dev);
-    uint32_t intstat;
-
-    intstat = tsb_i2s_read(info, TSB_I2S_BLOCK_SO, TSB_I2S_REG_INTSTAT);
-
-    if (intstat & TSB_I2S_REG_INT_INT)
-        tsb_i2s_tx_data(info);
-    else
-        tsb_i2s_clear_irqs(info, TSB_I2S_BLOCK_SO, intstat);
-
-    return OK;
+    return 0;
 }
 
-static int tsb_i2s_irq_si_handler(int irq, void *context)
+void tsb_i2s_xfer_close(struct tsb_i2s_info *info)
 {
-    struct tsb_i2s_info *info = device_get_private(saved_dev);
-    uint32_t intstat;
-
-    intstat = tsb_i2s_read(info, TSB_I2S_BLOCK_SI, TSB_I2S_REG_INTSTAT);
-
-    if (intstat & TSB_I2S_REG_INT_INT)
-        tsb_i2s_rx_data(info);
-    else
-        tsb_i2s_clear_irqs(info, TSB_I2S_BLOCK_SI, intstat);
-
-    return OK;
+    return;
 }
 
-int tsb_i2s_xfer_irq_attach(struct tsb_i2s_info *info)
+int tsb_i2s_xfer_prepare_receiver(struct tsb_i2s_info *info)
 {
-    int retval = OK;
-
-    retval = irq_attach(info->so_irq, tsb_i2s_irq_so_handler);
-    if (retval != OK) {
-        lldbg("Failed to attach I2SO irq.\n");
-        return retval;
-    }
-
-    retval = irq_attach(info->si_irq, tsb_i2s_irq_si_handler);
-    if (retval != OK) {
-        lldbg("Failed to attach I2SO irq.\n");
-        return retval;
-    }
-
-    return retval;
+    return 0;
 }
 
-int tsb_i2s_xfer_irq_detach(struct tsb_i2s_info *info)
+int tsb_i2s_xfer_prepare_transmitter(struct tsb_i2s_info *info)
 {
-    int retval = OK;
-
-    retval = irq_detach(info->so_irq);
-    if (retval != OK) {
-        irq_detach(info->si_irq);
-        return retval;
-    }
-
-    return irq_detach(info->si_irq);
+    return 0;
 }

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2014-2015 Google, Inc.
+# Copyright (c) 2015-2016 Google, Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -56,6 +56,12 @@ config ARCH_UNIPRO_MAX_CPORT_COUNT
 		Maximum number of CPort supported. This option is used to reduced the
 		number of CPort supported by the UniPro IP. A value of <= 0 indicate
 		that the driver should use all the CPorts supported by the UniPro IP.
+
+config ARCH_I2S_USE_DMA
+    bool "Enable DMA for I2S data transfer"
+    depends on ARCH_CHIP_DEVICE_GDMAC
+    ---help---
+        Enable I2S to utilize DMA to move data.
 
 config ARCH_UNIPROTX_USE_DMA
 	bool "Enable DMA for Unipro TX"

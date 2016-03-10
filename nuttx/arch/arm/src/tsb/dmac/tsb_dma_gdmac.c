@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2015 Google Inc.
+ * Copyright (c) 2015-2016 Google Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -1652,7 +1652,7 @@ int tsb_gdmac_allocal_mem2io_chan(struct device *dev,
     /* Set the transfer and transfer done handlers */
     gdmac_chan->do_dma_transfer = gdmac_mem2io_transfer;
     gdmac_chan->release_channel = gdmac_mem2io_release_channel;
-    gdmac-chan->error_handler = NULL;
+    gdmac_chan->error_handler = NULL;
     gdmac_chan->gdmac_dev = dev;
 
     *tsb_chan = &gdmac_chan->tsb_chan;
@@ -1961,7 +1961,7 @@ int tsb_gdmac_allocal_io2mem_chan(struct device *dev,
     /* Set the transfer and transfer done handlers */
     gdmac_chan->do_dma_transfer = gdmac_io2mem_transfer;
     gdmac_chan->release_channel = gdmac_io2mem_release_channel;
-    gdmac-chan->error_handler = NULL;
+    gdmac_chan->error_handler = NULL;
     gdmac_chan->gdmac_dev = dev;
 
     *tsb_chan = &gdmac_chan->tsb_chan;

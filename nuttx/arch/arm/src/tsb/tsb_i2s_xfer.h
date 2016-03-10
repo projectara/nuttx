@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2015 Google Inc.
+ * Copyright (c) 2015-2016 Google Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,12 +37,20 @@
 /*
  * Data movement routines provided by tsb_i2s_xfer,c or tsb_i2s_xfer_dma.c
  */
-int tsb_i2s_xfer_irq_attach(struct tsb_i2s_info *info);
-int tsb_i2s_xfer_irq_detach(struct tsb_i2s_info *info);
 
 int tsb_i2s_start_receiver(struct tsb_i2s_info *info);
 void tsb_i2s_stop_receiver(struct tsb_i2s_info *info, int is_err);
 int tsb_i2s_start_transmitter(struct tsb_i2s_info *info);
 void tsb_i2s_stop_transmitter(struct tsb_i2s_info *info, int is_err);
+int tsb_i2s_tx_data(struct tsb_i2s_info *info);
+int tsb_i2s_rx_data(struct tsb_i2s_info *info);
+
+/*
+ *  Nothing need to be done in the following routines if we use SW pulling
+ */
+int tsb_i2s_xfer_open(struct tsb_i2s_info *info);
+void tsb_i2s_xfer_close(struct tsb_i2s_info *info);
+int tsb_i2s_xfer_prepare_receiver(struct tsb_i2s_info *info);
+int tsb_i2s_xfer_prepare_transmitter(struct tsb_i2s_info *info);
 
 #endif /* __TSB_I2S_XFER_H */

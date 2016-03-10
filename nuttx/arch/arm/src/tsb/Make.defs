@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2014-2015 Google, Inc.
+# Copyright (c) 2015-2016 Google, Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -113,7 +113,11 @@ endif
 
 ifeq ($(CONFIG_ARCH_CHIP_TSB_I2S),y)
 CHIP_CSRCS += tsb_i2s.c
+ifeq ($(CONFIG_ARCH_I2S_USE_DMA), y)
+CHIP_CSRCS += tsb_i2s_xfer_dma.c
+else
 CHIP_CSRCS += tsb_i2s_xfer.c
+endif
 endif
 
 CMN_CSRCS += tsb_unipro.c
