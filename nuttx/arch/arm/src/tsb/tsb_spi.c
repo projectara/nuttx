@@ -124,17 +124,17 @@ enum tsb_spi_state {
 };
 
 /**
- * Current transition information.
+ * Transfer information
  */
-struct xfer_curr_info {
-    /** Currently TX buffer pointer */
-    uint8_t *cur_tx;
+struct xfer_info {
+    /** TX buffer pointer */
+    uint8_t *tx;
 
-    /** Currently RX buffer pointer */
-    uint8_t *cur_rx;
+    /** RX buffer pointer */
+    uint8_t *rx;
 
-    /** Select bits per word for this transfer */
-    uint8_t cur_bpw;
+    /** bits per word used for this transfer */
+    uint8_t bpw;
 
     /** Tx buffer remaining bytes */
     uint32_t tx_remaining;
@@ -162,8 +162,8 @@ struct tsb_spi_dev_info {
     /** SPI device state */
     enum tsb_spi_state state;
 
-    /** struct for currectly transfer information store */
-    struct xfer_curr_info curr_xfer;
+    /** current transfer information */
+    struct xfer_info curr_xfer;
 
     /** bit masks of supported SPI protocol mode */
     uint16_t modes;
@@ -591,7 +591,7 @@ static int tsb_spi_setbits(struct device *dev, uint8_t cs, uint8_t nbits)
     ctrl0 |= ((nbits - 1) << SPI_CTRLR0_DFS32_OFFSET);
 
     tsb_spi_write(info->reg_base, DW_SPI_CTRLR0, ctrl0);
-    info->curr_xfer.cur_bpw = nbits;
+    info->curr_xfer.bpw = nbits;
 
 exit_setbit:
     sem_post(&info->lock);
@@ -639,8 +639,8 @@ static int tsb_spi_exchange(struct device *dev,
     }
 
     info->curr_xfer.status = 0;
-    info->curr_xfer.cur_tx = transfer->txbuffer;
-    info->curr_xfer.cur_rx = transfer->rxbuffer;
+    info->curr_xfer.tx = transfer->txbuffer;
+    info->curr_xfer.rx = transfer->rxbuffer;
 
     /* event has read request, we still need to read data because SPI data
      * exchange behavior */
@@ -679,7 +679,7 @@ err_unlock:
  */
 int tsb_spi_process_rx(struct tsb_spi_dev_info *info)
 {
-    struct xfer_curr_info *xfer = &info->curr_xfer;
+    struct xfer_info *xfer = &info->curr_xfer;
     uint32_t rx_left, rx_reads, data;
 
     /* calculate how much available data in Rx FIFO */
@@ -689,20 +689,20 @@ int tsb_spi_process_rx(struct tsb_spi_dev_info *info)
     while (rx_reads--) {
         data = tsb_spi_read(info->reg_base, DW_SPI_DR);
 
-        if (xfer->cur_bpw <= 8) {
-            if (xfer->cur_rx) {
-                *(uint8_t *)(xfer->cur_rx) = data;
-                xfer->cur_rx += 1;
+        if (xfer->bpw <= 8) {
+            if (xfer->rx) {
+                *(uint8_t *)(xfer->rx) = data;
+                xfer->rx += 1;
             }
-        } else if (xfer->cur_bpw <= 16) {
-            if (xfer->cur_rx) {
-                *(uint16_t *)(xfer->cur_rx) = data;
-                xfer->cur_rx += 2;
+        } else if (xfer->bpw <= 16) {
+            if (xfer->rx) {
+                *(uint16_t *)(xfer->rx) = data;
+                xfer->rx += 2;
             }
-        } else if (xfer->cur_bpw <= 32) {
-            if (xfer->cur_rx) {
-                *(uint32_t *)(xfer->cur_rx) = data;
-                xfer->cur_rx += 4;
+        } else if (xfer->bpw <= 32) {
+            if (xfer->rx) {
+                *(uint32_t *)(xfer->rx) = data;
+                xfer->rx += 4;
             }
         } else {
             return -EINVAL;
@@ -720,7 +720,7 @@ int tsb_spi_process_rx(struct tsb_spi_dev_info *info)
  */
 int tsb_spi_process_tx(struct tsb_spi_dev_info *info)
 {
-    struct xfer_curr_info *xfer = &info->curr_xfer;
+    struct xfer_info *xfer = &info->curr_xfer;
     uint32_t tx_room, tx_writes, data = 0;
 
     /* calculate how much available space in Tx FIFO */
@@ -728,20 +728,20 @@ int tsb_spi_process_tx(struct tsb_spi_dev_info *info)
     tx_writes = (xfer->tx_remaining > tx_room)? tx_room : xfer->tx_remaining;
 
     while (tx_writes--) {
-        if (xfer->cur_bpw <= 8) {
-            if (xfer->cur_tx) {
-                data = *(uint8_t *)(xfer->cur_tx);
-                xfer->cur_tx += 1;
+        if (xfer->bpw <= 8) {
+            if (xfer->tx) {
+                data = *(uint8_t *)(xfer->tx);
+                xfer->tx += 1;
             }
-        } else if (xfer->cur_bpw <= 16) {
-            if (xfer->cur_tx) {
-                data = *(uint16_t *)(xfer->cur_tx);
-                xfer->cur_tx += 2;
+        } else if (xfer->bpw <= 16) {
+            if (xfer->tx) {
+                data = *(uint16_t *)(xfer->tx);
+                xfer->tx += 2;
             }
-        } else if (xfer->cur_bpw <= 32) {
-            if (xfer->cur_tx) {
-                data = *(uint32_t *)(xfer->cur_tx);
-                xfer->cur_tx += 4;
+        } else if (xfer->bpw <= 32) {
+            if (xfer->tx) {
+                data = *(uint32_t *)(xfer->tx);
+                xfer->tx += 4;
             }
         } else {
             return -EINVAL;
@@ -1067,7 +1067,7 @@ static int tsb_spi_dev_open(struct device *dev)
     }
     info->cs_high = 0;
 
-    info->curr_xfer.cur_bpw = 8;
+    info->curr_xfer.bpw = 8;
 
     ret = tsb_spi_hw_init(info);
     if (ret) {
