@@ -110,6 +110,12 @@
 #define SPI_BPW_MASK        0xFFFFFFF8  /* Minimum of 4 bits-per-word */
 #define SPI_TX_FIFO_DEPTH   16          /* TX FIFO depth */
 #define SPI_RX_FIFO_DEPTH   16          /* RX FIFO depth */
+#define _SPI_BASE_MODE      (SPI_MODE_CPHA | SPI_MODE_CPOL | SPI_MODE_LOOP)
+#if defined(CONFIG_TSB_SPI_GPIO)
+# define SPI_DEFAULT_MODE   (_SPI_BASE_MODE | SPI_MODE_CS_HIGH)
+#else
+# define SPI_DEFAULT_MODE   _SPI_BASE_MODE
+#endif
 
 #define TSB_SPI_ACTIVITY           9
 
@@ -167,9 +173,6 @@ struct tsb_spi_dev_info {
 
     /** current transfer information */
     struct xfer_info curr_xfer;
-
-    /** bit masks of supported SPI protocol mode */
-    uint16_t modes;
 
     /** number of chip select pins supported */
     uint16_t csnum;
@@ -508,7 +511,7 @@ static int tsb_spi_setmode(struct device *dev, uint8_t cs, uint8_t mode)
     }
 
     /* check hardware mode capabilities */
-    if ((mode & info->modes) != mode) {
+    if ((mode & SPI_DEFAULT_MODE) != mode) {
         ret = -ENOSYS;
         goto err_setmode;
     }
@@ -841,7 +844,7 @@ static int tsb_spi_getcaps(struct device *dev, struct master_spi_caps *caps)
 
     sem_wait(&info->lock);
 
-    caps->modes = info->modes;
+    caps->mode = SPI_DEFAULT_MODE;
     caps->flags = 0; /* nothing that we can't do */
     caps->bpw_mask = SPI_BPW_MASK;
     caps->csnum = info->csnum;
@@ -1056,10 +1059,6 @@ static int tsb_spi_dev_open(struct device *dev)
     }
     /* Set Capability */
     info->csnum = data->num;
-    info->modes = (SPI_MODE_CPHA | SPI_MODE_CPOL | SPI_MODE_LOOP);
-#if defined(CONFIG_TSB_SPI_GPIO)
-    info->modes |= SPI_MODE_CS_HIGH;
-#endif
 
     info->curr_xfer.cs_high = 0;
     info->curr_xfer.bpw = 8;

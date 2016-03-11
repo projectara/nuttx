@@ -95,7 +95,7 @@ static uint8_t gb_spi_protocol_master_config(struct gb_operation *operation)
     response->bpw_mask = cpu_to_le32(caps.bpw_mask);
     response->min_speed_hz = cpu_to_le32(caps.min_speed_hz);
     response->max_speed_hz = cpu_to_le32(caps.max_speed_hz);
-    response->mode = cpu_to_le16(caps.modes);
+    response->mode = cpu_to_le16(caps.mode);
     response->flags = cpu_to_le16(caps.flags);
     response->num_chipselect = cpu_to_le16(caps.csnum);
 

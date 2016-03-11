@@ -85,7 +85,7 @@ struct master_spi_caps {
     /** maximum Transfer speed in Hz */
     uint32_t max_speed_hz;
     /** bit masks of supported SPI protocol mode */
-    uint16_t modes;
+    uint16_t mode;
     /** bit masks of supported SPI protocol flags */
     uint16_t flags;
     /** number of chip select pins supported */
