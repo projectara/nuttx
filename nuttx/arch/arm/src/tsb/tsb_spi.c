@@ -186,9 +186,6 @@ struct tsb_spi_dev_info {
     /** RX thread notification flag */
     sem_t xfer_completed;
 
-    /** number of spi slave device */
-    uint8_t dev_num;
-
     /** configuration of spi slave device */
     struct spi_board_device_cfg *board_cfg;
 
@@ -341,7 +338,7 @@ static int tsb_spi_select(struct device *dev, uint8_t devid)
     tsb_spi_write(info->reg_base, DW_SPI_SER, 0x2);
 
     /* only one chip-select pin can be activated */
-    for (i = 0; i < info->dev_num; i++) {
+    for (i = 0; i < info->csnum; i++) {
         if (i == devid) {
             gpio_set_value(info->board_cfg[i].ext_cs,
                     info->curr_xfer.cs_high);
@@ -869,18 +866,13 @@ static int tsb_spi_query_board_cfg(struct device *dev)
 
     info = device_get_private(dev);
 
-    /* get number of SPI slave device */
-    ret = device_spi_board_get_device_num(info->spi_board_dev, &info->dev_num);
-    if (ret) {
-        return ret;
-    }
     /* Get SPI specific chip configured information */
-    info->board_cfg = zalloc(info->dev_num *
+    info->board_cfg = zalloc(info->csnum *
                              sizeof(struct spi_board_device_cfg));
     if (!info->board_cfg) {
         return -ENOMEM;
     }
-    for (i = 0; i < info->dev_num; i++) {
+    for (i = 0; i < info->csnum; i++) {
         ret = device_spi_board_get_device_cfg(info->spi_board_dev, i,
                                               &info->board_cfg[i]);
         if (ret) {
@@ -914,7 +906,7 @@ static int tsb_spi_get_cfg(struct device *dev, uint8_t cs,
 
     info = device_get_private(dev);
 
-    if (!info->board_cfg || cs >= info->dev_num) {
+    if (!info->board_cfg || cs >= info->csnum) {
         return -EINVAL;
     }
 

@@ -61,35 +61,10 @@ struct spi_board_device_cfg {
  * SPI board device driver operations
  */
 struct device_spi_board_type_ops {
-    /** Get number of SPI device. */
-    int (*get_device_num)(struct device *dev, uint8_t *num);
     /** Get SPI specific chip configured information. */
     int (*get_device_cfg)(struct device *dev, uint8_t cs,
                           struct spi_board_device_cfg *dev_cfg);
 };
-
-/**
- * @brief Get number of SPI device
- *
- * @param dev Pointer to structure of device.
- * @param num number of device.
- * @return 0 on success, negative errno on error.
- */
-static inline int device_spi_board_get_device_num(struct device *dev,
-                                                  uint8_t *num)
-{
-    DEVICE_DRIVER_ASSERT_OPS(dev);
-
-    if (!device_is_open(dev)) {
-        return -ENODEV;
-    }
-
-    if (DEVICE_DRIVER_GET_OPS(dev, spi_board)->get_device_num)
-        return DEVICE_DRIVER_GET_OPS(dev,
-                                spi_board)->get_device_num(dev, num);
-
-    return -ENOSYS;
-}
 
 /**
  * @brief Get SPI specific chip configured information.

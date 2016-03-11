@@ -112,25 +112,6 @@ static int spi_board_deinitialize(struct device *dev)
 }
 
 /**
- * @brief Get number of SPI device
- *
- * @param dev Pointer to structure of device.
- * @param num number of device.
- * @return 0 on success, negative errno on error.
- */
-static int spi_board_get_device_num(struct device *dev, uint8_t *num)
-{
-    struct spi_board_init_data *data;
-
-    if (!dev || !dev->init_data) {
-        return -EINVAL;
-    }
-    data = dev->init_data;
-    *num = data->num;
-    return 0;
-}
-
-/**
  * @brief Get SPI specific chip configured information.
  *
  * @param dev pointer to structure of device data
@@ -276,7 +257,6 @@ static void spi_board_dev_remove(struct device *dev)
 }
 
 static struct device_spi_board_type_ops spi_board_type_ops = {
-    .get_device_num = spi_board_get_device_num,
     .get_device_cfg = spi_board_get_device_cfg,
 };
 
