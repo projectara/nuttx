@@ -196,7 +196,7 @@ static uint8_t gb_spi_protocol_transfer(struct gb_operation *operation)
 
     for (i = 0; i < op_count; i++) {
         desc = &request->transfers[i];
-        if (desc->rdwr & SPI_XFER_READ) {
+        if (desc->rdwr & GB_SPI_XFER_READ) {
             size += le32_to_cpu(desc->len);
         }
     }
@@ -249,8 +249,8 @@ static uint8_t gb_spi_protocol_transfer(struct gb_operation *operation)
         /* setup SPI transfer */
         memset(&transfer, 0, sizeof(struct device_spi_transfer));
         transfer.txbuffer = write_data;
-        /* If rdwr without SPI_XFER_READ flag, not need to pass read buffer */
-        if (desc->rdwr & SPI_XFER_READ) {
+        /* If rdwr without GB_SPI_XFER_READ flag, not need to pass read buffer */
+        if (desc->rdwr & GB_SPI_XFER_READ) {
             transfer.rxbuffer = read_buf;
         } else {
             transfer.rxbuffer = NULL;
@@ -267,10 +267,10 @@ static uint8_t gb_spi_protocol_transfer(struct gb_operation *operation)
         /* move to next gb_spi_transfer data buffer */
         write_data += le32_to_cpu(desc->len);
 
-        /* If rdwr without SPI_XFER_READ flag, not need to resize
+        /* If rdwr without GB_SPI_XFER_READ flag, not need to resize
          * read buffer
          */
-        if (desc->rdwr & SPI_XFER_READ) {
+        if (desc->rdwr & GB_SPI_XFER_READ) {
             read_buf += le32_to_cpu(desc->len);
         }
 

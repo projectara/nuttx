@@ -52,6 +52,10 @@
 #define GB_SPI_FLAG_NO_RX       0x02    /* can't do buffer read */
 #define GB_SPI_FLAG_NO_TX       0x04    /* can't do buffer write */
 
+/* SPI Transfer Type */
+#define GB_SPI_XFER_READ        0x01    /* flag for read transfer */
+#define GB_SPI_XFER_WRITE       0x02    /* flag for write transfer */
+
 /**
  * SPI Protocol Version Response
  */

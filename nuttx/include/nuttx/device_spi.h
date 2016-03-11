@@ -58,9 +58,6 @@
 #define SPI_FLAG_NO_RX              0x0002      /* can’t do buffer read */
 #define SPI_FLAG_NO_TX              0x0004      /* can’t do buffer write */
 
-#define SPI_XFER_READ               0x01        /* flag for read transfer */
-#define SPI_XFER_WRITE              0x02        /* flag for write transfer */
-
 #define SPI_DEV_TYPE                0x00        /* Normal SPI device */
 #define SPI_NOR_TYPE                0x01        /* MTD SPI device */
 #define SPI_MODALIAS_TYPE           0x02        /* Fixed name device */
