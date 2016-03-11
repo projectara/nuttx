@@ -136,6 +136,9 @@ struct xfer_info {
     /** bits per word used for this transfer */
     uint8_t bpw;
 
+    /** chip-select pin active high for this transfer */
+    uint8_t cs_high;
+
     /** Tx buffer remaining bytes */
     uint32_t tx_remaining;
 
@@ -170,9 +173,6 @@ struct tsb_spi_dev_info {
 
     /** number of chip select pins supported */
     uint16_t csnum;
-
-    /** chip-select pin active high when selected */
-    uint16_t cs_high;
 
     /** Exclusive access for SPI bus */
     sem_t bus;
@@ -314,7 +314,6 @@ static int tsb_spi_select(struct device *dev, uint8_t devid)
 {
     struct tsb_spi_dev_info *info = NULL;
     int ret = 0, i;
-    uint8_t select = 0;
 
     /* check input parameters */
     if (!dev || !device_get_private(dev)) {
@@ -339,11 +338,12 @@ static int tsb_spi_select(struct device *dev, uint8_t devid)
     if (info->using_gpio) {
         /* only one chip-select pin can be actived */
         for (i = 0; i < info->dev_num; i++) {
-            select = (info->cs_high & BIT(i))? 1 : 0;
             if (i == devid) {
-                gpio_set_value(info->board_cfg[i].ext_cs, select);
+                gpio_set_value(info->board_cfg[i].ext_cs,
+                        info->curr_xfer.cs_high);
             } else {
-                gpio_set_value(info->board_cfg[i].ext_cs, !select);
+                gpio_set_value(info->board_cfg[i].ext_cs,
+                        !info->curr_xfer.cs_high);
             }
         }
     }
@@ -369,7 +369,6 @@ err_select:
 static int tsb_spi_deselect(struct device *dev, uint8_t devid)
 {
     struct tsb_spi_dev_info *info = NULL;
-    uint8_t deselect = 0;
 
     /* check input parameters */
     if (!dev || !device_get_private(dev)) {
@@ -387,8 +386,8 @@ static int tsb_spi_deselect(struct device *dev, uint8_t devid)
     tsb_spi_write(info->reg_base, DW_SPI_SER, 0);
 
     if (info->using_gpio) {
-        deselect = (info->cs_high & BIT(devid))? 0 : 1;
-        gpio_set_value(info->board_cfg[devid].ext_cs, deselect);
+        gpio_set_value(info->board_cfg[devid].ext_cs,
+                        !info->curr_xfer.cs_high);
     }
     sem_post(&info->lock);
     return 0;
@@ -532,9 +531,9 @@ static int tsb_spi_setmode(struct device *dev, uint8_t cs, uint8_t mode)
 
     /* SPI CS_HIGH mode */
     if (mode & SPI_MODE_CS_HIGH)
-        info->cs_high |= BIT(cs);
+        info->curr_xfer.cs_high = 1;
     else
-        info->cs_high &= ~BIT(cs);
+        info->curr_xfer.cs_high = 0;
 
     tsb_spi_write(info->reg_base, DW_SPI_CTRLR0, ctrl0);
 
@@ -1065,8 +1064,8 @@ static int tsb_spi_dev_open(struct device *dev)
     if (info->using_gpio) {
         info->modes |= SPI_MODE_CS_HIGH;
     }
-    info->cs_high = 0;
 
+    info->curr_xfer.cs_high = 0;
     info->curr_xfer.bpw = 8;
 
     ret = tsb_spi_hw_init(info);
