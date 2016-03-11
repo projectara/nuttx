@@ -37,18 +37,6 @@
 struct spi_board_init_data {
     /** number of spi slave device */
     uint8_t num;
-    /** maximum frequency supported in controlelr */
-    uint32_t max_freq;
-    /** minimum frequency supported in controlelr */
-    uint32_t min_freq;
-    /** maximum divider supported in controlelr */
-    uint16_t max_div;
-    /** bit pre-work supported in controlelr */
-    uint32_t bpw_mask;
-    /** TX FIFO depth supported in controller */
-    uint32_t tx_depth;
-    /** RX FIFO depth supported in controller */
-    uint32_t rx_depth;
     /** configuration of spi slave device */
     struct spi_board_device_cfg *devices;
     /** using normal GPIO pin instead of internal chip-select */

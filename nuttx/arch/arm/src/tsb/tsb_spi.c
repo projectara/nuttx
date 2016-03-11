@@ -102,7 +102,14 @@
 #define SPI_ISR_RXFIS_MASK  BIT(4)
 #define SPI_ISR_MSTIS_MASK  BIT(5)
 
-#define SPI_BUS_CLOCK       48000000    /* 48MHz */
+/** SPI master characteristics */
+#define SPI_BUS_CLOCK       48000000    /* SPI bus clock: 48MHz */
+#define SPI_MAX_FREQ        (SPI_BUS_CLOCK >> 1)    /* Maximum frequency: 24MHz */
+#define SPI_MIN_FREQ        15000       /* Minimum frequency: 15kHz */
+#define SPI_MAX_DIV         0xFFFE      /* Maximum Divider */
+#define SPI_BPW_MASK        0xFFFFFFF8  /* Minimum of 4 bits-per-word */
+#define SPI_TX_FIFO_DEPTH   16          /* TX FIFO depth */
+#define SPI_RX_FIFO_DEPTH   16          /* RX FIFO depth */
 
 #define TSB_SPI_ACTIVITY           9
 
@@ -158,8 +165,11 @@ struct tsb_spi_dev_info {
     /** struct for currectly transfer information store */
     struct xfer_curr_info curr_xfer;
 
-    /** struct for SPI controller capability store */
-    struct master_spi_caps caps;
+    /** bit masks of supported SPI protocol mode */
+    uint16_t modes;
+
+    /** number of chip select pins supported */
+    uint16_t csnum;
 
     /** chip-select pin active high when selected */
     uint16_t cs_high;
@@ -172,12 +182,6 @@ struct tsb_spi_dev_info {
 
     /** RX thread notification flag */
     sem_t xfer_completed;
-
-    /** TX FIFO depth for SPI controller */
-    uint32_t tx_fifo_depth;
-
-    /** RX FIFO depth for SPI controller */
-    uint32_t rx_fifo_depth;
 
     /** using normal GPIO pin instead of internal chip-select function */
     bool using_gpio;
@@ -326,7 +330,7 @@ static int tsb_spi_select(struct device *dev, uint8_t devid)
         goto err_select;
     }
 
-    if (info->caps.csnum <= devid) {
+    if (info->csnum <= devid) {
         ret = -EINVAL;
         goto err_select;
     }
@@ -422,7 +426,7 @@ static int tsb_spi_setfrequency(struct device *dev, uint8_t cs,
 
     sem_wait(&info->lock);
 
-    if (info->caps.csnum <= cs) {
+    if (info->csnum <= cs) {
         ret = -EINVAL;
         goto err_freq_set;
     }
@@ -435,7 +439,7 @@ static int tsb_spi_setfrequency(struct device *dev, uint8_t cs,
     freq = *frequency;
 
     /* check the frequency range */
-    if (freq > info->caps.max_speed_hz || freq < info->caps.min_speed_hz) {
+    if (freq > SPI_MAX_FREQ || freq < SPI_MIN_FREQ) {
         ret = -EINVAL;
         goto err_freq_set;
     }
@@ -444,7 +448,7 @@ static int tsb_spi_setfrequency(struct device *dev, uint8_t cs,
     /* the 'div' doesn't support odd number */
     div = (div + 1) & 0xFFFE;
 
-    if (div > info->caps.max_div) {
+    if (div > SPI_MAX_DIV) {
         ret = -EINVAL;
         goto err_freq_set;
     }
@@ -490,7 +494,7 @@ static int tsb_spi_setmode(struct device *dev, uint8_t cs, uint8_t mode)
 
     sem_wait(&info->lock);
 
-    if (info->caps.csnum <= cs) {
+    if (info->csnum <= cs) {
         ret = -EINVAL;
         goto err_setmode;
     }
@@ -501,7 +505,7 @@ static int tsb_spi_setmode(struct device *dev, uint8_t cs, uint8_t mode)
     }
 
     /* check hardware mode capabilities */
-    if ((mode & info->caps.modes) != mode) {
+    if ((mode & info->modes) != mode) {
         ret = -ENOSYS;
         goto err_setmode;
     }
@@ -566,7 +570,7 @@ static int tsb_spi_setbits(struct device *dev, uint8_t cs, uint8_t nbits)
 
     sem_wait(&info->lock);
 
-    if (info->caps.csnum <= cs) {
+    if (info->csnum <= cs) {
         ret = -EINVAL;
         goto exit_setbit;
     }
@@ -577,7 +581,7 @@ static int tsb_spi_setbits(struct device *dev, uint8_t cs, uint8_t nbits)
     }
 
     /* check hardware bpw capabilities */
-    if (!(BIT(nbits - 1) & info->caps.bpw)) {
+    if (!(BIT(nbits - 1) & SPI_BPW_MASK)) {
         ret = -ENOSYS;
         goto exit_setbit;
     }
@@ -720,7 +724,7 @@ int tsb_spi_process_tx(struct tsb_spi_dev_info *info)
     uint32_t tx_room, tx_writes, data = 0;
 
     /* calculate how much available space in Tx FIFO */
-    tx_room = info->rx_fifo_depth - tsb_spi_read(info->reg_base, DW_SPI_TXFLR);
+    tx_room = SPI_TX_FIFO_DEPTH - tsb_spi_read(info->reg_base, DW_SPI_TXFLR);
     tx_writes = (xfer->tx_remaining > tx_room)? tx_room : xfer->tx_remaining;
 
     while (tx_writes--) {
@@ -834,12 +838,12 @@ static int tsb_spi_getcaps(struct device *dev, struct master_spi_caps *caps)
 
     sem_wait(&info->lock);
 
-    caps->modes = info->caps.modes;
-    caps->flags = info->caps.flags;
-    caps->bpw = info->caps.bpw;
-    caps->csnum = info->caps.csnum;
-    caps->min_speed_hz = info->caps.min_speed_hz;
-    caps->max_speed_hz = info->caps.max_speed_hz;
+    caps->modes = info->modes;
+    caps->flags = 0; /* nothing that we can't do */
+    caps->bpw = SPI_BPW_MASK;
+    caps->csnum = info->csnum;
+    caps->min_speed_hz = SPI_MIN_FREQ;
+    caps->max_speed_hz = SPI_MAX_FREQ;
     sem_post(&info->lock);
     return 0;
 }
@@ -1056,23 +1060,13 @@ static int tsb_spi_dev_open(struct device *dev)
         goto err_hwinit;
     }
     /* Set Capability */
-    info->caps.csnum = data->num;
-    info->caps.modes = (SPI_MODE_CPHA | SPI_MODE_CPOL | SPI_MODE_LOOP);
+    info->csnum = data->num;
+    info->modes = (SPI_MODE_CPHA | SPI_MODE_CPOL | SPI_MODE_LOOP);
     if (info->using_gpio) {
-        info->caps.modes |= SPI_MODE_CS_HIGH;
+        info->modes |= SPI_MODE_CS_HIGH;
     }
-    /* support both transmit and receive */
-    info->caps.flags = 0;
-
-     /* support 4 to 32 bits */
-    info->caps.bpw = data->bpw_mask;
-
     info->cs_high = 0;
-    info->caps.min_speed_hz = data->min_freq;
-    info->caps.max_speed_hz = data->max_freq;
-    info->tx_fifo_depth = data->tx_depth;
-    info->rx_fifo_depth = data->rx_depth;
-    info->caps.max_div = data->max_div;
+
     info->curr_xfer.cur_bpw = 8;
 
     ret = tsb_spi_hw_init(info);
