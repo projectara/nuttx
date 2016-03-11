@@ -478,8 +478,8 @@ static int apbridgea_audio_register_cport(struct apbridgea_audio_info *info,
 
     cport->direction |= req->direction;
 
-    dbg_info("%s: registered cportid %u, direction 0x%0x/0x%x\n", __func__,
-             data_cportid, req->direction, cport->direction);
+    dbg_verbose("%s: registered cportid %u, direction 0x%0x/0x%x\n", __func__,
+                data_cportid, req->direction, cport->direction);
 
     return 0;
 }
@@ -504,7 +504,7 @@ static int apbridgea_audio_unregister_cport(struct apbridgea_audio_info *info,
 
     cport = apbridgea_audio_find_cport(info, data_cportid);
     if (!cport) {
-        dbg_error("%s: cport %u not registered\n", __func__, data_cportid);
+        dbg_verbose("%s: cport %u not registered\n", __func__, data_cportid);
         return -EINVAL;
     }
 
@@ -534,8 +534,8 @@ static int apbridgea_audio_unregister_cport(struct apbridgea_audio_info *info,
         free(cport);
     }
 
-    dbg_info("%s: unregistered cportid %u, direction 0x%x\n", __func__,
-             data_cportid, req->direction);
+    dbg_verbose("%s: unregistered cportid %u, direction 0x%x\n", __func__,
+                data_cportid, req->direction);
 
     return 0;
 }
@@ -635,8 +635,8 @@ static void apbridgea_audio_unipro_tx(struct apbridgea_audio_info *info,
                                     apbridgea_audio_unipro_tx_cb, rb);
             if (ret) {
                 rb_hdr->not_acked--;
-                dbg_error("%s: can't send UniPro message on cport %u, ret %u\n",
-                          __func__, cport->data_cportid, ret);
+                dbg_verbose("%s: can't send UniPro message on cport %u, ret %u\n",
+                            __func__, cport->data_cportid, ret);
             }
         }
     }
@@ -765,7 +765,7 @@ static int apbridgea_audio_prepare_tx(struct apbridgea_audio_info *info)
     if (!AUDIO_IS_CONFIGURED(info, TX) ||
         (info->flags & APBRIDGEA_AUDIO_FLAG_TX_PREPARED)) {
 
-        dbg_error("%s: protocol error, flags 0x%x\n", __func__, info->flags);
+        dbg_verbose("%s: protocol error, flags 0x%x\n", __func__, info->flags);
         return -EPROTO;
     }
 
@@ -820,13 +820,14 @@ static int apbridgea_audio_start_tx(struct apbridgea_audio_info *info,
     if (!(info->flags & APBRIDGEA_AUDIO_FLAG_TX_PREPARED) ||
         (info->flags & APBRIDGEA_AUDIO_FLAG_TX_STARTED)) {
 
-        dbg_error("%s: protocol error, flags 0x%x\n", __func__, info->flags);
+        dbg_verbose("%s: protocol error, flags 0x%x\n", __func__, info->flags);
         return -EPROTO;
     }
 
     info->flags |= APBRIDGEA_AUDIO_FLAG_TX_STARTED;
 
-    dbg_info("%s: Starting TX (I2S RX), flags 0x%x\n", __func__, info->flags);
+    dbg_verbose("%s: Starting TX (I2S RX), flags 0x%x\n", __func__,
+                info->flags);
 
     ret = device_i2s_start_receiver(info->i2s_dev);
     if (ret) {
@@ -842,18 +843,19 @@ static int apbridgea_audio_stop_tx(struct apbridgea_audio_info *info)
     int ret;
 
     if (!(info->flags & APBRIDGEA_AUDIO_FLAG_TX_STARTED)) {
-        dbg_error("%s: protocol error, flags 0x%x\n", __func__, info->flags);
+        dbg_verbose("%s: protocol error, flags 0x%x\n", __func__, info->flags);
         return -EPROTO;
     }
 
     ret = device_i2s_stop_receiver(info->i2s_dev);
     if (ret) {
-        dbg_error("%s: device_i2s_stop_receiver() failed %d\n", __func__, ret);
+        dbg_verbose("%s: device_i2s_stop_receiver() failed %d\n", __func__,
+                    ret);
     }
 
     info->flags &= ~APBRIDGEA_AUDIO_FLAG_TX_STARTED;
 
-    dbg_info("%s: TX stopped (I2S RX), flags 0x%x\n", __func__, info->flags);
+    dbg_verbose("%s: TX stopped (I2S RX), flags 0x%x\n", __func__, info->flags);
 
     return 0;
 }
@@ -865,7 +867,7 @@ static int apbridgea_audio_shutdown_tx(struct apbridgea_audio_info *info)
     if ((info->flags & APBRIDGEA_AUDIO_FLAG_TX_STARTED) ||
         !(info->flags & APBRIDGEA_AUDIO_FLAG_TX_PREPARED)) {
 
-        dbg_error("%s: protocol error, flags 0x%x\n", __func__, info->flags);
+        dbg_verbose("%s: protocol error, flags 0x%x\n", __func__, info->flags);
         return -EPROTO;
     }
 
@@ -962,7 +964,7 @@ static int apbridgea_audio_prepare_rx(struct apbridgea_audio_info *info)
     if (!AUDIO_IS_CONFIGURED(info, RX) ||
         (info->flags & APBRIDGEA_AUDIO_FLAG_RX_PREPARED)) {
 
-        dbg_error("%s: protocol error, flags 0x%x\n", __func__, info->flags);
+        dbg_verbose("%s: protocol error, flags 0x%x\n", __func__, info->flags);
         return -EPROTO;
     }
 
@@ -1015,13 +1017,14 @@ static int apbridgea_audio_start_rx(struct apbridgea_audio_info *info)
     if (!(info->flags & APBRIDGEA_AUDIO_FLAG_RX_PREPARED) ||
         (info->flags & APBRIDGEA_AUDIO_FLAG_RX_STARTED)) {
 
-        dbg_error("%s: protocol error, flags 0x%x\n", __func__, info->flags);
+        dbg_verbose("%s: protocol error, flags 0x%x\n", __func__, info->flags);
         return -EPROTO;
     }
 
     info->flags |= APBRIDGEA_AUDIO_FLAG_RX_STARTED;
 
-    dbg_info("%s: Starting RX (I2S TX), flags 0x%x\n", __func__, info->flags);
+    dbg_verbose("%s: Starting RX (I2S TX), flags 0x%x\n", __func__,
+                info->flags);
 
     ret = device_i2s_start_transmitter(info->i2s_dev);
     if (ret) {
@@ -1038,7 +1041,7 @@ static int apbridgea_audio_stop_rx(struct apbridgea_audio_info *info)
     int ret;
 
     if (!(info->flags & APBRIDGEA_AUDIO_FLAG_RX_STARTED)) {
-        dbg_error("%s: protocol error, flags 0x%x\n", __func__, info->flags);
+        dbg_verbose("%s: protocol error, flags 0x%x\n", __func__, info->flags);
         return -EPROTO;
     }
 
@@ -1050,7 +1053,7 @@ static int apbridgea_audio_stop_rx(struct apbridgea_audio_info *info)
 
     info->flags &= ~APBRIDGEA_AUDIO_FLAG_RX_STARTED;
 
-    dbg_info("%s: RX stopped (I2S TX), flags 0x%x\n", __func__, info->flags);
+    dbg_verbose("%s: RX stopped (I2S TX), flags 0x%x\n", __func__, info->flags);
 
     return 0;
 }
@@ -1062,7 +1065,7 @@ static int apbridgea_audio_shutdown_rx(struct apbridgea_audio_info *info)
     if ((info->flags & APBRIDGEA_AUDIO_FLAG_RX_STARTED) ||
         !(info->flags & APBRIDGEA_AUDIO_FLAG_RX_PREPARED)) {
 
-        dbg_error("%s: protocol error, flags 0x%x\n", __func__, info->flags);
+        dbg_verbose("%s: protocol error, flags 0x%x\n", __func__, info->flags);
         return -EPROTO;
     }
 
