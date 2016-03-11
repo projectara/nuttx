@@ -28,6 +28,7 @@
 
 config DRIVERS_ARA_SPI_BOARD
 	bool "SPI board support"
-	default n
+	depends on ARCH_CHIP_DEVICE_SPI
 	---help---
-		A Greybus Module default has SPI Bundle.
+		SPI slaves are described by board templates. This should be enabled when
+		using SPI.
