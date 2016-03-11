@@ -92,7 +92,7 @@ static uint8_t gb_spi_protocol_master_config(struct gb_operation *operation)
         return GB_OP_NO_MEMORY;
     }
 
-    response->bpw_mask = cpu_to_le32(caps.bpw);
+    response->bpw_mask = cpu_to_le32(caps.bpw_mask);
     response->min_speed_hz = cpu_to_le32(caps.min_speed_hz);
     response->max_speed_hz = cpu_to_le32(caps.max_speed_hz);
     response->mode = cpu_to_le16(caps.modes);

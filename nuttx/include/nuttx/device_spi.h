@@ -79,7 +79,7 @@ struct device_spi_transfer {
  */
 struct master_spi_caps {
     /** number of bits per word supported */
-    uint32_t bpw;
+    uint32_t bpw_mask;
     /** minimum Transfer speed in Hz */
     uint32_t min_speed_hz;
     /** maximum Transfer speed in Hz */

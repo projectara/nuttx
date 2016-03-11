@@ -840,7 +840,7 @@ static int tsb_spi_getcaps(struct device *dev, struct master_spi_caps *caps)
 
     caps->modes = info->modes;
     caps->flags = 0; /* nothing that we can't do */
-    caps->bpw = SPI_BPW_MASK;
+    caps->bpw_mask = SPI_BPW_MASK;
     caps->csnum = info->csnum;
     caps->min_speed_hz = SPI_MIN_FREQ;
     caps->max_speed_hz = SPI_MAX_FREQ;
