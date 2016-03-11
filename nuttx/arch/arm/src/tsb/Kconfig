@@ -220,6 +220,28 @@ config ARCH_CHIP_DEVICE_SPI
 	---help---
 		TSB SPI Master Driver
 
+if ARCH_CHIP_DEVICE_SPI
+
+choice
+	prompt "SPI chip-select mode"
+	default TSB_SPI_GPIO
+	depends on ARCH_CHIP_TSB
+	---help---
+		The Toshiba SPI driver can select SPI slaves either through the regular
+		CS0 and CS1 pins, or can use the GPIO pins instead. In the first case,
+		there can be only two SPI slaves, in the latter, there can be as many
+		SPI slaves as the number of free GPIO pins.
+
+config TSB_SPI_GPIO
+	bool "SPI GPIO pins chip-select"
+
+config TSB_SPI_CS
+	bool "SPI CS pins chip-select"
+
+endchoice
+
+endif
+
 config ARCH_CHIP_DEVICE_SDIO
 	bool "SDIO Support"
 	select DEVICE_CORE

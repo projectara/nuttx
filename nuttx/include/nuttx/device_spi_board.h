@@ -66,8 +66,6 @@ struct device_spi_board_type_ops {
     /** Get SPI specific chip configured information. */
     int (*get_device_cfg)(struct device *dev, uint8_t cs,
                           struct spi_board_device_cfg *dev_cfg);
-    /** Check whether using normal gpio instead of internal chip-select */
-    int (*is_using_gpio_cs)(struct device *dev, bool *using_gpio);
 };
 
 /**
@@ -114,29 +112,6 @@ static inline int device_spi_board_get_device_cfg(struct device *dev,
     if (DEVICE_DRIVER_GET_OPS(dev, spi_board)->get_device_cfg)
         return DEVICE_DRIVER_GET_OPS(dev, spi_board)->get_device_cfg(dev, cs,
                                                                      dev_cfg);
-    return -ENOSYS;
-}
-
-/**
- * @brief Check whether using normal gpio instead of internal chip-select
- *
- * @param dev Pointer to structure of device.
- * @param using_gpio whether using normal gpio or not.
- * @return 0 on success, negative errno on error.
- */
-static inline int device_spi_board_is_using_gpio_cs(struct device *dev,
-                                                  bool *using_gpio)
-{
-    DEVICE_DRIVER_ASSERT_OPS(dev);
-
-    if (!device_is_open(dev)) {
-        return -ENODEV;
-    }
-
-    if (DEVICE_DRIVER_GET_OPS(dev, spi_board)->is_using_gpio_cs)
-        return DEVICE_DRIVER_GET_OPS(dev,
-                                spi_board)->is_using_gpio_cs(dev, using_gpio);
-
     return -ENOSYS;
 }
 

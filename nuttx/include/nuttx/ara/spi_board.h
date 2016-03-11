@@ -39,8 +39,6 @@ struct spi_board_init_data {
     uint8_t num;
     /** configuration of spi slave device */
     struct spi_board_device_cfg *devices;
-    /** using normal GPIO pin instead of internal chip-select */
-    bool using_gpio;
 };
 
 #endif /* _DRIVERS_ARA_SPI_BOARD_H_ */

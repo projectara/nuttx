@@ -183,9 +183,6 @@ struct tsb_spi_dev_info {
     /** RX thread notification flag */
     sem_t xfer_completed;
 
-    /** using normal GPIO pin instead of internal chip-select function */
-    bool using_gpio;
-
     /** number of spi slave device */
     uint8_t dev_num;
 
@@ -333,20 +330,26 @@ static int tsb_spi_select(struct device *dev, uint8_t devid)
         ret = -EINVAL;
         goto err_select;
     }
-    tsb_spi_write(info->reg_base, DW_SPI_SER, (1 << devid));
+#if defined(CONFIG_TSB_SPI_GPIO)
+    /* from the SPI master's point of view, we fake that we're always talking to
+     * slave #1. The trick is that by default, CS1 doesn't belong to the SPI
+     * master, so the transaction will still be initiated and meanwhile we can
+     * manually setup the CS with GPIOs the way we want. */
+    tsb_spi_write(info->reg_base, DW_SPI_SER, 0x2);
 
-    if (info->using_gpio) {
-        /* only one chip-select pin can be actived */
-        for (i = 0; i < info->dev_num; i++) {
-            if (i == devid) {
-                gpio_set_value(info->board_cfg[i].ext_cs,
-                        info->curr_xfer.cs_high);
-            } else {
-                gpio_set_value(info->board_cfg[i].ext_cs,
-                        !info->curr_xfer.cs_high);
-            }
+    /* only one chip-select pin can be activated */
+    for (i = 0; i < info->dev_num; i++) {
+        if (i == devid) {
+            gpio_set_value(info->board_cfg[i].ext_cs,
+                    info->curr_xfer.cs_high);
+        } else {
+            gpio_set_value(info->board_cfg[i].ext_cs,
+                    !info->curr_xfer.cs_high);
         }
     }
+#else
+    tsb_spi_write(info->reg_base, DW_SPI_SER, (1 << devid));
+#endif
 
 err_select:
     sem_post(&info->lock);
@@ -385,10 +388,11 @@ static int tsb_spi_deselect(struct device *dev, uint8_t devid)
     }
     tsb_spi_write(info->reg_base, DW_SPI_SER, 0);
 
-    if (info->using_gpio) {
-        gpio_set_value(info->board_cfg[devid].ext_cs,
-                        !info->curr_xfer.cs_high);
-    }
+#if defined(CONFIG_TSB_SPI_GPIO)
+    gpio_set_value(info->board_cfg[devid].ext_cs,
+            !info->curr_xfer.cs_high);
+#endif
+
     sem_post(&info->lock);
     return 0;
 }
@@ -881,9 +885,6 @@ static int tsb_spi_query_board_cfg(struct device *dev)
             return ret;
         }
     }
-    /* get using_gpio config */
-    ret = device_spi_board_is_using_gpio_cs(info->spi_board_dev,
-                                            &info->using_gpio);
     return ret;
 }
 
@@ -934,16 +935,18 @@ static int tsb_spi_get_cfg(struct device *dev, uint8_t cs,
  */
 static void tsb_spi_hw_deinit(struct tsb_spi_dev_info *info)
 {
+    uint32_t pinshare = 0;
+
     /* Disable SPI controller */
     tsb_spi_write(info->reg_base, DW_SPI_SSIENR, 0);
 
-    /* Release pinshare for SPI */
-    if (info->using_gpio) {
-        tsb_release_pinshare(TSB_PIN_GPIO13);
-    } else {
-        tsb_release_pinshare(TSB_PIN_GPIO13 | TSB_PIN_GPIO15 |
-                             TSB_PIN_SPIM_CS1);
-    }
+    /* release SPIM_CLK, SPIM_SDI and SPIM_SDO */
+    pinshare |= TSB_PIN_GPIO13;
+#if !defined(CONFIG_TSB_SPI_GPIO)
+    /* release also SPIM_CS0 and SPIM_CS1 */
+    pinshare |= (TSB_PIN_GPIO15 | TSB_PIN_SPIM_CS1);
+#endif
+    tsb_release_pinshare(pinshare);
 
     tsb_clk_disable(TSB_CLK_SPIP);
     tsb_clk_disable(TSB_CLK_SPIS);
@@ -985,14 +988,12 @@ static int tsb_spi_hw_init(struct tsb_spi_dev_info *info)
     ctrl0 &= ~SPI_CTRL0_TMOD_MASK;
     tsb_spi_write(info->reg_base, DW_SPI_CTRLR0, ctrl0);
 
-    /* Check pinshare for SPIM pins */
-    if (info->using_gpio) {
-        /* SPIM_CLK / SPIM_SDO / SPIM_SDI */
-        pinshare = TSB_PIN_GPIO13;
-    } else {
-        /* SPIM_CLK / SPIM_SDO / SPIM_SDI & CS0 & CS1 */
-        pinshare = TSB_PIN_GPIO13 | TSB_PIN_GPIO15 | TSB_PIN_SPIM_CS1;
-    }
+    /* get SPIM_CLK, SPIM_SDI and SPIM_SDO */
+    pinshare |= TSB_PIN_GPIO13;
+#if !defined(CONFIG_TSB_SPI_GPIO)
+    /* get also SPIM_CS0 and SPIM_CS1 */
+    pinshare |= (TSB_PIN_GPIO15 | TSB_PIN_SPIM_CS1);
+#endif
 
     ret = tsb_request_pinshare(pinshare);
     if (ret) {
@@ -1000,16 +1001,11 @@ static int tsb_spi_hw_init(struct tsb_spi_dev_info *info)
         goto err_req_pinshare;
     }
     /* Configure pin functionality for SPI */
-    if (info->using_gpio) {
-        /* Configure GPIO pinshare on SPI board driver when using GPIO instead
-         * of internal chip-select.
-         */
-        tsb_clr_pinshare(TSB_PIN_GPIO13);
-    } else {
-        tsb_clr_pinshare(TSB_PIN_GPIO13);
-        tsb_clr_pinshare(TSB_PIN_GPIO15);
-        tsb_set_pinshare(TSB_PIN_SPIM_CS1);
-    }
+    tsb_clr_pinshare(TSB_PIN_GPIO13);
+#if !defined(CONFIG_TSB_SPI_GPIO)
+    tsb_clr_pinshare(TSB_PIN_GPIO15);
+    tsb_set_pinshare(TSB_PIN_SPIM_CS1);
+#endif
 err_req_pinshare:
     return ret;
 }
@@ -1061,9 +1057,9 @@ static int tsb_spi_dev_open(struct device *dev)
     /* Set Capability */
     info->csnum = data->num;
     info->modes = (SPI_MODE_CPHA | SPI_MODE_CPOL | SPI_MODE_LOOP);
-    if (info->using_gpio) {
-        info->modes |= SPI_MODE_CS_HIGH;
-    }
+#if defined(CONFIG_TSB_SPI_GPIO)
+    info->modes |= SPI_MODE_CS_HIGH;
+#endif
 
     info->curr_xfer.cs_high = 0;
     info->curr_xfer.bpw = 8;

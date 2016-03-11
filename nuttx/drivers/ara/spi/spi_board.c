@@ -68,21 +68,21 @@ static int spi_board_initialize(struct device *dev)
     data = dev->init_data;
 
     /* initialize device */
-    if (data->using_gpio) {
-        for (i = 0; i < data->num; i++) {
-            ret = gpio_activate(data->devices[i].ext_cs);
-            if (ret) {
-                /* deactive all activated gpio pin */
-                while(--i >= 0) {
-                    gpio_deactivate(data->devices[i].ext_cs);
-                }
-                return ret;
+#if defined(CONFIG_TSB_SPI_GPIO)
+    for (i = 0; i < data->num; i++) {
+        ret = gpio_activate(data->devices[i].ext_cs);
+        if (ret) {
+            /* deactive all activated gpio pin */
+            while(--i >= 0) {
+                gpio_deactivate(data->devices[i].ext_cs);
             }
-            /* set gpio direction and initial output state */
-            gpio_direction_out(data->devices[i].ext_cs,
-                               data->devices[i].init_cs_state);
+            return ret;
         }
+        /* set gpio direction and initial output state */
+        gpio_direction_out(data->devices[i].ext_cs,
+                data->devices[i].init_cs_state);
     }
+#endif
     return 0;
 }
 
@@ -103,11 +103,11 @@ static int spi_board_deinitialize(struct device *dev)
     data = dev->init_data;
 
     /* deinitialize device */
-    if (data->using_gpio) {
-        for (i = 0; i < data->num; i++) {
-            gpio_deactivate(data->devices[i].ext_cs);
-        }
+#if defined(CONFIG_TSB_SPI_GPIO)
+    for (i = 0; i < data->num; i++) {
+        gpio_deactivate(data->devices[i].ext_cs);
     }
+#endif
     return 0;
 }
 
@@ -153,25 +153,6 @@ static int spi_board_get_device_cfg(struct device *dev, uint8_t cs,
         return -EINVAL;
     }
     memcpy(dev_cfg, &data->devices[cs], sizeof(struct spi_board_device_cfg));
-    return 0;
-}
-
-/**
- * @brief Check whether using normal gpio instead of internal chip-select
- *
- * @param dev Pointer to structure of device.
- * @param using_gpio whether using normal gpio or not.
- * @return 0 on success, negative errno on error.
- */
-static int spi_board_is_using_gpio_cs(struct device *dev, bool *using_gpio)
-{
-    struct spi_board_init_data *data;
-
-    if (!dev || !dev->init_data) {
-        return -EINVAL;
-    }
-    data = dev->init_data;
-    *using_gpio = data->using_gpio;
     return 0;
 }
 
@@ -297,7 +278,6 @@ static void spi_board_dev_remove(struct device *dev)
 static struct device_spi_board_type_ops spi_board_type_ops = {
     .get_device_num = spi_board_get_device_num,
     .get_device_cfg = spi_board_get_device_cfg,
-    .is_using_gpio_cs = spi_board_is_using_gpio_cs,
 };
 
 static struct device_driver_ops spi_board_driver_ops = {
