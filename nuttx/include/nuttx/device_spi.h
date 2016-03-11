@@ -35,9 +35,6 @@
 
 #define DEVICE_TYPE_SPI_HW          "spi"
 
-#define SPI_FLAG_ASYNC_TRANSFER     0x01        /* non-blocking transfer */
-#define SPI_FLAG_DMA_TRNSFER        0x02        /* DMA transfer */
-
 /* SPI mode definition */
 #define SPI_MODE_CPHA               0x01        /* clock phase */
 #define SPI_MODE_CPOL               0x02        /* clock polarity */
@@ -75,22 +72,6 @@ struct device_spi_transfer {
     void *rxbuffer;
     /** Size of rx and tx buffers */
     size_t nwords;
-    /** SPI transfer mode */
-    uint16_t flags;
-    /**
-     * Timeout value (milliseconds) for SPI transfer. Timeout value must
-     * larger then 0, timeout <=0 means infinite timeout.
-     */
-    int timeout;
-    /**
-     * Called to report transaction completion, only for asynchronous SPI
-     * transfer.
-     */
-    void (*complete)(void *context);
-    /** The argument to complete() function when it's called */
-    void *context;
-    /** Return code for asynchronous SPI transfer */
-    int status;
 };
 
 /**

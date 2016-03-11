@@ -257,7 +257,6 @@ static uint8_t gb_spi_protocol_transfer(struct gb_operation *operation)
         }
 
         transfer.nwords = le32_to_cpu(desc->len);
-        transfer.flags = SPI_FLAG_DMA_TRNSFER; // synchronous & DMA transfer
 
         /* start SPI transfer */
         ret = device_spi_exchange(bundle->dev, &transfer);
