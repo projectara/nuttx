@@ -116,16 +116,16 @@ static int spi_board_deinitialize(struct device *dev)
  *
  * @param dev pointer to structure of device data
  * @param cs the specific chip number
- * @param dev_cfg pointer to the device_spi_cfg structure to receive the
+ * @param spi_board pointer to the device_spi_cfg structure to receive the
  *                configuration that be set in chip.
  * @return 0 on success, negative errno on error
  */
 static int spi_board_get_device_cfg(struct device *dev, uint8_t cs,
-                                    struct spi_board_device_cfg *dev_cfg)
+                                    struct device_spi_board *spi_board)
 {
     struct spi_board_init_data *data;
 
-    if (!dev || !dev->init_data || !dev_cfg) {
+    if (!dev || !dev->init_data || !spi_board) {
         return -EINVAL;
     }
     data = dev->init_data;
@@ -133,7 +133,7 @@ static int spi_board_get_device_cfg(struct device *dev, uint8_t cs,
     if (cs >= data->num) {
         return -EINVAL;
     }
-    memcpy(dev_cfg, &data->devices[cs], sizeof(struct spi_board_device_cfg));
+    memcpy(spi_board, &data->devices[cs], sizeof(struct device_spi_board));
     return 0;
 }
 

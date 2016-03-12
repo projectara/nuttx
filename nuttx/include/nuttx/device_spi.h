@@ -77,7 +77,7 @@ struct device_spi_transfer {
 /**
  * SPI hardware capabilities info
  */
-struct master_spi_caps {
+struct device_spi_master_config {
     /** number of bits per word supported */
     uint32_t bpw_mask;
     /** minimum Transfer speed in Hz */
@@ -94,17 +94,17 @@ struct master_spi_caps {
     uint16_t max_div;
 };
 
-struct device_spi_cfg {
+struct device_spi_device_config {
+    /** chip name */
+    uint8_t name[32];
+    /** max speed be set in device */
+    uint32_t max_speed_hz;
     /** mode be set in device */
     uint16_t mode;
     /** bit per word be set in device */
     uint8_t bpw;
-    /** max speed be set in device */
-    uint32_t max_speed_hz;
     /** SPI device type */
     uint8_t device_type;
-    /** chip name */
-    uint8_t name[32];
 };
 
 /**
@@ -128,10 +128,11 @@ struct device_spi_type_ops {
     /** Exchange a block of data from SPI */
     int (*exchange)(struct device *dev, struct device_spi_transfer *transfer);
     /** Get SPI device driver hardware capabilities information */
-    int (*get_master_caps)(struct device *dev, struct master_spi_caps *caps);
+    int (*get_master_config)(struct device *dev,
+                             struct device_spi_master_config *master_cfg);
     /** Get configuration parameters from chip */
-    int (*get_device_cfg)(struct device *dev, uint8_t cs,
-                          struct device_spi_cfg *dev_cfg);
+    int (*get_device_config)(struct device *dev, uint8_t cs,
+                             struct device_spi_device_config *device_cfg);
 };
 
 /**
@@ -303,23 +304,23 @@ static inline int device_spi_exchange(struct device *dev,
 }
 
 /**
- * @brief SPI getcaps wrap function
+ * @brief SPI get_master_config wrap function
  *
  * @param dev pointer to structure of device data
- * @param caps pointer to the spi_caps structure to receive the capabilities
+ * @param master_config pointer to the structure to receive the capabilities
  *             information.
  * @return 0 on success, negative errno on error
  */
-static inline int device_spi_get_master_caps(struct device *dev,
-                                             struct master_spi_caps *caps)
+static inline int device_spi_get_master_config(struct device *dev,
+                                               struct device_spi_master_config *master_cfg)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
     if (!device_is_open(dev)) {
         return -ENODEV;
     }
-    if (DEVICE_DRIVER_GET_OPS(dev, spi)->get_master_caps) {
-        return DEVICE_DRIVER_GET_OPS(dev, spi)->get_master_caps(dev, caps);
+    if (DEVICE_DRIVER_GET_OPS(dev, spi)->get_master_config) {
+        return DEVICE_DRIVER_GET_OPS(dev, spi)->get_master_config(dev, master_cfg);
     }
     return -ENOSYS;
 }
@@ -329,21 +330,21 @@ static inline int device_spi_get_master_caps(struct device *dev,
  *
  * @param dev pointer to structure of device data
  * @param cs required chip number
- * @param dev_cfg pointer to the device_spi_cfg structure to receive the
- *                specific chip of configuration.
+ * @param device_cfg pointer to the device_spi_device_config structure to receive
+ * the specific chip of configuration.
  * @return 0 on success, negative errno on error
  */
-static inline int device_spi_get_device_cfg(struct device *dev, uint8_t cs,
-                                            struct device_spi_cfg *dev_cfg)
+static inline int device_spi_get_device_config(struct device *dev, uint8_t cs,
+                                               struct device_spi_device_config *device_cfg)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
     if (!device_is_open(dev)) {
         return -ENODEV;
     }
-    if (DEVICE_DRIVER_GET_OPS(dev, spi)->get_device_cfg) {
-        return DEVICE_DRIVER_GET_OPS(dev, spi)->get_device_cfg(dev, cs,
-                                                               dev_cfg);
+    if (DEVICE_DRIVER_GET_OPS(dev, spi)->get_device_config) {
+        return DEVICE_DRIVER_GET_OPS(dev, spi)->get_device_config(dev, cs,
+                                                                  device_cfg);
     }
     return -ENOSYS;
 }

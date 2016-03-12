@@ -38,7 +38,7 @@ struct spi_board_init_data {
     /** number of spi slave device */
     uint8_t num;
     /** configuration of spi slave device */
-    struct spi_board_device_cfg *devices;
+    struct device_spi_board *devices;
 };
 
 #endif /* _DRIVERS_ARA_SPI_BOARD_H_ */

@@ -35,12 +35,10 @@
 
 #include <nuttx/util.h>
 #include <nuttx/device.h>
-#include <nuttx/device_spi.h>
-#include <nuttx/greybus/types.h>
 
 #define DEVICE_TYPE_SPI_BOARD_HW "spi_board"
 
-struct spi_board_device_cfg {
+struct device_spi_board {
     /** chip name */
     uint8_t name[32];
     /** max speed be set in device */
@@ -63,7 +61,7 @@ struct spi_board_device_cfg {
 struct device_spi_board_type_ops {
     /** Get SPI specific chip configured information. */
     int (*get_device_cfg)(struct device *dev, uint8_t cs,
-                          struct spi_board_device_cfg *dev_cfg);
+                          struct device_spi_board *spi_board);
 };
 
 /**
@@ -71,12 +69,12 @@ struct device_spi_board_type_ops {
  *
  * @param dev Pointer to structure of device.
  * @param cs the specific chip number.
- * @param dev_cfg pointer to the spi_board_device_cfg structure to receive the
+ * @param spi_board pointer to the device_spi_board structure to receive the
  *                configuration that be set in chip.
  * @return 0 on success, negative errno on error.
  */
 static inline int device_spi_board_get_device_cfg(struct device *dev,
-                              uint8_t cs, struct spi_board_device_cfg *dev_cfg)
+                              uint8_t cs, struct device_spi_board *spi_board)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -86,7 +84,7 @@ static inline int device_spi_board_get_device_cfg(struct device *dev,
 
     if (DEVICE_DRIVER_GET_OPS(dev, spi_board)->get_device_cfg)
         return DEVICE_DRIVER_GET_OPS(dev, spi_board)->get_device_cfg(dev, cs,
-                                                                     dev_cfg);
+                                                                     spi_board);
     return -ENOSYS;
 }
 

@@ -75,14 +75,14 @@ static uint8_t gb_spi_protocol_version(struct gb_operation *operation)
 static uint8_t gb_spi_protocol_master_config(struct gb_operation *operation)
 {
     struct gb_spi_master_config_response *response;
-    struct master_spi_caps caps;
+    struct device_spi_master_config master_config;
     int ret = 0;
 
     struct gb_bundle *bundle = gb_operation_get_bundle(operation);
     DEBUGASSERT(bundle);
 
     /* get hardware capabilities */
-    ret = device_spi_get_master_caps(bundle->dev, &caps);
+    ret = device_spi_get_master_config(bundle->dev, &master_config);
     if (ret) {
         return gb_errno_to_op_result(ret);
     }
@@ -92,12 +92,12 @@ static uint8_t gb_spi_protocol_master_config(struct gb_operation *operation)
         return GB_OP_NO_MEMORY;
     }
 
-    response->bpw_mask = cpu_to_le32(caps.bpw_mask);
-    response->min_speed_hz = cpu_to_le32(caps.min_speed_hz);
-    response->max_speed_hz = cpu_to_le32(caps.max_speed_hz);
-    response->mode = cpu_to_le16(caps.mode);
-    response->flags = cpu_to_le16(caps.flags);
-    response->num_chipselect = cpu_to_le16(caps.csnum);
+    response->bpw_mask = cpu_to_le32(master_config.bpw_mask);
+    response->min_speed_hz = cpu_to_le32(master_config.min_speed_hz);
+    response->max_speed_hz = cpu_to_le32(master_config.max_speed_hz);
+    response->mode = cpu_to_le16(master_config.mode);
+    response->flags = cpu_to_le16(master_config.flags);
+    response->num_chipselect = cpu_to_le16(master_config.csnum);
 
     return GB_OP_SUCCESS;
 }
@@ -116,7 +116,7 @@ static uint8_t gb_spi_protocol_device_config(struct gb_operation *operation)
     struct gb_spi_device_config_request *request;
     struct gb_spi_device_config_response *response;
     size_t request_size;
-    struct device_spi_cfg dev_cfg;
+    struct device_spi_device_config device_cfg;
     uint8_t cs;
     int ret = 0;
 
@@ -133,7 +133,7 @@ static uint8_t gb_spi_protocol_device_config(struct gb_operation *operation)
     cs = request->chip_select;
 
     /* get selected chip of configuration */
-    ret = device_spi_get_device_cfg(bundle->dev, cs, &dev_cfg);
+    ret = device_spi_get_device_config(bundle->dev, cs, &device_cfg);
     if (ret) {
         return gb_errno_to_op_result(ret);
     }
@@ -143,11 +143,11 @@ static uint8_t gb_spi_protocol_device_config(struct gb_operation *operation)
         return GB_OP_NO_MEMORY;
     }
 
-    response->device_type = dev_cfg.device_type;
-    response->mode = cpu_to_le16(dev_cfg.mode);
-    response->bpw = dev_cfg.bpw;
-    response->max_speed_hz = cpu_to_le32(dev_cfg.max_speed_hz);
-    memcpy(response->name, &dev_cfg.name, sizeof(dev_cfg.name));
+    response->device_type = device_cfg.device_type;
+    response->mode = cpu_to_le16(device_cfg.mode);
+    response->bpw = device_cfg.bpw;
+    response->max_speed_hz = cpu_to_le32(device_cfg.max_speed_hz);
+    memcpy(response->name, &device_cfg.name, sizeof(device_cfg.name));
 
     return GB_OP_SUCCESS;
 }
