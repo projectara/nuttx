@@ -126,6 +126,8 @@ struct power_supply_info {
     uint8_t properties_count;
     /** Event callback function */
     power_supply_event_callback callback;
+    /** Private data passed to event_callbacks */
+    void *event_data;
 };
 
 /**
@@ -355,7 +357,7 @@ static int power_supply_set_property(struct device *dev, uint8_t psy_id,
         default:
             return -EINVAL;
         }
-        info->callback(POWER_SUPPLY_ID, POWER_SUPPLY_UPDATE);
+        info->callback(info->event_data, POWER_SUPPLY_ID, POWER_SUPPLY_UPDATE);
     }
 
     return 0;
@@ -365,10 +367,11 @@ static int power_supply_set_property(struct device *dev, uint8_t psy_id,
  * @brief Attach callback function to power supply device.
  *
  * @param dev Pointer to structure of device.
+ * @param data Private user data passed to the callback.
  * @param callback Pointer to event callback function.
  * @return 0 on success, negative errno on error.
  */
-static int power_supply_attach_callback(struct device *dev,
+static int power_supply_attach_callback(struct device *dev, void *data,
                                         power_supply_event_callback callback)
 {
     struct power_supply_info *info = NULL;
@@ -379,6 +382,7 @@ static int power_supply_attach_callback(struct device *dev,
     info = device_get_private(dev);
 
     info->callback = callback;
+    info->event_data = data;
 
     return 0;
 }
