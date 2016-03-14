@@ -135,7 +135,11 @@ static void up_idlepm(void)
           break;
 
         case PM_SLEEP:
+#ifdef CONFIG_STM32_IDLE_NO_STANDBY
+          stm32_pmstop(true);
+#else
           (void)stm32_pmstandby();
+#endif
           break;
 
         default:
