@@ -67,9 +67,6 @@ include $(APPDIR)/Make.defs
 ASRCS =
 CSRCS =
 MAINSRC = apbridge.c
-ifeq ($(CONFIG_APBRIDGEA_UNIPRO),y)
-MAINSRC += unipro.c
-endif
 
 AOBJS = $(ASRCS:.S=$(OBJEXT))
 COBJS = $(CSRCS:.c=$(OBJEXT))

@@ -69,6 +69,7 @@
 #include <arch/board/common_gadget.h>
 #include <arch/board/apbridgea_gadget.h>
 #include <arch/board/apbridgea_audio.h>
+ #include <arch/board/apbridgea_unipro.h>
 #include <nuttx/greybus/greybus_timestamp.h>
 #include <nuttx/greybus/timesync.h>
 #include <greybus/control-gb.h>
@@ -209,8 +210,6 @@ struct apbridge_dev_s {
     struct gb_timestamp *ts;
 
     struct gadget_descriptor *g_desc;
-
-    struct apbridge_usb_driver *driver;
 
     /* Number of request per bulk out endpoints */
     uint8_t req_count[APBRIDGE_NBULKS];
@@ -835,11 +834,7 @@ void map_cport_to_ep(struct apbridge_dev_s *priv,
     cportid_set_epno(priv, cport_to_ep->endpoint_in, cportid);
     epno_set_cportid(priv, cport_to_ep->endpoint_out, cportid);
 
-    if (priv->driver->unipro_cport_mapping) {
-        priv->driver->unipro_cport_mapping(cportid,
-                                           is_multiplexed ? MULTIPLEXED_EP
-                                                          : DIRECT_EP);
-    }
+    unipro_cport_mapping(cportid, is_multiplexed ? MULTIPLEXED_EP : DIRECT_EP);
 }
 
 /****************************************************************************
@@ -1026,7 +1021,6 @@ static void usbclass_rdcomplete(struct usbdev_ep_s *ep,
                                 struct usbdev_req_s *req)
 {
     struct apbridge_dev_s *priv;
-    struct apbridge_usb_driver *drv;
     unsigned int cportid;
 
     /* Sanity check */
@@ -1041,7 +1035,6 @@ static void usbclass_rdcomplete(struct usbdev_ep_s *ep,
     /* Extract references to private data */
 
     priv = ep_to_apbridge(ep);
-    drv = priv->driver;
 
     /* Process the received data unless this is some unusual condition */
 
@@ -1724,8 +1717,7 @@ static void usbclass_disconnect(struct usbdevclass_driver_s *driver,
     DEV_CONNECT(dev);
 }
 
-int usbdev_apbinitialize(struct device *dev,
-                         struct apbridge_usb_driver *driver)
+int usbdev_apbinitialize(struct device *dev)
 {
     struct apbridge_dev_s *priv;
     struct usbdevclass_driver_s *drvr;
@@ -1791,7 +1783,6 @@ int usbdev_apbinitialize(struct device *dev,
     /* Initialize the USB driver structure */
 
     memset(priv, 0, sizeof(struct apbridge_dev_s));
-    priv->driver = driver;
 
     if (map_table_init(priv)) {
         goto errout_with_map_table;
@@ -1823,16 +1814,12 @@ int usbdev_apbinitialize(struct device *dev,
                  (uint16_t) - ret);
         goto errout_cport_table;
     }
-    ret = priv->driver->init(priv);
-    if (ret)
-        goto errout_with_init;
 
     /* Register the single port supported by this implementation */
     return OK;
 
- errout_with_init:
-    device_usbdev_unregister_gadget(dev, drvr);
 errout_cport_table:
+    device_usbdev_unregister_gadget(dev, drvr);
     kmm_free(priv->ts);
 errout_with_alloc_ts:
     map_table_free(priv);

@@ -57,23 +57,13 @@ enum ep_mapping {
     DIRECT_EP,
 };
 
-struct apbridge_usb_driver
-{
-    int (*usb_to_unipro)(struct apbridge_dev_s *dev, unsigned int cportid,
-                         void *payload, size_t size);
-    int (*init)(struct apbridge_dev_s *dev);
-
-    void (*unipro_cport_mapping)(unsigned int cportid, enum ep_mapping mapping);
-};
-
 struct apbridge_dev_s *get_apbridge_dev(void);
 
 int unipro_to_usb(struct apbridge_dev_s *dev, unsigned cportid,
                   const void *payload, size_t size);
 
 void usb_wait(struct apbridge_dev_s *dev);
-int usbdev_apbinitialize(struct device *dev,
-                         struct apbridge_usb_driver *driver);
+int usbdev_apbinitialize(struct device *dev);
 
 int usb_release_buffer(struct apbridge_dev_s *priv, const void *buf);
 

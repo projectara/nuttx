@@ -40,12 +40,3 @@ config APBRIDGEA
 		('E' for endpoint) which is the APBridge on anything
 		that is not the AP module.  Do not select this for
 		GPBridge either.
-
-choice
-	prompt "Select the backend"
-config APBRIDGEA_UNIPRO
-	bool "Enable bridge mode on APBridgeA"
-	depends on APBRIDGEA
-	---help---
-		The firmware will act as bridge between UniPro and USB.
-endchoice

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015 Google Inc.
+ * Copyright (c) 2015 Google, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -10,7 +10,7 @@
  * this list of conditions and the following disclaimer in the documentation
  * and/or other materials provided with the distribution.
  * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
+ * * may be used to endorse or promote products derived from this
  * software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
@@ -26,24 +26,13 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef APBRIDGE_BACKEND_H
-#define APBRIDGE_BACKEND_H
+#ifndef _APBRIDGEA_UNIPRO_H_
+#define _APBRIDGEA_UNIPRO_H_
 
-#include <nuttx/unipro/unipro.h>
+int apbridgea_unipro_init(void);
+void apbridgea_unipro_enable(void);
+int usb_to_unipro(struct apbridge_dev_s *dev, unsigned cportid,
+                         void *buf, size_t len);
+void unipro_cport_mapping(unsigned int cportid, enum ep_mapping mapping);
 
-enum ep_mapping;
-
-struct apbridge_backend {
-    int (*usb_to_unipro)(unsigned int cportid, void *buf, size_t len,
-                         unipro_send_completion_t callback, void *priv);
-    void (*unipro_cport_mapping)(unsigned int cportid, enum ep_mapping mapping);
-    void (*unipro_enable)(void);
-
-    void (*init)(void);
-};
-
-int recv_from_unipro(unsigned int cportid, void *buf, size_t len);
-void apbridge_backend_register(struct apbridge_backend *apbridge_backend);
-
-#endif /* APBRIDGE_BACKEND_H */
-
+#endif /* _APBRIDGEA_UNIPRO_H_ */

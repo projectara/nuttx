@@ -42,92 +42,8 @@
 #include <apps/nsh.h>
 
 #include <arch/board/apbridgea_gadget.h>
+#include <arch/board/apbridgea_unipro.h>
 #include <arch/board/apbridgea_audio.h>
-
-#include "apbridge_backend.h"
-
-static struct apbridge_dev_s *g_usbdev = NULL;
-static pthread_t g_apbridge_thread;
-static struct apbridge_backend apbridge_backend;
-
-static int release_buffer(int status, const void *buf, void *priv)
-{
-    return usb_release_buffer(priv, buf);
-}
-
-static int usb_to_unipro(struct apbridge_dev_s *dev, unsigned cportid,
-                         void *buf, size_t len)
-{
-    gb_dump(buf, len);
-
-    if (len < sizeof(struct gb_operation_hdr)) {
-        lowsyslog("%s: Packet smaller than Greybus header\n", __func__);
-        return -EPROTO;
-    }
-
-    if (len != gb_packet_size(buf)) {
-        lowsyslog("%s: Invalid message size: %u != %u\n",
-                  __func__, len, gb_packet_size(buf));
-        return -EPROTO;
-    }
-
-    return apbridge_backend.usb_to_unipro(cportid, buf, len,
-                                          release_buffer, dev);
-}
-
-int recv_from_unipro(unsigned int cportid, void *buf, size_t len)
-{
-    /*
-     * FIXME: Remove when UniPro driver provides the actual buffer length.
-     */
-    len = gb_packet_size(buf);
-
-    gb_dump(buf, len);
-
-    if (len < sizeof(struct gb_operation_hdr)) {
-       lowsyslog("%s: Packet smaller than Greybus header\n", __func__);
-        return -EPROTO;
-    }
-
-    if (len != gb_packet_size(buf)) {
-        lowsyslog("%s: Invalid message size: %u != %u\n",
-                  __func__, len, gb_packet_size(buf));
-        return -EPROTO;
-    }
-
-    return unipro_to_usb(g_usbdev, cportid, buf, len);
-}
-
-static void *apbridge_wait_and_init(void *p_data)
-{
-    struct apbridge_dev_s *priv = p_data;
-
-    usb_wait(priv);
-    apbridge_backend.unipro_enable();
-
-    return NULL;
-}
-
-static int apbridge_init(struct apbridge_dev_s *priv)
-{
-    int ret;
-
-    g_usbdev = priv;
-    ret = pthread_create(&g_apbridge_thread, NULL, apbridge_wait_and_init,
-                         (pthread_addr_t)priv);
-    return ret;
-}
-
-static void unipro_cport_mapping(unsigned int cportid, enum ep_mapping mapping)
-{
-    apbridge_backend.unipro_cport_mapping(cportid, mapping);
-}
-
-static struct apbridge_usb_driver usb_driver = {
-    .usb_to_unipro = usb_to_unipro,
-    .init = apbridge_init,
-    .unipro_cport_mapping = unipro_cport_mapping,
-};
 
 static struct srvmgr_service services[] = {
 #if defined(CONFIG_ARA_GB_LOOPBACK)
@@ -162,7 +78,7 @@ static int usb_init(void)
     device_hsic_release_reset(hub_dev);
     device_close(hub_dev);
 
-    usbdev_apbinitialize(usb_dev, &usb_driver);
+    usbdev_apbinitialize(usb_dev);
 
     return ret;
 }
@@ -172,16 +88,16 @@ int bridge_main(int argc, char *argv[])
     int ret;
     struct sched_param param;
 
-    apbridge_backend_register(&apbridge_backend);
     srvmgr_start(services);
 
-    apbridge_backend.init();
+    apbridgea_unipro_init();
 
     ret = usb_init();
     if (ret) {
         printf("Can not init usb: error %d\n", ret);
     }
 
+    apbridgea_unipro_enable();
     apbridgea_audio_init();
 
 #ifdef CONFIG_EXAMPLES_NSH
