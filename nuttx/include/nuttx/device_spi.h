@@ -104,7 +104,7 @@ struct device_spi_type_ops {
     /** Configure SPI mode */
     int (*setmode)(struct device *dev, uint8_t cs, uint8_t mode);
     /** Set the number of bits per word in transmission */
-    int (*setbits)(struct device *dev, uint8_t cs, uint8_t nbits);
+    int (*setbpw)(struct device *dev, uint8_t cs, uint8_t bpw);
     /** Exchange a block of data from SPI */
     int (*exchange)(struct device *dev, struct device_spi_transfer *transfer);
     /** Get SPI device driver hardware capabilities information */
@@ -239,25 +239,25 @@ static inline int device_spi_setmode(struct device *dev, uint8_t cs,
 }
 
 /**
- * @brief SPI setbits wrap function
+ * @brief SPI setbpw wrap function
  *
  * @param dev pointer to structure of device data
  * @param cs required chip number
- * @param nbits The number of bits requested. The nbits value range is from
- *        1 to 32. The generic nbits value is 8, 16, 32, but this value still
+ * @param bpw The number of bits per word requested. The bpw value range is from
+ *        1 to 32. The genericbpw value is 8, 16, 32, but this value still
  *        depends on hardware supported.
  * @return 0 on success, negative errno on error
  */
-static inline int device_spi_setbits(struct device *dev, uint8_t cs,
-                                     uint8_t nbits)
+static inline int device_spi_setbpw(struct device *dev, uint8_t cs,
+                                     uint8_t bpw)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
     if (!device_is_open(dev)) {
         return -ENODEV;
     }
-    if (DEVICE_DRIVER_GET_OPS(dev, spi)->setbits) {
-        return DEVICE_DRIVER_GET_OPS(dev, spi)->setbits(dev, cs, nbits);
+    if (DEVICE_DRIVER_GET_OPS(dev, spi)->setbpw) {
+        return DEVICE_DRIVER_GET_OPS(dev, spi)->setbpw(dev, cs, bpw);
     }
     return -ENOSYS;
 }

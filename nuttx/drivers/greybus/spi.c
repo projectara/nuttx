@@ -225,7 +225,7 @@ static uint8_t gb_spi_protocol_transfer(struct gb_operation *operation)
         freq = le32_to_cpu(desc->speed_hz);
 
         /* set SPI bits-per-word */
-        ret = device_spi_setbits(bundle->dev, request->chip_select,
+        ret = device_spi_setbpw(bundle->dev, request->chip_select,
                                  desc->bits_per_word);
         if (ret) {
             goto spi_err;

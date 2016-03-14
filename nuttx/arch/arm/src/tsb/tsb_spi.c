@@ -226,7 +226,7 @@ static void tsb_spi_write(uint32_t base, uint32_t addr, uint32_t val)
  * On SPI buses where there are multiple devices, it will be necessary to lock
  * SPI to have exclusive access to the buses for a sequence of transfers.
  * The bus should be locked before the chip is selected. After locking the SPI
- * bus, the caller should then also call the setfrequency(), setbits() , and
+ * bus, the caller should then also call the setfrequency(), setbpw() , and
  * setmode() methods to make sure that the SPI is properly configured for the
  * device. If the SPI buses is being shared, then it may have been left in an
  * incompatible state.
@@ -556,11 +556,11 @@ err_setmode:
  *
  * @param dev pointer to structure of device data
  * @param cs the specific chip number
- * @param nbits The number of bits requested. The nbits value range is from
+ * @param bpw The number of bpw requested. The bpw value range is from
  *        4 to 32.
  * @return 0 on success, negative errno on error
  */
-static int tsb_spi_setbits(struct device *dev, uint8_t cs, uint8_t nbits)
+static int tsb_spi_setbpw(struct device *dev, uint8_t cs, uint8_t bpw)
 {
     struct tsb_spi_dev_info *info = NULL;
     uint32_t ctrl0 = 0;
@@ -591,17 +591,17 @@ static int tsb_spi_setbits(struct device *dev, uint8_t cs, uint8_t nbits)
         goto exit_setbit;
 
     /* check hardware bpw capabilities */
-    if (!(BIT(nbits - 1) & SPI_BPW_MASK) || (nbits != bpw_slave)) {
+    if (!(BIT(bpw - 1) & SPI_BPW_MASK) || (bpw != bpw_slave)) {
         ret = -EINVAL;
         goto exit_setbit;
     }
 
     ctrl0 = tsb_spi_read(info->reg_base, DW_SPI_CTRLR0);
     ctrl0 &= ~SPI_CTRLR0_DFS32_MASK;
-    ctrl0 |= ((nbits - 1) << SPI_CTRLR0_DFS32_OFFSET);
+    ctrl0 |= ((bpw - 1) << SPI_CTRLR0_DFS32_OFFSET);
 
     tsb_spi_write(info->reg_base, DW_SPI_CTRLR0, ctrl0);
-    info->curr_xfer.bpw = nbits;
+    info->curr_xfer.bpw = bpw;
 
 exit_setbit:
     sem_post(&info->lock);
@@ -1320,7 +1320,7 @@ static struct device_spi_type_ops tsb_spi_type_ops = {
     .deselect           = tsb_spi_deselect,
     .setfrequency       = tsb_spi_setfrequency,
     .setmode            = tsb_spi_setmode,
-    .setbits            = tsb_spi_setbits,
+    .setbpw             = tsb_spi_setbpw,
     .exchange           = tsb_spi_exchange,
     .get_master_config  = tsb_spi_get_master_config,
     .get_device_config  = tsb_spi_get_device_config,
