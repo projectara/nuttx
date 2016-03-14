@@ -48,11 +48,4 @@ config APBRIDGEA_UNIPRO
 	depends on APBRIDGEA
 	---help---
 		The firmware will act as bridge between UniPro and USB.
-config APBRIDGEA_DUMMY
-	bool "Enable dummy mode on APBridgeA"
-	depends on APBRIDGEA
-	---help---
-		Enable dummy backend on APBridgeA.
-		The firmware will just enumerate.
-		This backend is only useful to test hardware.
 endchoice
