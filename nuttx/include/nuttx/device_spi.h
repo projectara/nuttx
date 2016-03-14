@@ -29,38 +29,18 @@
 #ifndef __ARCH_ARM_DEVICE_SPI_H
 #define __ARCH_ARM_DEVICE_SPI_H
 
-#include <stdint.h>
-#include <nuttx/device.h>
 #include <errno.h>
+#include <stdint.h>
+
+#include <nuttx/device.h>
+#include <nuttx/device_spi_board.h>
 
 #define DEVICE_TYPE_SPI_HW          "spi"
-
-/* SPI mode definition */
-#define SPI_MODE_CPHA               0x01        /* clock phase */
-#define SPI_MODE_CPOL               0x02        /* clock polarity */
-#define SPI_MODE_CS_HIGH            0x04        /* chipselect active high */
-#define SPI_MODE_LSB_FIRST          0x08        /* per-word bits-on-wire */
-#define SPI_MODE_3WIRE              0x10        /* SI/SO signals shared */
-#define SPI_MODE_LOOP               0x20        /* loopback mode */
-#define SPI_MODE_NO_CS              0x40        /* 1 dev/bus, no chipselect */
-#define SPI_MODE_READY              0x80        /* slave pulls low to pause */
-
-#define SPI_MODE_0                  (0 | 0)     /* (original MicroWire) */
-#define SPI_MODE_1                  (0 | SPI_MODE_CPHA)
-#define SPI_MODE_2                  (SPI_MODE_CPOL | 0)
-#define SPI_MODE_3                  (SPI_MODE_CPOL | SPI_MODE_CPHA)
 
 /* SPI Flag */
 #define SPI_FLAG_HALF_DUPLEX        0x0001      /* can’t do full duplex */
 #define SPI_FLAG_NO_RX              0x0002      /* can’t do buffer read */
 #define SPI_FLAG_NO_TX              0x0004      /* can’t do buffer write */
-
-#define SPI_DEV_TYPE                0x00        /* Normal SPI device */
-#define SPI_NOR_TYPE                0x01        /* MTD SPI device */
-#define SPI_MODALIAS_TYPE           0x02        /* Fixed name device */
-
-/* error code */
-#define SUCCESS                     0
 
 /**
  * SPI a read/write buffer pair
@@ -104,7 +84,7 @@ struct device_spi_device_config {
     /** bit per word be set in device */
     uint8_t bpw;
     /** SPI device type */
-    uint8_t device_type;
+    enum device_spi_type device_type;
 };
 
 /**

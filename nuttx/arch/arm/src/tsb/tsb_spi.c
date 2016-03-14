@@ -112,8 +112,10 @@
 #define SPI_RX_FIFO_DEPTH   16          /* RX FIFO depth */
 #define _SPI_BASE_MODE      (SPI_MODE_CPHA | SPI_MODE_CPOL | SPI_MODE_LOOP)
 #if defined(CONFIG_TSB_SPI_GPIO)
+# define SPI_MAX_SLAVES      16
 # define SPI_DEFAULT_MODE   (_SPI_BASE_MODE | SPI_MODE_CS_HIGH)
 #else
+# define SPI_MAX_SLAVES      2
 # define SPI_DEFAULT_MODE   _SPI_BASE_MODE
 #endif
 
@@ -161,21 +163,11 @@ static struct device *spi_dev = NULL;
  * @brief private SPI device information
  */
 struct tsb_spi_dev_info {
-    /** Driver model representation of the device */
-    struct device *dev;
-    struct device *spi_board_dev;
-
     /** SPI device base address */
     uint32_t reg_base;
 
-    /** SPI device state */
-    enum tsb_spi_state state;
-
     /** current transfer information */
     struct xfer_info curr_xfer;
-
-    /** number of chip select pins supported */
-    uint16_t csnum;
 
     /** Exclusive access for SPI bus */
     sem_t bus;
@@ -186,11 +178,17 @@ struct tsb_spi_dev_info {
     /** RX thread notification flag */
     sem_t xfer_completed;
 
-    /** configuration of spi slave device */
-    struct device_spi_board *board_config;
+    /** pointers to SPI slaves */
+    struct device *dev_spi_board[SPI_MAX_SLAVES];
+
+    /** number of SPI slaves attached */
+    uint8_t num_boards;
 
     /** SPI controller power state */
     int spi_pmstate;
+
+    /** SPI device state */
+    enum tsb_spi_state state;
 };
 
 /**
@@ -310,7 +308,7 @@ static int tsb_spi_unlock(struct device *dev)
 static int tsb_spi_select(struct device *dev, uint8_t devid)
 {
     struct tsb_spi_dev_info *info = NULL;
-    int ret = 0, i;
+    int ret = 0;
 
     /* check input parameters */
     if (!dev || !device_get_private(dev)) {
@@ -326,7 +324,7 @@ static int tsb_spi_select(struct device *dev, uint8_t devid)
         goto err_select;
     }
 
-    if (info->csnum <= devid) {
+    if (devid >=  info->num_boards) {
         ret = -EINVAL;
         goto err_select;
     }
@@ -336,20 +334,13 @@ static int tsb_spi_select(struct device *dev, uint8_t devid)
      * master, so the transaction will still be initiated and meanwhile we can
      * manually setup the CS with GPIOs the way we want. */
     tsb_spi_write(info->reg_base, DW_SPI_SER, 0x2);
-
-    /* only one chip-select pin can be activated */
-    for (i = 0; i < info->csnum; i++) {
-        if (i == devid) {
-            gpio_set_value(info->board_config[i].ext_cs,
-                    info->curr_xfer.cs_high);
-        } else {
-            gpio_set_value(info->board_config[i].ext_cs,
-                    !info->curr_xfer.cs_high);
-        }
-    }
 #else
+    /* otherwise we really select the slave through the SPI master */
     tsb_spi_write(info->reg_base, DW_SPI_SER, (1 << devid));
 #endif
+
+    ret = device_spi_board_cs_select(info->dev_spi_board[devid],
+            info->curr_xfer.cs_high);
 
 err_select:
     sem_post(&info->lock);
@@ -372,6 +363,7 @@ err_select:
 static int tsb_spi_deselect(struct device *dev, uint8_t devid)
 {
     struct tsb_spi_dev_info *info = NULL;
+    int ret = 0;
 
     /* check input parameters */
     if (!dev || !device_get_private(dev)) {
@@ -383,18 +375,18 @@ static int tsb_spi_deselect(struct device *dev, uint8_t devid)
     sem_wait(&info->lock);
 
     if (info->state != TSB_SPI_STATE_LOCKED) {
-        sem_post(&info->lock);
-        return -EPERM;
+        ret = -EPERM;
+        goto err_deselect;
     }
+
     tsb_spi_write(info->reg_base, DW_SPI_SER, 0);
 
-#if defined(CONFIG_TSB_SPI_GPIO)
-    gpio_set_value(info->board_config[devid].ext_cs,
+    ret = device_spi_board_cs_select(info->dev_spi_board[devid],
             !info->curr_xfer.cs_high);
-#endif
 
+err_deselect:
     sem_post(&info->lock);
-    return 0;
+    return ret;
 }
 
 /**
@@ -417,6 +409,7 @@ static int tsb_spi_setfrequency(struct device *dev, uint8_t cs,
 {
     struct tsb_spi_dev_info *info = NULL;
     uint32_t freq;
+    uint32_t max_freq_slave;
     uint32_t div;
     int ret = 0;
 
@@ -429,7 +422,7 @@ static int tsb_spi_setfrequency(struct device *dev, uint8_t cs,
 
     sem_wait(&info->lock);
 
-    if (info->csnum <= cs) {
+    if (cs >= info->num_boards) {
         ret = -EINVAL;
         goto err_freq_set;
     }
@@ -440,9 +433,12 @@ static int tsb_spi_setfrequency(struct device *dev, uint8_t cs,
     }
 
     freq = *frequency;
+    ret = device_spi_board_get_max_speed_hz(info->dev_spi_board[cs], &max_freq_slave);
+    if (ret)
+        goto err_freq_set;
 
     /* check the frequency range */
-    if (freq > SPI_MAX_FREQ || freq < SPI_MIN_FREQ) {
+    if (freq > SPI_MAX_FREQ || freq < SPI_MIN_FREQ || freq > max_freq_slave) {
         ret = -EINVAL;
         goto err_freq_set;
     }
@@ -486,6 +482,7 @@ static int tsb_spi_setmode(struct device *dev, uint8_t cs, uint8_t mode)
 {
     struct tsb_spi_dev_info *info = NULL;
     uint32_t ctrl0 = 0;
+    uint16_t mode_slave;
     int ret = 0;
 
     /* check input parameters */
@@ -497,7 +494,7 @@ static int tsb_spi_setmode(struct device *dev, uint8_t cs, uint8_t mode)
 
     sem_wait(&info->lock);
 
-    if (info->csnum <= cs) {
+    if (cs >= info->num_boards) {
         ret = -EINVAL;
         goto err_setmode;
     }
@@ -507,9 +504,14 @@ static int tsb_spi_setmode(struct device *dev, uint8_t cs, uint8_t mode)
         goto err_setmode;
     }
 
+    ret = device_spi_board_get_mode(info->dev_spi_board[cs], &mode_slave);
+    if (ret)
+        goto err_setmode;
+
     /* check hardware mode capabilities */
-    if ((mode & SPI_DEFAULT_MODE) != mode) {
-        ret = -ENOSYS;
+    if (((mode & SPI_DEFAULT_MODE) != mode) &&
+            ((mode & mode_slave) != mode)) {
+        ret = -EINVAL;
         goto err_setmode;
     }
 
@@ -562,6 +564,7 @@ static int tsb_spi_setbits(struct device *dev, uint8_t cs, uint8_t nbits)
 {
     struct tsb_spi_dev_info *info = NULL;
     uint32_t ctrl0 = 0;
+    uint8_t bpw_slave;
     int ret = 0;
 
     /* check input parameters */
@@ -573,7 +576,7 @@ static int tsb_spi_setbits(struct device *dev, uint8_t cs, uint8_t nbits)
 
     sem_wait(&info->lock);
 
-    if (info->csnum <= cs) {
+    if (cs >= info->num_boards) {
         ret = -EINVAL;
         goto exit_setbit;
     }
@@ -583,9 +586,13 @@ static int tsb_spi_setbits(struct device *dev, uint8_t cs, uint8_t nbits)
         goto exit_setbit;
     }
 
+    ret = device_spi_board_get_bpw(info->dev_spi_board[cs], &bpw_slave);
+    if (ret)
+        goto exit_setbit;
+
     /* check hardware bpw capabilities */
-    if (!(BIT(nbits - 1) & SPI_BPW_MASK)) {
-        ret = -ENOSYS;
+    if (!(BIT(nbits - 1) & SPI_BPW_MASK) || (nbits != bpw_slave)) {
+        ret = -EINVAL;
         goto exit_setbit;
     }
 
@@ -845,43 +852,11 @@ static int tsb_spi_get_master_config(struct device *dev,
     master_config->mode = SPI_DEFAULT_MODE;
     master_config->flags = 0; /* nothing that we can't do */
     master_config->bpw_mask = SPI_BPW_MASK;
-    master_config->csnum = info->csnum;
+    master_config->csnum = info->num_boards;
     master_config->min_speed_hz = SPI_MIN_FREQ;
     master_config->max_speed_hz = SPI_MAX_FREQ;
     sem_post(&info->lock);
     return 0;
-}
-
-/**
- * @brief Get SPI board configured information.
- *
- * This function can be called whether lock() has been called or not.
- *
- * @param dev pointer to structure of device data
- * @return 0 on success, negative errno on error
- */
-static int tsb_spi_query_board_cfg(struct device *dev)
-{
-    struct tsb_spi_dev_info *info = NULL;
-    int ret = 0, i;
-
-    info = device_get_private(dev);
-
-    /* Get SPI specific chip configured information */
-    info->board_config = zalloc(info->csnum *
-                             sizeof(struct device_spi_device_config));
-    if (!info->board_config) {
-        return -ENOMEM;
-    }
-    for (i = 0; i < info->csnum; i++) {
-        ret = device_spi_board_get_device_cfg(info->spi_board_dev, i,
-                                              &info->board_config[i]);
-        if (ret) {
-            free(info->board_config);
-            return ret;
-        }
-    }
-    return ret;
 }
 
 /**
@@ -899,6 +874,7 @@ static int tsb_spi_get_device_config(struct device *dev, uint8_t cs,
                                      struct device_spi_device_config *device_cfg)
 {
     struct tsb_spi_dev_info *info = NULL;
+    struct device *spi_board;
 
     /* check input parameters */
     if (!dev || !device_get_private(dev) || !device_cfg) {
@@ -907,19 +883,21 @@ static int tsb_spi_get_device_config(struct device *dev, uint8_t cs,
 
     info = device_get_private(dev);
 
-    if (!info->board_config || cs >= info->csnum) {
+    if (!info->dev_spi_board || cs >= info->num_boards) {
         return -EINVAL;
     }
 
     sem_wait(&info->lock);
 
+    spi_board = info->dev_spi_board[cs];
+
     /* get device config */
-    device_cfg->mode = info->board_config[cs].mode;
-    device_cfg->bpw = info->board_config[cs].bpw;
-    device_cfg->max_speed_hz = info->board_config[cs].max_speed_hz;
-    device_cfg->device_type = info->board_config[cs].device_type;
-    strncpy((char*)device_cfg->name, (char*)info->board_config[cs].name,
-            sizeof(device_cfg->name) - 1);
+    device_spi_board_get_mode(spi_board, &device_cfg->mode);
+    device_spi_board_get_bpw(spi_board, &device_cfg->bpw);
+    device_spi_board_get_max_speed_hz(spi_board, &device_cfg->max_speed_hz);
+    device_spi_board_get_type(spi_board, &device_cfg->device_type);
+    device_spi_board_get_name(spi_board, device_cfg->name);
+
     sem_post(&info->lock);
     return 0;
 }
@@ -940,7 +918,7 @@ static void tsb_spi_hw_deinit(struct tsb_spi_dev_info *info)
     pinshare |= TSB_PIN_GPIO13;
 #if !defined(CONFIG_TSB_SPI_GPIO)
     /* release also SPIM_CS0 and SPIM_CS1 */
-    pinshare |= (TSB_PIN_GPIO15 | TSB_PIN_SPIM_CS1);
+    pinshare |= (TSB_PIN_GPIO15 | TSB_PIN_SDIO | TSB_PIN_SPIM_CS1);
 #endif
     tsb_release_pinshare(pinshare);
 
@@ -987,8 +965,10 @@ static int tsb_spi_hw_init(struct tsb_spi_dev_info *info)
     /* get SPIM_CLK, SPIM_SDI and SPIM_SDO */
     pinshare |= TSB_PIN_GPIO13;
 #if !defined(CONFIG_TSB_SPI_GPIO)
-    /* get also SPIM_CS0 and SPIM_CS1 */
-    pinshare |= (TSB_PIN_GPIO15 | TSB_PIN_SPIM_CS1);
+    /* get also SPIM_CS0 */
+    pinshare |= TSB_PIN_GPIO15;
+    /* and SPIM_CS1 */
+    pinshare |= (TSB_PIN_SDIO | TSB_PIN_SPIM_CS1);
 #endif
 
     ret = tsb_request_pinshare(pinshare);
@@ -997,9 +977,13 @@ static int tsb_spi_hw_init(struct tsb_spi_dev_info *info)
         goto err_req_pinshare;
     }
     /* Configure pin functionality for SPI */
+    /* CLK, SDO, SDI */
     tsb_clr_pinshare(TSB_PIN_GPIO13);
 #if !defined(CONFIG_TSB_SPI_GPIO)
+    /* CS0_N */
     tsb_clr_pinshare(TSB_PIN_GPIO15);
+    /* CS1_N */
+    tsb_clr_pinshare(TSB_PIN_SDIO);
     tsb_set_pinshare(TSB_PIN_SPIM_CS1);
 #endif
 err_req_pinshare:
@@ -1020,7 +1004,8 @@ err_req_pinshare:
 static int tsb_spi_dev_open(struct device *dev)
 {
     struct tsb_spi_dev_info *info = NULL;
-    struct spi_board_init_data *data;
+    struct device *spi_board;
+    int i;
     int ret = 0;
 
     /* check input parameter */
@@ -1036,22 +1021,17 @@ static int tsb_spi_dev_open(struct device *dev)
         ret = -EBUSY;
         goto err_open;
     }
-    /* open SPI device board driver to get slave devices information */
-    info->spi_board_dev = device_open(DEVICE_TYPE_SPI_BOARD_HW, 0);
-    if (!info->spi_board_dev) {
-        ret = -EBUSY;
-        goto err_open;
-    }
 
-    data = info->spi_board_dev->init_data;
-
-    ret = tsb_spi_query_board_cfg(dev);
-    if (ret) {
-        ret = -EIO;
-        goto err_hwinit;
+    /* open all the consecutive slaves we can find */
+    info->num_boards = 0;
+    for (i = 0; i < SPI_MAX_SLAVES; i++) {
+        spi_board = device_open(DEVICE_TYPE_SPI_BOARD_HW, i);
+        if (spi_board) {
+            info->num_boards++;
+            info->dev_spi_board[i] = spi_board;
+        } else
+            break;
     }
-    /* Set Capability */
-    info->csnum = data->num;
 
     info->curr_xfer.cs_high = 0;
     info->curr_xfer.bpw = 8;
@@ -1076,13 +1056,9 @@ static int tsb_spi_dev_open(struct device *dev)
 err_irq:
     tsb_spi_hw_deinit(info);
 err_hwinit:
-    if (info->spi_board_dev) {
-        device_close(info->spi_board_dev);
-        info->spi_board_dev = NULL;
-        if (info->board_config) {
-            free(info->board_config);
-            info->board_config = NULL;
-        }
+    for (i = 0; i < info->num_boards; i++) {
+        device_close(info->dev_spi_board[i]);
+        info->dev_spi_board[i] = NULL;
     }
 err_open:
     sem_post(&info->lock);
@@ -1101,6 +1077,7 @@ err_open:
  */
 static void tsb_spi_dev_close(struct device *dev)
 {
+    int i;
     struct tsb_spi_dev_info *info = NULL;
 
     /* check input parameter */
@@ -1117,13 +1094,9 @@ static void tsb_spi_dev_close(struct device *dev)
 
     tsb_spi_hw_deinit(info);
 
-    if (info->spi_board_dev) {
-        device_close(info->spi_board_dev);
-        info->spi_board_dev = NULL;
-    }
-    if (info->board_config) {
-        free(info->board_config);
-        info->board_config = NULL;
+    for (i = 0; i < info->num_boards; i++) {
+        device_close(info->dev_spi_board[i]);
+        info->dev_spi_board[i] = NULL;
     }
     info->state = TSB_SPI_STATE_CLOSED;
     sem_post(&info->lock);
@@ -1283,7 +1256,6 @@ static int tsb_spi_dev_probe(struct device *dev)
     }
 
     info->reg_base = (uint32_t)r->start;
-    info->dev = dev;
     info->state = TSB_SPI_STATE_CLOSED;
     info->spi_pmstate = PM_SLEEP;
     device_set_private(dev, info);
@@ -1332,10 +1304,6 @@ static void tsb_spi_dev_remove(struct device *dev)
     sem_destroy(&info->xfer_completed);
     device_set_private(dev, NULL);
     spi_dev = NULL;
-    if (info->board_config) {
-        free(info->board_config);
-        info->board_config = NULL;
-    }
     free(info);
 }
 

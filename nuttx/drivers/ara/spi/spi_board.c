@@ -38,226 +38,176 @@
 #include <nuttx/device_spi_board.h>
 #include <nuttx/ara/spi_board.h>
 
-/* SPI board flags */
-#define SPI_BOARD_FLAG_OPEN BIT(0)
-
-/**
- * @brief SPI board device private information
- */
-struct spi_board_info {
-    /** Device driver handler */
-    struct device *dev;
-    /** SPI board driver state */
-    uint32_t flags;
+struct device_spi_board {
+    /** external chip-select pin */
+    uint8_t cs_gpio;
 };
 
-/**
- * @brief Initialize SPI board
- *
- * @param dev Pointer to structure of device.
- * @return 0 on success, negative errno on error.
- */
-static int spi_board_initialize(struct device *dev)
+static int spi_board_get_name(struct device *dev, uint8_t *name)
 {
-    struct spi_board_init_data *data;
-    int ret = 0, i = 0;
+    struct spi_board_info *info;
 
-    if (!dev || !dev->init_data) {
+    if (!dev || !device_get_init_data(dev) || !name) {
         return -EINVAL;
     }
-    data = dev->init_data;
+    info = device_get_init_data(dev);
 
-    /* initialize device */
-#if defined(CONFIG_TSB_SPI_GPIO)
-    for (i = 0; i < data->num; i++) {
-        ret = gpio_activate(data->devices[i].ext_cs);
-        if (ret) {
-            /* deactive all activated gpio pin */
-            while(--i >= 0) {
-                gpio_deactivate(data->devices[i].ext_cs);
-            }
-            return ret;
-        }
-        /* set gpio direction and initial output state */
-        gpio_direction_out(data->devices[i].ext_cs,
-                data->devices[i].init_cs_state);
+    memcpy(name, info->name, sizeof(info->name));
+    return 0;
+}
+
+static int spi_board_get_max_speed_hz(struct device *dev, uint32_t *max_speed_hz)
+{
+    struct spi_board_info *info;
+
+    if (!dev || !device_get_init_data(dev) || !max_speed_hz) {
+        return -EINVAL;
     }
+    info = device_get_init_data(dev);
+
+    *max_speed_hz = info->max_speed_hz;
+    return 0;
+}
+
+static int spi_board_get_type(struct device *dev, enum device_spi_type *type)
+{
+    struct spi_board_info *info;
+
+    if (!dev || !device_get_init_data(dev) || !type) {
+        return -EINVAL;
+    }
+    info = device_get_init_data(dev);
+
+    *type = info->type;
+    return 0;
+}
+
+static int spi_board_get_mode(struct device *dev, uint16_t *mode)
+{
+    struct spi_board_info *info;
+
+    if (!dev || !device_get_init_data(dev) || !mode) {
+        return -EINVAL;
+    }
+    info = device_get_init_data(dev);
+
+    *mode = info->mode;
+    return 0;
+}
+
+static int spi_board_get_bpw(struct device *dev, uint8_t *bpw)
+{
+    struct spi_board_info *info;
+
+    if (!dev || !device_get_init_data(dev) || !bpw) {
+        return -EINVAL;
+    }
+    info = device_get_init_data(dev);
+
+    *bpw = info->bpw;
+    return 0;
+}
+
+static int spi_board_cs_select(struct device *dev, uint8_t val)
+{
+    struct device_spi_board *board;
+
+    if (!dev || !device_get_private(dev)) {
+        return -EINVAL;
+    }
+    board = device_get_private(dev);
+
+#if defined(CONFIG_TSB_SPI_GPIO)
+    gpio_set_value(board->cs_gpio, val);
 #endif
     return 0;
 }
 
-/**
- * @brief Deinitialize SPI board
- *
- * @param dev Pointer to structure of device.
- * @return 0 on success, negative errno on error.
- */
-static int spi_board_deinitialize(struct device *dev)
-{
-    struct spi_board_init_data *data;
-    int i;
-
-    if (!dev || !dev->init_data) {
-        return -EINVAL;
-    }
-    data = dev->init_data;
-
-    /* deinitialize device */
-#if defined(CONFIG_TSB_SPI_GPIO)
-    for (i = 0; i < data->num; i++) {
-        gpio_deactivate(data->devices[i].ext_cs);
-    }
-#endif
-    return 0;
-}
-
-/**
- * @brief Get SPI specific chip configured information.
- *
- * @param dev pointer to structure of device data
- * @param cs the specific chip number
- * @param spi_board pointer to the device_spi_cfg structure to receive the
- *                configuration that be set in chip.
- * @return 0 on success, negative errno on error
- */
-static int spi_board_get_device_cfg(struct device *dev, uint8_t cs,
-                                    struct device_spi_board *spi_board)
-{
-    struct spi_board_init_data *data;
-
-    if (!dev || !dev->init_data || !spi_board) {
-        return -EINVAL;
-    }
-    data = dev->init_data;
-
-    if (cs >= data->num) {
-        return -EINVAL;
-    }
-    memcpy(spi_board, &data->devices[cs], sizeof(struct device_spi_board));
-    return 0;
-}
-
-/**
-* @brief The device open function.
-*
-* This function is called when protocol preparing to use the driver ops
-* in initial stage. It is called after probe() was invoked by the system.
-* The function checks whether the driver is already open or not. If it was
-* opened, it returns driver busy error number, otherwise it keeps a flag to
-* identify the driver was opened and returns success.
-*
-* @param dev Pointer to the SPI board device structure.
-* @return 0 for success, negative errno on error
-*/
 static int spi_board_dev_open(struct device *dev)
 {
-    struct spi_board_info *info = NULL;
-    int ret = 0;
+    int ret;
+    struct device_spi_board *board;
+    struct spi_board_info *info;
 
-    if (!dev || !device_get_private(dev)) {
+    if (!dev || !device_get_private(dev) || !device_get_init_data(dev)) {
         return -EINVAL;
     }
-    info = device_get_private(dev);
+    board = device_get_private(dev);
+    info = device_get_init_data(dev);
 
-    if (info->flags & SPI_BOARD_FLAG_OPEN) {
-        ret = -EBUSY;
+#if defined(CONFIG_TSB_SPI_GPIO)
+    ret = gpio_activate(board->cs_gpio);
+    if (ret)
         return ret;
-    }
+    /* the initial value is deduced from whether the slave is defined as having
+     * an active high CS */
+    gpio_direction_out(board->cs_gpio, !(info->mode & SPI_MODE_CS_HIGH));
+#endif
 
-    /* initialize SPI board config */
-    ret = spi_board_initialize(dev);
-    if (ret) {
-        return ret;
-    }
-    info->flags |= SPI_BOARD_FLAG_OPEN;
-    return ret;
+    return 0;
 }
 
-/**
-* @brief The device close function.
-*
-* This function is called when protocol no longer using this driver.
-* The driver must be opened before calling this function.
-*
-* @param dev Pointer to the SPI board device structure.
-* @return None.
-*/
 static void spi_board_dev_close(struct device *dev)
 {
-    struct spi_board_info *info = NULL;
+    struct device_spi_board *board;
 
     if (!dev || !device_get_private(dev)) {
         return;
     }
-    info = device_get_private(dev);
+    board = device_get_private(dev);
 
-    if (!(info->flags & SPI_BOARD_FLAG_OPEN)) {
-        return;
-    }
-    /* deinitialize SPI board config */
-    spi_board_deinitialize(dev);
-
-    info->flags &= ~SPI_BOARD_FLAG_OPEN;
+#if defined(CONFIG_TSB_SPI_GPIO)
+    gpio_deactivate(board->cs_gpio);
+#endif
 }
 
-/**
-* @brief The device probe function.
-*
-* This function is called by the system to allocate memory for saving driver
-* internal information data when the system boots up.
-*
-* @param dev Pointer to the SPI board device structure.
-* @return 0 for success, negative errno on error.
-*/
 static int spi_board_dev_probe(struct device *dev)
 {
-    struct spi_board_info *info = NULL;
+    struct device_spi_board *board;
+    struct device_resource *r;
 
-    if (!dev || !dev->init_data) {
+    if (!dev || !device_get_init_data(dev)) {
         return -EINVAL;
     }
 
-    info = zalloc(sizeof(*info));
-    if (!info) {
+    board = zalloc(sizeof(*board));
+    if (!board) {
         return -ENOMEM;
     }
 
-    info->dev = dev;
-    device_set_private(dev, info);
+#if defined(CONFIG_TSB_SPI_GPIO)
+    /* get the CS GPIO pin */
+    r = device_resource_get(dev, DEVICE_RESOURCE_TYPE_GPIO, 0);
+    if (!r) {
+        free(board);
+        return -EINVAL;
+    }
+    board->cs_gpio = (uint8_t)r->start;
+#endif
+
+    device_set_private(dev, board);
 
     return 0;
 }
 
-/**
-* @brief The device remove function.
-*
-* This function is called by the system to unregister this driver. It must be
-* called after probe() and open(). It frees the internal information memory
-* space.
-*
-* @param dev Pointer to the SPI board device structure.
-* @return None.
-*/
 static void spi_board_dev_remove(struct device *dev)
 {
-    struct spi_board_info *info = NULL;
-
+    struct device_spi_board *board;
     if (!dev || !device_get_private(dev)) {
         return;
     }
-    info = device_get_private(dev);
-
-    if (info->flags & SPI_BOARD_FLAG_OPEN) {
-        spi_board_dev_close(dev);
-    }
-    info->flags = 0;
-
-    free(info);
+    board = device_get_private(dev);
+    free(board);
     device_set_private(dev, NULL);
 }
 
 static struct device_spi_board_type_ops spi_board_type_ops = {
-    .get_device_cfg = spi_board_get_device_cfg,
+    .get_name           = spi_board_get_name,
+    .get_max_speed_hz   = spi_board_get_max_speed_hz,
+    .get_type           = spi_board_get_type,
+    .get_mode           = spi_board_get_mode,
+    .get_bpw            = spi_board_get_bpw,
+    .cs_select          = spi_board_cs_select,
 };
 
 static struct device_driver_ops spi_board_driver_ops = {

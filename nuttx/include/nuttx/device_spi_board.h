@@ -29,6 +29,7 @@
 #ifndef __INCLUDE_NUTTX_DEVICE_SPI_BOARD_H
 #define __INCLUDE_NUTTX_DEVICE_SPI_BOARD_H
 
+#include <errno.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <assert.h>
@@ -36,45 +37,43 @@
 #include <nuttx/util.h>
 #include <nuttx/device.h>
 
-#define DEVICE_TYPE_SPI_BOARD_HW "spi_board"
+#define DEVICE_TYPE_SPI_BOARD_HW    "spi_board"
 
-struct device_spi_board {
-    /** chip name */
-    uint8_t name[32];
-    /** max speed be set in device */
-    uint32_t max_speed_hz;
-    /** type be set in device */
-    uint8_t device_type;
-    /** mode be set in device */
-    uint16_t mode;
-    /** bit per word be set in device */
-    uint8_t bpw;
-    /** external chip-select pin */
-    uint8_t ext_cs;
-    /** default cs pin state when using external chip-select pin */
-    uint8_t init_cs_state;
+/* SPI mode definition */
+#define SPI_MODE_CPHA               0x01        /* clock phase */
+#define SPI_MODE_CPOL               0x02        /* clock polarity */
+#define SPI_MODE_CS_HIGH            0x04        /* chipselect active high */
+#define SPI_MODE_LSB_FIRST          0x08        /* per-word bits-on-wire */
+#define SPI_MODE_3WIRE              0x10        /* SI/SO signals shared */
+#define SPI_MODE_LOOP               0x20        /* loopback mode */
+#define SPI_MODE_NO_CS              0x40        /* 1 dev/bus, no chipselect */
+#define SPI_MODE_READY              0x80        /* slave pulls low to pause */
+
+#define SPI_MODE_0                  (0 | 0)     /* (original MicroWire) */
+#define SPI_MODE_1                  (0 | SPI_MODE_CPHA)
+#define SPI_MODE_2                  (SPI_MODE_CPOL | 0)
+#define SPI_MODE_3                  (SPI_MODE_CPOL | SPI_MODE_CPHA)
+
+enum device_spi_type {
+    /* Normal SPI device */
+    SPI_DEV_TYPE,
+    /* MTD SPI device */
+    SPI_NOR_TYPE,
+    /* Fixed name device */
+    SPI_MODALIAS_TYPE,
 };
 
-/**
- * SPI board device driver operations
- */
+/** SPI board device driver operations */
 struct device_spi_board_type_ops {
-    /** Get SPI specific chip configured information. */
-    int (*get_device_cfg)(struct device *dev, uint8_t cs,
-                          struct device_spi_board *spi_board);
+    int (*get_name)(struct device *dev, uint8_t *name);
+    int (*get_max_speed_hz)(struct device *dev, uint32_t *max_speed_hz);
+    int (*get_type)(struct device *dev, enum device_spi_type *type);
+    int (*get_mode)(struct device *dev, uint16_t *mode);
+    int (*get_bpw)(struct device *dev, uint8_t *bpw);
+    int (*cs_select)(struct device *dev, uint8_t val);
 };
 
-/**
- * @brief Get SPI specific chip configured information.
- *
- * @param dev Pointer to structure of device.
- * @param cs the specific chip number.
- * @param spi_board pointer to the device_spi_board structure to receive the
- *                configuration that be set in chip.
- * @return 0 on success, negative errno on error.
- */
-static inline int device_spi_board_get_device_cfg(struct device *dev,
-                              uint8_t cs, struct device_spi_board *spi_board)
+static inline int device_spi_board_get_name(struct device *dev, uint8_t *name)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -82,9 +81,79 @@ static inline int device_spi_board_get_device_cfg(struct device *dev,
         return -ENODEV;
     }
 
-    if (DEVICE_DRIVER_GET_OPS(dev, spi_board)->get_device_cfg)
-        return DEVICE_DRIVER_GET_OPS(dev, spi_board)->get_device_cfg(dev, cs,
-                                                                     spi_board);
+    if (DEVICE_DRIVER_GET_OPS(dev, spi_board)->get_name)
+        return DEVICE_DRIVER_GET_OPS(dev, spi_board)->get_name(dev, name);
+
+    return -ENOSYS;
+}
+
+static inline int device_spi_board_get_max_speed_hz(struct device *dev, uint32_t *max_speed_hz)
+{
+    DEVICE_DRIVER_ASSERT_OPS(dev);
+
+    if (!device_is_open(dev)) {
+        return -ENODEV;
+    }
+
+    if (DEVICE_DRIVER_GET_OPS(dev, spi_board)->get_max_speed_hz)
+        return DEVICE_DRIVER_GET_OPS(dev, spi_board)->get_max_speed_hz(dev, max_speed_hz);
+
+    return -ENOSYS;
+}
+
+static inline int device_spi_board_get_type(struct device *dev, enum device_spi_type *type)
+{
+    DEVICE_DRIVER_ASSERT_OPS(dev);
+
+    if (!device_is_open(dev)) {
+        return -ENODEV;
+    }
+
+    if (DEVICE_DRIVER_GET_OPS(dev, spi_board)->get_type)
+        return DEVICE_DRIVER_GET_OPS(dev, spi_board)->get_type(dev, type);
+
+    return -ENOSYS;
+}
+
+static inline int device_spi_board_get_mode(struct device *dev, uint16_t *mode)
+{
+    DEVICE_DRIVER_ASSERT_OPS(dev);
+
+    if (!device_is_open(dev)) {
+        return -ENODEV;
+    }
+
+    if (DEVICE_DRIVER_GET_OPS(dev, spi_board)->get_mode)
+        return DEVICE_DRIVER_GET_OPS(dev, spi_board)->get_mode(dev, mode);
+
+    return -ENOSYS;
+}
+
+static inline int device_spi_board_get_bpw(struct device *dev, uint8_t *bpw)
+{
+    DEVICE_DRIVER_ASSERT_OPS(dev);
+
+    if (!device_is_open(dev)) {
+        return -ENODEV;
+    }
+
+    if (DEVICE_DRIVER_GET_OPS(dev, spi_board)->get_bpw)
+        return DEVICE_DRIVER_GET_OPS(dev, spi_board)->get_bpw(dev, bpw);
+
+    return -ENOSYS;
+}
+
+static inline int device_spi_board_cs_select(struct device *dev, uint8_t val)
+{
+    DEVICE_DRIVER_ASSERT_OPS(dev);
+
+    if (!device_is_open(dev)) {
+        return -ENODEV;
+    }
+
+    if (DEVICE_DRIVER_GET_OPS(dev, spi_board)->cs_select)
+        return DEVICE_DRIVER_GET_OPS(dev, spi_board)->cs_select(dev, val);
+
     return -ENOSYS;
 }
 

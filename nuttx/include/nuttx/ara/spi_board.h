@@ -34,11 +34,17 @@
 #include <stdint.h>
 #include <nuttx/device_spi_board.h>
 
-struct spi_board_init_data {
-    /** number of spi slave device */
-    uint8_t num;
-    /** configuration of spi slave device */
-    struct device_spi_board *devices;
+struct spi_board_info {
+    /** chip name */
+    uint8_t name[32];
+    /** max speed be set in device */
+    uint32_t max_speed_hz;
+    /** type be set in device */
+    enum device_spi_type type;
+    /** mode be set in device */
+    uint16_t mode;
+    /** bit per word be set in device */
+    uint8_t bpw;
 };
 
 #endif /* _DRIVERS_ARA_SPI_BOARD_H_ */
