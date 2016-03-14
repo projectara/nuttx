@@ -42,10 +42,11 @@
 /**
  * @brief SDIO event callback function
  *
+ * @param data Private data pass to the callback.
  * @param event Event type.
  * @return 0 on success, negative errno on error.
  */
-typedef int (*sdio_event_callback)(uint8_t event);
+typedef int (*sdio_event_callback)(void *data, uint8_t event);
 
 /**
  * @brief SDIO transfer callback function
@@ -150,7 +151,8 @@ struct device_sdio_type_ops {
     /** Read data from SDIO host controller */
     int (*read)(struct device *dev, struct sdio_transfer *transfer);
     /** Attach callback function with SDIO host controller */
-    int (*attach_callback)(struct device *dev, sdio_event_callback callback);
+    int (*attach_callback)(struct device *dev, sdio_event_callback callback,
+                           void *data);
 };
 
 /**
@@ -261,10 +263,12 @@ static inline int device_sdio_read(struct device *dev,
  *
  * @param dev Pointer to structure of device.
  * @param callback Pointer to event callback function.
+ * @param data Private data pass to the callback.
  * @return 0 on success, negative errno on error.
  */
 static inline int device_sdio_attach_callback(struct device *dev,
-                                              sdio_event_callback callback)
+                                              sdio_event_callback callback,
+                                              void *data)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -272,7 +276,8 @@ static inline int device_sdio_attach_callback(struct device *dev,
         return -ENODEV;
 
     if (DEVICE_DRIVER_GET_OPS(dev, sdio)->attach_callback)
-        return DEVICE_DRIVER_GET_OPS(dev, sdio)->attach_callback(dev, callback);
+        return DEVICE_DRIVER_GET_OPS(dev, sdio)->attach_callback(dev, callback,
+                                                                 data);
 
     return -ENOSYS;
 }
