@@ -248,12 +248,12 @@ static int usbclass_setconfig(struct apbridge_dev_s *priv, uint8_t config);
 
 /* Completion event handlers ***********************************************/
 
-static void usbclass_ep0incomplete(struct usbdev_ep_s *ep,
-                                   struct usbdev_req_s *req);
-static void usbclass_rdcomplete(struct usbdev_ep_s *ep,
-                                struct usbdev_req_s *req);
-static void usbclass_wrcomplete(struct usbdev_ep_s *ep,
-                                struct usbdev_req_s *req);
+static void ctrl_ep_complete(struct usbdev_ep_s *ep,
+                             struct usbdev_req_s *req);
+static void bulk_out_complete(struct usbdev_ep_s *ep,
+                              struct usbdev_req_s *req);
+static void bulk_in_complete(struct usbdev_ep_s *ep,
+                             struct usbdev_req_s *req);
 
 /* USB class device ********************************************************/
 
@@ -605,7 +605,7 @@ static int ep_add_requests(struct apbridge_dev_s *priv,
 
     /* Queue read requests in the bulk OUT endpoint */
     for (i = 0; i < n; i++) {
-        req = get_request(ep, usbclass_rdcomplete,
+        req = get_request(ep, bulk_out_complete,
                           APBRIDGE_REQ_SIZE, NULL);
         request_set_priv(req, req->buf);
         ret = EP_SUBMIT(ep, req);
@@ -785,7 +785,7 @@ int unipro_to_usb(struct apbridge_dev_s *priv, unsigned int cportid,
     }
 
     /* Bulk in request use UniPro buffer so only get a request without buffer */
-    req = get_request(ep, usbclass_wrcomplete, 0,
+    req = get_request(ep, bulk_in_complete, 0,
                       (void*) cportid);
     if (!req) {
         return apbridge_queue(priv, ep, payload, len, (void*) cportid);
@@ -984,15 +984,15 @@ static int usbclass_setconfig(struct apbridge_dev_s *priv, uint8_t config)
 }
 
 /****************************************************************************
- * Name: usbclass_ep0incomplete
+ * Name: ctrl_ep_complete
  *
  * Description:
  *   Handle completion of EP0 control operations
  *
  ****************************************************************************/
 
-static void usbclass_ep0incomplete(struct usbdev_ep_s *ep,
-                                   struct usbdev_req_s *req)
+static void ctrl_ep_complete(struct usbdev_ep_s *ep,
+                             struct usbdev_req_s *req)
 {
     if (req->result || req->xfrd != req->len) {
         usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_REQRESULT),
@@ -1009,7 +1009,7 @@ static void usbdclass_log_rx_time(struct apbridge_dev_s *priv, unsigned int cpor
 }
 
 /****************************************************************************
- * Name: usbclass_rdcomplete
+ * Name: bulk_out_complete
  *
  * Description:
  *   Handle completion of read request on the bulk OUT endpoint.  This
@@ -1017,8 +1017,8 @@ static void usbdclass_log_rx_time(struct apbridge_dev_s *priv, unsigned int cpor
  *
  ****************************************************************************/
 
-static void usbclass_rdcomplete(struct usbdev_ep_s *ep,
-                                struct usbdev_req_s *req)
+static void bulk_out_complete(struct usbdev_ep_s *ep,
+                              struct usbdev_req_s *req)
 {
     struct apbridge_dev_s *priv;
     unsigned int cportid;
@@ -1068,8 +1068,8 @@ static void usbclass_rdcomplete(struct usbdev_ep_s *ep,
     EP_SUBMIT(ep, req);
 }
 
-static void usbclass_wrcomplete(struct usbdev_ep_s *ep,
-                              struct usbdev_req_s *req)
+static void bulk_in_complete(struct usbdev_ep_s *ep,
+                             struct usbdev_req_s *req)
 {
     struct apbridge_msg_s *info;
     struct apbridge_dev_s *priv;
@@ -1541,7 +1541,7 @@ static int usbclass_setup(struct usbdevclass_driver_s *driver,
         return -ENODEV;
     }
 #endif
-    req = get_request(dev->ep0, usbclass_ep0incomplete,
+    req = get_request(dev->ep0, ctrl_ep_complete,
                       APBRIDGE_MXDESCLEN, NULL);
     if (!req) {
         lowsyslog("%s(): unable to get a request buffer\n", __func__);
@@ -1654,7 +1654,7 @@ static int usbclass_setup(struct usbdevclass_driver_s *driver,
     }
 
     if (ret < 0) {
-         usbclass_ep0incomplete(dev->ep0, req);
+         ctrl_ep_complete(dev->ep0, req);
     }
 
     return ret;
