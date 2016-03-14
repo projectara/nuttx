@@ -47,7 +47,6 @@
 #include <arch/board/apbridgea_gadget.h>
 
 #include "../../../../drivers/greybus/audio-gb.h"
-#include "../../../../../apps/ara/apbridge/apbridge_backend.h"
 
 #undef APBRIDGEA_AUDIO_I2S_MASTER
 
