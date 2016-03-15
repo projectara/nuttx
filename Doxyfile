@@ -774,6 +774,9 @@ INPUT  = nuttx/include/nuttx/device.h
 INPUT  += nuttx/include/nuttx/device_table.h
 INPUT  += nuttx/include/nuttx/device_hid.h
 INPUT  += nuttx/include/nuttx/device_i2c.h
+INPUT  += nuttx/include/nuttx/device_spi.h
+INPUT  += nuttx/include/nuttx/device_spi_board.h
+INPUT  += nuttx/include/nuttx/ara/spi_board.h
 INPUT  += nuttx/include/nuttx/device_uart.h
 INPUT  += nuttx/include/nuttx/gpio.h
 

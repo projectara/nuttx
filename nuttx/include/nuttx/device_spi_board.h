@@ -29,50 +29,115 @@
 #ifndef __INCLUDE_NUTTX_DEVICE_SPI_BOARD_H
 #define __INCLUDE_NUTTX_DEVICE_SPI_BOARD_H
 
+/**
+ * @file nuttx/device_spi_board.h
+ * @brief SPI Board API
+ * @attention This file is officially included in the Firmware Documentation.
+ * Please contact the Firmware Documentation team before modifying it.
+ */
+
 #include <errno.h>
 #include <stdint.h>
-#include <stdbool.h>
-#include <assert.h>
 
-#include <nuttx/util.h>
 #include <nuttx/device.h>
 
+/** SPI Board Device type */
 #define DEVICE_TYPE_SPI_BOARD_HW    "spi_board"
 
-/* SPI mode definition */
-#define SPI_MODE_CPHA               0x01        /* clock phase */
-#define SPI_MODE_CPOL               0x02        /* clock polarity */
-#define SPI_MODE_CS_HIGH            0x04        /* chipselect active high */
-#define SPI_MODE_LSB_FIRST          0x08        /* per-word bits-on-wire */
-#define SPI_MODE_3WIRE              0x10        /* SI/SO signals shared */
-#define SPI_MODE_LOOP               0x20        /* loopback mode */
-#define SPI_MODE_NO_CS              0x40        /* 1 dev/bus, no chipselect */
-#define SPI_MODE_READY              0x80        /* slave pulls low to pause */
+/** @defgroup SPI_MODE_FLAGS SPI mode flags
+ * @{
+ */
+/** Clock phase (0: sample on first clock, 1: on second) */
+#define SPI_MODE_CPHA       0x01
+/** Clock polarity (0: clock low on idle, 1: high on idle) */
+#define SPI_MODE_CPOL       0x02
+/** Chip select active high */
+#define SPI_MODE_CS_HIGH    0x04
+/** Transmit Least-Significant-Bits first */
+#define SPI_MODE_LSB_FIRST  0x08
+/** Use only three wires: SI/SO signals are shared */
+#define SPI_MODE_3WIRE      0x10
+/** Loopback mode */
+#define SPI_MODE_LOOP       0x20
+/** Only one slave per bus, no need for chipselect */
+#define SPI_MODE_NO_CS      0x40
+/** Slave pulls low to pause */
+#define SPI_MODE_READY      0x80
+/** @} */
 
-#define SPI_MODE_0                  (0 | 0)     /* (original MicroWire) */
-#define SPI_MODE_1                  (0 | SPI_MODE_CPHA)
-#define SPI_MODE_2                  (SPI_MODE_CPOL | 0)
-#define SPI_MODE_3                  (SPI_MODE_CPOL | SPI_MODE_CPHA)
+/** @defgroup SPI_MODE SPI standard modes
+ * @{
+ */
+/** Mode 0 (original MicroWire): CPOL=0 | CPHA=0 */
+#define SPI_MODE_0  (0 | 0)
+/** Mode 1: CPOL=0 | CPHA=1 */
+#define SPI_MODE_1  (0 | SPI_MODE_CPHA)
+/** Mode 2: CPOL=1 | CPHA=0 */
+#define SPI_MODE_2  (SPI_MODE_CPOL | 0)
+/** Mode 3: CPOL=1 | CPHA=1 */
+#define SPI_MODE_3  (SPI_MODE_CPOL | SPI_MODE_CPHA)
+/** @} */
 
+/** SPI board device type */
 enum device_spi_type {
-    /* Normal SPI device */
+    /** Generic SPI device (translate into 'spidev' on Linux) */
     SPI_DEV_TYPE,
-    /* MTD SPI device */
+    /** SPI NOR flash device that supports JEDEC READ ID */
     SPI_NOR_TYPE,
-    /* Fixed name device */
+    /** SPI device that can be identified by its name */
     SPI_MODALIAS_TYPE,
 };
 
 /** SPI board device driver operations */
 struct device_spi_board_type_ops {
+    /** Get the name of a SPI board
+     * @param dev Pointer to the SPI board
+     * @param name Buffer to fill out with the name (size must be 32 bytes)
+     * @return 0 on success, negative errno on failure
+     */
     int (*get_name)(struct device *dev, uint8_t *name);
+    /** Get the max speed of a SPI board (in Hz)
+     * @param dev Pointer to the SPI board
+     * @param max_speed_hz Pointer to a variable whose value is to be filled out
+     * with the max speed (in Hz)
+     * @return 0 on success, negative errno on failure
+     */
     int (*get_max_speed_hz)(struct device *dev, uint32_t *max_speed_hz);
+    /** Get the SPI board device type
+     * @param dev Pointer to the SPI board
+     * @param type Pointer to a variable whose value is to be filled out with
+     * the SPI board device type
+     * @return 0 on success, negative errno on failure
+     */
     int (*get_type)(struct device *dev, enum device_spi_type *type);
+    /** Get the SPI board mode
+     * @param dev Pointer to the SPI board
+     * @param mode Pointer to a variable whose value is to be filled out with
+     * the SPI board mode (\ref SPI_MODE and \ref SPI_MODE_FLAGS)
+     * @return 0 on success, negative errno on failure
+     */
     int (*get_mode)(struct device *dev, uint16_t *mode);
+    /** Get the SPI board default word size (i.e. bits per word)
+     * @param dev Pointer to the SPI board
+     * @param bpw Pointer to a variable whose value is to be filled out with the
+     * SPI board default word size
+     * @return 0 on success, negative errno on failure
+     */
     int (*get_bpw)(struct device *dev, uint8_t *bpw);
+    /** Selects the SPI board for a transfer (Chip-Select emulation)
+     * @param dev Pointer to the SPI board
+     * @param val Chip-Select value that should be applied in order to select
+     * this SPI Board
+     * @return 0 on success, negative errno on failure
+     */
     int (*cs_select)(struct device *dev, uint8_t val);
 };
 
+/** Get the name of a SPI board
+ * @param dev Pointer to the SPI board
+ * @param name Buffer to fill out with the name (size must be 32 bytes)
+ * @return 0 on success, negative errno on failure
+ */
 static inline int device_spi_board_get_name(struct device *dev, uint8_t *name)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
@@ -87,6 +152,12 @@ static inline int device_spi_board_get_name(struct device *dev, uint8_t *name)
     return -ENOSYS;
 }
 
+/** Get the max speed of a SPI board (in Hz)
+ * @param dev Pointer to the SPI board
+ * @param max_speed_hz Pointer to a variable whose value is to be filled out
+ * with the max speed (in Hz)
+ * @return 0 on success, negative errno on failure
+ */
 static inline int device_spi_board_get_max_speed_hz(struct device *dev, uint32_t *max_speed_hz)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
@@ -101,6 +172,12 @@ static inline int device_spi_board_get_max_speed_hz(struct device *dev, uint32_t
     return -ENOSYS;
 }
 
+/** Get the SPI board device type
+ * @param dev Pointer to the SPI board
+ * @param type Pointer to a variable whose value is to be filled out with the
+ * SPI board device type
+ * @return 0 on success, negative errno on failure
+ */
 static inline int device_spi_board_get_type(struct device *dev, enum device_spi_type *type)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
@@ -115,6 +192,12 @@ static inline int device_spi_board_get_type(struct device *dev, enum device_spi_
     return -ENOSYS;
 }
 
+/** Get the SPI board mode
+ * @param dev Pointer to the SPI board
+ * @param mode Pointer to a variable whose value is to be filled out with the
+ * SPI board mode (\ref SPI_MODE and \ref SPI_MODE_FLAGS)
+ * @return 0 on success, negative errno on failure
+ */
 static inline int device_spi_board_get_mode(struct device *dev, uint16_t *mode)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
@@ -129,6 +212,12 @@ static inline int device_spi_board_get_mode(struct device *dev, uint16_t *mode)
     return -ENOSYS;
 }
 
+/** Get the SPI board default word size (i.e. bits per word)
+ * @param dev Pointer to the SPI board
+ * @param bpw Pointer to a variable whose value is to be filled out with the SPI
+ * board default word size
+ * @return 0 on success, negative errno on failure
+ */
 static inline int device_spi_board_get_bpw(struct device *dev, uint8_t *bpw)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
@@ -143,6 +232,12 @@ static inline int device_spi_board_get_bpw(struct device *dev, uint8_t *bpw)
     return -ENOSYS;
 }
 
+/** Selects the SPI board for a transfer (Chip-Select emulation)
+ * @param dev Pointer to the SPI board
+ * @param val Chip-Select value that should be applied in order to select this
+ * SPI Board
+ * @return 0 on success, negative errno on failure
+ */
 static inline int device_spi_board_cs_select(struct device *dev, uint8_t val)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);

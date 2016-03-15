@@ -31,19 +31,27 @@
 #ifndef _DRIVERS_ARA_SPI_BOARD_H_
 #define _DRIVERS_ARA_SPI_BOARD_H_
 
+/**
+ * @file nuttx/ara/spi_board.h
+ * @brief SPI board API
+ * @attention This file is officially included in the Firmware Documentation.
+ * Please contact the Firmware Documentation team before modifying it.
+ */
+
 #include <stdint.h>
 #include <nuttx/device_spi_board.h>
 
+/** SPI board device initialization */
 struct spi_board_info {
-    /** chip name */
+    /** SPI board name */
     uint8_t name[32];
-    /** max speed be set in device */
+    /** SPI board maximum speed (in Hz) */
     uint32_t max_speed_hz;
-    /** type be set in device */
+    /** SPI board device type */
     enum device_spi_type type;
-    /** mode be set in device */
+    /** SPI board default mode */
     uint16_t mode;
-    /** bit per word be set in device */
+    /** SPI board default word size (bits-per-word) */
     uint8_t bpw;
 };
 

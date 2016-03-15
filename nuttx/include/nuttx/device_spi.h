@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Google, Inc.
+ * Copyright (c) 2015-2016 Google, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,8 +26,15 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __ARCH_ARM_DEVICE_SPI_H
-#define __ARCH_ARM_DEVICE_SPI_H
+#ifndef __INCLUDE_NUTTX_DEVICE_SPI_H
+#define __INCLUDE_NUTTX_DEVICE_SPI_H
+
+/**
+ * @file nuttx/device_spi.h
+ * @brief SPI API
+ * @attention This file is officially included in the Firmware Documentation.
+ * Please contact the Firmware Documentation team before modifying it.
+ */
 
 #include <errno.h>
 #include <stdint.h>
@@ -35,91 +42,139 @@
 #include <nuttx/device.h>
 #include <nuttx/device_spi_board.h>
 
-#define DEVICE_TYPE_SPI_HW          "spi"
+/** SPI Device type */
+#define DEVICE_TYPE_SPI_HW  "spi"
 
-/* SPI Flag */
-#define SPI_FLAG_HALF_DUPLEX        0x0001      /* can’t do full duplex */
-#define SPI_FLAG_NO_RX              0x0002      /* can’t do buffer read */
-#define SPI_FLAG_NO_TX              0x0004      /* can’t do buffer write */
-
-/**
- * SPI a read/write buffer pair
+/** @defgroup SPI_MASTER_FLAGS SPI Master Flags
+ * @{
  */
+/** Only supports half-duplex transmission */
+#define SPI_FLAG_HALF_DUPLEX    0x0001
+/** Cannot do buffer read */
+#define SPI_FLAG_NO_RX          0x0002
+/** Cannot do buffer write */
+#define SPI_FLAG_NO_TX          0x0004
+/** @} */
+
+/** SPI transfer structure */
 struct device_spi_transfer {
-    /** Data to be written, or NULL */
+    /** Buffer of data to be sent (NULL if read-only) */
     void *txbuffer;
-    /** Data to be read, or NULL */
+    /** Buffer of data to be read (NULL if write-only) */
     void *rxbuffer;
-    /** Size of rx and tx buffers */
+    /** Size of data buffers */
     size_t nwords;
 };
 
-/**
- * SPI hardware capabilities info
- */
+/** SPI master configuration */
 struct device_spi_master_config {
-    /** number of bits per word supported */
+    /** Mask of supported numbers of bits per word */
     uint32_t bpw_mask;
-    /** minimum Transfer speed in Hz */
+    /** Minimum supported transfer speed (in Hz) */
     uint32_t min_speed_hz;
-    /** maximum Transfer speed in Hz */
+    /** Maximum supported transfer speed (in Hz) */
     uint32_t max_speed_hz;
-    /** bit masks of supported SPI protocol mode */
+    /** Supported SPI modes (\ref SPI_MODE_FLAGS and \ref SPI_MODE) */
     uint16_t mode;
-    /** bit masks of supported SPI protocol flags */
+    /** Supported SPI flags (\ref SPI_MASTER_FLAGS) */
     uint16_t flags;
-    /** number of spi slaves supported */
+    /** Number of supported SPI slaves */
     uint16_t dev_num;
-    /** maximum divider supported */
+    /** Maximum supported frequency divider */
     uint16_t max_div;
 };
 
+/** SPI slave configuration */
 struct device_spi_device_config {
-    /** chip name */
+    /** Slave name */
     uint8_t name[32];
-    /** max speed be set in device */
+    /** Maximum supported transfer speed (in Hz) */
     uint32_t max_speed_hz;
-    /** mode be set in device */
+    /** Default SPI mode */
     uint16_t mode;
-    /** bit per word be set in device */
+    /** Default bits per word */
     uint8_t bpw;
     /** SPI device type */
     enum device_spi_type device_type;
 };
 
-/**
- * SPI device driver operations
- */
+/** SPI device driver operations */
 struct device_spi_type_ops {
-    /** Lock SPI bus for exclusive access */
+    /** Lock the SPI bus (for exclusive access)
+     * @param dev Pointer to the SPI master
+     * @return 0 on success, negative errno on failure
+     */
     int (*lock)(struct device *dev);
-    /** Unlock SPI bus for exclusive access */
+    /** Unlock the SPI bus
+     * @param dev Pointer to the SPI master
+     * @return 0 on success, negative errno on failure
+     */
     int (*unlock)(struct device *dev);
-    /** Enable the SPI chip select pin */
+    /** Select a SPI slave for a transmission (through its CS pin)
+     * @param dev Pointer to the SPI master
+     * @param devid The identifier of the SPI slave to select
+     * @return 0 on success, negative errno on failure
+     */
     int (*select)(struct device *dev, uint8_t devid);
-    /** Disable the SPI chip select pin */
+    /** Deselect a SPI slave after a transmission (through its CS pin)
+     * @param dev Pointer to the SPI master
+     * @param devid The identifier of the SPI slave to deselect
+     * @return 0 on success, negative errno on failure
+     */
     int (*deselect)(struct device *dev, uint8_t devid);
-    /** Configure SPI clock */
+    /** Configure the frequency before a transmission
+     * @param dev Pointer to the SPI master
+     * @param devid The identifier of the SPI slave whose frequency is to be
+     * configured
+     * @param frequency The frequency to use
+     * @return 0 on success, negative errno on failure
+     */
     int (*setfrequency)(struct device *dev, uint8_t devid, uint32_t *frequency);
-    /** Configure SPI mode */
+    /** Configure the mode before a transmission
+     * @param dev Pointer to the SPI master
+     * @param devid The identifier of the SPI slave whose mode is to be
+     * configured
+     * @param mode The mode to use
+     * @return 0 on success, negative errno on failure
+     */
     int (*setmode)(struct device *dev, uint8_t devid, uint8_t mode);
-    /** Set the number of bits per word in transmission */
+    /** Configure the number of bits per word before a transmission
+     * @param dev Pointer to the SPI master
+     * @param devid The identifier of the SPI slave whose number of bits per
+     * word is to be configured
+     * @param bpw The number of bits per word to use
+     * @return 0 on success, negative errno on failure
+     */
     int (*setbpw)(struct device *dev, uint8_t devid, uint8_t bpw);
-    /** Exchange a block of data from SPI */
+    /** Perform a SPI transmission
+     * @param dev Pointer to the SPI master
+     * @param transfer Pointer to a SPI transfer structure
+     * @return 0 on success, negative errno on failure
+     */
     int (*exchange)(struct device *dev, struct device_spi_transfer *transfer);
-    /** Get SPI device driver hardware capabilities information */
+    /** Get the SPI master configuration
+     * @param dev Pointer to the SPI master
+     * @param master_cfg Pointer to a variable whose value is to be filled out
+     * with the SPI master configuration
+     * @return 0 on success, negative errno on failure
+     */
     int (*get_master_config)(struct device *dev,
                              struct device_spi_master_config *master_cfg);
-    /** Get configuration parameters from chip */
+    /** Get a SPI slave configuration
+     * @param dev Pointer to the SPI master
+     * @param devid The identifier of the SPI slave whose configuration is to be
+     * returned
+     * @param device_cfg Pointer to a variable whose value is to be filled out
+     * with the SPI slave configuration
+     * @return 0 on success, negative errno on failure
+     */
     int (*get_device_config)(struct device *dev, uint8_t devid,
                              struct device_spi_device_config *device_cfg);
 };
 
-/**
- * @brief SPI lock wrap function
- *
- * @param dev pointer to structure of device data
- * @return 0 on success, negative errno on error
+/** Lock the SPI bus (for exclusive access)
+ * @param dev Pointer to the SPI master
+ * @return 0 on success, negative errno on failure
  */
 static inline int device_spi_lock(struct device *dev)
 {
@@ -134,11 +189,9 @@ static inline int device_spi_lock(struct device *dev)
     return -ENOSYS;
 }
 
-/**
- * @brief SPI unlock wrap function
- *
- * @param dev pointer to structure of device data
- * @return 0 on success, negative errno on error
+/** Unlock the SPI bus
+ * @param dev Pointer to the SPI master
+ * @return 0 on success, negative errno on failure
  */
 static inline int device_spi_unlock(struct device *dev)
 {
@@ -153,12 +206,10 @@ static inline int device_spi_unlock(struct device *dev)
     return -ENOSYS;
 }
 
-/**
- * @brief SPI select wrap function
- *
- * @param dev pointer to structure of device data
- * @param devid identifier of a selected SPI slave device
- * @return 0 on success, negative errno on error
+/** Select a SPI slave for a transmission (through its CS pin)
+ * @param dev Pointer to the SPI master
+ * @param devid The identifier of the SPI slave to select
+ * @return 0 on success, negative errno on failure
  */
 static inline int device_spi_select(struct device *dev, uint8_t devid)
 {
@@ -173,12 +224,10 @@ static inline int device_spi_select(struct device *dev, uint8_t devid)
     return -ENOSYS;
 }
 
-/**
- * @brief SPI deselect wrap function
- *
- * @param dev pointer to structure of device data
- * @param devid identifier of a selected SPI slave device
- * @return 0 on success, negative errno on error
+/** Deselect a SPI slave after a transmission (through its CS pin)
+ * @param dev Pointer to the SPI master
+ * @param devid The identifier of the SPI slave to deselect
+ * @return 0 on success, negative errno on failure
  */
 static inline int device_spi_deselect(struct device *dev, uint8_t devid)
 {
@@ -193,13 +242,12 @@ static inline int device_spi_deselect(struct device *dev, uint8_t devid)
     return -ENOSYS;
 }
 
-/**
- * @brief SPI setfrequency wrap function
- *
- * @param dev pointer to structure of device data
- * @param devid required chip number
- * @param frequency SPI frequency requested (unit: Hz)
- * @return 0 on success, negative errno on error
+/** Configure the frequency before a transmission
+ * @param dev Pointer to the SPI master
+ * @param devid The identifier of the SPI slave whose frequency is to be
+ * configured
+ * @param frequency The frequency to use
+ * @return 0 on success, negative errno on failure
  */
 static inline int device_spi_setfrequency(struct device *dev, uint8_t devid,
                                           uint32_t *frequency)
@@ -216,13 +264,11 @@ static inline int device_spi_setfrequency(struct device *dev, uint8_t devid,
     return -ENOSYS;
 }
 
-/**
- * @brief SPI setmode wrap function
- *
- * @param dev pointer to structure of device data
- * @param devid required chip number
- * @param mode SPI protocol mode requested
- * @return 0 on success, negative errno on error
+/** Configure the mode before a transmission
+ * @param dev Pointer to the SPI master
+ * @param devid The identifier of the SPI slave whose mode is to be configured
+ * @param mode The mode to use
+ * @return 0 on success, negative errno on failure
  */
 static inline int device_spi_setmode(struct device *dev, uint8_t devid,
                                      uint8_t mode)
@@ -238,15 +284,12 @@ static inline int device_spi_setmode(struct device *dev, uint8_t devid,
     return -ENOSYS;
 }
 
-/**
- * @brief SPI setbpw wrap function
- *
- * @param dev pointer to structure of device data
- * @param devid required chip number
- * @param bpw The number of bits per word requested. The bpw value range is from
- *        1 to 32. The genericbpw value is 8, 16, 32, but this value still
- *        depends on hardware supported.
- * @return 0 on success, negative errno on error
+/** Configure the number of bits per word before a transmission
+ * @param dev Pointer to the SPI master
+ * @param devid The identifier of the SPI slave whose number of bits per word is to
+ * be configured
+ * @param bpw The number of bits per word to use
+ * @return 0 on success, negative errno on failure
  */
 static inline int device_spi_setbpw(struct device *dev, uint8_t devid,
                                      uint8_t bpw)
@@ -262,12 +305,10 @@ static inline int device_spi_setbpw(struct device *dev, uint8_t devid,
     return -ENOSYS;
 }
 
-/**
- * @brief SPI exchange wrap function
- *
- * @param dev pointer to structure of device data
- * @param transfer pointer to the spi transfer request
- * @return 0 on success, negative errno on error
+/** Perform a SPI transmission
+ * @param dev Pointer to the SPI master
+ * @param transfer Pointer to a SPI transfer structure
+ * @return 0 on success, negative errno on failure
  */
 static inline int device_spi_exchange(struct device *dev,
                                       struct device_spi_transfer *transfer)
@@ -283,13 +324,11 @@ static inline int device_spi_exchange(struct device *dev,
     return -ENOSYS;
 }
 
-/**
- * @brief SPI get_master_config wrap function
- *
- * @param dev pointer to structure of device data
- * @param master_config pointer to the structure to receive the capabilities
- *             information.
- * @return 0 on success, negative errno on error
+/** Get the SPI master configuration
+ * @param dev Pointer to the SPI master
+ * @param master_cfg Pointer to a variable whose value is to be filled out with
+ * the SPI master configuration
+ * @return 0 on success, negative errno on failure
  */
 static inline int device_spi_get_master_config(struct device *dev,
                                                struct device_spi_master_config *master_cfg)
@@ -305,14 +344,13 @@ static inline int device_spi_get_master_config(struct device *dev,
     return -ENOSYS;
 }
 
-/**
- * @brief SPI device configuration
- *
- * @param dev pointer to structure of device data
- * @param devid required chip number
- * @param device_cfg pointer to the device_spi_device_config structure to receive
- * the specific chip of configuration.
- * @return 0 on success, negative errno on error
+/** Get a SPI slave configuration
+ * @param dev Pointer to the SPI master
+ * @param devid The identifier of the SPI slave whose configuration is to be
+ * returned
+ * @param device_cfg Pointer to a variable whose value is to be filled out with
+ * the SPI slave configuration
+ * @return 0 on success, negative errno on failure
  */
 static inline int device_spi_get_device_config(struct device *dev, uint8_t devid,
                                                struct device_spi_device_config *device_cfg)
@@ -329,4 +367,4 @@ static inline int device_spi_get_device_config(struct device *dev, uint8_t devid
     return -ENOSYS;
 }
 
-#endif /* __ARCH_ARM_DEVICE_SPI_H */
+#endif /* __INCLUDE_NUTTX_DEVICE_SPI_H */
