@@ -181,7 +181,10 @@ static void unipro_backend_init(void)
             continue;
         unipro_driver_register(&unipro_driver, i);
     }
+}
 
+static void unipro_backend_unipro_enable(void)
+{
     sem_wait(&linkup_sem);
     tsb_unipro_mbox_send(TSB_MAIL_READY_AP);
 }
@@ -230,5 +233,6 @@ void apbridge_backend_register(struct apbridge_backend *apbridge_backend)
 
     apbridge_backend->usb_to_unipro = unipro_usb_to_unipro;
     apbridge_backend->init = unipro_backend_init;
+    apbridge_backend->unipro_enable = unipro_backend_unipro_enable;
     apbridge_backend->unipro_cport_mapping = unipro_cport_mapping;
 }

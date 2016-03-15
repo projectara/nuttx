@@ -87,7 +87,7 @@ static void *apbridge_wait_and_init(void *p_data)
     struct apbridge_dev_s *priv = p_data;
 
     usb_wait(priv);
-    apbridge_backend.init();
+    apbridge_backend.unipro_enable();
 
     return NULL;
 }
@@ -158,6 +158,8 @@ int bridge_main(int argc, char *argv[])
 
     apbridge_backend_register(&apbridge_backend);
     srvmgr_start(services);
+
+    apbridge_backend.init();
 
     ret = usb_init();
     if (ret) {
