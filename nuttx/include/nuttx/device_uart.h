@@ -147,7 +147,7 @@ enum uart_stopbit {
  * @param data Private data passed to the callback
  * @param status The status register's content
  */
-typedef void (*uart_status_callback)(void *data, uint8_t ms);
+typedef void (*uart_status_callback)(void *data, uint8_t status);
 
 /**
  * @brief UART transmit and receive callback
