@@ -71,6 +71,7 @@ endif
 ifeq ($(CONFIG_APBRIDGEA),y)
 CSRCS += common_gadget.c
 CSRCS += apbridgea_gadget.c
+CSRCS += apbridgea_debug.c
 CSRCS += apbridgea_unipro.c
 endif
 

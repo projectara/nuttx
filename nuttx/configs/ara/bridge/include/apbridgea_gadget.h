@@ -68,6 +68,12 @@ int usbdev_apbinitialize(struct device *dev);
 
 int usb_release_buffer(struct apbridge_dev_s *priv, const void *buf);
 
+static inline
+struct apbridge_dev_s *usbdev_to_apbridge(struct usbdev_s *dev)
+{
+    return dev->ep0->priv;
+}
+
 /*
  * Offloaded cport
  * Give ability to APBridgeA to use a cport without AP involvment.

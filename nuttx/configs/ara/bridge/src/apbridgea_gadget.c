@@ -70,7 +70,6 @@
 #include <arch/board/apbridgea_gadget.h>
 #include <arch/board/apbridgea_audio.h>
  #include <arch/board/apbridgea_unipro.h>
-#include <nuttx/greybus/greybus_timestamp.h>
 #include <nuttx/greybus/timesync.h>
 #include <greybus/control-gb.h>
 
@@ -207,7 +206,6 @@ struct apbridge_dev_s {
     int epout_to_cport_n[APBRIDGE_NBULKS];
     transfer_cb *rx_transfer;
     transfer_cb *tx_transfer;
-    struct gb_timestamp *ts;
 
     struct gadget_descriptor *g_desc;
 
@@ -392,12 +390,6 @@ static inline
 struct apbridge_dev_s *driver_to_apbridge(struct usbdevclass_driver_s *drv)
 {
     return CONTAINER_OF(drv, struct apbridge_dev_s, drvr);
-}
-
-static inline
-struct apbridge_dev_s *usbdev_to_apbridge(struct usbdev_s *dev)
-{
-    return dev->ep0->priv;
 }
 
 static inline struct apbridge_dev_s *ep_to_apbridge(struct usbdev_ep_s *ep)
@@ -763,25 +755,13 @@ static int _to_usb_submit(struct usbdev_ep_s *ep, struct usbdev_req_s *req,
                           unsigned int cportid, const void *payload,
                           size_t len)
 {
-    struct gb_operation_hdr *gbhdr;
-    struct apbridge_dev_s *priv;
     int ret;
 
-    priv = ep->priv;
     req->len = len;
     req->flags = USBDEV_REQFLAGS_NULLPKT;
 
     req->buf = (void*) payload;
     set_cport_id(ep, req, cportid);
-
-    gbhdr = (struct gb_operation_hdr *)req->buf;
-    gb_timestamp_tag_exit_time(&priv->ts[cportid], cportid);
-
-    /* Skip the timestamping if it's not a response from GPB to AP. */
-    if (gbhdr->type & GB_TYPE_RESPONSE_FLAG) {
-        gb_timestamp_log(&priv->ts[cportid], cportid,
-                         req->buf, len, GREYBUS_FW_TIMESTAMP_APBRIDGE);
-    }
 
     /* Then submit the request to the endpoint */
 
@@ -1032,11 +1012,6 @@ static void ctrl_ep_complete(struct usbdev_ep_s *ep,
     put_request(req);
 }
 
-static void usbdclass_log_rx_time(struct apbridge_dev_s *priv, unsigned int cportid)
-{
-    gb_timestamp_tag_entry_time(&priv->ts[cportid], cportid);
-}
-
 /****************************************************************************
  * Name: bulk_out_complete
  *
@@ -1071,7 +1046,6 @@ static void bulk_out_complete(struct usbdev_ep_s *ep,
     case OK:                    /* Normal completion */
         usbtrace(TRACE_CLASSRDCOMPLETE, 0);
         cportid = get_cport_id(priv, ep, req);
-        usbdclass_log_rx_time(priv, cportid);
         if (!tx_transfer(priv, cportid, req->buf, req->xfrd))
             return;
 
@@ -1392,36 +1366,6 @@ static int ep_mapping_vendor_request_out(struct usbdev_s *dev, uint8_t req,
 
     map_cport_to_ep(usbdev_to_apbridge(dev), (struct cport_to_ep *)buf);
     return len;
-}
-
-static int latency_tag_en_vendor_request_out(struct usbdev_s *dev, uint8_t req,
-                                             uint16_t index, uint16_t value,
-                                             void *buf, uint16_t len)
-{
-    int ret = -EINVAL;
-    struct apbridge_dev_s *priv = usbdev_to_apbridge(dev);
-
-    if (value < unipro_cport_count()) {
-        priv->ts[value].tag = true;
-        ret = 0;
-        lldbg("enable tagging for cportid %d\n", value);
-    }
-    return ret;
-}
-
-static int latency_tag_dis_vendor_request_out(struct usbdev_s *dev, uint8_t req,
-                                              uint16_t index, uint16_t value,
-                                              void *buf, uint16_t len)
-{
-    int ret = -EINVAL;
-    struct apbridge_dev_s *priv = usbdev_to_apbridge(dev);
-
-    if (value < unipro_cport_count()) {
-        priv->ts[value].tag = false;
-        ret = 0;
-        lldbg("disable tagging for cportid %d\n", value);
-    }
-    return ret;
 }
 
 #ifdef CONFIG_ARCH_CHIP_DEVICE_CSI
@@ -1746,8 +1690,6 @@ int usbdev_apbinitialize(struct device *dev)
     struct apbridge_dev_s *priv;
     struct usbdevclass_driver_s *drvr;
     int ret = -ENOMEM;
-    unsigned int i;
-    unsigned int cport_count = unipro_cport_count();
 
     /* Register USB vendor requests */
     if (register_vendor_request(APBRIDGE_RWREQUEST_LOG, VENDOR_REQ_IN,
@@ -1755,12 +1697,6 @@ int usbdev_apbinitialize(struct device *dev)
         goto errout_vendor_req;
     if (register_vendor_request(APBRIDGE_RWREQUEST_EP_MAPPING, VENDOR_REQ_DATA,
                                 ep_mapping_vendor_request_out))
-        goto errout_vendor_req;
-    if (register_vendor_request(APBRIDGE_ROREQUEST_LATENCY_TAG_EN, VENDOR_REQ_OUT,
-                                latency_tag_en_vendor_request_out))
-        goto errout_vendor_req;
-    if (register_vendor_request(APBRIDGE_ROREQUEST_LATENCY_TAG_DIS, VENDOR_REQ_OUT,
-                                latency_tag_dis_vendor_request_out))
         goto errout_vendor_req;
 #ifdef CONFIG_ARCH_CHIP_DEVICE_CSI
     if (register_vendor_request(APBRIDGE_RWREQUEST_CSI_TX_CONTROL, VENDOR_REQ_DATA,
@@ -1816,18 +1752,8 @@ int usbdev_apbinitialize(struct device *dev)
         goto errout_with_cport_callback;
     }
 
-    priv->ts = kmm_malloc(sizeof(struct gb_timestamp) * unipro_cport_count());
-    if (!priv->ts) {
-        ret = -ENOMEM;
-        goto errout_with_alloc_ts;
-    }
-
-    for (i = 0; i < cport_count; i++) {
-        priv->ts[i].tag = false;
-    }
     sem_init(&priv->config_sem, 0, 0);
     list_init(&priv->msg_queue);
-    gb_timestamp_init();
 
     /* Initialize the USB class driver structure */
 
@@ -1848,8 +1774,6 @@ int usbdev_apbinitialize(struct device *dev)
 
 errout_cport_table:
     device_usbdev_unregister_gadget(dev, drvr);
-    kmm_free(priv->ts);
-errout_with_alloc_ts:
     cport_callback_free(priv);
 errout_with_cport_callback:
     map_table_free(priv);

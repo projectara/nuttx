@@ -43,6 +43,7 @@
 
 #include <arch/board/apbridgea_gadget.h>
 #include <arch/board/apbridgea_unipro.h>
+#include <arch/board/apbridgea_debug.h>
 #include <arch/board/apbridgea_audio.h>
 
 static struct srvmgr_service services[] = {
@@ -98,6 +99,7 @@ int bridge_main(int argc, char *argv[])
     }
 
     apbridgea_unipro_enable();
+    apbridgea_debug_init();
     apbridgea_audio_init();
 
 #ifdef CONFIG_EXAMPLES_NSH
