@@ -84,11 +84,11 @@ int recv_from_unipro(unsigned int cportid, void *buf, size_t len)
         return -EPROTO;
     }
 
-    return unipro_to_usb(get_apbridge_dev(), cportid, buf, len);
+    return rx_transfer(get_apbridge_dev(), cportid, buf, len);
 }
 
-int usb_to_unipro(struct apbridge_dev_s *dev, unsigned cportid,
-                         void *buf, size_t len)
+int unipro_tx_transfer(unsigned int cportid,
+                       void *buf, size_t len, void *priv)
 {
     gb_dump(buf, len);
 
@@ -103,7 +103,7 @@ int usb_to_unipro(struct apbridge_dev_s *dev, unsigned cportid,
         return -EPROTO;
     }
 
-    return unipro_send_async(cportid, buf, len, release_buffer, dev);
+    return unipro_send_async(cportid, buf, len, release_buffer, priv);
 }
 
 static void cport_reset_cb(unsigned int cportid, void *data)
