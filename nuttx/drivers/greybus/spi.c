@@ -97,7 +97,7 @@ static uint8_t gb_spi_protocol_master_config(struct gb_operation *operation)
     response->max_speed_hz = cpu_to_le32(master_config.max_speed_hz);
     response->mode = cpu_to_le16(master_config.mode);
     response->flags = cpu_to_le16(master_config.flags);
-    response->num_chipselect = cpu_to_le16(master_config.csnum);
+    response->num_chipselect = cpu_to_le16(master_config.dev_num);
 
     return GB_OP_SUCCESS;
 }

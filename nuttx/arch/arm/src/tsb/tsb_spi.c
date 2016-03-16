@@ -332,7 +332,7 @@ static int tsb_spi_select(struct device *dev, uint8_t devid)
     /* from the SPI master's point of view, we fake that we're always talking to
      * slave #1. The trick is that by default, CS1 doesn't belong to the SPI
      * master, so the transaction will still be initiated and meanwhile we can
-     * manually setup the CS with GPIOs the way we want. */
+     * manually setup the devid with GPIOs the way we want. */
     tsb_spi_write(info->reg_base, DW_SPI_SER, 0x2);
 #else
     /* otherwise we really select the slave through the SPI master */
@@ -400,11 +400,11 @@ err_deselect:
  * state, it returns an error code to notify a problem.
  *
  * @param dev pointer to structure of device data
- * @param cs the specific chip number
+ * @param devid the specific chip number
  * @param frequency SPI frequency requested (unit: Hz)
  * @return 0 on success, negative errno on error
  */
-static int tsb_spi_setfrequency(struct device *dev, uint8_t cs,
+static int tsb_spi_setfrequency(struct device *dev, uint8_t devid,
                                 uint32_t *frequency)
 {
     struct tsb_spi_dev_info *info = NULL;
@@ -422,7 +422,7 @@ static int tsb_spi_setfrequency(struct device *dev, uint8_t cs,
 
     sem_wait(&info->lock);
 
-    if (cs >= info->num_boards) {
+    if (devid >= info->num_boards) {
         ret = -EINVAL;
         goto err_freq_set;
     }
@@ -433,7 +433,7 @@ static int tsb_spi_setfrequency(struct device *dev, uint8_t cs,
     }
 
     freq = *frequency;
-    ret = device_spi_board_get_max_speed_hz(info->dev_spi_board[cs], &max_freq_slave);
+    ret = device_spi_board_get_max_speed_hz(info->dev_spi_board[devid], &max_freq_slave);
     if (ret)
         goto err_freq_set;
 
@@ -474,11 +474,11 @@ err_freq_set:
  * function returns -EPERM error code.
  *
  * @param dev pointer to structure of device data
- * @param cs the specific chip number
+ * @param devid the specific chip number
  * @param mode SPI protocol mode requested
  * @return 0 on success, negative errno on error
  */
-static int tsb_spi_setmode(struct device *dev, uint8_t cs, uint8_t mode)
+static int tsb_spi_setmode(struct device *dev, uint8_t devid, uint8_t mode)
 {
     struct tsb_spi_dev_info *info = NULL;
     uint32_t ctrl0 = 0;
@@ -494,7 +494,7 @@ static int tsb_spi_setmode(struct device *dev, uint8_t cs, uint8_t mode)
 
     sem_wait(&info->lock);
 
-    if (cs >= info->num_boards) {
+    if (devid >= info->num_boards) {
         ret = -EINVAL;
         goto err_setmode;
     }
@@ -504,7 +504,7 @@ static int tsb_spi_setmode(struct device *dev, uint8_t cs, uint8_t mode)
         goto err_setmode;
     }
 
-    ret = device_spi_board_get_mode(info->dev_spi_board[cs], &mode_slave);
+    ret = device_spi_board_get_mode(info->dev_spi_board[devid], &mode_slave);
     if (ret)
         goto err_setmode;
 
@@ -555,12 +555,12 @@ err_setmode:
  * this function returns -EPERM error code.
  *
  * @param dev pointer to structure of device data
- * @param cs the specific chip number
+ * @param devid the specific chip number
  * @param bpw The number of bpw requested. The bpw value range is from
  *        4 to 32.
  * @return 0 on success, negative errno on error
  */
-static int tsb_spi_setbpw(struct device *dev, uint8_t cs, uint8_t bpw)
+static int tsb_spi_setbpw(struct device *dev, uint8_t devid, uint8_t bpw)
 {
     struct tsb_spi_dev_info *info = NULL;
     uint32_t ctrl0 = 0;
@@ -576,7 +576,7 @@ static int tsb_spi_setbpw(struct device *dev, uint8_t cs, uint8_t bpw)
 
     sem_wait(&info->lock);
 
-    if (cs >= info->num_boards) {
+    if (devid >= info->num_boards) {
         ret = -EINVAL;
         goto exit_setbit;
     }
@@ -586,7 +586,7 @@ static int tsb_spi_setbpw(struct device *dev, uint8_t cs, uint8_t bpw)
         goto exit_setbit;
     }
 
-    ret = device_spi_board_get_bpw(info->dev_spi_board[cs], &bpw_slave);
+    ret = device_spi_board_get_bpw(info->dev_spi_board[devid], &bpw_slave);
     if (ret)
         goto exit_setbit;
 
@@ -852,7 +852,7 @@ static int tsb_spi_get_master_config(struct device *dev,
     master_config->mode = SPI_DEFAULT_MODE;
     master_config->flags = 0; /* nothing that we can't do */
     master_config->bpw_mask = SPI_BPW_MASK;
-    master_config->csnum = info->num_boards;
+    master_config->dev_num = info->num_boards;
     master_config->min_speed_hz = SPI_MIN_FREQ;
     master_config->max_speed_hz = SPI_MAX_FREQ;
     sem_post(&info->lock);
@@ -865,12 +865,12 @@ static int tsb_spi_get_master_config(struct device *dev,
  * This function can be called whether lock() has been called or not.
  *
  * @param dev pointer to structure of device data
- * @param cs the specific chip number
+ * @param devid the specific chip number
  * @param device_cfg pointer to the device_spi_device_config structure to receive
  * the configuration that be set in chip.
  * @return 0 on success, negative errno on error
  */
-static int tsb_spi_get_device_config(struct device *dev, uint8_t cs,
+static int tsb_spi_get_device_config(struct device *dev, uint8_t devid,
                                      struct device_spi_device_config *device_cfg)
 {
     struct tsb_spi_dev_info *info = NULL;
@@ -883,13 +883,13 @@ static int tsb_spi_get_device_config(struct device *dev, uint8_t cs,
 
     info = device_get_private(dev);
 
-    if (!info->dev_spi_board || cs >= info->num_boards) {
+    if (!info->dev_spi_board || devid >= info->num_boards) {
         return -EINVAL;
     }
 
     sem_wait(&info->lock);
 
-    spi_board = info->dev_spi_board[cs];
+    spi_board = info->dev_spi_board[devid];
 
     /* get device config */
     device_spi_board_get_mode(spi_board, &device_cfg->mode);

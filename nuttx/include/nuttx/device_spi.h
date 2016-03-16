@@ -68,8 +68,8 @@ struct device_spi_master_config {
     uint16_t mode;
     /** bit masks of supported SPI protocol flags */
     uint16_t flags;
-    /** number of chip select pins supported */
-    uint16_t csnum;
+    /** number of spi slaves supported */
+    uint16_t dev_num;
     /** maximum divider supported */
     uint16_t max_div;
 };
@@ -100,18 +100,18 @@ struct device_spi_type_ops {
     /** Disable the SPI chip select pin */
     int (*deselect)(struct device *dev, uint8_t devid);
     /** Configure SPI clock */
-    int (*setfrequency)(struct device *dev, uint8_t cs, uint32_t *frequency);
+    int (*setfrequency)(struct device *dev, uint8_t devid, uint32_t *frequency);
     /** Configure SPI mode */
-    int (*setmode)(struct device *dev, uint8_t cs, uint8_t mode);
+    int (*setmode)(struct device *dev, uint8_t devid, uint8_t mode);
     /** Set the number of bits per word in transmission */
-    int (*setbpw)(struct device *dev, uint8_t cs, uint8_t bpw);
+    int (*setbpw)(struct device *dev, uint8_t devid, uint8_t bpw);
     /** Exchange a block of data from SPI */
     int (*exchange)(struct device *dev, struct device_spi_transfer *transfer);
     /** Get SPI device driver hardware capabilities information */
     int (*get_master_config)(struct device *dev,
                              struct device_spi_master_config *master_cfg);
     /** Get configuration parameters from chip */
-    int (*get_device_config)(struct device *dev, uint8_t cs,
+    int (*get_device_config)(struct device *dev, uint8_t devid,
                              struct device_spi_device_config *device_cfg);
 };
 
@@ -197,11 +197,11 @@ static inline int device_spi_deselect(struct device *dev, uint8_t devid)
  * @brief SPI setfrequency wrap function
  *
  * @param dev pointer to structure of device data
- * @param cs required chip number
+ * @param devid required chip number
  * @param frequency SPI frequency requested (unit: Hz)
  * @return 0 on success, negative errno on error
  */
-static inline int device_spi_setfrequency(struct device *dev, uint8_t cs,
+static inline int device_spi_setfrequency(struct device *dev, uint8_t devid,
                                           uint32_t *frequency)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
@@ -210,7 +210,7 @@ static inline int device_spi_setfrequency(struct device *dev, uint8_t cs,
         return -ENODEV;
     }
     if (DEVICE_DRIVER_GET_OPS(dev, spi)->setfrequency) {
-        return DEVICE_DRIVER_GET_OPS(dev, spi)->setfrequency(dev, cs,
+        return DEVICE_DRIVER_GET_OPS(dev, spi)->setfrequency(dev, devid,
                                                              frequency);
     }
     return -ENOSYS;
@@ -220,11 +220,11 @@ static inline int device_spi_setfrequency(struct device *dev, uint8_t cs,
  * @brief SPI setmode wrap function
  *
  * @param dev pointer to structure of device data
- * @param cs required chip number
+ * @param devid required chip number
  * @param mode SPI protocol mode requested
  * @return 0 on success, negative errno on error
  */
-static inline int device_spi_setmode(struct device *dev, uint8_t cs,
+static inline int device_spi_setmode(struct device *dev, uint8_t devid,
                                      uint8_t mode)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
@@ -233,7 +233,7 @@ static inline int device_spi_setmode(struct device *dev, uint8_t cs,
         return -ENODEV;
     }
     if (DEVICE_DRIVER_GET_OPS(dev, spi)->setmode) {
-        return DEVICE_DRIVER_GET_OPS(dev, spi)->setmode(dev, cs, mode);
+        return DEVICE_DRIVER_GET_OPS(dev, spi)->setmode(dev, devid, mode);
     }
     return -ENOSYS;
 }
@@ -242,13 +242,13 @@ static inline int device_spi_setmode(struct device *dev, uint8_t cs,
  * @brief SPI setbpw wrap function
  *
  * @param dev pointer to structure of device data
- * @param cs required chip number
+ * @param devid required chip number
  * @param bpw The number of bits per word requested. The bpw value range is from
  *        1 to 32. The genericbpw value is 8, 16, 32, but this value still
  *        depends on hardware supported.
  * @return 0 on success, negative errno on error
  */
-static inline int device_spi_setbpw(struct device *dev, uint8_t cs,
+static inline int device_spi_setbpw(struct device *dev, uint8_t devid,
                                      uint8_t bpw)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
@@ -257,7 +257,7 @@ static inline int device_spi_setbpw(struct device *dev, uint8_t cs,
         return -ENODEV;
     }
     if (DEVICE_DRIVER_GET_OPS(dev, spi)->setbpw) {
-        return DEVICE_DRIVER_GET_OPS(dev, spi)->setbpw(dev, cs, bpw);
+        return DEVICE_DRIVER_GET_OPS(dev, spi)->setbpw(dev, devid, bpw);
     }
     return -ENOSYS;
 }
@@ -309,12 +309,12 @@ static inline int device_spi_get_master_config(struct device *dev,
  * @brief SPI device configuration
  *
  * @param dev pointer to structure of device data
- * @param cs required chip number
+ * @param devid required chip number
  * @param device_cfg pointer to the device_spi_device_config structure to receive
  * the specific chip of configuration.
  * @return 0 on success, negative errno on error
  */
-static inline int device_spi_get_device_config(struct device *dev, uint8_t cs,
+static inline int device_spi_get_device_config(struct device *dev, uint8_t devid,
                                                struct device_spi_device_config *device_cfg)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
@@ -323,7 +323,7 @@ static inline int device_spi_get_device_config(struct device *dev, uint8_t cs,
         return -ENODEV;
     }
     if (DEVICE_DRIVER_GET_OPS(dev, spi)->get_device_config) {
-        return DEVICE_DRIVER_GET_OPS(dev, spi)->get_device_config(dev, cs,
+        return DEVICE_DRIVER_GET_OPS(dev, spi)->get_device_config(dev, devid,
                                                                   device_cfg);
     }
     return -ENOSYS;
