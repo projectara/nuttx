@@ -41,6 +41,7 @@
 #define TSB_UNIPRO_ACTIVITY     9
 #define TSB_GPIO_ACTIVITY       9
 #define TSB_I2C_ACTIVITY        9
+#define TSB_PWM_ACTIVITY        9
 
 #ifdef CONFIG_PM
 int tsb_pm_getstate(void);

@@ -37,6 +37,8 @@
 #include <nuttx/device.h>
 #include <nuttx/device_pwm.h>
 #include <nuttx/list.h>
+#include <nuttx/power/pm.h>
+#include <arch/tsb/pm.h>
 
 #include "up_arch.h"
 #include "tsb_scm.h"
@@ -208,6 +210,31 @@ static struct generator_info *get_gntr_info(struct pwm_ctlr_info *info,
     return NULL;
 }
 
+#ifdef CONFIG_PM
+/**
+ * @brief Notify PM framework about activity and check if clock is enabled.
+ *
+ * This function is called before reading and writing PWM controller registers.
+ * It calls pm_activity to notify PM framework that activity happening in the
+ * driver, and makes sure that PWM clock is enabled before register read/write.
+ *
+ * @param dev Pointer to the device structure for PWM controller.
+ *
+ * @return 0: Success, error code on failure.
+*/
+static int pwm_pm_activity(struct device *dev)
+{
+    pm_activity(TSB_PWM_ACTIVITY);
+
+    return tsb_pm_wait_for_wakeup();
+}
+#else
+static int pwm_pm_activity(struct device *dev)
+{
+    return 0;
+}
+#endif
+
 /**
  * @brief Stops a specific generator of toggling.
  *
@@ -273,6 +300,7 @@ err_disable:
 static int tsb_pwm_op_setup(struct device *dev)
 {
     struct pwm_ctlr_info *info = NULL;
+    int ret;
 
     if (!dev || !device_get_private(dev)) {
         return -EINVAL;
@@ -282,6 +310,11 @@ static int tsb_pwm_op_setup(struct device *dev)
 
     sem_wait(&info->pwr_mutex);
 
+    if ((ret = pwm_pm_activity(dev))) {
+        return ret;
+    }
+
+#ifndef CONFIG_PM
     if (!info->refcount) {
         /* Enable Clock */
         tsb_clk_enable(TSB_CLK_PWMODP);
@@ -291,6 +324,7 @@ static int tsb_pwm_op_setup(struct device *dev)
         tsb_reset(TSB_RST_PWMODP);
         tsb_reset(TSB_RST_PWMODS);
     }
+#endif
 
     info->refcount++;
 
@@ -334,10 +368,12 @@ static int tsb_pwm_op_shutdown(struct device *dev, bool force_off)
         info->refcount--;
     }
 
+#ifndef CONFIG_PM
     if (info->refcount == 0) {
         tsb_clk_disable(TSB_CLK_PWMODP);
         tsb_clk_disable(TSB_CLK_PWMODS);
     }
+#endif
 
     sem_post(&info->pwr_mutex);
 
@@ -507,6 +543,10 @@ static int tsb_pwm_op_deactivate(struct device *dev, uint16_t which)
 
     tsb_pin_release(pwm_pin[which]);
 
+    if ((ret = pwm_pm_activity(dev))) {
+        goto no_deactivated;
+    }
+
     if (dev_info->gntr_flag & TSB_PWM_FLAG_ENABLED) {
         reg_cr = tsb_pwm_read(dev_info->gntr_base, TSB_PWM_CR);
         tsb_pwm_write(dev_info->gntr_base, TSB_PWM_CR, reg_cr & ~PWM_CR_ENB);
@@ -560,6 +600,10 @@ static int tsb_pwm_op_config(struct device *dev, uint16_t which, uint32_t duty,
     dev_info = get_gntr_info(info, which);
     if (!dev_info) {
         ret = -EIO;
+        goto err_config;
+    }
+
+    if ((ret = pwm_pm_activity(dev))) {
         goto err_config;
     }
 
@@ -643,6 +687,10 @@ static int tsb_pwm_op_enable(struct device *dev, uint16_t which)
         goto err_enable;
     }
 
+    if ((ret = pwm_pm_activity(dev))) {
+        goto err_enable;
+    }
+
     /* Check whether or not this generator has been configured */
     if (!(dev_info->gntr_flag & TSB_PWM_FLAG_CONFIGURED)) {
         ret = -EIO;
@@ -697,6 +745,10 @@ static int tsb_pwm_op_set_polarity(struct device *dev, uint16_t which,
         goto err_set_polarity;
     }
 
+    if ((ret = pwm_pm_activity(dev))) {
+        goto err_set_polarity;
+    }
+
     reg_cr = tsb_pwm_read(dev_info->gntr_base, TSB_PWM_CR);
     if (polarity) {
         reg_cr |= PWM_CR_POL;
@@ -738,6 +790,10 @@ static int tsb_pwm_op_sync(struct device *dev, bool enable)
     sem_wait(&info->op_mutex);
 
     if (info->refcount) {
+        if ((ret = pwm_pm_activity(dev))) {
+            goto err_pm_activity;
+        }
+
         reg_cr = tsb_pwm_read(info->reg_base, TSB_PWM_GENB);
         if (enable) {
             tsb_pwm_write(info->reg_base, TSB_PWM_GENB, reg_cr |
@@ -750,6 +806,7 @@ static int tsb_pwm_op_sync(struct device *dev, bool enable)
         ret = -EIO;
     }
 
+err_pm_activity:
     sem_post(&info->op_mutex);
 
     return ret;
@@ -792,6 +849,10 @@ static int tsb_pwm_op_set_mode(struct device *dev, uint16_t which,
     dev_info = get_gntr_info(info, which);
     if (!dev_info) {
         ret = -EIO;
+        goto err_set_mode;
+    }
+
+    if ((ret = pwm_pm_activity(dev))) {
         goto err_set_mode;
     }
 
@@ -873,6 +934,7 @@ static int tsb_pwm_op_intr_callback(struct device *dev, uint32_t mask_int,
     struct pwm_ctlr_info *info = NULL;
     uint32_t mask;
     uint32_t reg_cr;
+    int ret;
 
     if (!dev || !device_get_private(dev)) {
         return -EINVAL;
@@ -884,6 +946,10 @@ static int tsb_pwm_op_intr_callback(struct device *dev, uint32_t mask_int,
             (mask_int & TSB_PWM_STATUS_MASK);
 
     if (info->refcount) {
+        if ((ret = pwm_pm_activity(dev))) {
+            return ret;
+        }
+
         if (!callback) {
             /* If no callback handler, that mean user want to disable interrupt
              * by masked bit.
@@ -923,12 +989,17 @@ static int tsb_pwm_irq_handler(int irq, void *context, void *priv)
 {
     uint32_t int_state;
     struct pwm_ctlr_info *info = NULL;
+    int ret;
 
     if (!device_get_private(saved_dev)) {
         return ERROR;
     }
 
     info = device_get_private(saved_dev);
+
+    if ((ret = pwm_pm_activity(info->dev))) {
+        return ret;
+    }
 
     int_state = tsb_pwm_read(info->reg_base, TSB_PWM_INTSTATUS);
 
@@ -970,6 +1041,16 @@ static int tsb_pwm_dev_open(struct device *dev)
     }
 
     up_enable_irq(info->pwm_irq);
+
+#ifdef CONFIG_PM
+    /* Enable Clock */
+    tsb_clk_enable(TSB_CLK_PWMODP);
+    tsb_clk_enable(TSB_CLK_PWMODS);
+
+    /* Reset */
+    tsb_reset(TSB_RST_PWMODP);
+    tsb_reset(TSB_RST_PWMODS);
+#endif
 
     info->flags = TSB_PWM_FLAG_OPENED;
 
@@ -1031,11 +1112,140 @@ static void tsb_pwm_dev_close(struct device *dev)
     /* Finally, shutdown power and clock. */
     tsb_pwm_op_shutdown(dev, true);
 
+#ifdef CONFIG_PM
+    tsb_clk_disable(TSB_CLK_PWMODP);
+    tsb_clk_disable(TSB_CLK_PWMODS);
+#endif
+
     info->flags &= ~TSB_PWM_FLAG_OPENED;
 
 err_close:
     sem_post(&info->op_mutex);
 }
+
+static int tsb_pwm_suspend(struct device *dev)
+{
+    struct pwm_ctlr_info *info = NULL;
+    struct generator_info *dev_info = NULL;
+    struct list_head *iter;
+
+    info = device_get_private(dev);
+
+    sem_wait(&info->op_mutex);
+
+    list_foreach(&info->pwm_list, iter) {
+        dev_info = list_entry(iter, struct generator_info, list);
+        if (dev_info->gntr_flag & TSB_PWM_FLAG_ENABLED) {
+            sem_post(&info->op_mutex);
+            return -EBUSY;
+        }
+    }
+
+    tsb_clk_disable(TSB_CLK_PWMODP);
+    tsb_clk_disable(TSB_CLK_PWMODS);
+
+    sem_post(&info->op_mutex);
+
+    return 0;
+}
+
+static int tsb_pwm_poweroff(struct device *dev)
+{
+    return tsb_pwm_suspend(dev);
+}
+
+static int tsb_pwm_resume(struct device *dev)
+{
+    tsb_clk_enable(TSB_CLK_PWMODP);
+    tsb_clk_enable(TSB_CLK_PWMODS);
+
+    return 0;
+}
+
+#ifdef CONFIG_PM
+static void tsb_pwm_pm_notify(struct pm_callback_s *cb,
+                              enum pm_state_e pmstate)
+{
+    struct device *dev;
+    irqstate_t flags;
+
+    dev = cb->priv;
+
+    flags = irqsave();
+
+    switch (pmstate) {
+    case PM_NORMAL:
+        if (tsb_pm_getstate() == PM_SLEEP) {
+            tsb_pwm_resume(dev);
+        }
+        break;
+    case PM_IDLE:
+    case PM_STANDBY:
+        /* Nothing to do in idle or standby. */
+        break;
+    case PM_SLEEP:
+        tsb_pwm_suspend(dev);
+        break;
+    default:
+        /* Can never happen. */
+        PANIC();
+    }
+
+    irqrestore(flags);
+}
+
+static int tsb_pwm_pm_prepare(struct pm_callback_s *cb,
+                              enum pm_state_e pmstate)
+{
+    struct pwm_ctlr_info *info = NULL;
+    struct generator_info *dev_info = NULL;
+    struct list_head *iter;
+    struct device *dev;
+    irqstate_t flags;
+
+    dev = cb->priv;
+    info = device_get_private(dev);
+
+    flags = irqsave();
+
+    switch (pmstate) {
+    case PM_NORMAL:
+        break;
+    case PM_IDLE:
+    case PM_STANDBY:
+        /* Nothing to do in idle or standby. */
+        break;
+    case PM_SLEEP:
+        list_foreach(&info->pwm_list, iter) {
+            dev_info = list_entry(iter, struct generator_info, list);
+            if (dev_info->gntr_flag & TSB_PWM_FLAG_ENABLED) {
+                irqrestore(flags);
+                return -EBUSY;
+            }
+        }
+        break;
+    default:
+        /* Can never happen. */
+        PANIC();
+    }
+
+    irqrestore(flags);
+
+    return OK;
+}
+#else
+static void tsb_pwm_pm_notify(struct pm_callback_s *cb,
+                              enum pm_state_e pmstate)
+{
+
+}
+
+static int tsb_pwm_pm_prepare(struct pm_callback_s *cb,
+                              enum pm_state_e pmstate)
+{
+    return OK;
+}
+#endif
 
 /**
  * @brief Device driver probe function.
@@ -1103,11 +1313,23 @@ static int tsb_pwm_dev_probe(struct device *dev)
     sem_init(&info->op_mutex, 0, 1);
     sem_init(&info->pwr_mutex, 0, 1);
 
+    ret = tsb_pm_register(tsb_pwm_pm_prepare, tsb_pwm_pm_notify, dev);
+    if (ret < 0) {
+        goto err_pm;
+    }
+
+    return ret;
+
+err_pm:
+    sem_destroy(&info->op_mutex);
+    sem_destroy(&info->pwr_mutex);
+    irq_detach(info->pwm_irq);
+err_resc:
+    free(info);
     return ret;
 
 err_irq:
     irqrestore(flags);
-err_resc:
     free(info);
     return ret;
 }
@@ -1138,6 +1360,12 @@ static void tsb_pwm_dev_remove(struct device *dev)
     free(info);
     device_set_private(dev, NULL);
 }
+
+static struct device_pm_ops tsb_pwm_pm_ops = {
+    .suspend    = tsb_pwm_suspend,
+    .poweroff   = tsb_pwm_poweroff,
+    .resume     = tsb_pwm_resume,
+};
 
 static struct device_pwm_type_ops tsb_pwm_type_ops = {
     /** Get number of generator supported in system */
@@ -1187,4 +1415,5 @@ struct device_driver tsb_pwm_driver = {
     .name       = "tsb_pwm",
     .desc       = "TTSB PWM Driver",
     .ops        = &tsb_pwm_driver_ops,
+    .pm         = &tsb_pwm_pm_ops,
 };
