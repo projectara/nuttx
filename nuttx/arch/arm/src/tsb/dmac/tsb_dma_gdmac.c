@@ -1175,6 +1175,7 @@ static int gdmac_mem2unipro_transfer(struct device *dev,
                     CCR_DST_CONFIG(1, mem2unipro_chan->ccr_transfer_size) |
                     CCR_SRC_CONFIG(1, mem2unipro_chan->ccr_transfer_size);
 
+            pl330_code->postburst_block_wait = DMA_NO_WAITFORPERIPGERAL;
             pl330_code->postburst_block_load = DMANOP;
             pl330_code->postburst_block_store = DMA_NO_PERIPHERALSTORE;
         }
