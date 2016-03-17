@@ -367,12 +367,13 @@ static int power_supply_set_property(struct device *dev, uint8_t psy_id,
  * @brief Attach callback function to power supply device.
  *
  * @param dev Pointer to structure of device.
- * @param data Private user data passed to the callback.
  * @param callback Pointer to event callback function.
+ * @param data Private user data passed to the callback.
  * @return 0 on success, negative errno on error.
  */
-static int power_supply_attach_callback(struct device *dev, void *data,
-                                        power_supply_event_callback callback)
+static int power_supply_attach_callback(struct device *dev,
+                                        power_supply_event_callback callback,
+                                        void *data)
 {
     struct power_supply_info *info = NULL;
 
