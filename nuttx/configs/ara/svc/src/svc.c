@@ -878,7 +878,6 @@ int svc_hot_unplug(uint8_t portid, bool lock_interface)
         return rc;
     }
 
-    switch_port_irq_enable(svc->sw, portid, false);
     if (svc->ap_initialized) {
         /*
          * If AP is ready, generate an event to send

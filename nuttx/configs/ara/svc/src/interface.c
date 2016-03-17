@@ -430,6 +430,9 @@ static int interface_power_off(struct interface *iface)
 
     wd_cancel(&iface->linkup_wd);
 
+    /* Disable Switch port IRQs */
+    switch_port_irq_enable(svc->sw, iface->switch_portid, false);
+
     /* Disable Switch port */
     rc = switch_enable_port(svc->sw, iface->switch_portid, false);
     if (rc && (rc != -EOPNOTSUPP)) {
