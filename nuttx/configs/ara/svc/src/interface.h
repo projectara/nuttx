@@ -140,6 +140,7 @@ struct interface {
     enum ara_iface_order if_order;
     pthread_mutex_t mutex;
     bool handler_active;
+    struct work_s wakeout_work; /* WAKEOUT pulse completion work */
 };
 
 #define interface_foreach(iface, idx)                       \
@@ -204,6 +205,7 @@ int interface_power_off_atomic(struct interface *iface);
 int interface_power_on_atomic(struct interface *iface);
 int interface_generate_wakeout_atomic(struct interface *, bool assert,
                                       int length);
+int interface_cancel_wakeout_atomic(struct interface *iface);
 int interface_store_hotplug_state_atomic(uint8_t port_id, enum hotplug_state hotplug,
                                          bool lock_interface);
 enum hotplug_state interface_consume_hotplug_state_atomic(uint8_t port_id);

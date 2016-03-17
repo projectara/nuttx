@@ -53,7 +53,6 @@
 #include "svc_pm.h"
 
 #define POWER_OFF_TIME_IN_US                        (500000)
-#define WAKEOUT_PULSE_DURATION_IN_US                (100000)
 #define MODULE_PORT_WAKEOUT_PULSE_DURATION_IN_US    (500000)
 #define LINKUP_WD_DELAY_IN_MS                       (100)
 #define LINKUP_WD_DELAY        ((LINKUP_WD_DELAY_IN_MS * CLOCKS_PER_SEC) / 1000)
@@ -264,6 +263,61 @@ static int interface_power_disable(struct interface *iface)
 }
 
 /*
+ * @brief Handle the end of the WAKEOUT pulse on an interface
+ * @param data pointer to interface struct
+ *
+ * Runs in workqueue context
+ * Requires caller to hold iface->mutex
+ */
+static int interface_wakeout_timeout(struct interface *iface)
+{
+    int rc = 0;
+
+    if (!iface) {
+        dbg_error("%s: called with null interface\n", __func__);
+        return -ENODEV;
+    }
+
+    dbg_verbose("Wakeout pulse timeout on %s\n", iface->name);
+
+    switch (iface->if_type) {
+    case ARA_IFACE_TYPE_MODULE_PORT:
+        /* Put the WAKE/DETECT line back to default state */
+        gpio_direction_out(iface->detect_in.gpio, iface->detect_in.polarity);
+        /* Finally re-install the interrupt handler on the pin */
+        rc = interface_install_wd_handler(iface, true);
+        break;
+    case ARA_IFACE_TYPE_MODULE_PORT2:
+        /* Put the WAKEOUT line back to default state */
+        gpio_direction_out(iface->wake_gpio, !iface->wake_gpio_pol);
+        break;
+    case ARA_IFACE_TYPE_BUILTIN:
+    default:
+        dbg_error("%s: unsupported interface type: %d\n", __func__,
+                  iface->if_type);
+        rc = -ENOTSUP;
+        break;
+    }
+
+    return rc;
+}
+
+/*
+ * @brief Handle the end of the WAKEOUT pulse on an interface
+ * @param data pointer to interface struct
+ *
+ * Runs in workqueue context
+ */
+static void interface_wakeout_timeout_atomic(void *data)
+{
+    struct interface *iface = data;
+
+    pthread_mutex_lock_debug(&iface->mutex);
+    interface_wakeout_timeout(iface);
+    pthread_mutex_unlock_debug(&iface->mutex);
+}
+
+/*
  * @brief Generate a WAKEOUT signal to wake-up/power-up modules.
  * If assert is true, keep the WAKEOUT lines asserted.
  *
@@ -337,30 +391,65 @@ static int interface_generate_wakeout(struct interface *iface,
         /* Then configure the pin as output and assert it */
         gpio_direction_out(gpio, polarity);
 
-        /* Keep the line asserted for the given duration */
-        up_udelay(pulse_len);
-
-        gpio_direction_out(gpio, !polarity);
-
-        switch (iface->if_type) {
-        case ARA_IFACE_TYPE_MODULE_PORT:
-            /* Finally re-install the interrupt handler on the pin */
-            rc = interface_install_wd_handler(iface, true);
-            if (rc) {
-                return rc;
-            }
-            break;
-
-        case ARA_IFACE_TYPE_MODULE_PORT2:
-        case ARA_IFACE_TYPE_BUILTIN:
-            break;
-
-        default:
-            dbg_error("%s(): unsupported interface port type: %d\n", __func__,
-                      iface->if_type);
-            return -ENOTSUP;
+        /*
+         * Keep the line asserted for the given duration. After timeout
+         * de-assert the line.
+         */
+        if (!work_available(&iface->wakeout_work)) {
+            rc = work_cancel(HPWORK, &iface->wakeout_work);
+            /*
+             * work_cancel() doesn't fail in the current
+             * implementation. And if it did, we'd be dead in the water
+             * anyway.
+             */
+            DEBUGASSERT(!rc);
+        }
+        rc = work_queue(HPWORK, &iface->wakeout_work,
+                        interface_wakeout_timeout_atomic,
+                        iface, USEC2TICK(pulse_len));
+        if (rc) {
+            dbg_error("%s: Could not schedule WAKEOUT pulse completion work for %s\n",
+                      __func__, iface->name);
+            interface_wakeout_timeout(iface);
         }
     }
+    return rc;
+}
+
+/*
+ * @brief Cancel the WAKEOUT pulse on an interface
+ * @param data Pointer to interface struct
+ *
+ * Requires caller to hold iface->mutex
+ */
+static int interface_cancel_wakeout(struct interface *iface)
+{
+    int rc = 0;
+
+    if (!iface) {
+        dbg_error("%s: called with null interface\n", __func__);
+        return -ENODEV;
+    }
+
+    /* Cancel the work queue if already started */
+    if (!work_available(&iface->wakeout_work)) {
+        rc = work_cancel(HPWORK, &iface->wakeout_work);
+        /*
+         * work_cancel() doesn't fail in the current
+         * implementation. And if it did, we'd be dead in the water
+         * anyway.
+         */
+        DEBUGASSERT(!rc);
+    }
+
+    /*
+     * Re-install the interrupt handler on the pin.
+     * Since we are canceling the WAKEOUT pulse do not check the hotplug
+     * state here. Depending on the case (power off, power cycle etc.)
+     * the caller checks the new state.
+     */
+    rc = interface_wakeout_timeout(iface);
+
     return rc;
 }
 
@@ -381,6 +470,19 @@ int interface_generate_wakeout_atomic(struct interface *iface, bool assert,
     return rc;
 }
 
+/*
+ * @brief Cancel a WAKEOUT signal on an interface.
+ */
+int interface_cancel_wakeout_atomic(struct interface *iface)
+{
+    int rc;
+
+    pthread_mutex_lock_debug(&iface->mutex);
+    rc = interface_cancel_wakeout(iface);
+    pthread_mutex_unlock_debug(&iface->mutex);
+
+    return rc;
+}
 
 /**
  * @brief Get interface power supply state
@@ -428,7 +530,9 @@ static int interface_power_off(struct interface *iface)
         return -EINVAL;
     }
 
+    /* Cancel LinkUp and WAKEOUT pulse for the interface */
     wd_cancel(&iface->linkup_wd);
+    rc = interface_cancel_wakeout_atomic(iface);
 
     /* Disable Switch port IRQs */
     switch_port_irq_enable(svc->sw, iface->switch_portid, false);
