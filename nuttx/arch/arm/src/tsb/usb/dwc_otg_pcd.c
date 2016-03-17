@@ -128,10 +128,12 @@ void dwc_otg_request_done(dwc_otg_pcd_ep_t * ep, dwc_otg_pcd_request_t * req,
 	}
 
 	ep->stopped = stopped;
+#ifdef DWC_ENHANCED_SG_DMA
 	/* Don't free request still in bulk out ring descriptor */
 	if (!ep->dwc_ep.is_in && ep->dwc_ep.type == DWC_OTG_EP_TYPE_BULK &&
 		DWC_CIRCLEQ_ENTRY_IN_QUEUE(req, sg_dma_queue_entry))
 		return;
+#endif
 	DWC_FREE(req);
 }
 
@@ -756,7 +758,9 @@ void dwc_otg_iso_ep_stop_transfer(dwc_otg_core_if_t * core_if, dwc_ep_t * ep)
 	ep->pkt_per_frm = 0;
 	ep->pkt_per_frm = 0;
 	ep->desc_cnt = 0;
+#ifdef DWC_ENHANCED_SG_DMA
 	ep->desc_cnt_save = 0;
+#endif
 	ep->iso_desc_addr = 0;
 	ep->iso_dma_desc_addr = 0;
 }
@@ -988,11 +992,13 @@ static void dwc_otg_pcd_init_ep(dwc_otg_pcd_t * pcd, dwc_otg_pcd_ep_t * pcd_ep,
 	pcd_ep->dwc_ep.total_len = 0;
 	pcd_ep->dwc_ep.desc_addr = 0;
 	pcd_ep->dwc_ep.dma_desc_addr = 0;
-	pcd_ep->sg_dma_queue_count = 0;
 	DWC_CIRCLEQ_INIT(&pcd_ep->queue);
+#ifdef DWC_ENHANCED_SG_DMA
+	pcd_ep->sg_dma_queue_count = 0;
 	DWC_CIRCLEQ_INIT(&pcd_ep->sg_dma_queue);
 	if (!pcd_ep->sg_dma_queue_lock)
 		pcd_ep->sg_dma_queue_lock = DWC_SPINLOCK_ALLOC();
+#endif
 }
 
 /**
@@ -1027,8 +1033,10 @@ static void dwc_otg_pcd_reinit(dwc_otg_pcd_t * pcd)
 			dwc_otg_pcd_init_ep(pcd, ep, 1 /* IN */ , i);
 
 			DWC_CIRCLEQ_INIT(&ep->queue);
+#ifdef DWC_ENHANCED_SG_DMA
 			DWC_CIRCLEQ_INIT(&ep->sg_dma_queue);
 			ep->sg_dma_queue_count = 0;
+#endif
 		}
 		hwcfg1 >>= 2;
 	}
@@ -1046,8 +1054,10 @@ static void dwc_otg_pcd_reinit(dwc_otg_pcd_t * pcd)
 			 */
 			dwc_otg_pcd_init_ep(pcd, ep, 0 /* OUT */ , i);
 			DWC_CIRCLEQ_INIT(&ep->queue);
+#ifdef DWC_ENHANCED_SG_DMA
 			DWC_CIRCLEQ_INIT(&ep->sg_dma_queue);
 			ep->sg_dma_queue_count = 0;
+#endif
 		}
 		hwcfg1 >>= 2;
 	}
@@ -1057,6 +1067,7 @@ static void dwc_otg_pcd_reinit(dwc_otg_pcd_t * pcd)
 	pcd->ep0.dwc_ep.type = DWC_OTG_EP_TYPE_CONTROL;
 }
 
+#ifdef DWC_ENHANCED_SG_DMA
 /**
  * Remove ep's
  */
@@ -1097,7 +1108,7 @@ static void dwc_otg_pcd_remove_ep(dwc_otg_pcd_t * pcd)
 		hwcfg1 >>= 2;
 	}
 }
-
+#endif /* DWC_ENHANCED_SG_DMA */
 
 /**
  * This function is called when the SRP timer expires. The SRP should
@@ -1400,7 +1411,9 @@ void dwc_otg_pcd_remove(dwc_otg_pcd_t * pcd)
 {
 	dwc_otg_dev_if_t *dev_if = GET_CORE_IF(pcd)->dev_if;
 	int i;
+#ifdef DWC_ENHANCED_SG_DMA
 	dwc_otg_pcd_remove_ep(pcd);
+#endif
 	if (pcd->core_if->core_params->dev_out_nak) {
 		for (i = 0; i < MAX_EPS_CHANNELS; i++) {
 			DWC_TIMER_CANCEL(pcd->core_if->ep_xfer_timer[i]);
@@ -2414,6 +2427,7 @@ int dwc_otg_pcd_xiso_ep_queue(dwc_otg_pcd_t * pcd, void *ep_handle,
 #endif
 /* END ifdef DWC_UTE_PER_IO ***************************************************/
 
+#ifdef DWC_ENHANCED_SG_DMA
 dwc_otg_pcd_request_t *dwc_otg_pcd_get_queue_req(dwc_otg_pcd_ep_t *ep,
                                                  dwc_dma_t dma)
 {
@@ -2632,7 +2646,9 @@ static void dwc_otg_pcd_ep_resume(dwc_otg_pcd_ep_t *ep)
 	DWC_MODIFY_REG32(&GET_CORE_IF(pcd)->dev_if->out_ep_regs[dwc_ep->num]->doepctl, 0, depctl.d32);
 
 }
+#endif /* DWC_ENHANCED_SG_DMA */
 
+#ifdef DWC_ENHANCED_SG_DMA
 void init_fifo_dma_desc_chain(dwc_otg_core_if_t * core_if,
 			      dwc_otg_pcd_ep_t *ep)
 {
@@ -2662,7 +2678,7 @@ void init_fifo_dma_desc_chain(dwc_otg_core_if_t * core_if,
 		i++;
 	}
 }
-
+#endif /* DWC_ENHANCED_SG_DMA */
 
 int dwc_otg_pcd_ep_queue(dwc_otg_pcd_t * pcd, void *ep_handle,
 			 uint8_t * buf, dwc_dma_t dma_buf, uint32_t buflen,
@@ -2672,9 +2688,11 @@ int dwc_otg_pcd_ep_queue(dwc_otg_pcd_t * pcd, void *ep_handle,
 	dwc_otg_pcd_request_t *req;
 	dwc_otg_pcd_ep_t *ep;
 	uint32_t max_transfer;
+#ifdef DWC_ENHANCED_SG_DMA
 	int start_transfer = 0;
 	int ret = 0;
 	int last = 0;
+#endif
 
 	ep = get_ep_from_handle(pcd, ep_handle);
 	if (!ep || (!ep->desc && ep->dwc_ep.num != 0)) {
@@ -2682,7 +2700,15 @@ int dwc_otg_pcd_ep_queue(dwc_otg_pcd_t * pcd, void *ep_handle,
 		return -DWC_E_INVALID;
 	}
 
+#ifndef DWC_ENHANCED_SG_DMA
+	if (atomic_alloc) {
+		req = DWC_ALLOC_ATOMIC(sizeof(*req));
+	} else {
+		req = DWC_ALLOC(sizeof(*req));
+	}
+#else
 	req = dwc_otg_pcd_get_queue_req_alloc(ep, dma_buf, atomic_alloc);
+#endif
 	if (!req) {
 		return -DWC_E_NO_MEMORY;
 	}
@@ -2877,21 +2903,26 @@ int dwc_otg_pcd_ep_queue(dwc_otg_pcd_t * pcd, void *ep_handle,
 			}
 #endif
 
+#ifdef DWC_ENHANCED_SG_DMA
 			depctl_data_t depctl;
 			depctl.d32 = DWC_READ_REG32(&GET_CORE_IF(pcd)->dev_if->out_ep_regs[ep->dwc_ep.num]->doepctl);
 			if (!depctl.b.epena || ep->dwc_ep.type != DWC_OTG_EP_TYPE_BULK) {
 				ep->dwc_ep.desc_cnt = 0;
 				last = req->dma_desc->status.b.l;
 				dwc_otg_pcd_queue_req(GET_CORE_IF(pcd), ep, req);
+#endif
 				dwc_otg_ep_start_transfer(GET_CORE_IF(pcd),
 							  &ep->dwc_ep);
+#ifdef DWC_ENHANCED_SG_DMA
 				start_transfer = 1;
 			}
+#endif
 		}
 	}
 
 	if (req != 0) {
 		++pcd->request_pending;
+#ifdef DWC_ENHANCED_SG_DMA
 		if(!start_transfer) {
 			last = req->dma_desc->status.b.l;
 			ret = dwc_otg_pcd_queue_req(GET_CORE_IF(pcd), ep, req);
@@ -2903,7 +2934,9 @@ int dwc_otg_pcd_ep_queue(dwc_otg_pcd_t * pcd, void *ep_handle,
 				req->dma_desc->status.b.l = 0;
 				DWC_CIRCLEQ_INSERT_HEAD(&ep->queue, req, queue_entry);
 			} else {
+#endif
 				DWC_CIRCLEQ_INSERT_TAIL(&ep->queue, req, queue_entry);
+#ifdef DWC_ENHANCED_SG_DMA
 			}
 		}
 		if (!ep->dwc_ep.is_in &&
@@ -2915,6 +2948,7 @@ int dwc_otg_pcd_ep_queue(dwc_otg_pcd_t * pcd, void *ep_handle,
 			ep->bna = 0;
 			dwc_otg_pcd_ep_resume(ep);
 		}
+#endif
 		if (ep->dwc_ep.is_in && ep->stopped
 		    && !(GET_CORE_IF(pcd)->dma_enable)) {
 			/** @todo NGS Create a function for this. */
@@ -2965,11 +2999,13 @@ int dwc_otg_pcd_ep_dequeue(dwc_otg_pcd_t * pcd, void *ep_handle,
 		return -DWC_E_INVALID;
 	}
 
+#ifdef DWC_ENHANCED_SG_DMA
 	/* Invalidate the entry in the ring to cause a BNA */
 	if (invalidate_ring_entry(&ep->dwc_ep, req->dma_desc) < 0) {
 		return -DWC_E_INVALID;
 	}
 	dwc_otg_pcd_dequeue_req(pcd->core_if, ep, req);
+#endif
 
 	if (!DWC_CIRCLEQ_EMPTY_ENTRY(req, queue_entry)) {
 		dwc_otg_request_done(ep, req, -DWC_E_RESTART);

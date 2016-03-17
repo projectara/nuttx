@@ -182,6 +182,12 @@ config ARCH_CHIP_USB_PCD
 	---help---
 		Synopsys USB Device Driver
 
+if ARCH_CHIP_USB_PCD
+config DWC_ENHANCED_SG_DMA
+	bool "Enable SG DMA enhancement"
+	default n
+endif
+
 config DWC_QUIET
 	bool "Make DWC driver quiet (no printf)"
 	depends on ARCH_CHIP_USB_COMMON
