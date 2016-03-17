@@ -98,6 +98,8 @@ enum ara_iface_type {
     ARA_IFACE_TYPE_BUILTIN,
     /* Module port interface, as on DB3 board */
     ARA_IFACE_TYPE_MODULE_PORT,
+    /* Module port interface for HW >= EVT2 */
+    ARA_IFACE_TYPE_MODULE_PORT2,
 };
 
 /* Interface power states */
@@ -121,6 +123,8 @@ struct interface {
     atomic_t refclk_state;
     struct pm_data *pm;
     struct wd_data detect_in;
+    uint8_t wake_gpio;
+    bool wake_gpio_pol;
     enum hotplug_state hp_state;
     uint8_t linkup_retries;
     bool ejectable;
@@ -178,7 +182,8 @@ static inline int interface_is_builtin(struct interface *iface) {
 
 /** @brief Test if an interface connects to a module port */
 static inline int interface_is_module_port(struct interface *iface) {
-    return !!(iface->if_type == ARA_IFACE_TYPE_MODULE_PORT);
+    return !!(iface->if_type == ARA_IFACE_TYPE_MODULE_PORT ||
+              iface->if_type == ARA_IFACE_TYPE_MODULE_PORT2);
 }
 
 uint8_t interface_pm_get_adc(struct interface *iface);
@@ -234,6 +239,36 @@ uint32_t interface_pm_get_spin(struct interface *iface);
         .pm = NULL,                                            \
         .detect_in = INIT_WD_DATA(wake_detect_gpio,            \
                                   !!detect_in_pol),            \
+        .ejectable = _ejectable,                               \
+        .release_gpio = _rg,                                   \
+        .linkup_wd = WDOG_INITIAILIZER,                        \
+    }
+
+/*
+ * Module port interface for HW >= EVT2
+ */
+#define DECLARE_MODULE_PORT_INTERFACE2(_var_name, _name,       \
+                                       vsys_vreg_data,         \
+                                       refclk_vreg_data,       \
+                                       portid,                 \
+                                       _wake_gpio,             \
+                                       _wake_gpio_pol,         \
+                                       latch_gpio,             \
+                                       latch_pol,              \
+                                       _ejectable,             \
+                                       _rg)                    \
+    DECLARE_VREG(_var_name ## _vsys_vreg, vsys_vreg_data);     \
+    DECLARE_VREG(_var_name ## _refclk_vreg, refclk_vreg_data); \
+    static struct interface MAKE_INTERFACE(_var_name) = {      \
+        .name = _name,                                         \
+        .if_type = ARA_IFACE_TYPE_MODULE_PORT2,                \
+        .vsys_vreg = &_var_name ## _vsys_vreg,                 \
+        .refclk_vreg = &_var_name ## _refclk_vreg,             \
+        .switch_portid = portid,                               \
+        .pm = NULL,                                            \
+        .detect_in = INIT_WD_DATA(latch_gpio, !!latch_pol),    \
+        .wake_gpio = _wake_gpio,                               \
+        .wake_gpio_pol = !!_wake_gpio_pol,                     \
         .ejectable = _ejectable,                               \
         .release_gpio = _rg,                                   \
         .linkup_wd = WDOG_INITIAILIZER,                        \
