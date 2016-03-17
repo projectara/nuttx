@@ -618,8 +618,8 @@ static int gb_lights_init(unsigned int cport, struct gb_bundle *bundle)
         goto err_free_info;
     }
 
-    ret = device_lights_register_callback(bundle->dev, lights_info,
-                                          event_callback);
+    ret = device_lights_register_callback(bundle->dev, event_callback,
+                                          lights_info);
     if (ret) {
         goto err_close_device;
     }
