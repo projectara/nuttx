@@ -186,6 +186,14 @@ config DEVICE_CORE
 	bool
 	default n
 
+config DEVICE_AUTO_REGISTRATION
+	bool "Device Auto Registration Support"
+	depends on DEVICE_CORE
+	default y
+	---help---
+		This selection enables automatic registration of devices
+		that are compiled in.
+
 menuconfig GPIO
 	bool "GPIO Device Support"
 	default n

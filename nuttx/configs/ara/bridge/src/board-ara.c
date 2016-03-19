@@ -57,7 +57,7 @@ void board_initialize(void)
     tsb_gpio_register(NULL);
 #endif
 
-#ifdef CONFIG_DEVICE_CORE
+#ifdef CONFIG_DEVICE_AUTO_REGISTRATION
     tsb_device_table_register();
     tsb_driver_register();
 #endif

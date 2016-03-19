@@ -174,7 +174,7 @@ void ara_module_early_init(void)
 
 void ara_module_init(void)
 {
-#ifdef CONFIG_DEVICE_CORE
+#ifdef CONFIG_DEVICE_AUTO_REGISTRATION
     device_table_register(&bdb_device_table);
     bdb_driver_register();
 #endif
