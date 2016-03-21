@@ -246,6 +246,8 @@ int interface_generate_wakeout(struct interface *iface, bool assert,
                                int length)
 {
     int rc;
+    uint32_t gpio;
+    bool polarity;
 
     if (!iface) {
         dbg_error("%s: called with null interface\n", __func__);
@@ -260,29 +262,75 @@ int interface_generate_wakeout(struct interface *iface, bool assert,
                  iface->name ? iface->name : "unknown", length);
     }
 
+    switch (iface->if_type) {
+    case ARA_IFACE_TYPE_MODULE_PORT:
+        gpio = iface->detect_in.gpio;
+        polarity = !iface->detect_in.polarity;
+        break;
+
+    case ARA_IFACE_TYPE_MODULE_PORT2:
+        gpio = iface->wake_gpio;
+        polarity = iface->wake_gpio_pol;
+        break;
+
+    case ARA_IFACE_TYPE_BUILTIN:
+    default:
+        dbg_error("%s: unsupported interface type: %d\n", __func__,
+                  iface->if_type);
+        return -ENOTSUP;
+    }
+
     /* Generate a WAKEOUT pulse
      *
      * DB3 module port:
      * Generate a pulse on the WD line. The polarity is reversed
      * from the DETECT_IN polarity.
      */
-    if (iface->detect_in.gpio) {
-        bool polarity = iface->detect_in.polarity;
+    if (gpio) {
         int pulse_len = (length > 0) ?
                         length : MODULE_PORT_WAKEOUT_PULSE_DURATION_IN_US;
 
-        /* First uninstall the interrupt handler on the pin */
-        interface_uninstall_wd_handler(&iface->detect_in);
+        switch (iface->if_type) {
+        case ARA_IFACE_TYPE_MODULE_PORT:
+            /* First uninstall the interrupt handler on the pin */
+            interface_uninstall_wd_handler(&iface->detect_in);
+            break;
+
+        case ARA_IFACE_TYPE_MODULE_PORT2:
+        case ARA_IFACE_TYPE_BUILTIN:
+            break;
+
+        default:
+            dbg_error("%s(): unsupported interface port type: %d\n", __func__,
+                      iface->if_type);
+            return -ENOTSUP;
+        }
+
         /* Then configure the pin as output and assert it */
-        gpio_direction_out(iface->detect_in.gpio, polarity ? 0 : 1);
+        gpio_direction_out(gpio, polarity);
 
         /* Keep the line asserted for the given duration */
         up_udelay(pulse_len);
 
-        /* Finally re-install the interrupt handler on the pin */
-        rc = interface_install_wd_handler(iface, true);
-        if (rc) {
-            return rc;
+        gpio_direction_out(gpio, !polarity);
+
+        switch (iface->if_type) {
+        case ARA_IFACE_TYPE_MODULE_PORT:
+            /* Finally re-install the interrupt handler on the pin */
+            rc = interface_install_wd_handler(iface, true);
+            if (rc) {
+                return rc;
+            }
+            break;
+
+        case ARA_IFACE_TYPE_MODULE_PORT2:
+        case ARA_IFACE_TYPE_BUILTIN:
+            break;
+
+        default:
+            dbg_error("%s(): unsupported interface port type: %d\n", __func__,
+                      iface->if_type);
+            return -ENOTSUP;
         }
     }
 
