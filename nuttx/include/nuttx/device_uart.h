@@ -144,9 +144,10 @@ enum uart_stopbit {
  *
  * This callback function is called upon modification of a Status Register.
  *
+ * @param data Private data passed to the callback
  * @param status The status register's content
  */
-typedef void (*uart_status_callback)(uint8_t ms);
+typedef void (*uart_status_callback)(void *data, uint8_t ms);
 
 /**
  * @brief UART transmit and receive callback
@@ -154,11 +155,14 @@ typedef void (*uart_status_callback)(uint8_t ms);
  * This callback function is called upon the completion of a transmit or receive
  * operation.
  *
+ * @param dev Pointer to the UART device controller
+ * @param data Private data passed to the callback
  * @param buffer Buffer of data (to receive or to transmit)
  * @param length Amount of received/sent data
  * @param error Error code upon completion
  */
-typedef void (*uart_xfer_callback)(uint8_t *buffer, int length, int error);
+typedef void (*uart_xfer_callback)(struct device *dev, void *data,
+                                   uint8_t *buffer, int length, int error);
 
 /** UART device driver operations  */
 struct device_uart_type_ops {
@@ -207,15 +211,21 @@ struct device_uart_type_ops {
     /** Register a callback on Modem Status
      * @param dev Pointer to the UART device controller
      * @param callback The callback function to be called on an event
+     * @param data Private data to be passed to the callback
      * @return 0 on success, negative errno on failure
      */
-    int (*attach_ms_callback)(struct device *dev, uart_status_callback callback);
+    int (*attach_ms_callback)(struct device *dev,
+                              uart_status_callback callback,
+                              void *data);
     /** Register a callback on Line Status
      * @param dev Pointer to the UART device controller
      * @param callback The callback function to be called on an event
+     * @param data Private data to be passed to the callback
      * @return 0 on success, negative errno on failure
      */
-    int (*attach_ls_callback)(struct device *dev, uart_status_callback callback);
+    int (*attach_ls_callback)(struct device *dev,
+                              uart_status_callback callback,
+                              void *data);
     /** Transmit data through the UART controller
      * @param dev Pointer to the UART device controller
      * @param buffer Buffer of data to transmit
@@ -388,10 +398,13 @@ static inline int device_uart_set_break(struct device *dev, uint8_t break_on)
 /** Register a callback on Modem Status
  * @param dev Pointer to the UART device controller
  * @param callback The callback function to be called on an event
+ * @param data Private data to be passed to the callback.
  * @return 0 on success, negative errno on failure
  */
 static inline int device_uart_attach_ms_callback(struct device *dev,
-                                                 uart_status_callback callback)
+                                                 uart_status_callback callback,
+                                                 void *data)
+
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -400,7 +413,8 @@ static inline int device_uart_attach_ms_callback(struct device *dev,
 
     if (DEVICE_DRIVER_GET_OPS(dev, uart)->attach_ms_callback)
         return DEVICE_DRIVER_GET_OPS(dev, uart)->attach_ms_callback(dev,
-                                                                    callback);
+                                                                    callback,
+                                                                    data);
 
     return -ENOSYS;
 }
@@ -408,10 +422,12 @@ static inline int device_uart_attach_ms_callback(struct device *dev,
 /** Register a callback on Line Status
  * @param dev Pointer to the UART device controller
  * @param callback The callback function to be called on an event
+ * @param data Private data to be passed to the callback.
  * @return 0 on success, negative errno on failure
  */
 static inline int device_uart_attach_ls_callback(struct device *dev,
-                                                 uart_status_callback callback)
+                                                 uart_status_callback callback,
+                                                 void *data)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -420,7 +436,8 @@ static inline int device_uart_attach_ls_callback(struct device *dev,
 
     if (DEVICE_DRIVER_GET_OPS(dev, uart)->attach_ls_callback)
         return DEVICE_DRIVER_GET_OPS(dev, uart)->attach_ls_callback(dev,
-                                                                    callback);
+                                                                    callback,
+                                                                    data);
 
     return -ENOSYS;
 }
@@ -438,8 +455,9 @@ static inline int device_uart_attach_ls_callback(struct device *dev,
  * @return 0 on success, negative errno on failure
  */
 static inline int device_uart_start_transmitter(struct device *dev,
-                        uint8_t *buffer, int length, void *dma,
-                        int *sent, uart_xfer_callback callback)
+                                                uint8_t *buffer, int length,
+                                                void *dma, int *sent,
+                                                uart_xfer_callback callback)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -484,8 +502,9 @@ static inline int device_uart_stop_transmitter(struct device *dev)
  * @return 0 on success, negative errno on failure
  */
 static inline int device_uart_start_receiver(struct device *dev,
-                        uint8_t* buffer, int length, void *dma,
-                        int *got, uart_xfer_callback callback)
+                                             uint8_t* buffer,
+                                             int length, void *dma, int *got,
+                                             uart_xfer_callback callback)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 

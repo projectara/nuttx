@@ -109,12 +109,7 @@ struct gb_uart_info {
     pthread_t           rx_thread;
     /** inform the thread should be terminated */
     int                 thread_stop;
-    /** uart driver handle */
-    struct device   *dev;
 };
-
-/* The structure for keeping protocol global data. */
-static struct gb_uart_info *info = NULL;
 
 /**
  * @brief Put the node to the back of the queue.
@@ -236,11 +231,17 @@ static int uart_alloc_buf(int max_nodes, int buf_size, sq_queue_t *queue)
  * Callback for device driver modem status changes. This function can be called
  * when device driver detect modem status changes.
  *
+ * @param data Pointer to struct gb_uart_info.
  * @param ms The updated modem status.
  * @return None.
  */
-static void uart_ms_callback(uint8_t ms)
+static void uart_ms_callback(void *data, uint8_t ms)
 {
+    struct gb_uart_info *info;
+
+    DEBUGASSERT(data);
+    info = data;
+
     info->updated_ms = ms;
 
     sem_post(&info->status_sem);
@@ -252,11 +253,17 @@ static void uart_ms_callback(uint8_t ms)
  * Callback for device driver line status changes. This function can be called
  * when device driver detect line status changes.
  *
+ * @param data Pointer to struct gb_uart_info.
  * @param ls The updated modem status.
  * @return None.
  */
-static void uart_ls_callback(uint8_t ls)
+static void uart_ls_callback(void *data, uint8_t ls)
 {
+    struct gb_uart_info *info;
+
+    DEBUGASSERT(data);
+    info = data;
+
     info->updated_ls = ls;
 
     sem_post(&info->status_sem);
@@ -273,16 +280,23 @@ static void uart_ls_callback(uint8_t ls)
  * It put the current buffer to received queue and gets another buffer to
  * continue receiving. Then notifies rx thread to process.
  *
+ * @param dev Pointer to the UART device controller
+ * @param data Pointer to struct gb_uart_info.
  * @param buffer Data buffer.
  * @param length Received data length.
  * @param error Error code when driver receiving.
  * @return None.
  */
-static void uart_rx_callback(uint8_t *buffer, int length, int error)
+static void uart_rx_callback(struct device *dev, void *data, uint8_t *buffer,
+                             int length, int error)
 {
+    struct gb_uart_info *info;
     struct buf_node *node;
     int ret;
     uint8_t flags = 0;
+
+    DEBUGASSERT(data);
+    info = data;
 
     info->rx_node->data_size = length;
 
@@ -316,7 +330,7 @@ static void uart_rx_callback(uint8_t *buffer, int length, int error)
     }
 
     info->rx_node = node;
-    ret = device_uart_start_receiver(info->dev, node->buffer,
+    ret = device_uart_start_receiver(dev, node->buffer,
                                      info->rx_buf_size,
                                      NULL, NULL, uart_rx_callback);
     if (ret) {
@@ -364,6 +378,7 @@ static void *uart_status_thread(void *data)
 {
     uint16_t updated_status = 0;
     struct gb_uart_serial_state_request *request;
+    struct gb_uart_info *info = data;
     int ret = 0;
 
     while (1) {
@@ -408,6 +423,9 @@ static void *uart_rx_thread(void *data)
     struct gb_operation *operation = NULL;
     struct gb_uart_receive_data_request *request = NULL;
     struct buf_node *node = NULL;
+    struct gb_bundle *bundle = data;
+    struct gb_uart_info *info = bundle->priv;
+    struct device *dev = bundle->dev;
     int ret;
 
     while (1) {
@@ -445,9 +463,9 @@ static void *uart_rx_thread(void *data)
         if (info->require_node) {
             node = get_node_from(&info->free_queue);
             info->rx_node = node;
-            ret = device_uart_start_receiver(info->dev, node->buffer,
-                                             info->rx_buf_size, NULL, NULL,
-                                             uart_rx_callback);
+            ret = device_uart_start_receiver(dev, node->buffer,
+                                             info->rx_buf_size, NULL,
+                                             NULL, uart_rx_callback);
             if (ret) {
                 uart_report_error(GB_UART_EVENT_DEVICE_ERROR, __func__);
             }
@@ -464,10 +482,10 @@ static void *uart_rx_thread(void *data)
  * Terminates the thread for status change and releases the system resouces and
  * operations allocated by uart_status_cb_init().
  *
- * @param None.
+ * @param info Pointer to struct gb_uart_info.
  * @return None.
  */
-static void uart_status_cb_deinit(void)
+static void uart_status_cb_deinit(struct gb_uart_info *info)
 {
     if (info->status_thread != (pthread_t)0) {
         info->thread_stop = 1;
@@ -488,10 +506,10 @@ static void uart_status_cb_deinit(void)
  * This function creates one operations and uses that request of operation
  * for sending the status change event to peer.
  *
- * @param None.
+ * @param info Pointer to struct gb_uart_info.
  * @return 0 on success, error code on failure.
  */
-static int uart_status_cb_init(void)
+static int uart_status_cb_init(struct gb_uart_info *info)
 {
     int ret;
 
@@ -529,10 +547,10 @@ err_destroy_ms_ls_op:
  * Terminates the thread for receiver and releases the system resouces and
  * buffers allocated by uart_receiver_cb_init().
  *
- * @param None.
+ * @param info Pointer to struct gb_uart_info.
  * @return None.
  */
-static void uart_receiver_cb_deinit(void)
+static void uart_receiver_cb_deinit(struct gb_uart_info *info)
 {
     if (info->rx_thread != (pthread_t)0) {
         info->thread_stop = 1;
@@ -554,11 +572,12 @@ static void uart_receiver_cb_deinit(void)
  * The semaphore works as message queue and all tasks are done in the
  * thread.
  *
- * @param None.
+ * @param bundle Greybus bundle handle
  * @return 0 for success, -errno for failures.
  */
-static int uart_receiver_cb_init(void)
+static int uart_receiver_cb_init(struct gb_bundle *bundle)
 {
+    struct gb_uart_info *info = bundle->priv;
     int ret;
 
     sq_init(&info->free_queue);
@@ -577,7 +596,7 @@ static int uart_receiver_cb_init(void)
         goto err_free_data_buf;
     }
 
-    ret = pthread_create(&info->rx_thread, NULL, uart_rx_thread, info);
+    ret = pthread_create(&info->rx_thread, NULL, uart_rx_thread, bundle);
     if (ret) {
         goto err_destroy_rx_sem;
     }
@@ -589,7 +608,7 @@ err_destroy_rx_sem:
 err_free_data_buf:
     uart_free_buf(&info->free_queue);
 
-    return -ret;
+    return ret;
 }
 
 /**
@@ -629,7 +648,8 @@ static uint8_t gb_uart_send_data(struct gb_operation *operation)
     int sent = 0;
     size_t request_size = gb_operation_get_request_payload_size(operation);
     struct gb_uart_send_data_request *request =
-                    gb_operation_get_request_payload(operation);
+                                   gb_operation_get_request_payload(operation);
+    struct gb_bundle *bundle;
 
     if (request_size < sizeof(*request)) {
         gb_error("dropping short message\n");
@@ -643,7 +663,10 @@ static uint8_t gb_uart_send_data(struct gb_operation *operation)
         return GB_OP_INVALID;
     }
 
-    ret = device_uart_start_transmitter(info->dev, request->data, size, NULL,
+    bundle = gb_operation_get_bundle(operation);
+    DEBUGASSERT(bundle);
+
+    ret = device_uart_start_transmitter(bundle->dev, request->data, size, NULL,
                                         &sent, NULL);
     if (ret) {
         return GB_OP_UNKNOWN_ERROR;
@@ -670,12 +693,16 @@ static uint8_t gb_uart_set_line_coding(struct gb_operation *operation)
     enum uart_stopbit stopbit;
     uint8_t databits;
     struct gb_serial_line_coding_request *request =
-                    gb_operation_get_request_payload(operation);
+                                   gb_operation_get_request_payload(operation);
+    struct gb_bundle *bundle;
 
     if (gb_operation_get_request_payload_size(operation) < sizeof(*request)) {
         gb_error("dropping short message\n");
         return GB_OP_INVALID;
     }
+
+    bundle = gb_operation_get_bundle(operation);
+    DEBUGASSERT(bundle);
 
     _baud = le32_to_cpu(request->rate);
     switch(_baud) {
@@ -735,8 +762,9 @@ static uint8_t gb_uart_set_line_coding(struct gb_operation *operation)
 
     databits = request->data;
 
-    ret = device_uart_set_configuration(info->dev, baud, parity, databits,
-                     stopbit, 1); /* 1 for auto flow control enable */
+    ret = device_uart_set_configuration(bundle->dev, baud, parity, databits,
+                                        stopbit, 1);
+                                        /* 1 for auto flow control enable */
     if (ret) {
         return GB_OP_UNKNOWN_ERROR;
     }
@@ -758,14 +786,18 @@ static uint8_t gb_uart_set_control_line_state(struct gb_operation *operation)
     uint8_t modem_ctrl = 0;
     uint16_t control;
     struct gb_uart_set_control_line_state_request *request =
-                gb_operation_get_request_payload(operation);
+                                   gb_operation_get_request_payload(operation);
+    struct gb_bundle *bundle;
 
     if (gb_operation_get_request_payload_size(operation) < sizeof(*request)) {
         gb_error("dropping short message\n");
         return GB_OP_INVALID;
     }
 
-    ret = device_uart_get_modem_ctrl(info->dev, &modem_ctrl);
+    bundle = gb_operation_get_bundle(operation);
+    DEBUGASSERT(bundle);
+
+    ret = device_uart_get_modem_ctrl(bundle->dev, &modem_ctrl);
     if (ret) {
         return GB_OP_UNKNOWN_ERROR;
     }
@@ -783,7 +815,7 @@ static uint8_t gb_uart_set_control_line_state(struct gb_operation *operation)
         modem_ctrl &= ~MCR_RTS;
     }
 
-    ret = device_uart_set_modem_ctrl(info->dev, &modem_ctrl);
+    ret = device_uart_set_modem_ctrl(bundle->dev, &modem_ctrl);
     if (ret) {
         return GB_OP_UNKNOWN_ERROR;
     }
@@ -803,14 +835,18 @@ static uint8_t gb_uart_send_break(struct gb_operation *operation)
 {
     int ret;
     struct gb_uart_set_break_request *request =
-                  gb_operation_get_request_payload(operation);
+                                   gb_operation_get_request_payload(operation);
+    struct gb_bundle *bundle;
 
     if (gb_operation_get_request_payload_size(operation) < sizeof(*request)) {
         gb_error("dropping short message\n");
         return GB_OP_INVALID;
     }
 
-    ret = device_uart_set_break(info->dev, request->state);
+    bundle = gb_operation_get_bundle(operation);
+    DEBUGASSERT(bundle);
+
+    ret = device_uart_set_break(bundle->dev, request->state);
     if (ret) {
         return GB_OP_UNKNOWN_ERROR;
     }
@@ -830,54 +866,56 @@ static uint8_t gb_uart_send_break(struct gb_operation *operation)
  */
 static int gb_uart_init(unsigned int cport, struct gb_bundle *bundle)
 {
+    struct gb_uart_info *info;
     int ret;
     uint8_t ms = 0, ls = 0;
-
 
     info = zalloc(sizeof(*info));
     if (info == NULL) {
         return -ENOMEM;
     }
 
+    bundle->priv = info;
+
     gb_debug("%s(): GB uart info struct: 0x%p \n", __func__, info);
 
     info->cport = cport;
 
-    ret = uart_status_cb_init();
-    if (ret) {
-        goto err_free_info;
+    bundle->dev = device_open(DEVICE_TYPE_UART_HW, 0);
+    if (!bundle->dev) {
+        ret = -ENODEV;
+        goto err_device_close;
     }
 
-    ret = uart_receiver_cb_init();
+    ret = uart_status_cb_init(info);
+     if (ret) {
+        goto err_device_close;
+     }
+
+    ret = uart_receiver_cb_init(bundle);
     if (ret) {
         goto err_status_cb_deinit;
-    }
+     }
 
-    info->dev = device_open(DEVICE_TYPE_UART_HW, 0);
-    if (!info->dev) {
-        ret = -ENODEV;
+    /* update serial status */
+    ret = device_uart_get_modem_status(bundle->dev, &ms);
+    if (ret) {
         goto err_receiver_cb_deinit;
     }
 
-    /* update serial status */
-    ret = device_uart_get_modem_status(info->dev, &ms);
+    ret = device_uart_get_line_status(bundle->dev, &ls);
     if (ret) {
-        goto err_device_close;
-    }
-
-    ret = device_uart_get_line_status(info->dev, &ls);
-    if (ret) {
-        goto err_device_close;
+        goto err_receiver_cb_deinit;
     }
 
     info->last_serial_state = parse_ms_ls_registers(ms, ls);
 
-    ret = device_uart_attach_ms_callback(info->dev, uart_ms_callback);
+    ret = device_uart_attach_ms_callback(bundle->dev, uart_ms_callback, info);
     if (ret) {
-        goto err_device_close;
+        goto err_receiver_cb_deinit;
     }
 
-    ret = device_uart_attach_ls_callback(info->dev, uart_ls_callback);
+    ret = device_uart_attach_ls_callback(bundle->dev, uart_ls_callback, info);
     if (ret) {
         goto err_clr_ms_callback;
     }
@@ -889,16 +927,16 @@ static int gb_uart_init(unsigned int cport, struct gb_bundle *bundle)
     return 0;
 
 err_clr_ms_callback:
-    device_uart_attach_ms_callback(info->dev, NULL);
-err_device_close:
-    device_close(info->dev);
+    device_uart_attach_ms_callback(bundle->dev, NULL, info);
 err_receiver_cb_deinit:
-    uart_receiver_cb_deinit();
+    uart_receiver_cb_deinit(info);
 err_status_cb_deinit:
-    uart_status_cb_deinit();
-err_free_info:
+    uart_status_cb_deinit(info);
+err_device_close:
+    device_close(bundle->dev);
+    bundle->priv = NULL;
+    bundle->dev = NULL;
     free(info);
-
     return ret;
 }
 
@@ -913,16 +951,24 @@ err_free_info:
  */
 static void gb_uart_exit(unsigned int cport, struct gb_bundle *bundle)
 {
+    struct gb_uart_info *info;
 
-    device_uart_attach_ls_callback(info->dev, NULL);
+    DEBUGASSERT(bundle);
+    info = bundle->priv;
 
-    device_uart_attach_ms_callback(info->dev, NULL);
+    if (!info)
+        return;
 
-    device_close(info->dev);
+    device_uart_attach_ls_callback(bundle->dev, NULL, NULL);
 
-    uart_receiver_cb_deinit();
+    device_uart_attach_ms_callback(bundle->dev, NULL, NULL);
 
-    uart_status_cb_deinit();
+    uart_receiver_cb_deinit(info);
+
+    uart_status_cb_deinit(info);
+
+    device_close(bundle->dev);
+    bundle->dev = NULL;
 
     free(info);
 }

@@ -221,6 +221,8 @@ struct tsb_uart_info {
     uart_xfer_callback rx_callback;
     /** Transmit callback function */
     uart_xfer_callback tx_callback;
+    /** Private data passed to event_callbacks */
+    void *event_data;
 };
 
 /** device structure for interrupt handler */
@@ -386,7 +388,9 @@ static void ua_xmitchars(struct tsb_uart_info *uart_info)
             ua_reg_bit_clr(uart_info->reg_base, UA_IER_DLH, UA_IER_ETBEI);
             if (uart_info->tx_callback) {
                 uart_info->flags &= ~TSB_UART_FLAG_XMIT;
-                uart_info->tx_callback(uart_info->xmit.buffer,
+                uart_info->tx_callback(uart_info->dev,
+                                       uart_info->event_data,
+                                       uart_info->xmit.buffer,
                                        uart_info->xmit.head, 0);
             }
             else {
@@ -441,7 +445,9 @@ static void ua_recvchars(struct tsb_uart_info *uart_info, uint8_t int_id)
                            UA_IER_ERBFI | UA_IER_ELSI);
             uart_info->flags &= ~TSB_UART_FLAG_RECV;
             if (uart_info->rx_callback) {
-                uart_info->rx_callback(uart_info->recv.buffer,
+                uart_info->rx_callback(uart_info->dev,
+                                       uart_info->event_data,
+                                       uart_info->recv.buffer,
                                        uart_info->recv.head,
                                        uart_info->line_err);
             }
@@ -481,7 +487,7 @@ static int ua_irq_handler(int irq, void *context)
         case UA_INTERRUPT_ID_MS:
             status = ua_getreg(uart_info->reg_base, UA_MSR);
             if (uart_info->ms_callback) {
-                uart_info->ms_callback(status);
+                uart_info->ms_callback(uart_info->event_data, status);
             }
             break;
         case UA_INTERRUPT_ID_LS:
@@ -489,7 +495,7 @@ static int ua_irq_handler(int irq, void *context)
             uart_info->line_err = status & (UA_LSR_OE | UA_LSR_PE | UA_LSR_FE |
                                             UA_LSR_BI);
             if (uart_info->ls_callback) {
-                uart_info->ls_callback(status);
+                uart_info->ls_callback(uart_info->event_data, status);
             }
             break;
         case UA_INTERRUPT_ID_TX:
@@ -862,10 +868,12 @@ static int tsb_uart_set_break(struct device *dev, uint8_t break_on)
 *
 * @param dev The pointer to the UART device structure.
 * @param callback Null means caller doesn’t need this event.
+* @param data Private data pass to the callback.
 * @return 0 for success, -errno for failures.
 */
 static int tsb_uart_attach_ms_callback(struct device *dev,
-                                       uart_status_callback callback)
+                                       uart_status_callback callback,
+                                       void *data)
 {
     struct tsb_uart_info *uart_info = NULL;
 
@@ -875,7 +883,7 @@ static int tsb_uart_attach_ms_callback(struct device *dev,
 
     uart_info = device_get_private(dev);
 
-    if (callback == NULL) {
+    if (callback == NULL || data == NULL) {
         /* Disable modem status interrupt. */
         ua_reg_bit_clr(uart_info->reg_base, UA_IER_DLH, UA_IER_EDSSI);
         uart_info->ms_callback = NULL;
@@ -885,6 +893,9 @@ static int tsb_uart_attach_ms_callback(struct device *dev,
     /* Enable modem status interrupt. */
     ua_reg_bit_set(uart_info->reg_base, UA_IER_DLH, UA_IER_EDSSI);
     uart_info->ms_callback = callback;
+
+    uart_info->event_data = data;
+
     return 0;
 }
 
@@ -896,10 +907,12 @@ static int tsb_uart_attach_ms_callback(struct device *dev,
 *
 * @param dev The pointer to the UART device structure.
 * @param callback Null means caller doesn’t need this event.
+* @param data Private data pass to the callback.
 * @return 0 for success, -errno for failures.
 */
 static int tsb_uart_attach_ls_callback(struct device *dev,
-                                       uart_status_callback callback)
+                                       uart_status_callback callback,
+                                       void *data)
 {
     struct tsb_uart_info *uart_info = NULL;
 
@@ -910,6 +923,7 @@ static int tsb_uart_attach_ls_callback(struct device *dev,
     uart_info = device_get_private(dev);
 
     uart_info->ls_callback = callback;
+    uart_info->event_data = data;
 
     return 0;
 }
@@ -1002,8 +1016,9 @@ static int tsb_uart_stop_transmitter(struct device *dev)
 
     if (uart_info->tx_callback) {
         uart_info->flags &= ~TSB_UART_FLAG_XMIT;
-        uart_info->tx_callback(uart_info->xmit.buffer,
-                               uart_info->xmit.head, 0);
+        uart_info->tx_callback(uart_info->dev, uart_info->event_data,
+                               uart_info->xmit.buffer, uart_info->xmit.head,
+                               0);
     } else {
         sem_post(&uart_info->tx_sem);
     }
@@ -1100,8 +1115,9 @@ static int tsb_uart_stop_receiver(struct device *dev)
 
     if (uart_info->rx_callback) {
         uart_info->flags &= ~TSB_UART_FLAG_RECV;
-        uart_info->rx_callback(uart_info->recv.buffer,
-                               uart_info->recv.head, uart_info->line_err);
+        uart_info->rx_callback(uart_info->dev, uart_info->event_data,
+                               uart_info->recv.buffer, uart_info->recv.head,
+                               uart_info->line_err);
     } else {
         sem_post(&uart_info->rx_sem);
     }
