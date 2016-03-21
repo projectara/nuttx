@@ -154,9 +154,14 @@
 
 /* CLOCK_SWRST_TIMEOUT_CONTROL bit mask definition */
 #define SDCLK_FREQ_SELECT_MASK 0x0000FF00
+#define DATA_TIME_OUT_CNT_VAL_MASK 0x000F0000
 
 /* CLOCK_SWRST_TIMEOUT_CONTROL bit shift definition */
 #define SDCLK_FREQ_SELECT_SHIFT 8
+#define DATA_TIME_OUT_CNT_VAL_SHIFT 16
+
+/* CLOCK_SWRST_TIMEOUT_CONTROL DATA_TIME_OUT_CNT_VAL definition */
+#define MAX_DATA_TIMEOUT 0xE
 
 /* INT_ERR_STATUS bit field details */
 #define COMMAND_COMPLETE         BIT(0)
@@ -418,6 +423,7 @@
 /* Register definition */
 #define REGISTER_INTERVAL  1000 /* 1ms */
 #define REGISTER_MAX_RETRY 10
+#define REGISTER_DAT_MAX_RETRY 50
 
 /* R2 response bit mask definition */
 #define R2_RSP_MASK 0xFF000000
@@ -1345,7 +1351,9 @@ static void sdio_write_fifo_data(struct tsb_sdio_info *info)
                          DAT_LINE_ACTIVE | COMMAND_INHIBIT_DAT;
     int16_t remaining = 0, i = 0;
     uint8_t *wbuf = info->write_buf.buffer;
+    uint8_t retry = 0;
 
+    remaining = info->write_buf.tail - info->write_buf.head;
     presentstate = sdio_getreg(info->sdio_reg_base, PRESENTSTATE);
     while (presentstate & data_mask) {
         /* Check data timeout */
@@ -1359,7 +1367,11 @@ static void sdio_write_fifo_data(struct tsb_sdio_info *info)
         /* Check data error */
         if (!(presentstate & BUFFER_WRITE_ENABLE) &&
             (presentstate & WRITE_TRANSFER_ACTIVE)) {
-            break;
+            up_udelay(REGISTER_INTERVAL);
+            retry++;
+            if (retry == REGISTER_DAT_MAX_RETRY) {
+                break;
+            }
         }
 
         if (presentstate & BUFFER_WRITE_ENABLE) {
@@ -1370,7 +1382,6 @@ static void sdio_write_fifo_data(struct tsb_sdio_info *info)
              * Is there at least a full uint32_t data remaining in the user
              * buffer?
              */
-            remaining = info->write_buf.tail - info->write_buf.head;
             if (remaining >= sizeof(uint32_t)) {
                 /* Yes. Write uint32_t data to the FIFO */
                 buf_port = wbuf[info->write_buf.head] |
@@ -1390,6 +1401,7 @@ static void sdio_write_fifo_data(struct tsb_sdio_info *info)
                 info->write_buf.head = info->write_buf.tail;
             }
             sdio_putreg(info->sdio_reg_base, DATAPORTREG, buf_port);
+            remaining = info->write_buf.tail - info->write_buf.head;
 
             /* More blocks? */
             if (info->write_buf.head == info->write_buf.tail) { /* No */
@@ -1398,6 +1410,7 @@ static void sdio_write_fifo_data(struct tsb_sdio_info *info)
                     info->write_callback(info->write_buf.head, info->blksz,
                                          info->write_buf.buffer, 0);
                 }
+                break;
             }
         }
         presentstate = sdio_getreg(info->sdio_reg_base, PRESENTSTATE);
@@ -1422,7 +1435,9 @@ static void sdio_read_fifo_data(struct tsb_sdio_info *info)
                          DAT_LINE_ACTIVE | COMMAND_INHIBIT_DAT;
     int16_t remaining = 0, i = 0;
     uint8_t *rbuf = info->read_buf.buffer;
+    uint8_t retry = 0;
 
+    remaining = info->read_buf.tail - info->read_buf.head;
     presentstate = sdio_getreg(info->sdio_reg_base, PRESENTSTATE);
     while (presentstate & data_mask) {
         /* Check data timeout */
@@ -1436,7 +1451,11 @@ static void sdio_read_fifo_data(struct tsb_sdio_info *info)
         /* Check data error */
         if (!(presentstate & BUFFER_READ_ENABLE) &&
             (presentstate & READ_TRANSFER_ACTIVE)) {
-            break;
+            up_udelay(REGISTER_INTERVAL);
+            retry++;
+            if (retry == REGISTER_DAT_MAX_RETRY) {
+                break;
+            }
         }
 
         if (presentstate & BUFFER_READ_ENABLE) {
@@ -1447,7 +1466,6 @@ static void sdio_read_fifo_data(struct tsb_sdio_info *info)
              * Is there at least a full uint32_t data remaining in the user
              * buffer?
              */
-            remaining = info->read_buf.tail - info->read_buf.head;
             buf_port = sdio_getreg(info->sdio_reg_base, DATAPORTREG);
             if (remaining >= sizeof(uint32_t)) {
                 /* Yes. Transfer uint32_t data in FIFO to the user buffer */
@@ -1470,6 +1488,7 @@ static void sdio_read_fifo_data(struct tsb_sdio_info *info)
                 }
                 info->read_buf.head = info->read_buf.tail;
             }
+            remaining = info->read_buf.tail - info->read_buf.head;
 
             /* More blocks? */
             if (info->read_buf.head == info->read_buf.tail) { /* No */
@@ -1478,6 +1497,7 @@ static void sdio_read_fifo_data(struct tsb_sdio_info *info)
                     info->read_callback(info->read_buf.head, info->blksz,
                                         info->read_buf.buffer, 0);
                 }
+                break;
             }
         }
         presentstate = sdio_getreg(info->sdio_reg_base, PRESENTSTATE);
@@ -1799,6 +1819,9 @@ static int tsb_sdio_send_cmd(struct device *dev, struct sdio_cmd *cmd)
 
     /* Prepare data information */
     if (info->data_cmd) {
+        sdio_reg_field_set(info->sdio_reg_base, CLOCK_SWRST_TIMEOUT_CONTROL,
+                           DATA_TIME_OUT_CNT_VAL_MASK,
+                           MAX_DATA_TIMEOUT << DATA_TIME_OUT_CNT_VAL_SHIFT);
         sdio_putreg16(info->sdio_reg_base, BLK_SIZE_COUNT, info->blksz);
         sdio_putreg16(info->sdio_reg_base, BLK_SIZE_COUNT + REG_OFFSET,
                       info->blocks);
@@ -1810,12 +1833,12 @@ static int tsb_sdio_send_cmd(struct device *dev, struct sdio_cmd *cmd)
         if (cmd->cmd_type != HC_SDIO_CMD_BCR) {
             /* Wait for DAT Line unused */
             while ((sdio_getreg(info->sdio_reg_base, PRESENTSTATE) &
-                   COMMAND_INHIBIT_DAT) && (retry < REGISTER_MAX_RETRY)) {
+                   COMMAND_INHIBIT_DAT) && (retry < REGISTER_DAT_MAX_RETRY)) {
                 usleep(REGISTER_INTERVAL);
                 retry++;
             }
 
-            if (retry == REGISTER_MAX_RETRY) { /* Detect timeout */
+            if (retry == REGISTER_DAT_MAX_RETRY) { /* Detect timeout */
                 return -EINVAL;
             }
         }
