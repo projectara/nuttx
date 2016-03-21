@@ -82,7 +82,8 @@ struct gb_control_interface_version_response {
 #define GB_CONTROL_PWR_OK               0x00
 #define GB_CONTROL_PWR_BUSY             0x01
 #define GB_CONTROL_PWR_ERROR_CAP        0x02
-#define GB_CONTROL_PWR_FAIL             0x03
+#define GB_CONTROL_PWR_NOSUPP           0x03
+#define GB_CONTROL_PWR_FAIL             0x04
 
 struct gb_control_intf_pwr_set_request {
     __u8      pwr_state;
