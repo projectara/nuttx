@@ -205,7 +205,7 @@ static uint8_t gb_control_bundle_pwr_set(struct gb_operation *operation)
     pm_ops = dev->driver->pm;
     if (!pm_ops) {
         gb_info("pm operations not supported by %s driver\n", dev->name);
-        response->result_code = GB_CONTROL_PWR_OK;
+        response->result_code = GB_CONTROL_PWR_NOSUPP;
         return GB_OP_SUCCESS;
     }
 
@@ -215,6 +215,8 @@ static uint8_t gb_control_bundle_pwr_set(struct gb_operation *operation)
             status = pm_ops->poweroff(dev);
         } else {
             gb_info("poweroff not supported by %s driver\n", dev->name);
+            response->result_code = GB_CONTROL_PWR_NOSUPP;
+            goto out;
         }
         break;
     case GB_CONTROL_PWR_STATE_SUSPEND:
@@ -222,6 +224,8 @@ static uint8_t gb_control_bundle_pwr_set(struct gb_operation *operation)
             status = pm_ops->suspend(dev);
         } else {
             gb_info("suspend not supported by %s driver\n", dev->name);
+            response->result_code = GB_CONTROL_PWR_NOSUPP;
+            goto out;
         }
         break;
     case GB_CONTROL_PWR_STATE_ON:
@@ -229,6 +233,8 @@ static uint8_t gb_control_bundle_pwr_set(struct gb_operation *operation)
             status = pm_ops->resume(dev);
         } else {
             gb_info("resume not supported by %s driver\n", dev->name);
+            response->result_code = GB_CONTROL_PWR_NOSUPP;
+            goto out;
         }
         break;
     default:
@@ -236,6 +242,8 @@ static uint8_t gb_control_bundle_pwr_set(struct gb_operation *operation)
     }
 
     response->result_code = status ? GB_CONTROL_PWR_FAIL : GB_CONTROL_PWR_OK;
+
+out:
     return GB_OP_SUCCESS;
 }
 
