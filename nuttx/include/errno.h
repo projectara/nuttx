@@ -375,6 +375,8 @@
 #define ENOMEDIUM_STR       "No medium found"
 #define EMEDIUMTYPE         124
 #define EMEDIUMTYPE_STR     "Wrong medium type"
+#define ENOTSUP             252
+#define ENOTSUP_STR         "Not supported"
 
 /************************************************************************
  * Type Declarations
