@@ -212,20 +212,23 @@ static uint8_t gb_control_bundle_pwr_set(struct gb_operation *operation)
     switch (request->pwr_state) {
     case GB_CONTROL_PWR_STATE_OFF:
         if (pm_ops->poweroff) {
-            gb_info("poweroff not supported by %s driver\n", dev->name);
             status = pm_ops->poweroff(dev);
+        } else {
+            gb_info("poweroff not supported by %s driver\n", dev->name);
         }
         break;
     case GB_CONTROL_PWR_STATE_SUSPEND:
         if (pm_ops->suspend) {
-            gb_info("suspend not supported by %s driver\n", dev->name);
             status = pm_ops->suspend(dev);
+        } else {
+            gb_info("suspend not supported by %s driver\n", dev->name);
         }
         break;
     case GB_CONTROL_PWR_STATE_ON:
         if (pm_ops->resume) {
-            gb_info("resume not supported by %s driver\n", dev->name);
             status = pm_ops->resume(dev);
+        } else {
+            gb_info("resume not supported by %s driver\n", dev->name);
         }
         break;
     default:
