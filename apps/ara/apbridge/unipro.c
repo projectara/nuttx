@@ -52,12 +52,13 @@
 #define ONE_SEC_IN_MSEC         1000
 #define RESET_TIMEOUT_DELAY (TIMEOUT_IN_MS * CLOCKS_PER_SEC) / ONE_SEC_IN_MSEC
 
+static sem_t linkup_sem;
+
 struct cport_reset_priv {
     struct usbdev_s *dev;
     struct wdog_s timeout_wd;
     atomic_t refcount;
 };
-static struct work_s mbox_work;
 
 static void cport_reset_cb(unsigned int cportid, void *data)
 {
@@ -150,22 +151,12 @@ static struct unipro_driver unipro_driver = {
     .rx_handler = recv_from_unipro,
 };
 
-static void tsb_unipro_mbox_send_worker(void *priv)
-{
-    tsb_unipro_mbox_send(TSB_MAIL_READY_AP);
-}
-
 static void apbridge_unipro_evt_handler(enum unipro_event evt)
 {
     switch (evt) {
     case UNIPRO_EVT_LUP_DONE:
         tsb_unipro_set_init_status(INIT_STATUS_S3FW_BOOT_FINISHED);
-        /*
-         * Tell the SVC that the AP Module is ready.
-         * Don't execute this job from interrupt because it can take a while.
-         */
-        work_queue(HPWORK, &mbox_work,
-                   tsb_unipro_mbox_send_worker, NULL, 0);
+        sem_post(&linkup_sem);
         break;
 
     default:
@@ -178,6 +169,8 @@ static void unipro_backend_init(void)
     int i;
     unsigned int cport_count = unipro_cport_count();
 
+    sem_init(&linkup_sem, 0, 0);
+
     /* unipro_init{_*}() will initialize any non-display, non-camera CPorts */
     unipro_init_with_event_handler(apbridge_unipro_evt_handler);
 
@@ -188,6 +181,12 @@ static void unipro_backend_init(void)
             continue;
         unipro_driver_register(&unipro_driver, i);
     }
+}
+
+static void unipro_backend_unipro_enable(void)
+{
+    sem_wait(&linkup_sem);
+    tsb_unipro_mbox_send(TSB_MAIL_READY_AP);
 }
 
 static void unipro_cport_mapping(unsigned int cportid, enum ep_mapping mapping)
@@ -234,5 +233,6 @@ void apbridge_backend_register(struct apbridge_backend *apbridge_backend)
 
     apbridge_backend->usb_to_unipro = unipro_usb_to_unipro;
     apbridge_backend->init = unipro_backend_init;
+    apbridge_backend->unipro_enable = unipro_backend_unipro_enable;
     apbridge_backend->unipro_cport_mapping = unipro_cport_mapping;
 }

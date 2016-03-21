@@ -37,6 +37,7 @@ struct apbridge_backend {
     int (*usb_to_unipro)(unsigned int cportid, void *buf, size_t len,
                          unipro_send_completion_t callback, void *priv);
     void (*unipro_cport_mapping)(unsigned int cportid, enum ep_mapping mapping);
+    void (*unipro_enable)(void);
 
     void (*init)(void);
 };
