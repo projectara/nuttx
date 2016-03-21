@@ -36,6 +36,8 @@
 #include <nuttx/device.h>
 #include <nuttx/device_sdio.h>
 #include <nuttx/device_sdio_board.h>
+#include <nuttx/power/pm.h>
+#include <arch/tsb/pm.h>
 
 #include <nuttx/gpio.h>
 #include "up_arch.h"
@@ -433,6 +435,9 @@
 
 /* UniPro register time definition */
 #define UNIPRO_REGISTER_TIME 500000 /* 500ms */
+
+/* SDIO power management activity definition */
+#define TSB_SDIO_ACTIVITY 9
 
 /* SDIO buffer structure */
 struct sdio_buffer
@@ -1201,6 +1206,8 @@ int sdio_irq_event(int irq, void *context)
     struct tsb_sdio_info *info = device_get_private(sdio_dev);
     uint8_t value = 0;
 
+    pm_activity(TSB_SDIO_ACTIVITY);
+
     gpio_irq_mask(irq);
     value = gpio_get_value(info->cd_pin_number);
 
@@ -1583,6 +1590,156 @@ static void *sdio_card_detect_thread(void *data)
 }
 
 /**
+ * @brief Suspend SD host controller
+ *
+ * This function is to disable SDIO clock for suspend SD host controller.
+ * If SD host controller is in data transfer state, return busy to the caller.
+ *
+ * @param dev Pointer to structure of device.
+ * @return 0 on success, negative errno on error.
+ */
+static int tsb_sdio_suspend(struct device *dev)
+{
+    struct tsb_sdio_info *info = device_get_private(dev);
+
+    if (info->flags & (SDIO_FLAG_WRITE | SDIO_FLAG_READ)) {
+        return -EBUSY;
+    }
+
+    tsb_clk_disable(TSB_CLK_SDIOSYS);
+    tsb_clk_disable(TSB_CLK_SDIOSD);
+
+    return 0;
+}
+
+/**
+ * @brief Power off SD host controller
+ *
+ * This function is to disable SDIO clock for power off SD host controller.
+ * If SD host controller is in data transfer state, return busy to the caller.
+ *
+ * @param dev Pointer to structure of device.
+ * @return 0 on success, negative errno on error.
+ */
+static int tsb_sdio_poweroff(struct device *dev)
+{
+    return tsb_sdio_suspend(dev);
+}
+
+/**
+ * @brief Resume SD host controller
+ *
+ * This function is to enable SDIO clock for resume SD host controller.
+ *
+ * @param dev Pointer to structure of device.
+ * @return 0 on success, negative errno on error.
+ */
+static int tsb_sdio_resume(struct device *dev)
+{
+    tsb_clk_enable(TSB_CLK_SDIOSYS);
+    tsb_clk_enable(TSB_CLK_SDIOSD);
+
+    return 0;
+}
+
+#ifdef CONFIG_PM
+/**
+ * @brief Notify SDIO device driver to new power state
+ *
+ * This function is called after SDIO device driver had the opportunity to
+ * prepare for the new power state.
+ *
+ * @param cb Pointer to structure of power management callback functions.
+ * @param pmstate Power management states.
+ * @return None.
+ */
+static void tsb_sdio_pm_notify(struct pm_callback_s *cb,
+                               enum pm_state_e pmstate)
+{
+    struct device *dev;
+    irqstate_t flags;
+
+    dev = cb->priv;
+
+    flags = irqsave();
+
+    switch (pmstate) {
+    case PM_NORMAL:
+        tsb_sdio_resume(dev);
+        break;
+    case PM_IDLE:
+    case PM_STANDBY:
+        /* Nothing to do in idle or standby. */
+        break;
+    case PM_SLEEP:
+        tsb_sdio_suspend(dev);
+        break;
+    default:
+        /* Can never happen. */
+        PANIC();
+    }
+
+    irqrestore(flags);
+}
+
+/**
+ * @brief Request SDIO device driver to prepare for a new power state
+ *
+ * SDIO device driver should begin whatever operations that may be required to
+ * enter power state. The driver may abort the state change mode by
+ * returning a non-zero value.
+ *
+ * @param cb Pointer to structure of power management callback functions.
+ * @param pmstate Power management states.
+ * @return 0 on success, negative errno on error.
+ */
+static int tsb_sdio_pm_prepare(struct pm_callback_s *cb,
+                               enum pm_state_e pmstate)
+{
+    struct tsb_sdio_info *info;
+    struct device *dev;
+    irqstate_t flags;
+
+    dev = cb->priv;
+    info = device_get_private(dev);
+
+    flags = irqsave();
+
+    switch (pmstate) {
+    case PM_NORMAL:
+    case PM_IDLE:
+    case PM_STANDBY:
+        /* Nothing to do in normal, idle or standby. */
+        break;
+    case PM_SLEEP:
+        if (info->flags & (SDIO_FLAG_WRITE | SDIO_FLAG_READ)) {
+            return -EBUSY;
+        }
+        break;
+    default:
+        /* Can never happen. */
+        PANIC();
+    }
+
+    irqrestore(flags);
+
+    return OK;
+}
+#else
+static void tsb_sdio_pm_notify(struct pm_callback_s *cb,
+                               enum pm_state_e pmstate)
+{
+
+}
+
+static int tsb_sdio_pm_prepare(struct pm_callback_s *cb,
+                               enum pm_state_e pmstate)
+{
+    return OK;
+}
+#endif
+
+/**
  * @brief Get capabilities of SD host controller
  *
  * This function is to get capabilities of SD host controller. The
@@ -1664,6 +1821,8 @@ static int tsb_sdio_set_ios(struct device *dev, struct sdio_ios *ios)
     struct tsb_sdio_info *info = device_get_private(dev);
 
     uint32_t uhs_mode_sel = 0;
+
+    pm_activity(TSB_SDIO_ACTIVITY);
 
     /* Set clock */
     if (sdio_clock_supply(ios, info)) {
@@ -1776,6 +1935,8 @@ static int tsb_sdio_send_cmd(struct device *dev, struct sdio_cmd *cmd)
     struct tsb_sdio_info *info = device_get_private(dev);
     uint8_t cmd_flags = 0;
     uint8_t retry = 0;
+
+    pm_activity(TSB_SDIO_ACTIVITY);
 
     /*
      * It needs to disable transfer complete interrupt in host for masking
@@ -2287,12 +2448,20 @@ static int tsb_sdio_dev_probe(struct device *dev)
     info->dev = dev;
     device_set_private(dev, info);
 
+    ret = tsb_pm_register(tsb_sdio_pm_prepare, tsb_sdio_pm_notify, dev);
+    if (ret) {
+        goto err_disable_irq;
+    }
+
     irqrestore(flags);
 
     return 0;
 
-err_destroy_card_detect_sem:
+err_disable_irq:
     irqrestore(flags);
+    up_disable_irq(info->sdio_irq);
+    irq_detach(info->sdio_irq);
+err_destroy_card_detect_sem:
     sem_destroy(&info->card_detect_sem);
 err_destroy_read_sem:
     sem_destroy(&info->read_sem);
@@ -2352,6 +2521,12 @@ static void tsb_sdio_dev_remove(struct device *dev)
     tsb_release_pinshare(TSB_PIN_SDIO);
 }
 
+static struct device_pm_ops tsb_sdio_pm_ops = {
+    .suspend  = tsb_sdio_suspend,
+    .poweroff = tsb_sdio_poweroff,
+    .resume   = tsb_sdio_resume,
+};
+
 static struct device_sdio_type_ops tsb_sdio_type_ops = {
     .get_capabilities = tsb_sdio_get_capability,
     .set_ios          = tsb_sdio_set_ios,
@@ -2374,4 +2549,5 @@ struct device_driver tsb_sdio_driver = {
     .name = "tsb_sdio",
     .desc = "TSB SDIO Driver",
     .ops  = &tsb_sdio_driver_ops,
+    .pm   = &tsb_sdio_pm_ops,
 };
