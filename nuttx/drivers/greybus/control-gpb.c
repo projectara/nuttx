@@ -232,12 +232,7 @@ static uint8_t gb_control_bundle_pwr_set(struct gb_operation *operation)
         return GB_OP_PROTOCOL_BAD;
     }
 
-    if (status) {
-        response->result_code = GB_CONTROL_PWR_FAIL;
-        return gb_errno_to_op_result(status);
-    }
-
-    response->result_code = GB_CONTROL_PWR_OK;
+    response->result_code = status ? GB_CONTROL_PWR_FAIL : GB_CONTROL_PWR_OK;
     return GB_OP_SUCCESS;
 }
 
