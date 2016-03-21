@@ -604,36 +604,37 @@ static struct vreg_data evt2_module_4B_refclk_vreg_data[] = {
     INIT_MODULE_CLK_DATA(EVT2_REFCLK_4B_EN),
 };
 
-DECLARE_MODULE_PORT_INTERFACE(evt2_module_1, "module_1",
-                              evt1_5_module_1_vsys_vreg_data,
-                              evt2_module_1_refclk_vreg_data, 13, WD_1_DET,
-                              ARA_IFACE_WD_ACTIVE_LOW, true,
-                              MOD_RELEASE_1);
-DECLARE_MODULE_PORT_INTERFACE(evt2_module_2, "module_2",
-                              evt1_5_module_2_vsys_vreg_data,
-                              evt2_module_2_refclk_vreg_data, 11, WD_2_DET,
-                              ARA_IFACE_WD_ACTIVE_LOW, true,
-                              MOD_RELEASE_2);
-DECLARE_MODULE_PORT_INTERFACE(evt2_module_3A, "module_3a",
-                              evt1_5_module_3A_vsys_vreg_data,
-                              evt2_module_3A_refclk_vreg_data, 4, WD_3A_DET,
-                              ARA_IFACE_WD_ACTIVE_LOW, true,
-                              EVT2_MOD_RELEASE_3A);
-DECLARE_MODULE_PORT_INTERFACE(evt2_module_3B, "module_3b",
-                              evt1_5_module_3B_vsys_vreg_data,
-                              evt2_module_3B_refclk_vreg_data, 2, WD_3B_DET,
-                              ARA_IFACE_WD_ACTIVE_LOW, true,
-                              MOD_RELEASE_3B);
-DECLARE_MODULE_PORT_INTERFACE(evt2_module_4A, "module_4a",
-                              evt1_5_module_4A_vsys_vreg_data,
-                              evt2_module_4A_refclk_vreg_data, 6, WD_4A_DET,
-                              ARA_IFACE_WD_ACTIVE_LOW, true,
-                              MOD_RELEASE_4A);
-DECLARE_MODULE_PORT_INTERFACE(evt2_module_4B, "module_4b",
-                              evt1_5_module_4B_vsys_vreg_data,
-                              evt2_module_4B_refclk_vreg_data, 8, WD_4B_DET,
-                              ARA_IFACE_WD_ACTIVE_LOW, true,
-                              MOD_RELEASE_4B);
+DECLARE_MODULE_PORT_INTERFACE2(evt2_module_1, "module_1",
+                               evt1_5_module_1_vsys_vreg_data,
+                               evt2_module_1_refclk_vreg_data, 13, WD_1_DET,
+                               ARA_IFACE_WD_ACTIVE_HIGH, LATCH_1_DET,
+                               ARA_IFACE_WD_ACTIVE_LOW, true, MOD_RELEASE_1);
+DECLARE_MODULE_PORT_INTERFACE2(evt2_module_2, "module_2",
+                               evt1_5_module_2_vsys_vreg_data,
+                               evt2_module_2_refclk_vreg_data, 11, WD_2_DET,
+                               ARA_IFACE_WD_ACTIVE_HIGH, LATCH_2_DET,
+                               ARA_IFACE_WD_ACTIVE_LOW, true, MOD_RELEASE_2);
+DECLARE_MODULE_PORT_INTERFACE2(evt2_module_3A, "module_3a",
+                               evt1_5_module_3A_vsys_vreg_data,
+                               evt2_module_3A_refclk_vreg_data, 4, WD_3A_DET,
+                               ARA_IFACE_WD_ACTIVE_HIGH, LATCH_3A_DET,
+                               ARA_IFACE_WD_ACTIVE_LOW, true,
+                               EVT2_MOD_RELEASE_3A);
+DECLARE_MODULE_PORT_INTERFACE2(evt2_module_3B, "module_3b",
+                               evt1_5_module_3B_vsys_vreg_data,
+                               evt2_module_3B_refclk_vreg_data, 2, WD_3B_DET,
+                               ARA_IFACE_WD_ACTIVE_HIGH, LATCH_3B_DET,
+                               ARA_IFACE_WD_ACTIVE_LOW, true, MOD_RELEASE_3B);
+DECLARE_MODULE_PORT_INTERFACE2(evt2_module_4A, "module_4a",
+                               evt1_5_module_4A_vsys_vreg_data,
+                               evt2_module_4A_refclk_vreg_data, 6, WD_4A_DET,
+                               ARA_IFACE_WD_ACTIVE_HIGH, LATCH_4A_DET,
+                               ARA_IFACE_WD_ACTIVE_LOW, true, MOD_RELEASE_4A);
+DECLARE_MODULE_PORT_INTERFACE2(evt2_module_4B, "module_4b",
+                               evt1_5_module_4B_vsys_vreg_data,
+                               evt2_module_4B_refclk_vreg_data, 8, WD_4B_DET,
+                               ARA_IFACE_WD_ACTIVE_HIGH, LATCH_4B_DET,
+                               ARA_IFACE_WD_ACTIVE_LOW, true, MOD_RELEASE_4B);
 
 static struct interface *evt2_interfaces[] = {
     &evt2_apb1_interface,
