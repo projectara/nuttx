@@ -54,11 +54,7 @@
 struct gb_sdio_info {
     /** CPort from greybus */
     unsigned int    cport;
-    /** SDIO driver handle */
-    struct device   *dev;
 };
-
-static struct gb_sdio_info *info = NULL;
 
 /**
  * @brief Return the max block length value in scale
@@ -84,13 +80,18 @@ static uint16_t scale_max_sd_block_length(uint16_t value)
 /**
  * @brief Event callback function for SDIO host controller driver
  *
+ * @param data Pointer to gb_sdio_info.
  * @param event Event type.
  * @return 0 on success, negative errno on error.
  */
-static int event_callback(uint8_t event)
+static int event_callback(void *data, uint8_t event)
 {
     struct gb_operation *operation;
     struct gb_sdio_event_request *request;
+    struct gb_sdio_info *info;
+
+    DEBUGASSERT(data);
+    info = data;
 
     operation = gb_operation_create(info->cport, GB_SDIO_TYPE_EVENT,
                                     sizeof(*request));
@@ -143,11 +144,15 @@ static uint8_t gb_sdio_protocol_version(struct gb_operation *operation)
 static uint8_t gb_sdio_protocol_get_capabilities(struct gb_operation *operation)
 {
     struct gb_sdio_get_capabilities_response *response;
+    struct gb_bundle *bundle;
     struct sdio_cap cap;
     uint16_t max_data_size;
     int ret;
 
-    ret = device_sdio_get_capabilities(info->dev, &cap);
+    bundle = gb_operation_get_bundle(operation);
+    DEBUGASSERT(bundle);
+
+    ret = device_sdio_get_capabilities(bundle->dev, &cap);
     if (ret) {
         return gb_errno_to_op_result(ret);
     }
@@ -196,8 +201,12 @@ static uint8_t gb_sdio_protocol_get_capabilities(struct gb_operation *operation)
 static uint8_t gb_sdio_protocol_set_ios(struct gb_operation *operation)
 {
     struct gb_sdio_set_ios_request *request;
+    struct gb_bundle *bundle;
     struct sdio_ios ios;
     int ret;
+
+    bundle = gb_operation_get_bundle(operation);
+    DEBUGASSERT(bundle);
 
     request = gb_operation_get_request_payload(operation);
 
@@ -214,7 +223,7 @@ static uint8_t gb_sdio_protocol_set_ios(struct gb_operation *operation)
     ios.timing = request->timing;
     ios.signal_voltage = request->signal_voltage;
     ios.drv_type = request->drv_type;
-    ret = device_sdio_set_ios(info->dev, &ios);
+    ret = device_sdio_set_ios(bundle->dev, &ios);
     if (ret) {
         return gb_errno_to_op_result(ret);
     }
@@ -234,9 +243,13 @@ static uint8_t gb_sdio_protocol_command(struct gb_operation *operation)
 {
     struct gb_sdio_command_request *request;
     struct gb_sdio_command_response *response;
+    struct gb_bundle *bundle;
     struct sdio_cmd cmd;
     uint32_t resp[4];
     int i, ret;
+
+    bundle = gb_operation_get_bundle(operation);
+    DEBUGASSERT(bundle);
 
     request = gb_operation_get_request_payload(operation);
 
@@ -252,7 +265,7 @@ static uint8_t gb_sdio_protocol_command(struct gb_operation *operation)
     cmd.data_blocks = le16_to_cpu(request->data_blocks);
     cmd.data_blksz = le16_to_cpu(request->data_blksz);
     cmd.resp = resp;
-    ret = device_sdio_send_cmd(info->dev, &cmd);
+    ret = device_sdio_send_cmd(bundle->dev, &cmd);
     if (ret && ret != -ETIMEDOUT) {
         /*
          * The Linux MMC core send pariticular command to indentify the card is
@@ -307,8 +320,12 @@ static uint8_t gb_sdio_protocol_transfer(struct gb_operation *operation)
 {
     struct gb_sdio_transfer_request *request;
     struct gb_sdio_transfer_response *response;
+    struct gb_bundle *bundle;
     struct sdio_transfer transfer;
     int ret;
+
+    bundle = gb_operation_get_bundle(operation);
+    DEBUGASSERT(bundle);
 
     request = gb_operation_get_request_payload(operation);
 
@@ -327,7 +344,7 @@ static uint8_t gb_sdio_protocol_transfer(struct gb_operation *operation)
             return GB_OP_INVALID;
         }
         transfer.data = request->data;
-        ret = device_sdio_write(info->dev, &transfer);
+        ret = device_sdio_write(bundle->dev, &transfer);
         if (ret) {
             return gb_errno_to_op_result(ret);
         }
@@ -345,7 +362,7 @@ static uint8_t gb_sdio_protocol_transfer(struct gb_operation *operation)
             return GB_OP_NO_MEMORY;
         }
         transfer.data = response->data;
-        ret = device_sdio_read(info->dev, &transfer);
+        ret = device_sdio_read(bundle->dev, &transfer);
         if (ret) {
             return gb_errno_to_op_result(ret);
         }
@@ -370,8 +387,10 @@ static uint8_t gb_sdio_protocol_transfer(struct gb_operation *operation)
  */
 static int gb_sdio_init(unsigned int cport, struct gb_bundle *bundle)
 {
+    struct gb_sdio_info *info;
     int ret;
 
+    DEBUGASSERT(bundle);
 
     info = zalloc(sizeof(*info));
     if (info == NULL) {
@@ -380,13 +399,13 @@ static int gb_sdio_init(unsigned int cport, struct gb_bundle *bundle)
 
     info->cport = cport;
 
-    info->dev = device_open(DEVICE_TYPE_SDIO_HW, 0);
-    if (!info->dev) {
+    bundle->dev = device_open(DEVICE_TYPE_SDIO_HW, 0);
+    if (!bundle->dev) {
         ret = -ENODEV;
         goto err_free_info;
     }
 
-    ret = device_sdio_attach_callback(info->dev, event_callback);
+    ret = device_sdio_attach_callback(bundle->dev, event_callback, info);
     if (ret) {
         goto err_close_device;
     }
@@ -394,7 +413,7 @@ static int gb_sdio_init(unsigned int cport, struct gb_bundle *bundle)
     return 0;
 
 err_close_device:
-    device_close(info->dev);
+    device_close(bundle->dev);
 err_free_info:
     free(info);
 
@@ -412,11 +431,16 @@ err_free_info:
  */
 static void gb_sdio_exit(unsigned int cport, struct gb_bundle *bundle)
 {
+    struct gb_sdio_info *info;
+
+    DEBUGASSERT(bundle);
+    info = bundle->priv;
+
     DEBUGASSERT(cport == info->cport);
 
-    device_sdio_attach_callback(info->dev, NULL);
+    device_sdio_attach_callback(bundle->dev, NULL, NULL);
 
-    device_close(info->dev);
+    device_close(bundle->dev);
 
     free(info);
     info = NULL;

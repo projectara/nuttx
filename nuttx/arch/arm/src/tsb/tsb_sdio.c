@@ -482,6 +482,8 @@ struct tsb_sdio_info {
     sem_t card_detect_sem;
     /** DMA handler */
     void *dma;
+    /** Private data pass to sdio_event_callback */
+    void *event_data;
     /** SDIO IRQ number */
     int sdio_irq;
     /** SDIO interrupt error status for the return of command */
@@ -1236,7 +1238,7 @@ int sdio_irq_event(int irq, void *context)
 
     if (info->pre_card_event != info->card_event) {
         if (info->callback) {
-            info->callback(info->card_event);
+            info->callback(info->event_data, info->card_event);
         }
         info->pre_card_event = info->card_event;
     }
@@ -1571,7 +1573,7 @@ static void *sdio_card_detect_thread(void *data)
         if (info->pre_card_event != info->card_event) {
             if (info->callback) {
                 usleep(UNIPRO_REGISTER_TIME);
-                info->callback(info->card_event);
+                info->callback(info->event_data, info->card_event);
             }
             info->pre_card_event = info->card_event;
         }
@@ -1991,10 +1993,12 @@ static int tsb_sdio_read(struct device *dev, struct sdio_transfer *transfer)
  *
  * @param dev Pointer to structure of device.
  * @param callback Pointer to event callback function.
+ * @param data Private data pass to the callback.
  * @return 0 on success, negative errno on error.
  */
 static int tsb_sdio_attach_callback(struct device *dev,
-                                    sdio_event_callback callback)
+                                    sdio_event_callback callback,
+                                    void *data)
 {
     struct tsb_sdio_info *info = NULL;
 
@@ -2004,6 +2008,8 @@ static int tsb_sdio_attach_callback(struct device *dev,
     info = device_get_private(dev);
 
     info->callback = callback;
+    info->event_data = data;
+
     return 0;
 }
 
