@@ -98,7 +98,6 @@ struct stm32_exti_handlers_priv_t {
     uint32_t pinset;
 };
 
-
 /* Handlers that pass private data ptr */
 static struct stm32_exti_handlers_priv_t stm32_exti_handlers[16] = {
     { .debounce.gpio = 0, .debounce.ms = 0, .debounce.isr = NULL },
@@ -429,4 +428,18 @@ xcpt_t stm32_gpiosetevent_priv(uint32_t pinset, bool risingedge,
 
   /* Return the old IRQ handler */
   return oldhandler;
+}
+
+/*
+ * Returns:
+ *  OK if debounce time is set
+ */
+int stm32_gpiosetdebounce(uint32_t pinset, uint16_t delay_ms)
+{
+    uint32_t pin = pinset & GPIO_PIN_MASK;
+
+    stm32_exti_handlers[pin].debounce.ms = delay_ms;
+    stm32_exti_handlers[pin].debounce.db_state = DB_ST_INVALID;
+
+    return OK;
 }

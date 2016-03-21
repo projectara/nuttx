@@ -265,8 +265,21 @@ static enum gpio_pull_type stm32_gpio_get_pull(void *driver_data, uint8_t pin)
 static int stm32_gpio_set_debounce(void *driver_data, uint8_t pin,
                                    uint16_t delay)
 {
-    //TODO implement debouncing for STM32 gpio driver
-    return -ENOSYS;
+    uint32_t cfgset;
+    int ret = 0;
+
+    lldbg("%s: pin=%hhu\n", __func__, pin);
+
+    ret = map_pin_nr_to_cfgset(pin, &cfgset);
+    if (ret) {
+        lldbg("%s: Invalid pin %hhu\n", __func__, pin);
+        return ret;
+    }
+
+    // preserve pull up/pull down
+    cfgset |= stm32_get_pupd(cfgset);
+
+    return stm32_gpiosetdebounce(cfgset, delay);
 }
 
 static int stm32_gpio_irqattach(void *driver_data, uint8_t pin, xcpt_t isr,

@@ -33,7 +33,7 @@
  *
  ************************************************************************************/
 /*
- * Copyright (c) 2015 Google, Inc.
+ * Copyright (c) 2016 Google, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -115,6 +115,24 @@ extern "C" {
 EXTERN xcpt_t stm32_gpiosetevent_priv(uint32_t pinset, bool risingedge,
                                            bool fallingedge, bool event,
                                            xcpt_t func, void *priv);
+
+/*****************************************************************************
+ *
+ * Name: stm32_gpiosetdebounce
+ *
+ * Description:
+ *  Sets the debounce delay time for a gpio pin
+ *
+ * Parameters:
+ *  - pinset: gpio pin configuration
+ *  - delay_ms: delay time in milliseconds
+ *
+ * Returns:
+ *  OK if delay time sucessfully set
+ *
+ *****************************************************************************/
+
+EXTERN int stm32_gpiosetdebounce(uint32_t pinset, uint16_t delay_ms);
 
 /****************************************************************************
  * Name: stm32_exti_alarm
