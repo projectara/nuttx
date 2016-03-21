@@ -69,6 +69,7 @@
 #include <nuttx/config.h>
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
+#include <nuttx/gpio/debounce.h>
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -91,11 +92,32 @@ struct stm32_exti_handlers_priv_t {
     xcpt_t stm32_exti_callback;
     uint32_t pin;
     void *priv;
+    struct debounce_data debounce;
+    bool risingedge;
+    bool fallingedge;
+    uint32_t pinset;
 };
 
 
 /* Handlers that pass private data ptr */
-static struct stm32_exti_handlers_priv_t stm32_exti_handlers[16];
+static struct stm32_exti_handlers_priv_t stm32_exti_handlers[16] = {
+    { .debounce.gpio = 0, .debounce.ms = 0, .debounce.isr = NULL },
+    { .debounce.gpio = 1, .debounce.ms = 0, .debounce.isr = NULL },
+    { .debounce.gpio = 2, .debounce.ms = 0, .debounce.isr = NULL },
+    { .debounce.gpio = 3, .debounce.ms = 0, .debounce.isr = NULL },
+    { .debounce.gpio = 4, .debounce.ms = 0, .debounce.isr = NULL },
+    { .debounce.gpio = 5, .debounce.ms = 0, .debounce.isr = NULL },
+    { .debounce.gpio = 6, .debounce.ms = 0, .debounce.isr = NULL },
+    { .debounce.gpio = 7, .debounce.ms = 0, .debounce.isr = NULL },
+    { .debounce.gpio = 8, .debounce.ms = 0, .debounce.isr = NULL },
+    { .debounce.gpio = 9, .debounce.ms = 0, .debounce.isr = NULL },
+    { .debounce.gpio = 10, .debounce.ms = 0, .debounce.isr = NULL },
+    { .debounce.gpio = 11, .debounce.ms = 0, .debounce.isr = NULL },
+    { .debounce.gpio = 12, .debounce.ms = 0, .debounce.isr = NULL },
+    { .debounce.gpio = 13, .debounce.ms = 0, .debounce.isr = NULL },
+    { .debounce.gpio = 14, .debounce.ms = 0, .debounce.isr = NULL },
+    { .debounce.gpio = 15, .debounce.ms = 0, .debounce.isr = NULL },
+};
 
 /****************************************************************************
  * Public Data
@@ -397,6 +419,10 @@ xcpt_t stm32_gpiosetevent_priv(uint32_t pinset, bool risingedge,
   stm32_exti_handlers[pin].stm32_exti_callback = func;
   stm32_exti_handlers[pin].pin = pin;
   stm32_exti_handlers[pin].priv = priv;
+  stm32_exti_handlers[pin].risingedge = risingedge;
+  stm32_exti_handlers[pin].fallingedge = fallingedge;
+  stm32_exti_handlers[pin].pinset = pinset;
+  stm32_exti_handlers[pin].debounce.db_state = DB_ST_INVALID;
 
   /* Re-enable IRQs */
   irqrestore(flags);
