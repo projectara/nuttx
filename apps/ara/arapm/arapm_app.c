@@ -606,8 +606,6 @@ static int arapm_main_init(void)
         }
     }
 
-    measurements[i] = malloc(sizeof(ina230_sample) * INA230_MAX_DEVS);
-
     /* Clear pointers and measurements*/
     for (d = 0; d < pwrmon_num_devs; d++) {
         for (r = 0; r < INA230_MAX_DEVS; r++) {
