@@ -57,8 +57,8 @@
 #define GB_SVC_TYPE_INTF_EJECT          0x11
 #define GB_SVC_TYPE_KEY_EVENT           0x12
 #define GB_SVC_TYPE_PING                0x13
-#define GB_SVC_TYPE_INTF_PWR_ENABLE     0x14
-#define GB_SVC_TYPE_INTF_REFCLK_ENABLE  0x15
+#define GB_SVC_TYPE_INTF_PWR_ENABLE     0x18
+#define GB_SVC_TYPE_INTF_REFCLK_ENABLE  0x19
 
 struct gb_svc_protocol_version_request {
     __u8        major;
