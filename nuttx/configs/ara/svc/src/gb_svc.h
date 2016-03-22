@@ -32,33 +32,37 @@
 #include <nuttx/greybus/types.h>
 
 /* SVC IDs */
-#define GB_SVC_CPORT_ID                 0x00
-#define GB_SVC_DEVICE_ID                0x01
+#define GB_SVC_CPORT_ID                         0x00
+#define GB_SVC_DEVICE_ID                        0x01
 
 /* Version of the Greybus SVC protocol we support */
-#define GB_SVC_VERSION_MAJOR            0x00
-#define GB_SVC_VERSION_MINOR            0x01
+#define GB_SVC_VERSION_MAJOR                    0x00
+#define GB_SVC_VERSION_MINOR                    0x01
 
 /* Greybus SVC request types */
-#define GB_SVC_TYPE_INVALID             0x00
-#define GB_SVC_TYPE_PROTOCOL_VERSION    0x01
-#define GB_SVC_TYPE_HELLO               0x02
-#define GB_SVC_TYPE_INTF_DEVICE_ID      0x03
-#define GB_SVC_TYPE_INTF_HOTPLUG        0x04
-#define GB_SVC_TYPE_INTF_HOT_UNPLUG     0x05
-#define GB_SVC_TYPE_INTF_RESET          0x06
-#define GB_SVC_TYPE_CONN_CREATE         0x07
-#define GB_SVC_TYPE_CONN_DESTROY        0x08
-#define GB_SVC_TYPE_DME_PEER_GET        0x09
-#define GB_SVC_TYPE_DME_PEER_SET        0x0a
-#define GB_SVC_TYPE_ROUTE_CREATE        0x0b
-#define GB_SVC_TYPE_ROUTE_DESTROY       0x0c
-#define GB_SVC_TYPE_INTF_SET_PWRM       0x10
-#define GB_SVC_TYPE_INTF_EJECT          0x11
-#define GB_SVC_TYPE_KEY_EVENT           0x12
-#define GB_SVC_TYPE_PING                0x13
-#define GB_SVC_TYPE_INTF_PWR_ENABLE     0x18
-#define GB_SVC_TYPE_INTF_REFCLK_ENABLE  0x19
+#define GB_SVC_TYPE_INVALID                     0x00
+#define GB_SVC_TYPE_PROTOCOL_VERSION            0x01
+#define GB_SVC_TYPE_HELLO                       0x02
+#define GB_SVC_TYPE_INTF_DEVICE_ID              0x03
+#define GB_SVC_TYPE_INTF_HOTPLUG                0x04
+#define GB_SVC_TYPE_INTF_HOT_UNPLUG             0x05
+#define GB_SVC_TYPE_INTF_RESET                  0x06
+#define GB_SVC_TYPE_CONN_CREATE                 0x07
+#define GB_SVC_TYPE_CONN_DESTROY                0x08
+#define GB_SVC_TYPE_DME_PEER_GET                0x09
+#define GB_SVC_TYPE_DME_PEER_SET                0x0a
+#define GB_SVC_TYPE_ROUTE_CREATE                0x0b
+#define GB_SVC_TYPE_ROUTE_DESTROY               0x0c
+#define GB_SVC_TYPE_INTF_SET_PWRM               0x10
+#define GB_SVC_TYPE_INTF_EJECT                  0x11
+#define GB_SVC_TYPE_KEY_EVENT                   0x12
+#define GB_SVC_TYPE_PING                        0x13
+#define GB_SVC_TYPE_PWRMON_RAIL_COUNT_GET       0x14
+#define GB_SVC_TYPE_PWRMON_RAIL_NAMES_GET       0x15
+#define GB_SVC_TYPE_PWRMON_SAMPLE_GET           0x16
+#define GB_SVC_TYPE_PWRMON_INTF_SAMPLE_GET      0x17
+#define GB_SVC_TYPE_INTF_PWR_ENABLE             0x18
+#define GB_SVC_TYPE_INTF_REFCLK_ENABLE          0x19
 
 struct gb_svc_protocol_version_request {
     __u8        major;
@@ -203,6 +207,41 @@ struct gb_svc_key_event_request {
 #define GB_SVC_KEY_RELEASED	0x00
 #define GB_SVC_KEY_PRESSED	0x01
 } __packed;
+
+struct gb_svc_pwrmon_rail_count_get_response {
+    __u8        rail_count;
+};
+
+#define GB_SVC_PWRMON_RAIL_NAME_BUFSIZE 32
+
+#define GB_SVC_PWRMON_TYPE_CURR         0x01
+#define GB_SVC_PWRMON_TYPE_VOL          0x02
+#define GB_SVC_PWRMON_TYPE_PWR          0x03
+
+#define GB_SVC_PWRMON_GET_SAMPLE_OK     0x00
+#define GB_SVC_PWRMON_GET_SAMPLE_INVAL  0x01
+#define GB_SVC_PWRMON_GET_SAMPLE_NOSUPP 0x02
+#define GB_SVC_PWRMON_GET_SAMPLE_HWERR  0x03
+
+struct gb_svc_pwrmon_sample_get_request {
+    __u8        rail_id;
+    __u8        measurement_type;
+};
+
+struct gb_svc_pwrmon_sample_get_response {
+    __u8        result;
+    __le32      measurement;
+};
+
+struct gb_svc_pwrmon_intf_sample_get_request {
+    __u8        intf_id;
+    __u8        measurement_type;
+};
+
+struct gb_svc_pwrmon_intf_sample_get_response {
+    __u8        result;
+    __le32      measurement;
+};
 
 struct gb_svc_intf_pwr_enable_request {
     __u8        intf_id;

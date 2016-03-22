@@ -468,6 +468,59 @@ static uint8_t gb_svc_intf_set_power_mode(struct gb_operation *op) {
     return GB_OP_SUCCESS;
 }
 
+static uint8_t gb_svc_pwrmon_rail_count_get(struct gb_operation *operation)
+{
+    struct gb_svc_pwrmon_rail_count_get_response *response;
+
+    response = gb_operation_alloc_response(operation, sizeof(*response));
+    if (!response) {
+        return GB_OP_NO_MEMORY;
+    }
+
+    return GB_OP_PROTOCOL_BAD; /* not supported yet */
+}
+
+static uint8_t gb_svc_pwrmon_rail_names_get(struct gb_operation *operation)
+{
+    return GB_OP_PROTOCOL_BAD; /* not supported yet */
+}
+
+static uint8_t gb_svc_pwrmon_sample_get(struct gb_operation *operation)
+{
+    struct gb_svc_pwrmon_sample_get_request *request;
+    struct gb_svc_pwrmon_sample_get_response *response;
+
+    if (gb_operation_get_request_payload_size(operation) < sizeof(*request)) {
+        gb_error("dropping short message\n");
+        return GB_OP_INVALID;
+    }
+
+    response = gb_operation_alloc_response(operation, sizeof(*response));
+    if (!response) {
+        return GB_OP_NO_MEMORY;
+    }
+
+    return GB_OP_PROTOCOL_BAD; /* not supported yet */
+}
+
+static uint8_t gb_svc_pwrmon_intf_sample_get(struct gb_operation *operation)
+{
+    struct gb_svc_pwrmon_intf_sample_get_request *request;
+    struct gb_svc_pwrmon_intf_sample_get_response *response;
+
+    if (gb_operation_get_request_payload_size(operation) < sizeof(*request)) {
+        gb_error("dropping short message\n");
+        return GB_OP_INVALID;
+    }
+
+    response = gb_operation_alloc_response(operation, sizeof(*response));
+    if (!response) {
+        return GB_OP_NO_MEMORY;
+    }
+
+    return GB_OP_PROTOCOL_BAD; /* not supported yet */
+}
+
 static uint8_t gb_svc_intf_pwr_enable(struct gb_operation *operation)
 {
     struct gb_svc_intf_pwr_enable_request *request;
@@ -561,6 +614,10 @@ static struct gb_operation_handler gb_svc_handlers[] = {
     GB_HANDLER(GB_SVC_TYPE_PING, gb_svc_ping),
     GB_HANDLER(GB_SVC_TYPE_INTF_PWR_ENABLE, gb_svc_intf_pwr_enable),
     GB_HANDLER(GB_SVC_TYPE_INTF_REFCLK_ENABLE, gb_svc_intf_refclk_enable),
+    GB_HANDLER(GB_SVC_TYPE_PWRMON_RAIL_COUNT_GET, gb_svc_pwrmon_rail_count_get),
+    GB_HANDLER(GB_SVC_TYPE_PWRMON_RAIL_NAMES_GET, gb_svc_pwrmon_rail_names_get),
+    GB_HANDLER(GB_SVC_TYPE_PWRMON_SAMPLE_GET, gb_svc_pwrmon_sample_get),
+    GB_HANDLER(GB_SVC_TYPE_PWRMON_INTF_SAMPLE_GET, gb_svc_pwrmon_intf_sample_get),
 };
 
 struct gb_driver svc_driver = {
