@@ -171,6 +171,11 @@ static uint8_t gb_control_intf_pwr_set(struct gb_operation *operation)
     struct gb_control_intf_pwr_set_request *request;
     struct gb_control_intf_pwr_set_response *response;
 
+    if (gb_operation_get_request_payload_size(operation) < sizeof(*request)) {
+        gb_error("dropping short message\n");
+        return GB_OP_INVALID;
+    }
+
     response = gb_operation_alloc_response(operation, sizeof(*response));
     if (!response)
         return GB_OP_NO_MEMORY;
@@ -189,6 +194,11 @@ static uint8_t gb_control_bundle_pwr_set(struct gb_operation *operation)
     struct gb_bundle *bundle;
     struct device *dev;
     int status = 0;
+
+    if (gb_operation_get_request_payload_size(operation) < sizeof(*request)) {
+        gb_error("dropping short message\n");
+        return GB_OP_INVALID;
+    }
 
     response = gb_operation_alloc_response(operation, sizeof(*response));
     if (!response)
