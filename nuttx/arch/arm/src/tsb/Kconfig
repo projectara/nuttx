@@ -82,6 +82,11 @@ config ARCH_UNIPROTX_DMA_WMB
     default y
     depends on ARCH_UNIPROTX_USE_DMA
 
+config ARCH_SHARE_DMA
+    bool "Sharing DMA Driver"
+	---help---
+        Enable DMA driver for multiple clients to use
+
 config ARCH_CHIP_DEVICE_PWM
 	bool "PWM Support"
 	select DEVICE_CORE

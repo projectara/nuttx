@@ -130,6 +130,10 @@ endif
 
 CMN_CSRCS += tsb_unipro_tx.c
 
+ifeq ($(CONFIG_ARCH_SHARE_DMA), y)
+CHIP_CSRCS += tsb_dma_share.c
+endif
+
 ifeq ($(CONFIG_ARCH_CHIP_USB_HCD),y)
 CHIP_CSRCS += tsb_usb.c
 endif

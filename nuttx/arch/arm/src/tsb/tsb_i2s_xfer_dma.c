@@ -42,6 +42,10 @@
 #include "tsb_scm.h"
 #include "tsb_i2s.h"
 
+#if defined(CONFIG_ARCH_SHARE_DMA)
+#include "tsb_dma_share.h"
+#endif
+
 #ifdef CONFIG_ARCH_I2S_USE_DMA_DEBUG
 #define DBG_I2S_DMA(fmt, ...) lldbg(fmt, ##__VA_ARGS__)
 #else
@@ -400,7 +404,7 @@ int tsb_i2s_xfer_open(struct tsb_i2s_info *info)
 {
     int retval = 0;
 
-#if defined(CONFIG_ARCH_UNIPROTX_I2S_SHARE_DMA)
+#if defined(CONFIG_ARCH_SHARE_DMA)
     i2s_dma.dev = tsb_dma_share_open();
 #else
     i2s_dma.dev = device_open(DEVICE_TYPE_DMA_HW, 0);
@@ -416,7 +420,11 @@ int tsb_i2s_xfer_open(struct tsb_i2s_info *info)
 void tsb_i2s_xfer_close(struct tsb_i2s_info *info)
 {
     if (i2s_dma.dev) {
+#if defined(CONFIG_ARCH_SHARE_DMA)
+        tsb_dma_share_close();
+#else
         device_close(i2s_dma.dev);
+#endif
     }
 }
 

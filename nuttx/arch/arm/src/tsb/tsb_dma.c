@@ -44,6 +44,7 @@
 
 #include "tsb_scm.h"
 #include "tsb_dma.h"
+#include "tsb_dma_share.h"
 
 enum tsb_dma_op_state {
     TSB_DMA_OP_STATE_IDLE,
@@ -709,6 +710,27 @@ int tsb_dma_callback(struct device *dev, struct tsb_dma_chan *dma_chan,
     return retval;
 }
 
+static int tsb_dma_probe(struct device *dev)
+{
+    int ret = 0;
+#ifdef CONFIG_ARCH_SHARE_DMA
+    ret = tsb_dma_share_init();
+    /*
+     *  tsb_dma_share_init() should never fail because we pass a fix value (1)
+     *  as the third parameter when we call sem_init().
+     */
+    DEBUGASSERT(ret == 0);
+#endif
+    return ret;
+}
+
+static void tsb_dma_remove(struct device *dev)
+{
+#ifdef CONFIG_ARCH_SHARE_DMA
+    tsb_dma_share_destroy();
+#endif
+}
+
 static struct device_dma_type_ops tsb_dma_type_ops = {
         .get_caps = tsb_dma_get_caps,
         .chan_free_count = tsb_dma_chan_free_count,
@@ -723,6 +745,8 @@ static struct device_dma_type_ops tsb_dma_type_ops = {
 };
 
 static struct device_driver_ops tsb_dma_driver_ops = {
+        .probe = tsb_dma_probe,
+        .remove = tsb_dma_remove,
         .open = tsb_dma_open,
         .close = tsb_dma_close,
         .type_ops = &tsb_dma_type_ops

@@ -46,6 +46,10 @@
 #include "tsb_unipro.h"
 #include "tsb_unipro_es2.h"
 
+#if defined(CONFIG_ARCH_SHARE_DMA)
+#include "tsb_dma_share.h"
+#endif
+
 #if CONFIG_ARCH_UNIPROTX_DMA_NUM_CHANNELS <= 0
 #   error DMA UniPro TX must have at least one channel
 #endif
@@ -567,7 +571,12 @@ int unipro_tx_init_dma(struct unipro_tx_calltable **table)
     sem_init(&worker.tx_fifo_lock, 0, 0);
     sem_init(&unipro_dma.dma_channel_lock, 0, 0);
 
+#if defined(CONFIG_ARCH_SHARE_DMA)
+    unipro_dma.dev = tsb_dma_share_open();
+#else
     unipro_dma.dev = device_open(DEVICE_TYPE_DMA_HW, 0);
+#endif
+
     if (!unipro_dma.dev) {
         lldbg("unipro: Failed to open DMA driver.\n");
         return -ENODEV;
@@ -596,8 +605,11 @@ int unipro_tx_init_dma(struct unipro_tx_calltable **table)
     unipro_dma.atabl_dev = device_open(DEVICE_TYPE_ATABL_HW, 0);
     if (!unipro_dma.atabl_dev) {
         lldbg("unipro: Failed to open ATABL driver.\n");
-
+#if defined(CONFIG_ARCH_SHARE_DMA)
+        tsb_dma_share_close();
+#else
         device_close(unipro_dma.dev);
+#endif
         return -ENODEV;
     }
 
