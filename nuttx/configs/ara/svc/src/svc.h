@@ -30,6 +30,7 @@
 #define  _SVC_H_
 
 #include <pthread.h>
+#include <arch/atomic.h>
 
 enum svc_state {
     SVC_STATE_STOPPED,
@@ -44,6 +45,7 @@ struct svc {
 
     enum svc_state state;
     int stop;
+    atomic_t allow_idle;
     pid_t svcd_pid;
     pthread_mutex_t lock;
     pthread_cond_t cv;

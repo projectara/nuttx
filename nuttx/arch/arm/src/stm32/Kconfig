@@ -1718,6 +1718,13 @@ config STM32_STM32F446_VOLTAGE_SCALING_3
 	---help---
 		Allow optimized voltage scaling for CPU frequency under 120MHz.
 
+config STM32_IDLE_NO_STANDBY
+	bool "Forbid STM32 StandBy mode in idle"
+	default n
+	---help---
+		Prevent STM32 StandBy mode where only a limited set of wake-up sources
+		are allowed. Use Stop mode instead.
+
 config STM32_DISABLE_IDLE_SLEEP_DURING_DEBUG
 	bool "Disable IDLE Sleep (WFI) in debug mode"
 	default n

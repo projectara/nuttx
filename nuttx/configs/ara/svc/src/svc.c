@@ -33,6 +33,7 @@
 #include <nuttx/util.h>
 #include <nuttx/greybus/greybus.h>
 #include <nuttx/unipro/unipro.h>
+#include <nuttx/power/pm.h>
 
 #include <apps/greybus-utils/utils.h>
 
@@ -1071,6 +1072,8 @@ static int svcd_main(int argc, char **argv) {
         goto done;
     }
 
+    /* The wake-up sources are installed. Allow idle now */
+    atomic_init(&svc->allow_idle, 1);
     while (!svc->stop) {
         pthread_cond_wait(&svc->cv, &svc->lock);
         /* check to see if we were told to stop */
@@ -1104,6 +1107,33 @@ done:
     return rc;
 }
 
+#ifdef CONFIG_PM
+static int svcd_prepare(struct pm_callback_s *cb, enum pm_state_e pmstate)
+{
+    /*
+     * Allow low power mode in idle if svcd started correctly and
+     * installed the wake-up events
+     */
+    int rc;
+
+    switch (pmstate) {
+    case PM_NORMAL:
+        rc = OK;
+        break;
+    default:
+        rc = atomic_get(&svc->allow_idle) ? OK : ERROR;
+        break;
+    }
+
+    return rc;
+}
+
+static  struct pm_callback_s svcd_cb =
+{
+    .prepare = svcd_prepare,
+};
+#endif
+
 /*
  * System entrypoint. CONFIG_USER_ENTRYPOINT should point to this function.
  */
@@ -1114,9 +1144,20 @@ int svc_init(int argc, char **argv) {
     svc->board_info = NULL;
     svc->svcd_pid = 0;
     svc->stop = 0;
+    atomic_init(&svc->allow_idle, 0);
     pthread_mutex_init(&svc->lock, NULL);
     pthread_cond_init(&svc->cv, NULL);
     svcd_set_state(SVC_STATE_STOPPED);
+
+    /* Register to receive power management callbacks */
+#ifdef CONFIG_PM
+    rc = pm_register(&svcd_cb);
+    if (rc) {
+        dbg_error("%s: could not register PM callback: %d, aborting\n",
+                  __func__, rc);
+        return rc;
+    }
+#endif
 
     rc = svcd_start();
     if (rc) {
@@ -1176,6 +1217,7 @@ void svcd_stop(void) {
 
     /* signal main thread to stop */
     svc->stop = 1;
+    atomic_init(&svc->allow_idle, 0);
     pthread_cond_signal(&svc->cv);
     pthread_mutex_unlock(&svc->lock);
 
