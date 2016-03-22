@@ -61,103 +61,103 @@
 #define GB_SVC_TYPE_INTF_REFCLK_ENABLE  0x15
 
 struct gb_svc_protocol_version_request {
-	__u8	major;
-	__u8	minor;
+    __u8        major;
+    __u8        minor;
 } __packed;
 
 struct gb_svc_protocol_version_response {
-	__u8	major;
-	__u8	minor;
+    __u8        major;
+    __u8        minor;
 } __packed;
 
 struct gb_svc_route_create_request {
-	__u8	intf1_id;
-	__u8	dev1_id;
-	__u8	intf2_id;
-	__u8	dev2_id;
+    __u8        intf1_id;
+    __u8        dev1_id;
+    __u8        intf2_id;
+    __u8        dev2_id;
 } __packed;
 
 struct gb_svc_route_destroy_request {
-    __u8    intf1_id;
-    __u8    intf2_id;
+    __u8        intf1_id;
+    __u8        intf2_id;
 } __packed;
 
 struct gb_svc_hello_request {
-	__le16			endo_id;
-	__u8			interface_id;
+    __le16      endo_id;
+    __u8        interface_id;
 } __packed;
 
 struct gb_svc_intf_device_id_request {
-    __u8 intf_id;
-    __u8 device_id;
+    __u8        intf_id;
+    __u8        device_id;
 } __packed;
 /* device id response has no payload */
 
 struct gb_svc_intf_hotplug_request {
     __u8 intf_id;
     struct {
-        __le32 ddbl1_mfr_id;
-        __le32 ddbl1_prod_id;
-        __le32 ara_vend_id;
-        __le32 ara_prod_id;
-	__le64 serial_number;
+        __le32  ddbl1_mfr_id;
+        __le32  ddbl1_prod_id;
+        __le32  ara_vend_id;
+        __le32  ara_prod_id;
+	__le64  serial_number;
     } data;
 } __packed;
 /* hotplug response has no payload */
 
 struct gb_svc_intf_hot_unplug_request {
-    __u8 intf_id;
+    __u8        intf_id;
 } __packed;
 /* hot unplug response has no payload */
 
 struct gb_svc_intf_reset_request {
-    __u8 intf_id;
+    __u8        intf_id;
 } __packed;
 /* interface reset response has no payload */
 
 struct gb_svc_intf_eject_request {
-	__u8 intf_id;
+    __u8        intf_id;
 } __packed;
 /* interface eject response has no payload */
 
 struct gb_svc_conn_create_request {
-    __u8   intf1_id;
-    __le16 cport1_id;
-    __u8   intf2_id;
-    __le16 cport2_id;
-    __u8   tc;
-    __u8   flags;
+    __u8        intf1_id;
+    __le16      cport1_id;
+    __u8        intf2_id;
+    __le16      cport2_id;
+    __u8        tc;
+    __u8        flags;
 } __packed;
 /* connection create response has no payload */
 
 struct gb_svc_conn_destroy_request {
-    __u8  intf1_id;
-    __le16 cport1_id;
-    __u8  intf2_id;
-    __le16 cport2_id;
+    __u8        intf1_id;
+    __le16      cport1_id;
+    __u8        intf2_id;
+    __le16      cport2_id;
 } __packed;
 /* connection destroy response has no payload */
 
 struct gb_svc_dme_peer_get_request {
-    __u8 intf_id;
-    __le16 attr;
-    __le16 selector;
+    __u8        intf_id;
+    __le16      attr;
+    __le16      selector;
 } __packed;
 
 struct gb_svc_dme_peer_get_response {
-    __le16 result_code;
-    __le32 attr_value;
+    __le16      result_code;
+    __le32      attr_value;
 } __packed;
 
 struct gb_svc_dme_peer_set_request {
-    __u8 intf_id;
-    __le16 attr;
-    __le16 selector;
-    __le32 value;
+    __u8        intf_id;
+    __le16      attr;
+    __le16      selector;
+    __le32      value;
 } __packed;
 
 struct gb_svc_dme_peer_set_response {
-    __le16 result_code;
+    __le16      result_code;
 } __packed;
 
 #define GB_SVC_UNIPRO_FAST_MODE         0x01
@@ -179,40 +179,40 @@ struct gb_svc_dme_peer_set_response {
 #define GB_SVC_UNIPRO_HS_SERIES_B       0x02
 
 struct gb_svc_intf_set_pwrm_request {
-       __u8 intf_id;
-       __u8 hs_series;
-       __u8 tx_mode;
-       __u8 tx_gear;
-       __u8 tx_nlanes;
-       __u8 rx_mode;
-       __u8 rx_gear;
-       __u8 rx_nlanes;
-       __u8 flags;
-       __le32 quirks;
+    __u8        intf_id;
+    __u8        hs_series;
+    __u8        tx_mode;
+    __u8        tx_gear;
+    __u8        tx_nlanes;
+    __u8        rx_mode;
+    __u8        rx_gear;
+    __u8        rx_nlanes;
+    __u8        flags;
+    __le32      quirks;
 } __packed;
 
 struct gb_svc_intf_set_pwrm_response {
-       __le16 result_code;
+    __le16      result_code;
 } __packed;
 
 struct gb_svc_key_event_request {
-        __le16	key_code;
+    __le16	key_code;
 #define GB_KEYCODE_ARA          0x00
 
-	__u8	key_event;
+    __u8	key_event;
 #define GB_SVC_KEY_RELEASED	0x00
 #define GB_SVC_KEY_PRESSED	0x01
 } __packed;
 
 struct gb_svc_intf_pwr_enable_request {
-    __u8 intf_id;
-    __u8 enable;
+    __u8        intf_id;
+    __u8        enable;
 #define GB_SVC_INTF_PWR_DISABLE         0x00
 #define GB_SVC_INTF_PWR_ENABLE          0x01
 };
 
 struct gb_svc_intf_pwr_enable_response {
-    __u8 result_code;
+    __u8        result_code;
 #define GB_SVC_INTF_PWR_OK              0x00
 #define GB_SVC_INTF_PWR_BUSY            0x01
 #define GB_SVC_INTF_PWR_ERROR_CAP       0x02
@@ -221,14 +221,14 @@ struct gb_svc_intf_pwr_enable_response {
 };
 
 struct gb_svc_intf_refclk_enable_request {
-    __u8 intf_id;
-    __u8 enable;
+    __u8        intf_id;
+    __u8        enable;
 #define GB_SVC_INTF_REFCLK_DISABLE      0x00
 #define GB_SVC_INTF_REFCLK_ENABLE       0x01
 };
 
 struct gb_svc_intf_refclk_enable_response {
-    __u8 result_code;
+    __u8        result_code;
 #define GB_SVC_INTF_REFCLK_OK           0x00
 #define GB_SVC_INTF_REFCLK_BUSY         0x01
 #define GB_SVC_INTF_REFCLK_ERROR_CAP    0x02
