@@ -28,3 +28,12 @@
 # For a description of the syntax of this configuration file,
 # see misc/tools/kconfig-language.txt.
 #
+
+config ARA_SVC_EVT1_5_MODULE_COMPATIBILITY
+	bool "EVT2 with EVT1.5 modules"
+	default n
+	---help---
+		Because of delayed EVT2 modules we need to be able to produce an
+		EVT2 image that is compatible with EVT1.5 modules. This option allows
+		to use EVT1.5 modules with EVT2. EVT2 modules won't be usable
+		if this option is selected.
