@@ -38,7 +38,6 @@
 
 #include <nuttx/clock.h>
 #include <nuttx/gpio.h>
-#include <nuttx/gpio/debounce.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/power/pm.h>
 
@@ -52,10 +51,9 @@
 
 static struct ara_key_context {
     struct work_s longpress_work;
-    struct work_s irq_work;
     bool rising_edge;
     int (*longpress_callback)(void *priv);
-    struct debounce_data db;
+    uint8_t gpio;
 } the_ara_key;
 
 /* triggered after long key press timer expiration */
@@ -89,55 +87,24 @@ static void ara_key_longpress_update(struct ara_key_context *key, bool active)
     irqrestore(flags);
 }
 
-
-/* ara key irq handler bottom-half -- interrupts on */
-static void ara_key_irqworker(void *priv)
-{
-    struct ara_key_context *key = &the_ara_key;
-    bool active = (bool)(uintptr_t)priv;
-    uint8_t event;
-
-    ara_key_longpress_update(key, active);
-
-    /* send event to ap */
-    event = active ? GB_SVC_KEY_PRESSED : GB_SVC_KEY_RELEASED;
-
-    gb_svc_key_event(GB_KEYCODE_ARA, event);
-}
-
 /*
- * This serves as both the GPIO IRQ handler and the debounce handler. When
- * called as the debounce handler, IRQs are probably not already disabled when
- * entering this function.
+ * This serves as the GPIO IRQ handler. The longpress worker is updated
+ * and a key event greybus message is sent.
  */
 static int ara_key_irqhandler(int irq, void *context, void *priv)
 {
     struct ara_key_context *key = &the_ara_key;
     bool value, active;
-    irqstate_t flags;
+    uint8_t event;
 
-    flags = irqsave();
-
-    value = !!gpio_get_value(key->db.gpio);
+    value = !!gpio_get_value(key->gpio);
     active = (value == key->rising_edge);
 
-    dbg_insane("ara key press value: %u active: %u\n", value, active);
+    ara_key_longpress_update(key, active);
 
-    if (!debounce_gpio(&key->db, active)) {
-	goto out;
-    }
+    event = active ? GB_SVC_KEY_PRESSED : GB_SVC_KEY_RELEASED;
 
-    dbg_insane("ara key press value: %u active: %u (stable)\n", value, active);
-
-    /* if something is pending, cancel it so we can pass the correct active */
-    if (!work_available(&key->irq_work)) {
-	work_cancel(HPWORK, &key->irq_work);
-    }
-    work_queue(HPWORK, &key->irq_work, ara_key_irqworker,
-               (void*)(uintptr_t)active, 0);
-
-out:
-    irqrestore(flags);
+    gb_svc_key_event(GB_KEYCODE_ARA, event);
 
     pm_activity(SVC_ARA_KEY_ACTIVITY);
 
@@ -154,10 +121,7 @@ int ara_key_enable(const struct ara_board_info *info,
         }
 
         the_ara_key.longpress_callback = longpress_callback;
-        the_ara_key.db.gpio = info->ara_key_gpio;
-	the_ara_key.db.ms = ARA_KEY_DEBOUNCE_TIME_MS;
-        the_ara_key.db.isr = ara_key_irqhandler;
-        the_ara_key.db.db_state = DB_ST_INVALID;
+        the_ara_key.gpio = info->ara_key_gpio;
         the_ara_key.rising_edge = info->ara_key_rising_edge;
 
         gpio_activate(info->ara_key_gpio);
@@ -165,6 +129,7 @@ int ara_key_enable(const struct ara_board_info *info,
         gpio_irq_mask(info->ara_key_gpio);
         gpio_irq_settriggering(info->ara_key_gpio, IRQ_TYPE_EDGE_BOTH);
         gpio_irq_attach(info->ara_key_gpio, ara_key_irqhandler);
+        gpio_set_debounce(info->ara_key_gpio, ARA_KEY_DEBOUNCE_TIME_MS);
     } else {
         gpio_irq_mask(info->ara_key_gpio);
         gpio_deactivate(info->ara_key_gpio);
