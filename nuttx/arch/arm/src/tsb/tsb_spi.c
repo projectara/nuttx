@@ -1240,6 +1240,7 @@ static int tsb_spi_pm_prepare(struct pm_callback_s *cb,
     case PM_SLEEP:
         if (info->curr_xfer.rx_remaining) {
             /* return not ready to SLEEP because exchange not complete yet */
+            irqrestore(flags);
             return -EIO;
         }
         break;
