@@ -173,7 +173,7 @@ typedef struct dwc_otg_pcd_ep {
 	unsigned disabling:1;
 	unsigned dma:1;
 	unsigned queue_sof:1;
-#ifdef DWC_OTG_BULK_OUT_RING
+#ifdef DWC_ENHANCED_SG_DMA
 	unsigned bna:1;
 #endif
 
