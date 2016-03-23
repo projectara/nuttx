@@ -573,12 +573,13 @@ static int lights_unregister_callback(struct device *dev)
  * lights device driver will perform the event callback function.
  *
  * @param dev pointer to structure of device data
- * @param data private user data passed to the callback
  * @param callback callback function for notify event
+ * @param data private user data passed to the callback
  * @return 0 on success, negative errno on error
  */
-static int lights_register_callback(struct device *dev, void *data,
-                                    lights_event_callback callback)
+static int lights_register_callback(struct device *dev,
+                                    lights_event_callback callback,
+                                    void *data)
 {
     struct lights_info *info = NULL;
 

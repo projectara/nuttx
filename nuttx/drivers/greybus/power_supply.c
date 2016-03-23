@@ -367,8 +367,8 @@ static int gb_power_supply_init(unsigned int cport, struct gb_bundle *bundle)
         goto err_free_info;
     }
 
-    ret = device_power_supply_attach_callback(bundle->dev, info,
-                                              event_callback);
+    ret = device_power_supply_attach_callback(bundle->dev, event_callback,
+                                              info);
     if (ret) {
         goto err_close_device;
     }
@@ -402,7 +402,7 @@ static void gb_power_supply_exit(unsigned int cport, struct gb_bundle *bundle)
 
     DEBUGASSERT(cport == info->cport);
 
-    device_power_supply_attach_callback(bundle->dev, info, NULL);
+    device_power_supply_attach_callback(bundle->dev, NULL, NULL);
 
     device_close(bundle->dev);
 
