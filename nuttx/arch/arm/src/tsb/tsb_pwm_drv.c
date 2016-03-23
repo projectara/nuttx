@@ -532,6 +532,7 @@ static int tsb_pwm_op_config(struct device *dev, uint16_t which, uint32_t duty,
     uint32_t reg_cr;
     uint32_t set_freq;
     uint32_t set_duty;
+    uint32_t cur_pclk_period;
     int ret = 0;
 
     if (valid_param(dev, which)) {
@@ -548,17 +549,30 @@ static int tsb_pwm_op_config(struct device *dev, uint16_t which, uint32_t duty,
         goto err_config;
     }
 
-    /*
+    /* Calculate internal clock timing.
      * Because input period and duty is nanosecond, so 1000000000 divided by
      * PCLK will get the minimum unit in nanosecond.
      */
-    set_freq = period / (1000000000 / dev_info->pclk);
+    cur_pclk_period = (1000000000 / dev_info->pclk);
+
+    /* Calculate frequency setting value */
+    set_freq = period / cur_pclk_period;
     if (set_freq <= 1) {
         ret = -EINVAL;
         goto err_config;
     }
 
-    set_duty = duty / (1000000000 / dev_info->pclk);
+    /* Because Controller of internal clock timing depend on maximum clock/DIV,
+     * if input of duty_cycle value < internal clock timing and > 0, the duty
+     * setting is not support, so need to fail the setting.
+     */
+    if (duty > 0 && duty < cur_pclk_period) {
+        ret = -EINVAL;
+        goto err_config;
+    }
+
+    /* Calculate duty setting value */
+    set_duty = duty / cur_pclk_period;
     if (set_duty > set_freq) {
         ret = -EINVAL;
         goto err_config;
