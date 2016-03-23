@@ -1193,12 +1193,10 @@ static int tsb_spi_resume(struct device *dev)
 static void tsb_spi_pm_notify(struct pm_callback_s *cb,
                               enum pm_state_e pmstate)
 {
-    struct tsb_spi_dev_info *info = NULL;
     struct device *dev;
     irqstate_t flags;
 
     dev = cb->priv;
-    info = device_get_private(dev);
 
     flags = irqsave();
 
