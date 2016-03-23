@@ -34,6 +34,7 @@
 #ifndef __ARCH_ARM_SRC_TSB_TSB_SCM_H
 #define __ARCH_ARM_SRC_TSB_TSB_SCM_H
 
+#include <stdint.h>
 #include <nuttx/util.h>
 #include "chip.h"
 
