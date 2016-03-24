@@ -2238,7 +2238,7 @@ static void complete_ep(dwc_otg_pcd_ep_t * ep)
 	dwc_otg_dev_in_ep_regs_t *in_ep_regs =
 	    dev_if->in_ep_regs[ep->dwc_ep.num];
 	deptsiz_data_t deptsiz;
-	depctl_data_t depctl;
+	depctl_data_t depctl = { .d32 = 0 };
 	dev_dma_desc_sts_t desc_sts;
 	dwc_otg_pcd_request_t *req = 0;
 	dwc_otg_dev_dma_desc_t *dma_desc;
