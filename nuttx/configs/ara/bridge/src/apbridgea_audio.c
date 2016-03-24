@@ -114,8 +114,6 @@ struct apbridga_audio_rb_hdr {
 static void apbridgea_audio_i2s_tx(struct apbridgea_audio_info *info,
                                    uint8_t *data);
 
-static atomic_t request_id;
-
 static pthread_t apbridgea_audio_demux_thread;
 static sem_t apbridgea_audio_demux_sem;
 
@@ -413,6 +411,9 @@ static int apbridgea_audio_from_unipro(unsigned int cportid, void *buf,
             dbg_error("%s: bad rx message from unipro, cport %u, len %u\n",
                       __func__, cportid, len);
         }
+    } else {
+        dbg_error("%s: unexpected message from unipro, cport %u, len %u\n",
+                  __func__, cportid, len);
     }
 
     unipro_rxbuf_free(cportid, buf);
@@ -617,10 +618,6 @@ static void apbridgea_audio_unipro_tx(struct apbridgea_audio_info *info,
 
     rb_hdr = ring_buf_get_buf(rb);
     gb_hdr = ring_buf_get_priv(rb);
-
-    gb_hdr->id = cpu_to_le16(atomic_inc(&request_id));
-    if (gb_hdr->id == 0) /* ID 0 is for request with no response */
-        gb_hdr->id = cpu_to_le16(atomic_inc(&request_id));
 
     rb_hdr->not_acked = 0;
 
@@ -1266,8 +1263,6 @@ int apbridgea_audio_init(void)
     list_init(&info->list);
 
     list_add(&apbridgea_audio_info_list, &info->list);
-
-    atomic_init(&request_id, 0);
 
     dbg_verbose("%s: audio driver initialized\n", __func__);
 
