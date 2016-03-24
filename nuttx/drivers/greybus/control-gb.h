@@ -44,8 +44,12 @@
 #define GB_CONTROL_TYPE_CONNECTED               0x05
 #define GB_CONTROL_TYPE_DISCONNECTED            0x06
 #define GB_CONTROL_TYPE_INTERFACE_VERSION       0x0a
-#define GB_CONTROL_TYPE_INTF_POWER_STATE_SET    0x0b
-#define GB_CONTROL_TYPE_BUNDLE_POWER_STATE_SET  0x0c
+/*
+ * XXX SW-4136: the below operations will need to be adjusted according to
+ * the new coldboot procedure. Temporarily disabling this functionality.
+ */
+/* #define GB_CONTROL_TYPE_INTF_POWER_STATE_SET    0x0b */
+/* #define GB_CONTROL_TYPE_BUNDLE_POWER_STATE_SET  0x0c */
 
 /* version request has no payload */
 struct gb_control_proto_version_response {

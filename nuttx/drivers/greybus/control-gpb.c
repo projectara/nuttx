@@ -166,7 +166,7 @@ static uint8_t gb_control_interface_version(struct gb_operation *operation)
     return GB_OP_SUCCESS;
 }
 
-static uint8_t gb_control_intf_pwr_set(struct gb_operation *operation)
+static uint8_t __attribute__((unused)) gb_control_intf_pwr_set(struct gb_operation *operation)
 {
     struct gb_control_intf_pwr_set_request *request;
     struct gb_control_intf_pwr_set_response *response;
@@ -186,7 +186,7 @@ static uint8_t gb_control_intf_pwr_set(struct gb_operation *operation)
     return GB_OP_PROTOCOL_BAD;
 }
 
-static uint8_t gb_control_bundle_pwr_set(struct gb_operation *operation)
+static uint8_t __attribute__((unused)) gb_control_bundle_pwr_set(struct gb_operation *operation)
 {
     struct gb_control_bundle_pwr_set_request *request;
     struct gb_control_bundle_pwr_set_response *response;
@@ -264,8 +264,9 @@ static struct gb_operation_handler gb_control_handlers[] = {
     GB_HANDLER(GB_CONTROL_TYPE_CONNECTED, gb_control_connected),
     GB_HANDLER(GB_CONTROL_TYPE_DISCONNECTED, gb_control_disconnected),
     GB_HANDLER(GB_CONTROL_TYPE_INTERFACE_VERSION, gb_control_interface_version),
-    GB_HANDLER(GB_CONTROL_TYPE_INTF_POWER_STATE_SET, gb_control_intf_pwr_set),
-    GB_HANDLER(GB_CONTROL_TYPE_BUNDLE_POWER_STATE_SET, gb_control_bundle_pwr_set),
+    /* XXX SW-4136: see control-gb.h */
+    /*GB_HANDLER(GB_CONTROL_TYPE_INTF_POWER_STATE_SET, gb_control_intf_pwr_set),
+    GB_HANDLER(GB_CONTROL_TYPE_BUNDLE_POWER_STATE_SET, gb_control_bundle_pwr_set),*/
 };
 
 struct gb_driver control_driver = {
