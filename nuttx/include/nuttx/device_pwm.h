@@ -29,31 +29,29 @@
 #ifndef __INCLUDE_NUTTX_DEVICE_PWM_H
 #define __INCLUDE_NUTTX_DEVICE_PWM_H
 
-#include <stdbool.h>
+/**
+ * @file nuttx/device_pwm.h
+ * @brief PWM API
+ * @attention This file is officially included in the Firmware Documentation.
+ * Please contact the Firmware Documentation team before modifying it.
+ */
+
 #include <errno.h>
+#include <stdbool.h>
 
-#include <nuttx/util.h>
 #include <nuttx/device.h>
+#include <nuttx/util.h>
 
+/** PWM Device type */
 #define DEVICE_TYPE_PWM_HW                 "pwm"
 
-/**
- * Definition for supported output mode.
- */
+/** PWM output modes */
 enum pwm_mode {
-    /** mode 0, finite pulse output */
+    /** mode 0: use a set pulse width duration */
     PWM_PULSECOUNT_MODE,
-
-    /**
-     * mode 1, true for high level signal, false for low level signal when
-     * FREQ = 0.
-     */
+    /** mode 1: signal is static high or low when frequency is 0 */
     PWM_STOP_LEVEL_MODE,
-
-    /**
-     * mode 2, Stat multiple pwm generators to concurrently output with same
-     * FREQUENCY.
-     */
+    /** mode 2: start PWM generators with same frequency simultaneously */
     PWM_SYNC_MODE,
 };
 
@@ -61,59 +59,94 @@ enum pwm_mode {
  * @brief PWM event callback function
  *
  * This callback function is registered with the PWM controller and is called
- * whenever the masked interrupt event occurs.
+ * whenever one of the selected interrupt events occur.
  *
- * @param state Contents of PWM interrupt state register
+ * @param state Content of PWM interrupt state register
  */
 typedef void (*pwm_event_callback)(uint32_t state);
 
-/**
- * PWM device driver operations.
- */
+/** PWM device driver operations */
 struct device_pwm_type_ops {
-    /** PWM get count function pointer. */
+    /** Get the number of supported PWM generators
+     * @param dev Pointer to the PWM device controller
+     * @param count Pointer to a variable whose is to be filled out with the
+     * number of supported PWM generators
+     * @return 0 on success, negative errno on failure
+     */
     int (*count)(struct device *dev, uint16_t *count);
-
-    /** PWM activate generator function pointer. */
+    /** Initialize a PWM generator
+     * @param dev Pointer to the PWM device controller
+     * @param which PWM generator device number
+     * @return 0 on success, negative errno on failure
+     */
     int (*activate)(struct device *dev, uint16_t which);
-
-    /** PPWM deactivate generator function pointer. */
+    /** Deinitialize a PWM generator
+     * @param dev Pointer to the PWM device controller
+     * @param which PWM generator device number
+     * @return 0 on success, negative errno on failure
+     */
     int (*deactivate)(struct device *dev, uint16_t which);
-
-    /** PWM config generator function pointer. */
+    /** Set the period and duty cycle of a PWM generator
+     * @param dev Pointer to the PWM device controller
+     * @param which PWM generator device number
+     * @param duty Duty cycle of PWM generator in nanoseconds
+     * @param period Period of PWM generator in nanoseconds
+     * @return 0 on success, negative errno on failure
+     */
     int (*config)(struct device *dev, uint16_t which, uint32_t duty,
                   uint32_t period);
-
-    /** PWM enable generator function pointer. */
+    /** Enable the pulse width output of a PWM generator
+     * @param dev Pointer to the PWM device controller
+     * @param which PWM generator device number
+     * @return 0 on success, negative errno on failure
+     */
     int (*enable)(struct device *dev, uint16_t  which);
-
-    /** PWM disable generator function pointer. */
+    /** Disable the pulse width output of a PWM generator
+     * @param dev Pointer to the PWM device controller
+     * @param which PWM generator device number
+     * @return 0 on success, negative errno on failure
+     */
     int (*disable)(struct device *dev, uint16_t  which);
-
-    /** PWM set generator of polarity function pointer. */
+    /** Set polarity of PWM generator active signal
+     * @param dev Pointer to the PWM device controller
+     * @param which PWM generator device number
+     * @param polarity Polarity of active signal. True for inverted, false for
+     * normal
+     * @return 0 on success, negative errno on failure
+     */
     int (*set_polarity)(struct device *dev, uint16_t  which, bool polarity);
-
-    /** PWM set generator output mode function pointer. */
+    /** Set output mode of PWM generator
+     * @param dev Pointer to the PWM device controller
+     * @param which PWM generator device number
+     * @param mode PWM generator output mode
+     * @param param For mode 0: number of pulses; For mode 1: true for high
+     * level, false for low level; For mode 2: true to enable sync
+     * @return 0 on success, negative errno on failure
+     */
     int (*set_mode)(struct device *dev, uint16_t  which, enum pwm_mode mode,
                     void *param);
-
-    /** PWM multiple generator of concurrent output. */
+    /** Start PWM generators with same frequency simultaneously
+     * @param dev Pointer to the PWM device controller
+     * @param enable True for start, false for stop
+     * @return 0 on success, negative errno on failure
+     */
     int (*sync_output)(struct device *dev, bool enable);
-
-    /**
-     * PWM interrupt callback handling() to notify caller and return status
-     * value for further caller and return status value for further processing.
+    /** Register callback function to be notified when one of the selected
+     * interrupt events occur
+     * @param dev Pointer to the PWM device controller
+     * @param mask Mask of selected interrupt events
+     * @param callback The callback function to be called on an event
+     * @return 0 on success, negative errno on failure
      */
     int (*register_callback)(struct device *dev, uint32_t mask,
                              pwm_event_callback callback);
 };
 
-/**
- * @brief Get the number of generators supported from PWM controlelr.
- *
- * @param dev Opened device driver handle.
- * @param count A pointer to the variable of maximum number of supported
- *              generators.
+/** Get number of PWM generators supported by driver
+ * @param dev Pointer to the PWM device controller
+ * @param count Pointer to variable to which number of PWM generators
+ * will be assigned.
+ * @return 0 on success, negative errno on failure
  */
 static inline int device_pwm_get_count(struct device *dev, uint16_t *count)
 {
@@ -130,11 +163,10 @@ static inline int device_pwm_get_count(struct device *dev, uint16_t *count)
     return DEVICE_DRIVER_GET_OPS(dev, pwm)->count(dev, count);
 }
 
-/**
- * @brief Activating a specific generator that system supported.
- *
- * @param dev Opened device driver handle.
- * @param which The number of Specific generator for operating.
+/** Initialize a PWM generator
+ * @param dev Pointer to the PWM device controller
+ * @param which PWM generator device number
+ * @return 0 on success, negative errno on failure
  */
 static inline int device_pwm_activate(struct device *dev, uint16_t which)
 {
@@ -151,11 +183,10 @@ static inline int device_pwm_activate(struct device *dev, uint16_t which)
     return DEVICE_DRIVER_GET_OPS(dev, pwm)->activate(dev, which);
 }
 
-/**
- * @brief Deativating a specific generator that been actived previously.
- *
- * @param dev Opened device driver handle.
- * @param which The number of Specific generator for operating.
+/** Deinitialize a PWM generator
+ * @param dev Pointer to the PWM device controller
+ * @param which PWM generator device number
+ * @return 0 on success, negative errno on failure
  */
 static inline int device_pwm_deactivate(struct device *dev, uint16_t which)
 {
@@ -172,13 +203,12 @@ static inline int device_pwm_deactivate(struct device *dev, uint16_t which)
     return DEVICE_DRIVER_GET_OPS(dev, pwm)->deactivate(dev, which);
 }
 
-/**
- * @brief Configure specific generator for a particular duty cycle and period.
- *
- * @param dev Opened device driver handle.
- * @param which The number of Specific generator for operating.
- * @param duty Active time (in nanoseconds).
- * @param period Sum of active and deactive time (in nanoseconds).
+/** Set the period and duty cycle of a PWM generator
+ * @param dev Pointer to the PWM device controller
+ * @param which PWM generator device number
+ * @param duty Duty cycle of PWM generator in nanoseconds
+ * @param period Period of PWM generator in nanoseconds
+ * @return 0 on success, negative errno on failure
  */
 static inline int device_pwm_config(struct device *dev, uint16_t which,
                                     uint32_t duty, uint32_t period)
@@ -196,12 +226,12 @@ static inline int device_pwm_config(struct device *dev, uint16_t which,
     return DEVICE_DRIVER_GET_OPS(dev, pwm)->config(dev, which, duty, period);
 }
 
-/**
- * @brief Configure specific generator for a particular polarity.
- *
- * @param dev Opened device driver handle.
- * @param which The number of Specific generator for operating.
- * @param polarity 0 for normal, 1 for inverted.
+/** Set polarity of PWM generator active signal
+ * @param dev Pointer to the PWM device controller
+ * @param which PWM generator device number
+ * @param polarity Polarity of active signal. True for inverted, false for
+ * normal
+ * @return 0 on success, negative errno on failure
  */
 static inline int device_pwm_set_polarity(struct device *dev, uint16_t which,
                                           bool polarity)
@@ -219,11 +249,10 @@ static inline int device_pwm_set_polarity(struct device *dev, uint16_t which,
     return DEVICE_DRIVER_GET_OPS(dev, pwm)->set_polarity(dev, which, polarity);
 }
 
-/**
- * @brief Enable a specific generator to start toggling.
- *
- * @param dev Opened device driver handle.
- * @param which The number of Specific generator for operating.
+/** Enable the pulse width output of a PWM generator
+ * @param dev Pointer to the PWM device controller
+ * @param which PWM generator device number
+ * @return 0 on success, negative errno on failure
  */
 static inline int device_pwm_enable(struct device *dev, uint16_t which)
 {
@@ -240,11 +269,10 @@ static inline int device_pwm_enable(struct device *dev, uint16_t which)
     return DEVICE_DRIVER_GET_OPS(dev, pwm)->enable(dev, which);
 }
 
-/**
- * @brief Disable a specific generator toggling.
- *
- * @param dev Opened device driver handle.
- * @param which The number of Specific generator for operating.
+/** Disable the pulse width output of a PWM generator
+ * @param dev Pointer to the PWM device controller
+ * @param which PWM generator device number
+ * @return 0 on success, negative errno on failure
  */
 static inline int device_pwm_disable(struct device *dev, uint16_t which)
 {
@@ -261,18 +289,13 @@ static inline int device_pwm_disable(struct device *dev, uint16_t which)
     return DEVICE_DRIVER_GET_OPS(dev, pwm)->disable(dev, which);
 }
 
-/**
- * @brief Set generator output mode.
- *
- * This function to set specific generator output in particular mode by 'mode'
- * parameter.
- *
- * @param dev Opened device driver handle.
- * @param which The number of Specific generator for operating.
- * @param mode A mode number will be set, refer to enum pwm_mode.
- * @param param For mode 0, totally iteration times.
- *              For mode 1, false is low level, true is high level.
- *              For mode 2, true to start sync.
+/** Set output mode of PWM generator
+ * @param dev Pointer to the PWM device controller
+ * @param which PWM generator device number
+ * @param mode PWM generator output mode
+ * @param param For mode 0: number of pulses; For mode 1: true for high level,
+ * false for low level; For mode 2: true to start sync
+ * @return 0 on success, negative errno on failure
  */
 static inline int device_pwm_set_mode(struct device *dev, uint16_t which,
                                       enum pwm_mode mode, void *param)
@@ -290,11 +313,10 @@ static inline int device_pwm_set_mode(struct device *dev, uint16_t which,
     return DEVICE_DRIVER_GET_OPS(dev, pwm)->set_mode(dev, which, mode, param);
 }
 
-/**
- * @brief Enable generate waveforms with the same FREQUENCY.
- *
- * @param dev Opened device driver handle.
- * @param enable True for enable, false for disable.
+/** Start PWM generators with same frequency simultaneously
+ * @param dev Pointer to the PWM device controller
+ * @param enable True for start, false for stop
+ * @return 0 on success, negative errno on failure
  */
 static inline int device_pwm_sync_output(struct device *dev, bool enable)
 {
@@ -311,13 +333,12 @@ static inline int device_pwm_sync_output(struct device *dev, bool enable)
     return DEVICE_DRIVER_GET_OPS(dev, pwm)->sync_output(dev, enable);
 }
 
-/**
- * @brief Callback function register.
- *
- * @param dev Opened device driver handle.
- * @param mask Required interrupt active bite.
- * @param callback Pointer to a callback handler.
- * @param state Pointer to a variable of interrupt status.
+/** Register callback function to be notified when one of the selected
+ * interrupt events occur
+ * @param dev Pointer to the PWM device controller
+ * @param mask Mask of selected interrupt events
+ * @param callback The callback function to be called on an event
+ * @return 0 on success, negative errno on failure
  */
 static inline int device_pwm_register_callback(struct device *dev,
                                                uint32_t mask,
