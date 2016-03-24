@@ -36,6 +36,7 @@
 
 #include <nuttx/unipro/unipro.h>
 #include <nuttx/greybus/tsb_unipro.h>
+#include <nuttx/power/pm.h>
 #include <arch/tsb/irq.h>
 #include <errno.h>
 
@@ -77,6 +78,8 @@ static unipro_event_handler_t evt_handler;
 #define ES2_APBRIDGE_CPORT_MAX 44 // number of CPorts available on the APBridges
 #define ES2_GPBRIDGE_CPORT_MAX 16 // number of CPorts available on the GPBridges
 #define ES2_INIT_STATUS(x) (x >> 24)
+
+#define TSB_UNIPRO_ACTIVITY 9
 
 /*
  * During unipro_unit(), we'll compute and cache the number of CPorts that this
@@ -364,6 +367,8 @@ static int irq_rx_eom(int irq, void *context) {
     (void)context;
     void *newbuf;
 
+    pm_activity(TSB_UNIPRO_ACTIVITY);
+
     clear_rx_interrupt(cport);
 
     if (!cport->driver) {
@@ -476,6 +481,8 @@ static void unipro_evt_handler(enum unipro_event evt)
 static int irq_unipro(int irq, void *context) {
     int rc;
     uint32_t val;
+
+    pm_activity(TSB_UNIPRO_ACTIVITY);
 
     tsb_irq_clear_pending(TSB_IRQ_UNIPRO);
 
