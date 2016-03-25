@@ -38,6 +38,26 @@
 #define DEVICE_TYPE_PWM_HW                 "pwm"
 
 /**
+ * Definition for supported output mode.
+ */
+enum pwm_mode {
+    /** mode 0, finite pulse output */
+    PWM_PULSECOUNT_MODE,
+
+    /**
+     * mode 1, true for high level signal, false for low level signal when
+     * FREQ = 0.
+     */
+    PWM_STOP_LEVEL_MODE,
+
+    /**
+     * mode 2, Stat multiple pwm generators to concurrently output with same
+     * FREQUENCY.
+     */
+    PWM_SYNC_MODE,
+};
+
+/**
  * PWM device driver operations.
  */
 struct device_pwm_type_ops {
@@ -64,7 +84,7 @@ struct device_pwm_type_ops {
     int (*set_polarity)(struct device *dev, uint16_t  which, bool polarity);
 
     /** PWM set generator output mode function pointer. */
-    int (*set_mode)(struct device *dev, uint16_t  which, uint32_t mode,
+    int (*set_mode)(struct device *dev, uint16_t  which, enum pwm_mode mode,
                     void *param);
 
     /** PWM setup power/clock of PWM controller function pointer. */
@@ -82,26 +102,6 @@ struct device_pwm_type_ops {
      */
     int (*pwm_intr_callback)(struct device *dev, uint32_t mask,
                              void (*callback)(void *state));
-};
-
-/**
- * Definition for supported output mode.
- */
-enum pwm_mode {
-    /** mode 0, finite pulse output */
-    PWM_PULSECOUNT_MODE,
-
-    /**
-     * mode 1, true for high level signal, false for low level signal when
-     * FREQ = 0.
-     */
-    PWM_STOP_LEVEL_MODE,
-
-    /**
-     * mode 2, Stat multiple pwm generators to concurrently output with same
-     * FREQUENCY.
-     */
-    PWM_SYNC_MODE,
 };
 
 /**
@@ -278,7 +278,8 @@ static inline int device_pwm_request_disable(struct device *dev,
  */
 static inline int device_pwm_request_set_mode(struct device *dev,
                                               uint16_t which,
-                                              uint32_t mode, void *param)
+                                              enum pwm_mode mode,
+                                              void *param)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 

@@ -760,7 +760,7 @@ static int tsb_pwm_op_sync(struct device *dev, bool enable)
  * @return 0: Success, error code on failure.
  */
 static int tsb_pwm_op_set_mode(struct device *dev, uint16_t which,
-                               uint32_t mode, void *param)
+                               enum pwm_mode mode, void *param)
 {
     struct pwm_ctlr_info *info = NULL;
     struct generator_info *dev_info = NULL;
