@@ -70,6 +70,7 @@ int svc_intf_set_power_mode(uint8_t, struct unipro_link_cfg *);
 
 int svcd_start(void);
 void svcd_stop(void);
+int svcd_power_down(void);
 
 struct interface;
 

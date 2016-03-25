@@ -601,6 +601,11 @@ static uint8_t gb_svc_intf_refclk_enable(struct gb_operation *operation)
     return GB_OP_SUCCESS;
 }
 
+static uint8_t gb_svc_pwr_down(struct gb_operation *op) {
+    return gb_errno_to_op_result(svcd_power_down());
+}
+
+
 static struct gb_operation_handler gb_svc_handlers[] = {
     GB_HANDLER(GB_SVC_TYPE_INTF_DEVICE_ID, gb_svc_intf_device_id),
     GB_HANDLER(GB_SVC_TYPE_INTF_EJECT, gb_svc_intf_eject),
@@ -618,6 +623,7 @@ static struct gb_operation_handler gb_svc_handlers[] = {
     GB_HANDLER(GB_SVC_TYPE_PWRMON_RAIL_NAMES_GET, gb_svc_pwrmon_rail_names_get),
     GB_HANDLER(GB_SVC_TYPE_PWRMON_SAMPLE_GET, gb_svc_pwrmon_sample_get),
     GB_HANDLER(GB_SVC_TYPE_PWRMON_INTF_SAMPLE_GET, gb_svc_pwrmon_intf_sample_get),
+    GB_HANDLER(GB_SVC_TYPE_PWR_DOWN, gb_svc_pwr_down),
 };
 
 struct gb_driver svc_driver = {

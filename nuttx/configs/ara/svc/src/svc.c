@@ -51,6 +51,7 @@
 #include "svc.h"
 #include "vreg.h"
 #include "gb_svc.h"
+#include <stm32_pm.h>
 
 #define SVCD_PRIORITY               (40)
 #define SVCD_STACK_SIZE             (2048)
@@ -64,6 +65,9 @@ struct svc *svc = &the_svc;
 #define SVC_EVENT_TYPE_READY_AP     0x1
 #define SVC_EVENT_TYPE_READY_OTHER  0x2
 #define SVC_EVENT_TYPE_HOT_UNPLUG   0x3
+
+#define INA230_SHUNT_VALUE          2 /* mohm */
+#define DEFAULT_CURRENT_LSB         100 /* 100uA current LSB */
 
 struct svc_event_ready_other {
     uint8_t port;
@@ -1315,5 +1319,49 @@ int svc_connect_interfaces(struct interface *iface1, uint16_t cportid1,
 
  error_exit:
     pthread_mutex_unlock(&svc->lock);
+    return rc;
+}
+
+static int power_down_ina231(void)
+{
+    int i;
+    int j;
+    pwrmon_board_info *board_info;
+    int pwrmon_num_devs;
+
+    board_info = board_get_pwrmon_info();
+    if (!board_info) {
+        dbg_error("error at getting board info\n");
+        return -ENODEV;
+    }
+
+    pwrmon_init(DEFAULT_CURRENT_LSB, ina230_ct_1_1ms, ina230_avg_count_64, &pwrmon_num_devs);
+
+    for (i = 0; i < board_info->num_devs; i++) {
+        for (j = 0; j < board_info->devs[i].num_rails; j++) {
+            pwrmon_rail *rails = pwrmon_init_rail(i,j);
+            /* deinit shuts down INA231 by default */
+            pwrmon_deinit_rail(rails);
+        }
+    }
+
+    /* Reset i2c selection gpios and relese i2c resource */
+    pwrmon_deinit();
+
+    return 0;
+}
+
+int svcd_power_down(void) {
+    int rc;
+
+    dbg_info("powering down INA231 chips...\n");
+    rc = power_down_ina231();
+    dbg_info("powering down all modules...\n");
+    interface_exit();
+    dbg_info("powering down switch...\n");
+    switch_exit(svc->sw);
+    dbg_info("putting svc into stm32_standby mode...\n");
+    svcd_stop();
+    stm32_pmstandby();
     return rc;
 }

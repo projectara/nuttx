@@ -63,6 +63,8 @@
 #define GB_SVC_TYPE_PWRMON_INTF_SAMPLE_GET      0x17
 #define GB_SVC_TYPE_INTF_PWR_ENABLE             0x18
 #define GB_SVC_TYPE_INTF_REFCLK_ENABLE          0x19
+#define GB_SVC_TYPE_PWR_DOWN                    0x1d
+
 
 struct gb_svc_protocol_version_request {
     __u8        major;
