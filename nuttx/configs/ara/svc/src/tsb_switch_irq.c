@@ -141,9 +141,9 @@ static int switch_hard_irq_handler(int irq, void *context, void *priv)
     }
 
     switch_post_irq(sw);
-#ifdef CONFIG_PM
+
     pm_activity(9);
-#endif
+
     return 0;
 }
 

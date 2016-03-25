@@ -137,9 +137,9 @@ static int ara_key_irqhandler(int irq, void *context)
 
 out:
     irqrestore(flags);
-#ifdef CONFIG_PM
+
     pm_activity(9);
-#endif
+
     return OK;
 }
 
