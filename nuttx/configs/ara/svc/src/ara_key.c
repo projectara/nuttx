@@ -45,6 +45,7 @@
 #include "ara_board.h"
 #include "ara_key.h"
 #include "gb_svc.h"
+#include "svc_pm.h"
 
 #define ARA_KEY_LONGPRESS_TIME_MS (5000)    /* 5s */
 #define ARA_KEY_DEBOUNCE_TIME_MS (300)	    /* 300ms */
@@ -138,7 +139,7 @@ static int ara_key_irqhandler(int irq, void *context)
 out:
     irqrestore(flags);
 
-    pm_activity(9);
+    pm_activity(SVC_ARA_KEY_ACTIVITY);
 
     return OK;
 }

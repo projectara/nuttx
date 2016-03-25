@@ -49,6 +49,7 @@
 #include "svc.h"
 #include "tsb_switch.h"
 #include "tsb_switch_event.h"
+#include "svc_pm.h"
 
 #define POWER_OFF_TIME_IN_US                        (500000)
 #define WAKEOUT_PULSE_DURATION_IN_US                (100000)
@@ -793,7 +794,7 @@ static int interface_wd_delay_check(struct wd_data *wd, uint32_t delay)
         return 0;
     }
 
-    pm_activity(7);
+    pm_activity(SVC_INTF_WD_DEBOUNCE_ACTIVITY);
 
     /* Schedule the work to run after the debounce timeout */
     return work_queue(HPWORK, &wd->work, interface_wd_delayed_handler, wd,

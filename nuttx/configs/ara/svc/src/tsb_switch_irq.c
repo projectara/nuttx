@@ -37,6 +37,8 @@
 
 #include <nuttx/power/pm.h>
 
+#include "svc_pm.h"
+
 #define SWITCH_IRQ_MAX    16
 
 /* TSB attributes fields values */
@@ -142,7 +144,7 @@ static int switch_hard_irq_handler(int irq, void *context, void *priv)
 
     switch_post_irq(sw);
 
-    pm_activity(9);
+    pm_activity(SVC_SWITCH_IRQ_ACTIVITY);
 
     return 0;
 }
