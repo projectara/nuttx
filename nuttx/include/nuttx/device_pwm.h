@@ -130,10 +130,10 @@ static inline int device_pwm_request_count(struct device *dev, uint16_t *count)
  * @brief Activating a specific generator that system supported.
  *
  * @param dev Opened device driver handle.
- * @param pwm_no The number of Specific generator for operating.
+ * @param which The number of Specific generator for operating.
  */
 static inline int device_pwm_request_activate(struct device *dev,
-                                              uint16_t pwm_no)
+                                              uint16_t which)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -145,17 +145,17 @@ static inline int device_pwm_request_activate(struct device *dev,
         return -ENOSYS;
     }
 
-    return DEVICE_DRIVER_GET_OPS(dev, pwm)->activate(dev, pwm_no);
+    return DEVICE_DRIVER_GET_OPS(dev, pwm)->activate(dev, which);
 }
 
 /**
  * @brief Deativating a specific generator that been actived previously.
  *
  * @param dev Opened device driver handle.
- * @param pwm_no The number of Specific generator for operating.
+ * @param which The number of Specific generator for operating.
  */
 static inline int device_pwm_request_deactivate(struct device *dev,
-                                                uint16_t pwm_no)
+                                                uint16_t which)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -167,19 +167,19 @@ static inline int device_pwm_request_deactivate(struct device *dev,
         return -ENOSYS;
     }
 
-    return DEVICE_DRIVER_GET_OPS(dev, pwm)->deactivate(dev, pwm_no);
+    return DEVICE_DRIVER_GET_OPS(dev, pwm)->deactivate(dev, which);
 }
 
 /**
  * @brief Configure specific generator for a particular duty cycle and period.
  *
  * @param dev Opened device driver handle.
- * @param pwm_no The number of Specific generator for operating.
+ * @param which The number of Specific generator for operating.
  * @param duty Active time (in nanoseconds).
  * @param period Sum of active and deactive time (in nanoseconds).
  */
 static inline int device_pwm_request_config(struct device *dev,
-                                            uint16_t pwm_no,
+                                            uint16_t which,
                                             uint32_t duty, uint32_t period)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
@@ -192,18 +192,18 @@ static inline int device_pwm_request_config(struct device *dev,
         return -ENOSYS;
     }
 
-    return DEVICE_DRIVER_GET_OPS(dev, pwm)->config(dev, pwm_no, duty, period);
+    return DEVICE_DRIVER_GET_OPS(dev, pwm)->config(dev, which, duty, period);
 }
 
 /**
  * @brief Configure specific generator for a particular polarity.
  *
  * @param dev Opened device driver handle.
- * @param pwm_no The number of Specific generator for operating.
+ * @param which The number of Specific generator for operating.
  * @param polarity 0 for normal, 1 for inverted.
  */
 static inline int device_pwm_request_set_polarity(struct device *dev,
-                                                  uint16_t pwm_no,
+                                                  uint16_t which,
                                                   bool polarity)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
@@ -216,17 +216,17 @@ static inline int device_pwm_request_set_polarity(struct device *dev,
         return -ENOSYS;
     }
 
-    return DEVICE_DRIVER_GET_OPS(dev, pwm)->set_polarity(dev, pwm_no, polarity);
+    return DEVICE_DRIVER_GET_OPS(dev, pwm)->set_polarity(dev, which, polarity);
 }
 
 /**
  * @brief Enable a specific generator to start toggling.
  *
  * @param dev Opened device driver handle.
- * @param pwm_no The number of Specific generator for operating.
+ * @param which The number of Specific generator for operating.
  */
 static inline int device_pwm_request_enable(struct device *dev,
-                                            uint16_t pwm_no)
+                                            uint16_t which)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -238,17 +238,17 @@ static inline int device_pwm_request_enable(struct device *dev,
         return -ENOSYS;
     }
 
-    return DEVICE_DRIVER_GET_OPS(dev, pwm)->enable(dev, pwm_no);
+    return DEVICE_DRIVER_GET_OPS(dev, pwm)->enable(dev, which);
 }
 
 /**
  * @brief Disable a specific generator toggling.
  *
  * @param dev Opened device driver handle.
- * @param pwm_no The number of Specific generator for operating.
+ * @param which The number of Specific generator for operating.
  */
 static inline int device_pwm_request_disable(struct device *dev,
-                                             uint16_t pwm_no)
+                                             uint16_t which)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -260,7 +260,7 @@ static inline int device_pwm_request_disable(struct device *dev,
         return -ENOSYS;
     }
 
-    return DEVICE_DRIVER_GET_OPS(dev, pwm)->disable(dev, pwm_no);
+    return DEVICE_DRIVER_GET_OPS(dev, pwm)->disable(dev, which);
 }
 
 /**
@@ -270,14 +270,14 @@ static inline int device_pwm_request_disable(struct device *dev,
  * parameter.
  *
  * @param dev Opened device driver handle.
- * @param pwm_no The number of Specific generator for operating.
+ * @param which The number of Specific generator for operating.
  * @param mode A mode number will be set, refer to enum pwm_mode.
  * @param param For mode 0, totally iteration times.
  *              For mode 1, false is low level, true is high level.
  *              For mode 2, true to start sync.
  */
 static inline int device_pwm_request_set_mode(struct device *dev,
-                                              uint16_t pwm_no,
+                                              uint16_t which,
                                               uint32_t mode, void *param)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
@@ -290,7 +290,7 @@ static inline int device_pwm_request_set_mode(struct device *dev,
         return -ENOSYS;
     }
 
-    return DEVICE_DRIVER_GET_OPS(dev, pwm)->set_mode(dev, pwm_no, mode, param);
+    return DEVICE_DRIVER_GET_OPS(dev, pwm)->set_mode(dev, which, mode, param);
 }
 
 /**
