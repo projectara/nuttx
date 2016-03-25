@@ -248,7 +248,7 @@ struct gb_svc_intf_pwr_enable_request {
     __u8        enable;
 #define GB_SVC_INTF_PWR_DISABLE         0x00
 #define GB_SVC_INTF_PWR_ENABLE          0x01
-};
+} __packed;
 
 struct gb_svc_intf_pwr_enable_response {
     __u8        result_code;
@@ -257,14 +257,14 @@ struct gb_svc_intf_pwr_enable_response {
 #define GB_SVC_INTF_PWR_ERROR_CAP       0x02
 #define GB_SVC_INTF_PWR_INSUFFICIENT    0x03
 #define GB_SVC_INTF_PWR_FAIL            0x04
-};
+} __packed;
 
 struct gb_svc_intf_refclk_enable_request {
     __u8        intf_id;
     __u8        enable;
 #define GB_SVC_INTF_REFCLK_DISABLE      0x00
 #define GB_SVC_INTF_REFCLK_ENABLE       0x01
-};
+} __packed;
 
 struct gb_svc_intf_refclk_enable_response {
     __u8        result_code;
@@ -272,7 +272,7 @@ struct gb_svc_intf_refclk_enable_response {
 #define GB_SVC_INTF_REFCLK_BUSY         0x01
 #define GB_SVC_INTF_REFCLK_ERROR_CAP    0x02
 #define GB_SVC_INTF_REFCLK_FAIL         0x03
-};
+} __packed;
 
 int gb_svc_protocol_version(void);
 int gb_svc_hello(uint8_t ap_intf_id);
