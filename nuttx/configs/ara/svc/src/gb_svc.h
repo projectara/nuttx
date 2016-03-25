@@ -210,7 +210,7 @@ struct gb_svc_key_event_request {
 
 struct gb_svc_pwrmon_rail_count_get_response {
     __u8        rail_count;
-};
+} __packed;
 
 #define GB_SVC_PWRMON_RAIL_NAME_BUFSIZE 32
 
@@ -226,22 +226,22 @@ struct gb_svc_pwrmon_rail_count_get_response {
 struct gb_svc_pwrmon_sample_get_request {
     __u8        rail_id;
     __u8        measurement_type;
-};
+} __packed;
 
 struct gb_svc_pwrmon_sample_get_response {
     __u8        result;
     __le32      measurement;
-};
+} __packed;
 
 struct gb_svc_pwrmon_intf_sample_get_request {
     __u8        intf_id;
     __u8        measurement_type;
-};
+} __packed;
 
 struct gb_svc_pwrmon_intf_sample_get_response {
     __u8        result;
     __le32      measurement;
-};
+} __packed;
 
 struct gb_svc_intf_pwr_enable_request {
     __u8        intf_id;
