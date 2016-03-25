@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2015 Google, Inc.
+ * Copyright (c) 2015-2016 Google, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,6 +26,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -662,14 +663,14 @@ err_enable:
  * @return 0: Success, error code on failure.
  */
 static int tsb_pwm_op_set_polarity(struct device *dev, uint16_t which,
-                                   uint8_t polarity)
+                                   bool polarity)
 {
     struct pwm_ctlr_info *info = NULL;
     struct generator_info *dev_info = NULL;
     uint32_t reg_cr;
     int ret = 0;
 
-    if (valid_param(dev, which) || polarity > 1) {
+    if (valid_param(dev, which)) {
         return -EINVAL;
     }
 

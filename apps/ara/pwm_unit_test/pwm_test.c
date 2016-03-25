@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 Google Inc.
+ * Copyright (c) 2014-2016 Google Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -45,7 +45,7 @@ struct pwm_app_info {
     uint16_t    index;
     uint32_t    period;
     uint32_t    duty;
-    uint8_t     polarity;
+    bool        polarity;
     uint32_t    secs;
     uint8_t     mode_num;
     uint32_t    param;

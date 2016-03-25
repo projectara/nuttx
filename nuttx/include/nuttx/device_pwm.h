@@ -61,7 +61,7 @@ struct device_pwm_type_ops {
     int (*disable)(struct device *dev, uint16_t  which);
 
     /** PWM set generator of polarity function pointer. */
-    int (*set_polarity)(struct device *dev, uint16_t  which, uint8_t polarity);
+    int (*set_polarity)(struct device *dev, uint16_t  which, bool polarity);
 
     /** PWM set generator output mode function pointer. */
     int (*set_mode)(struct device *dev, uint16_t  which, uint32_t mode,
@@ -204,7 +204,7 @@ static inline int device_pwm_request_config(struct device *dev,
  */
 static inline int device_pwm_request_set_polarity(struct device *dev,
                                                   uint16_t pwm_no,
-                                                  uint8_t polarity)
+                                                  bool polarity)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
