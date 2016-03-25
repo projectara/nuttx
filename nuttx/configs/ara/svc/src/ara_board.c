@@ -144,6 +144,7 @@ struct ara_board_info *ara_board_init(void) {
         break;
     case HWID_EVT1_5:
         board_info = &evt1_5_board_info;
+        board_info->pwrmon = &evt1_pwrmon;
         dbg_info("HWID found as EVT1.5\n");
         break;
     case HWID_EVT1_6:

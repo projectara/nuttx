@@ -146,6 +146,7 @@ pwrmon_board_info *board_get_pwrmon_info(void);
 extern struct ara_board_info db3_board_info;
 extern pwrmon_board_info db3_pwrmon;
 extern pwrmon_board_info db3_5_pwrmon;
+extern pwrmon_board_info evt1_pwrmon;
 extern struct interface *db3_5_interfaces[];
 extern size_t db3_5_nr_interfaces;
 extern struct ara_board_info evt1_board_info;
