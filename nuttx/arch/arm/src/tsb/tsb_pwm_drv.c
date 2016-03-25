@@ -105,7 +105,7 @@ struct pwm_ctlr_info {
      * Caller of interrupt Callback handler with state pointer, or interrupt
      * mask value.
      */
-    void (*handle)(void *state);
+    pwm_event_callback handle;
 
     uint32_t int_state;
 
@@ -854,7 +854,7 @@ err_set_mode:
  * @return 0: Success, error code on failure.
  */
 static int tsb_pwm_op_intr_callback(struct device *dev, uint32_t mask,
-                                    void (*callback)(void *state))
+                                    pwm_event_callback callback)
 {
     struct pwm_ctlr_info *info = NULL;
     uint32_t reg_cr;

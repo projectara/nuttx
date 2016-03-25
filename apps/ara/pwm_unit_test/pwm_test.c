@@ -69,9 +69,9 @@ static void print_usage(void) {
     printf("    -p: 1 for normal, 0 for inverted.\n");
 }
 
-static void intr_handler(void* state)
+static pwm_event_callback intr_handler(uint32_t state)
 {
-    val = *(uint32_t *)state;
+    val = state;
 }
 
 /**

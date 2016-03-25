@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2015 Google, Inc.
+ * Copyright (c) 2015-2016 Google, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -58,6 +58,16 @@ enum pwm_mode {
 };
 
 /**
+ * @brief PWM event callback function
+ *
+ * This callback function is registered with the PWM controller and is called
+ * whenever the masked interrupt event occurs.
+ *
+ * @param state Contents of PWM interrupt state register
+ */
+typedef void (*pwm_event_callback)(uint32_t state);
+
+/**
  * PWM device driver operations.
  */
 struct device_pwm_type_ops {
@@ -101,7 +111,7 @@ struct device_pwm_type_ops {
      * value for further caller and return status value for further processing.
      */
     int (*pwm_intr_callback)(struct device *dev, uint32_t mask,
-                             void (*callback)(void *state));
+                             pwm_event_callback callback);
 };
 
 /**
@@ -368,7 +378,7 @@ static inline int device_pwm_request_sync(struct device *dev, bool enable)
  */
 static inline int device_pwm_request_callback(struct device *dev,
                                               uint32_t mask,
-                                              void (*callback)(void *state))
+                                              pwm_event_callback callback)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
