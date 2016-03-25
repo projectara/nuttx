@@ -119,8 +119,6 @@
 # define SPI_DEFAULT_MODE   _SPI_BASE_MODE
 #endif
 
-#define TSB_SPI_ACTIVITY           9
-
 /**
  * SPI device state
  */

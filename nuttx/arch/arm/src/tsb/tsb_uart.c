@@ -179,8 +179,6 @@
 #define TSB_UART_FLAG_XMIT          BIT(1)
 #define TSB_UART_FLAG_RECV          BIT(2)
 
-#define TSB_UART_ACTIVITY           9
-
 /* buffer structure */
 struct uart_buffer
 {

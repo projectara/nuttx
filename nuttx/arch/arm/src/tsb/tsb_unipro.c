@@ -79,8 +79,6 @@ static unipro_event_handler_t evt_handler;
 #define ES2_GPBRIDGE_CPORT_MAX 16 // number of CPorts available on the GPBridges
 #define ES2_INIT_STATUS(x) (x >> 24)
 
-#define TSB_UNIPRO_ACTIVITY 9
-
 /*
  * During unipro_unit(), we'll compute and cache the number of CPorts that this
  * bridge has, for use by the functions in this source file.

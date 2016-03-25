@@ -74,8 +74,6 @@
 #define TSB_IO_PULL_UPDOWN_ENABLE0  0x40000A20
 #define TSB_IO_PULL_UP_ENABLE0      0x40000A30
 
-#define TSB_GPIO_ACTIVITY       9
-
 /* Structure for storing interrupt handlers and debounce data for each GPIO */
 struct tsb_gpio_irq_vectors_s {
     xcpt_t irq_vector;

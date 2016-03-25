@@ -81,8 +81,6 @@
 /** Timeout for waiting on a transfer */
 #define TSB_I2C_TRANSFER_TIMEOUT ((1000 * CLK_TCK) / 1000) /* 1000 ms (100Hz tick) */
 
-#define TSB_I2C_ACTIVITY            9
-
 /**
  * struct tsb_i2c_info - The driver internal information
  */

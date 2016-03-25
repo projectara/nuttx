@@ -436,9 +436,6 @@
 /* UniPro register time definition */
 #define UNIPRO_REGISTER_TIME 500000 /* 500ms */
 
-/* SDIO power management activity definition */
-#define TSB_SDIO_ACTIVITY 9
-
 /* SDIO buffer structure */
 struct sdio_buffer
 {
