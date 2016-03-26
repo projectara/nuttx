@@ -97,4 +97,7 @@
 #define CRYP_BASE       0x40085000
 #define CRYP_SIZE       0x1000
 
+#define PMU_BASE        0x40090000
+#define PMU_SIZE        0x1000
+
 #endif /* __ARCH_ARM_TSB_CHIP_H */
