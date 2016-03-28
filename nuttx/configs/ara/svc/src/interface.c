@@ -531,6 +531,7 @@ static int interface_power_off(struct interface *iface)
     }
 
     /* Cancel LinkUp and WAKEOUT pulse for the interface */
+    iface->linkup_req_sent = false;
     wd_cancel(&iface->linkup_wd);
     rc = interface_cancel_wakeout_atomic(iface);
 
@@ -646,6 +647,8 @@ static int interface_power_on(struct interface *iface)
     if (!iface) {
         return -EINVAL;
     }
+
+    iface->linkup_req_sent = false;
 
     rc = interface_detect_order(iface);
     if (rc && rc != -ENOTSUP) {

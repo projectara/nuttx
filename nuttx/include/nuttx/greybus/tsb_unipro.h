@@ -58,6 +58,8 @@
     #define TSB_LINKUP_SUCCESS     (0x01)
     #define TSB_LINKUP_FAIL        (0x02)
 #define TSB_DME_LINKSTARTUPIND     0xd021
+    #define TSB_LINKUP_IND_FAIL    (0x00)
+    #define TSB_LINKUP_IND_SUCCESS (0x01)
 #define TSB_DME_LINKLOSTIND        0xd022
 #define TSB_DME_HIBERNATEENTERREQ  0xd030
 #define TSB_DME_HIBERNATEENTERCNF  0xd030

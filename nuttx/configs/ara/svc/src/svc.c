@@ -108,6 +108,7 @@ static inline void svc_event_destroy(struct svc_event *event) {
 
 static int event_cb(struct tsb_switch_event *ev);
 static int event_mailbox(struct tsb_switch_event *ev);
+static int event_linkup_ind(struct tsb_switch_event *ev);
 static int event_linkup(struct tsb_switch_event *ev);
 
 static struct tsb_switch_event_listener evl = {
@@ -117,6 +118,9 @@ static struct tsb_switch_event_listener evl = {
 static int event_cb(struct tsb_switch_event *ev) {
 
     switch (ev->type) {
+    case TSB_SWITCH_EVENT_LINKUP_IND:
+        event_linkup_ind(ev);
+        break;
     case TSB_SWITCH_EVENT_LINKUP:
         event_linkup(ev);
         break;
@@ -125,6 +129,77 @@ static int event_cb(struct tsb_switch_event *ev) {
         break;
     }
     return 0;
+}
+
+static int event_linkup_ind(struct tsb_switch_event *ev) {
+    int rc;
+    char *linkup_ind_result;
+    struct interface *iface;
+    bool release_mutex;
+
+    rc = pthread_mutex_lock(&svc->lock);
+    if (rc != 0 && rc != EDEADLK) {
+        return rc;
+    }
+    release_mutex = !rc;
+
+    switch (ev->linkup.val) {
+    case TSB_LINKUP_IND_FAIL:
+        linkup_ind_result = "fail";
+        break;
+    case TSB_LINKUP_IND_SUCCESS:
+        linkup_ind_result = "success";
+        break;
+    default:
+        linkup_ind_result = "unknown";
+        break;
+    }
+    iface = interface_get_by_portid(ev->linkup.port);
+
+    if (!iface) {
+        dbg_error("%s: No interface for portId %u\n", __func__,
+                  ev->linkup.port);
+        if (release_mutex) {
+            pthread_mutex_unlock(&svc->lock);
+        }
+        return -EINVAL;
+    }
+
+    dbg_info("event received: type: %u (LINKUP_IND) port: %u (%s) val: %u (%s)\n",
+             ev->type, ev->linkup.port, interface_get_name(iface),
+             ev->linkup.val, linkup_ind_result);
+
+    switch (ev->linkup.val) {
+    case TSB_LINKUP_IND_SUCCESS:
+        /*
+         * LinkUpInd success returned from the module.
+         * End the WAKEOUT pulse and initiate a single manual LinkUp from
+         * the Switch.
+         */
+        if (!iface->linkup_req_sent) {
+            interface_cancel_wakeout_atomic(iface);
+            iface->linkup_req_sent = true;
+            rc = switch_link_startup(svc->sw, ev->linkup.port);
+        }
+        break;
+    case TSB_LINKUP_IND_FAIL:
+        /*
+         * LinkUpInd failure returned from the module, do nothing.
+         * The module will try again until it succeeds
+         */
+        iface->linkup_req_sent = false;
+        break;
+    default:
+        dbg_error("%s: Unexpected LinkUpInd value: %u port: %u\n",
+                  __func__, ev->linkup.val, ev->linkup.port);
+       rc = -EINVAL;
+    }
+
+    if (release_mutex) {
+        pthread_mutex_unlock(&svc->lock);
+    }
+
+    return rc;
 }
 
 static int event_linkup(struct tsb_switch_event *ev) {
@@ -156,18 +231,18 @@ static int event_linkup(struct tsb_switch_event *ev) {
     }
     iface = interface_get_by_portid(ev->linkup.port);
 
-    dbg_info("event received: type: %u (LINKUP) port: %u (%s) val: %u (%s)\n",
-             ev->type, ev->linkup.port, interface_get_name(iface),
-             ev->linkup.val, linkup_result);
-
     if (!iface) {
-        dbg_error("%s: No interface for portId %d\n", __func__,
+        dbg_error("%s: No interface for portId %u\n", __func__,
                   ev->linkup.port);
         if (release_mutex) {
             pthread_mutex_unlock(&svc->lock);
         }
         return -EINVAL;
     }
+
+    dbg_info("event received: type: %u (LINKUP) port: %u (%s) val: %u (%s)\n",
+             ev->type, ev->linkup.port, interface_get_name(iface),
+             ev->linkup.val, linkup_result);
 
     switch (ev->linkup.val) {
     case SW_LINKUP_INITIATE:

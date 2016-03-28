@@ -134,6 +134,7 @@ struct interface {
     bool wake_gpio_pol;
     enum hotplug_state hp_state;
     uint8_t linkup_retries;
+    bool linkup_req_sent;
     bool ejectable;
     uint8_t release_gpio;
     struct wdog_s linkup_wd;

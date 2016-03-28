@@ -359,6 +359,18 @@ static int switch_threaded_irq_handler(struct tsb_switch *sw) {
                         uint32_t irq_type = j;
                         uint32_t port = i;
                         switch (irq_type) {
+                        case IRQ_STATUS_LINKSTARTUPIND: {
+                            struct tsb_switch_event e;
+                            e.type = TSB_SWITCH_EVENT_LINKUP_IND;
+                            e.linkup.port = port;
+                            e.linkup.val = attr_value;
+                            rc = tsb_switch_event_notify(sw, &e);
+                            if (rc) {
+                                dbg_error("IRQ: LinkUpInd event notification failed for port %u: %d\n",
+                                          port, rc);
+                            }
+                            break;
+                        }
                         case IRQ_STATUS_LINKSTARTUPCNF: {
                             struct tsb_switch_event e;
                             e.type = TSB_SWITCH_EVENT_LINKUP;
@@ -366,7 +378,7 @@ static int switch_threaded_irq_handler(struct tsb_switch *sw) {
                             e.linkup.val = attr_value;
                             rc = tsb_switch_event_notify(sw, &e);
                             if (rc) {
-                                dbg_error("IRQ: LinkUp event notification failed for port %d: %d\n",
+                                dbg_error("IRQ: LinkUp event notification failed for port %u: %d\n",
                                           port, rc);
                             }
                             break;
@@ -378,7 +390,7 @@ static int switch_threaded_irq_handler(struct tsb_switch *sw) {
                             e.mbox.val = attr_value;
                             rc = tsb_switch_event_notify(sw, &e);
                             if (rc) {
-                                dbg_error("IRQ: Mailbox event notification failed for port %d: %d\n",
+                                dbg_error("IRQ: Mailbox event notification failed for port %u: %d\n",
                                           port, rc);
                             }
                             break;

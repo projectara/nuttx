@@ -571,6 +571,7 @@ int switch_dev_id_mask_set(struct tsb_switch *sw,
 
 enum tsb_switch_event_type {
     TSB_SWITCH_EVENT_MAILBOX,
+    TSB_SWITCH_EVENT_LINKUP_IND,
     TSB_SWITCH_EVENT_LINKUP,
 };
 
