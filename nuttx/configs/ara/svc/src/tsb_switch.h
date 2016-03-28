@@ -590,9 +590,6 @@ struct tsb_switch_event {
     };
 };
 
-/* Initiate a LinkUp on a Switch port */
-#define SW_LINKUP_INITIATE      (0x00)
-
 struct tsb_switch_event_listener {
     struct list_head entry;
     int (*cb)(struct tsb_switch_event *event);

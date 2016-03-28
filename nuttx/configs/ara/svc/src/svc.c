@@ -223,9 +223,6 @@ static int event_linkup(struct tsb_switch_event *ev) {
     release_mutex = !rc;
 
     switch (ev->linkup.val) {
-    case SW_LINKUP_INITIATE:
-        linkup_result = "initiate";
-        break;
     case TSB_LINKUP_FAIL:
         linkup_result = "fail";
         break;
@@ -252,11 +249,6 @@ static int event_linkup(struct tsb_switch_event *ev) {
              ev->linkup.val, linkup_result);
 
     switch (ev->linkup.val) {
-    case SW_LINKUP_INITIATE:
-        /* Initiate the LinkUp. The Switch will notify the result back */
-        interface_set_linkup_retries_atomic(iface, 0);
-        rc = switch_link_startup(svc->sw, ev->linkup.port);
-        break;
     case TSB_LINKUP_FAIL:
         interface_cancel_linkup_wd_atomic(iface);
         /* LinkUp failed, retry until max retries count is reached */

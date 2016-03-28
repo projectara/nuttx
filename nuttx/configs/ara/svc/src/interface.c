@@ -668,15 +668,24 @@ static int interface_power_on(struct interface *iface)
     if (!interface_get_refclk_state(iface)) {
         rc = interface_refclk_enable(iface);
         if (rc < 0) {
-            return rc;
+            goto out_power;
         }
     }
 
-    /* Generate WAKE_OUT */
-    rc = interface_generate_wakeout(iface, false, -1);
+    /* Enable Switch port */
+    rc = switch_enable_port(svc->sw, iface->switch_portid, true);
+    if (rc && (rc != -EOPNOTSUPP)) {
+        dbg_error("Failed to enable switch port for interface %s: %d.\n",
+                  iface->name, rc);
+        goto out_refclk;
+    }
+
+    /* Enable interrupts for Unipro port */
+    rc = switch_port_irq_enable(svc->sw, iface->switch_portid, true);
     if (rc) {
-        dbg_error("Failed to generate wakeout on interface %s\n", iface->name);
-        return rc;
+        dbg_error("Failed to enable port IRQs for interface %s: %d.\n",
+                  iface->name, rc);
+        goto out_port;
     }
 
     /*
@@ -693,33 +702,32 @@ static int interface_power_on(struct interface *iface)
      * leads to better behavior for now.
      */
     if (iface->ejectable) {
-        wd_start(&iface->linkup_wd, LINKUP_WD_DELAY, interface_linkup_timeout, 1,
-                 iface);
+        wd_start(&iface->linkup_wd, LINKUP_WD_DELAY, interface_linkup_timeout,
+                 1, iface);
     } else {
         dbg_info("%s: skipping linkup watchdog for interface %s\n",
                  __func__, iface->name);
     }
 
-    /* Enable Switch port */
-    rc = switch_enable_port(svc->sw, iface->switch_portid, true);
-    if (rc && (rc != -EOPNOTSUPP)) {
-        dbg_error("Failed to enable switch port for interface %s: %d.\n",
-                  iface->name, rc);
-        return rc;
-    }
-
-    /* Request manual LinkUp of the Unipro port */
-    struct tsb_switch_event e;
-    e.type = TSB_SWITCH_EVENT_LINKUP;
-    e.linkup.port = iface->switch_portid;
-    e.linkup.val = SW_LINKUP_INITIATE;
-    rc = tsb_switch_event_notify(svc->sw, &e);
+    /* Generate WAKEOUT */
+    rc = interface_generate_wakeout(iface, false, -1);
     if (rc) {
-        dbg_error("Failed to request LinkUp for interface %s\n", iface->name);
+        dbg_error("Failed to generate wakeout on interface %s\n", iface->name);
+        goto out_port_irq;
     }
 
     return 0;
 
+out_port_irq:
+    switch_port_irq_enable(svc->sw, iface->switch_portid, false);
+out_port:
+    switch_enable_port(svc->sw, iface->switch_portid, false);
+out_refclk:
+    interface_refclk_disable(iface);
+out_power:
+    interface_power_disable(iface);
+
+    return rc;
 }
 
 /*
@@ -1678,6 +1686,11 @@ int interface_init(struct interface **ints, size_t nr_ints,
         pthread_mutex_init(&ifc->mutex, NULL);
         pthread_mutex_lock_debug(&ifc->mutex);
 
+        /* Install handlers for DETECT_IN signal */
+        ifc->detect_in.db_state = WD_ST_INVALID;
+        ifc->detect_in.last_state = WD_ST_INVALID;
+        rc = interface_install_wd_handler(ifc, false);
+
         /* Initialize the hotplug state */
         ifc->handler_active = false;
         ifc->hp_state = interface_get_hotplug_state(ifc);
@@ -1688,18 +1701,6 @@ int interface_init(struct interface **ints, size_t nr_ints,
             /* Port is plugged in, power ON the interface */
             if (interface_power_on(ifc) < 0) {
                 dbg_error("Failed to power ON interface %s\n", ifc->name);
-            }
-            /*
-             * SW-3364. Unipro port interrupts need to be enabled initially
-             * for the LinkUp and Mailbox IRQs to be signalled by the Switch.
-             * Later the port interrupts are enabled and disabled as part of
-             * the hotplug/unplug sequence.
-             */
-            if (switch_port_irq_enable(svc->sw, ifc->switch_portid, true)) {
-                dbg_error("Failed to enable port IRQs for interface %s\n",
-                          ifc->name);
-                pthread_mutex_unlock_debug(&ifc->mutex);
-                return rc;
             }
             break;
         case HOTPLUG_ST_UNPLUGGED:
@@ -1712,11 +1713,6 @@ int interface_init(struct interface **ints, size_t nr_ints,
         default:
             break;
         }
-
-        /* Install handlers for DETECT_IN signal */
-        ifc->detect_in.db_state = WD_ST_INVALID;
-        ifc->detect_in.last_state = WD_ST_INVALID;
-        rc = interface_install_wd_handler(ifc, false);
 
         pthread_mutex_unlock_debug(&ifc->mutex);
 
