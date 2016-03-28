@@ -52,10 +52,14 @@
 #include "tsb_switch_event.h"
 #include "svc_pm.h"
 
-#define POWER_OFF_TIME_IN_US                        (500000)
-#define MODULE_PORT_WAKEOUT_PULSE_DURATION_IN_US    (500000)
-#define LINKUP_WD_DELAY_IN_MS                       (100)
-#define LINKUP_WD_DELAY        ((LINKUP_WD_DELAY_IN_MS * CLOCKS_PER_SEC) / 1000)
+#define POWER_OFF_TIME_IN_US                                (500000)
+#define MODULE_PORT_WAKEOUT_PULSE_DURATION_IN_US            (500000)
+#define MODULE_PORT_WAKEOUT_PULSE_DURATION_IN_MS            \
+        (MODULE_PORT_WAKEOUT_PULSE_DURATION_IN_US / 1000)
+#define LINKUP_WD_DELAY_IN_MS                               \
+        (200 + MODULE_PORT_WAKEOUT_PULSE_DURATION_IN_MS)
+#define LINKUP_WD_DELAY                                     \
+        ((LINKUP_WD_DELAY_IN_MS * CLOCKS_PER_SEC) / 1000)
 
 static struct interface **interfaces;
 static unsigned int nr_interfaces;
