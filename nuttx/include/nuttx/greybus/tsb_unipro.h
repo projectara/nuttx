@@ -47,13 +47,20 @@
     #define TSB_MAIL_READY_AP      (0x01)
     #define TSB_MAIL_READY_OTHER   (0x02)
 #define TSB_DME_LAYERENABLEREQ     0xd000
+    #define TSB_LAYER_UNIPRO_EN    (0x01)
 #define TSB_DME_LAYERENABLECNF     0xd000
+    #define TSB_LAYER_SUCCESS      (0x01)
+    #define TSB_LAYER_FAILURE      (0x02)
 #define TSB_DME_RESETREQ           0xd010
+    #define TSB_RESET_COLD         (0x01)
+    #define TSB_RESET_WARM         (0x02)
 #define TSB_DME_RESETCNF           0xd010
+    #define TSB_RESET_COMPLETED    (0x01)
 #define TSB_DME_ENDPOINTRESETREQ   0xd011
 #define TSB_DME_ENDPOINTRESETCNF   0xd011
 #define TSB_DME_ENDPOINTRESETIND   0xd012
 #define TSB_DME_LINKSTARTUPREQ     0xd020
+    #define TSB_LINKUP_INITIATE    (0x01)
 #define TSB_DME_LINKSTARTUPCNF     0xd020
     #define TSB_LINKUP_SUCCESS     (0x01)
     #define TSB_LINKUP_FAIL        (0x02)
