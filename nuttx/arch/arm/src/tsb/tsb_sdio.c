@@ -425,7 +425,7 @@
 /* Register definition */
 #define REGISTER_INTERVAL  1000 /* 1ms */
 #define REGISTER_MAX_RETRY 10
-#define REGISTER_DAT_MAX_RETRY 50
+#define REGISTER_DAT_MAX_RETRY 500
 
 /* R2 response bit mask definition */
 #define R2_RSP_MASK 0xFF000000
@@ -1173,6 +1173,7 @@ static int sdio_software_reset(struct tsb_sdio_info *info)
     sdio_reg_bit_set(info->sdio_reg_base, CLOCK_SWRST_TIMEOUT_CONTROL,
                      SW_RESET_DAT_LINE);
 
+    retry = 0;
     /* Check DR */
     while ((sdio_getreg(info->sdio_reg_base, CLOCK_SWRST_TIMEOUT_CONTROL) &
              SW_RESET_DAT_LINE) && (retry < REGISTER_MAX_RETRY)) {
@@ -1989,6 +1990,7 @@ static int tsb_sdio_send_cmd(struct device *dev, struct sdio_cmd *cmd)
                       info->blocks);
     }
 
+    retry = 0;
     /* Issue the command with the busy? */
     if (cmd->cmd_flags == HC_SDIO_RSP_R1B) {
         /* Issue Abort Command? */
