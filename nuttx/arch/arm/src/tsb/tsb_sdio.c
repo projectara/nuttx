@@ -1161,7 +1161,7 @@ static int sdio_software_reset(struct tsb_sdio_info *info)
     /* Check CR */
     while ((sdio_getreg(info->sdio_reg_base, CLOCK_SWRST_TIMEOUT_CONTROL) &
              SW_RESET_CMD_LINE) && (retry < REGISTER_MAX_RETRY)) {
-        usleep(REGISTER_INTERVAL);
+        up_udelay(REGISTER_INTERVAL);
         retry++;
     }
 
@@ -1177,7 +1177,7 @@ static int sdio_software_reset(struct tsb_sdio_info *info)
     /* Check DR */
     while ((sdio_getreg(info->sdio_reg_base, CLOCK_SWRST_TIMEOUT_CONTROL) &
              SW_RESET_DAT_LINE) && (retry < REGISTER_MAX_RETRY)) {
-        usleep(REGISTER_INTERVAL);
+        up_udelay(REGISTER_INTERVAL);
         retry++;
     }
 
@@ -1393,27 +1393,21 @@ static void sdio_write_fifo_data(struct tsb_sdio_info *info)
              */
             if (remaining >= sizeof(uint32_t)) {
                 /* Yes. Write uint32_t data to the FIFO */
-                buf_port = wbuf[info->write_buf.head] |
-                           wbuf[info->write_buf.head + 1] << BYTE_SHIFT |
-                           wbuf[info->write_buf.head + 2] << (BYTE_SHIFT * 2) |
-                           wbuf[info->write_buf.head + 3] << (BYTE_SHIFT * 3);
+                buf_port = *(uint32_t*)&wbuf[info->write_buf.head];
                 info->write_buf.head += sizeof(uint32_t);
             } else {
                 /*
                  * No. Write the bytes remaining in the user buffer to the
                  * FIFO
                  */
-                for (i = 0; i < remaining; i++) {
-                    buf_port |= wbuf[info->write_buf.head + i] <<
-                                (BYTE_SHIFT * i);
-                }
+                memcpy(&buf_port, &wbuf[info->write_buf.head], remaining);
                 info->write_buf.head = info->write_buf.tail;
             }
             sdio_putreg(info->sdio_reg_base, DATAPORTREG, buf_port);
             remaining = info->write_buf.tail - info->write_buf.head;
 
             /* More blocks? */
-            if (info->write_buf.head == info->write_buf.tail) { /* No */
+            if (!remaining) { /* No */
                 if (info->write_callback) { /* Non-blocking */
                     info->flags &= ~SDIO_FLAG_WRITE;
                     info->write_callback(info->write_buf.head, info->blksz,
@@ -1475,32 +1469,24 @@ static void sdio_read_fifo_data(struct tsb_sdio_info *info)
              * Is there at least a full uint32_t data remaining in the user
              * buffer?
              */
-            buf_port = sdio_getreg(info->sdio_reg_base, DATAPORTREG);
             if (remaining >= sizeof(uint32_t)) {
                 /* Yes. Transfer uint32_t data in FIFO to the user buffer */
-                rbuf[info->read_buf.head] = (uint8_t)buf_port;
-                rbuf[info->read_buf.head + 1] =
-                                        (uint8_t)(buf_port >> (BYTE_SHIFT * 1));
-                rbuf[info->read_buf.head + 2] =
-                                        (uint8_t)(buf_port >> (BYTE_SHIFT * 2));
-                rbuf[info->read_buf.head + 3] =
-                                        (uint8_t)(buf_port >> (BYTE_SHIFT * 3));
+                *(uint32_t*)&rbuf[info->read_buf.head] =
+                                  sdio_getreg(info->sdio_reg_base, DATAPORTREG);
                 info->read_buf.head += sizeof(uint32_t);
             } else {
                 /*
                  * No. Transfer the bytes remaining in FIFO to the user
                  * buffer
                  */
-                for (i = 0; i < remaining; i++) {
-                    rbuf[info->read_buf.head + i] =
-                                        (uint8_t)(buf_port >> (BYTE_SHIFT * i));
-                }
+                buf_port = sdio_getreg(info->sdio_reg_base, DATAPORTREG);
+                memcpy(&rbuf[info->read_buf.head], &buf_port, remaining);
                 info->read_buf.head = info->read_buf.tail;
             }
             remaining = info->read_buf.tail - info->read_buf.head;
 
             /* More blocks? */
-            if (info->read_buf.head == info->read_buf.tail) { /* No */
+            if (!remaining) { /* No */
                 if (info->read_callback) { /* Non-blocking */
                     info->flags &= ~SDIO_FLAG_READ;
                     info->read_callback(info->read_buf.head, info->blksz,
@@ -1972,7 +1958,7 @@ static int tsb_sdio_send_cmd(struct device *dev, struct sdio_cmd *cmd)
     /* Wait for CMD Line unused */
     while ((sdio_getreg(info->sdio_reg_base, PRESENTSTATE) &
            COMMAND_INHIBIT_CMD) && (retry < REGISTER_MAX_RETRY)) {
-        usleep(REGISTER_INTERVAL);
+        up_udelay(REGISTER_INTERVAL);
         retry++;
     }
 
@@ -1998,7 +1984,7 @@ static int tsb_sdio_send_cmd(struct device *dev, struct sdio_cmd *cmd)
             /* Wait for DAT Line unused */
             while ((sdio_getreg(info->sdio_reg_base, PRESENTSTATE) &
                    COMMAND_INHIBIT_DAT) && (retry < REGISTER_DAT_MAX_RETRY)) {
-                usleep(REGISTER_INTERVAL);
+                up_udelay(REGISTER_INTERVAL);
                 retry++;
             }
 
@@ -2056,13 +2042,12 @@ static int tsb_sdio_send_cmd(struct device *dev, struct sdio_cmd *cmd)
 
     /* Wait for Command Complete Int register */
     sem_wait(&info->cmd_sem);
-    usleep(COMMAND_INTERVAL);
+
     cmd->resp[0] = info->resp[0];
     cmd->resp[1] = info->resp[1];
     cmd->resp[2] = info->resp[2];
     cmd->resp[3] = info->resp[3];
 
-    usleep(COMMAND_INTERVAL);
     if (cmd->cmd == HC_MMC_STOP_TRANSMISSION) {
         info->sdio_int_err_status = sdio_software_reset(info);
     }
