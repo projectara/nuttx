@@ -60,7 +60,6 @@
 static struct interface **interfaces;
 static unsigned int nr_interfaces;
 static unsigned int nr_spring_interfaces;
-static struct work_s linkup_work;
 static struct vreg *vlatch_vdd;
 static struct vreg *latch_ilim;
 static uint8_t mod_sense;
@@ -589,7 +588,7 @@ static void interface_linkup_timeout(int argc, uint32_t arg1, ...)
     dbg_warn("Link-up took more than %d ms, turning interface '%s' OFF and ON again\n",
              LINKUP_WD_DELAY_IN_MS, iface->name);
 
-    work_queue(HPWORK, &linkup_work, interface_power_cycle, iface, 0);
+    work_queue(HPWORK, &iface->linkup_work, interface_power_cycle, iface, 0);
 }
 
 /*

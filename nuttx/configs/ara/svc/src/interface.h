@@ -133,6 +133,7 @@ struct interface {
     uint8_t wake_gpio;
     bool wake_gpio_pol;
     enum hotplug_state hp_state;
+    struct work_s linkup_work;
     uint8_t linkup_retries;
     bool linkup_req_sent;
     bool ejectable;
