@@ -44,6 +44,8 @@
 #define TSB_IRQ_TYPE_EDGE_RISING    0x3
 #define TSB_IRQ_TYPE_EDGE_BOTH      0x7
 
+#define TSB_IRQ_TRIGGER_MASK        0x7
+
 int tsb_gpio_register(void *driver_data);
 
 static inline size_t tsb_nr_gpio(void)

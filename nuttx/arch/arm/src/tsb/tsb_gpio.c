@@ -374,6 +374,9 @@ static int tsb_set_gpio_triggering(void *driver_data, uint8_t which, int trigger
     tsb_gpio_irq_vectors[which].irq_trigger_type = trigger;
     tsb_gpio_irq_vectors[which].debounce.db_state = DB_ST_INVALID;
 
+    /* Clear last reg setting */
+    v &= ~(TSB_IRQ_TRIGGER_MASK << shift);
+
     putreg32(v | (tsb_trigger << shift), reg);
     return 0;
 }
