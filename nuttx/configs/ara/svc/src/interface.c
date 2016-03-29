@@ -1010,87 +1010,6 @@ uint8_t interface_pm_get_chan(struct interface *iface)
     return iface->pm->chan;
 }
 
-
-/**
- * @brief Store the hotplug/unplug state of the interface, from the
- * port ID.
- *
- * This function is used to bufferize the last state of the interface
- * while the AP is not yet ready to accept hotplug events. This prevents
- * multiple hotplug and hot-unplug events to be sent to the AP when
- * it is ready.
- *
- * External facing function - atomic w/r to the pertinent interface.
- * Note: due to a code path that can interface->svc->interface we rely on
- * a flag called lock_interface to decide if the mutex should be taken.
- *
- * This is a temporary solution with the expectation that the
- * interface->svc->interface call chain will be removed; once done the
- * lock_interface flag should be removed and we should revert to a clean and
- * simple:
- * - mutex_lock();
- * - do something
- * - mutex_unlock();
- */
-int interface_store_hotplug_state_atomic(uint8_t port_id, enum hotplug_state hotplug,
-                                         bool lock_interface)
-{
-    int intf_id;
-    struct interface *iface;
-
-    intf_id = interface_get_id_by_portid(port_id);
-    if (intf_id < 0) {
-        dbg_error("%s: cannot get interface from portId %u\n" , __func__,
-                  port_id);
-        return -EINVAL;
-    }
-    iface = interfaces[intf_id - 1];
-
-    /* TODO: remove lock_interface */
-    if (lock_interface)
-        pthread_mutex_lock_debug(&iface->mutex);
-
-    iface->hp_state = hotplug;
-
-    /* TODO: remove lock_interface */
-    if (lock_interface)
-        pthread_mutex_unlock_debug(&iface->mutex);
-
-    return 0;
-}
-
-
-/**
- * @brief Consume the hotplug/unplug state of the interface, from the
- * port ID.
- *
- * This function is used to retrieve and clear the state of the interface
- * in order to generate an event to be sent to the AP.
- *
- * External facing function - atomic w/r to the pertinent interface.
- * Called directly from svc.c.
- */
-enum hotplug_state interface_consume_hotplug_state_atomic(uint8_t port_id)
-{
-    enum hotplug_state hp_state;
-    int intf_id;
-    struct interface *iface;
-
-    intf_id = interface_get_id_by_portid(port_id);
-    if (intf_id < 0) {
-        return HOTPLUG_ST_UNKNOWN;
-    }
-    iface = interfaces[intf_id - 1];
-
-    pthread_mutex_lock_debug(&iface->mutex);
-    hp_state = iface->hp_state;
-    iface->hp_state = HOTPLUG_ST_UNKNOWN;
-    pthread_mutex_unlock_debug(&iface->mutex);
-
-    return hp_state;
-}
-
-
 /**
  * @brief Get the hotplug state of an interface from the DETECT_IN signal
  */
@@ -1108,6 +1027,17 @@ static enum hotplug_state interface_get_hotplug_state(struct interface *iface)
             hs = HOTPLUG_ST_UNPLUGGED;
         }
     }
+
+    return hs;
+}
+
+enum hotplug_state interface_get_hotplug_state_atomic(struct interface *iface)
+{
+    enum hotplug_state hs;
+
+    pthread_mutex_lock_debug(&iface->mutex);
+    hs = interface_get_hotplug_state(iface);
+    pthread_mutex_unlock_debug(&iface->mutex);
 
     return hs;
 }
@@ -1175,13 +1105,12 @@ static void interface_wd_handle_active_stable(struct interface *iface)
     dbg_verbose("W&D: got stable %s_WD Act (gpio %d)\n",
                 iface->name, wd->gpio);
 
+    /* Power on the interface, includes the WAKEOUT pulse generation */
     if (wd->last_state == WD_ST_ACTIVE_STABLE) {
         interface_power_off(iface);
     }
     interface_power_on(iface);
-    if (iface->switch_portid != INVALID_PORT) {
-        svc_hot_plug(iface->switch_portid, false);
-    }
+
     /* Save last stable state for power ON/OFF handling */
     wd->last_state = wd->db_state;
 }
@@ -1689,13 +1618,10 @@ int interface_init(struct interface **ints, size_t nr_ints,
         ifc->detect_in.db_state = WD_ST_INVALID;
         ifc->detect_in.last_state = WD_ST_INVALID;
         rc = interface_install_wd_handler(ifc, false);
-
-        /* Initialize the hotplug state */
         ifc->handler_active = false;
-        ifc->hp_state = interface_get_hotplug_state(ifc);
 
         /* Power on/off the interface based on the DETECT_IN signal state */
-        switch (ifc->hp_state) {
+        switch (interface_get_hotplug_state(ifc)) {
         case HOTPLUG_ST_PLUGGED:
             /* Port is plugged in, power ON the interface */
             if (interface_power_on(ifc) < 0) {

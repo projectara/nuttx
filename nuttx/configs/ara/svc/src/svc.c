@@ -877,72 +877,7 @@ static int svc_handle_module_ready(uint8_t portid) {
 }
 
 /**
- * @brief Consume hotplug state for all ports and send events to the AP
- */
-static int svc_consume_hotplug_events(void)
-{
-    int i;
-
-    for (i = 0; i < SWITCH_PORT_MAX; i++) {
-        switch (interface_consume_hotplug_state_atomic(i)) {
-        /* Port is plugged in, send event to the AP */
-        case HOTPLUG_ST_PLUGGED:
-            svc_hot_plug(i, true);
-            break;
-        /*
-         * Module not present, don't send event to the AP as the AP never got a
-         * hotplug event for the port.
-         */
-        case HOTPLUG_ST_UNPLUGGED:
-            dbg_info("Hot_unplug event ignored for port %u\n", i);
-            break;
-        /* State not initialized yet or event already consumed, do nothing */
-        case HOTPLUG_ST_UNKNOWN:
-        default:
-            break;
-        }
-    }
-
-    return 0;
-}
-
-/**
- * @brief Handle hot_plug event from the interface detection signals
- *
- * Store the hotplug state for the interface until the AP is ready.
- * The actual hotplug event will be sent to the AP after the
- * handshake mechanism with the bridge succeeds.
- */
-int svc_hot_plug(uint8_t portid, bool lock_interface)
-{
-    bool release_mutex;
-    int rc;
-
-    rc = pthread_mutex_lock(&svc->lock);
-    if (rc) {
-        if (rc == EDEADLK) {
-            dbg_error("%s: mutex DEADLOCK detected, fix required\n", __func__);
-        } else {
-            return rc;
-        }
-    }
-    release_mutex = !rc;
-
-    switch_port_irq_enable(svc->sw, portid, true);
-    if (!svc->ap_initialized) {
-        /* If AP is not ready yet, store the state for later retrieval */
-        interface_store_hotplug_state_atomic(portid, HOTPLUG_ST_PLUGGED, lock_interface);
-    }
-
-    if (release_mutex) {
-        pthread_mutex_unlock(&svc->lock);
-    }
-
-    return 0;
-}
-
-/**
- * @brief Send hot_plug event from the interface detection signals
+ * @brief Send hot_unplug event to the AP
  */
 int svc_hot_unplug(uint8_t portid, bool lock_interface)
 {
@@ -978,9 +913,6 @@ int svc_hot_unplug(uint8_t portid, bool lock_interface)
             list_add(&svc_events, &svc_ev->events);
             pthread_cond_signal(&svc->cv);
         }
-    } else {
-        /* If AP is not ready yet, store the state for later retrieval */
-        interface_store_hotplug_state_atomic(portid, HOTPLUG_ST_UNPLUGGED, lock_interface);
     }
 
 out:
@@ -1167,11 +1099,9 @@ static int svcd_main(int argc, char **argv) {
 
             dbg_info("AP initialized on interface %u\n", svc->ap_intf_id);
             svc->ap_initialized = 1;
-
-            /* Send hotplug events to the AP */
-            svc_consume_hotplug_events();
         }
 
+        /* If AP is found let's handle the queued svc_events */
         if (svc->ap_initialized) {
             svc_handle_events();
         }

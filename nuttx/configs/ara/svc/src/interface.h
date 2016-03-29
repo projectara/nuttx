@@ -132,7 +132,6 @@ struct interface {
     struct wd_data detect_in;
     uint8_t wake_gpio;
     bool wake_gpio_pol;
-    enum hotplug_state hp_state;
     struct work_s linkup_work;
     uint8_t linkup_retries;
     bool linkup_req_sent;
@@ -208,9 +207,7 @@ int interface_power_on_atomic(struct interface *iface);
 int interface_generate_wakeout_atomic(struct interface *, bool assert,
                                       int length);
 int interface_cancel_wakeout_atomic(struct interface *iface);
-int interface_store_hotplug_state_atomic(uint8_t port_id, enum hotplug_state hotplug,
-                                         bool lock_interface);
-enum hotplug_state interface_consume_hotplug_state_atomic(uint8_t port_id);
+enum hotplug_state interface_get_hotplug_state_atomic(struct interface *iface);
 
 /*
  * Macro magic.

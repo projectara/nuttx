@@ -320,6 +320,7 @@ static int dumpstate_func(struct interface *iface, void *context)
     if (interface_is_module_port(iface)) {
         enum wd_debounce_state db_state = iface->detect_in.db_state;
         enum wd_debounce_state last_state = iface->detect_in.last_state;
+        enum hotplug_state hp_state = interface_get_hotplug_state_atomic(iface);
 
         if (iface->if_type == ARA_IFACE_TYPE_MODULE_PORT2) {
             printf("\twake:\n");
@@ -348,9 +349,9 @@ static int dumpstate_func(struct interface *iface, void *context)
                "<internal error>");
 
         printf("\thotplug state: %s\n",
-               iface->hp_state == HOTPLUG_ST_UNKNOWN ? "unknown" :
-               iface->hp_state == HOTPLUG_ST_PLUGGED ? "plugged" :
-               iface->hp_state == HOTPLUG_ST_UNPLUGGED ? "unplugged" :
+               hp_state == HOTPLUG_ST_UNKNOWN ? "unknown" :
+               hp_state == HOTPLUG_ST_PLUGGED ? "plugged" :
+               hp_state == HOTPLUG_ST_UNPLUGGED ? "unplugged" :
                "<internal error>");
 
         printf("\torder: %s\n",
