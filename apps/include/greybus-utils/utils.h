@@ -36,10 +36,12 @@
 #include <apps/greybus-utils/svc.h>
 #include <apps/greybus-utils/manifest.h>
 
-static inline int gb_packet_size(const char *rbuf)
+#include <arch/byteorder.h>
+
+static inline size_t gb_packet_size(const char *rbuf)
 {
    const struct gb_operation_hdr *hdr = (const struct gb_operation_hdr *)rbuf;
-   return hdr->size;
+   return le16_to_cpu(hdr->size);
 }
 
 struct cport_msg {
