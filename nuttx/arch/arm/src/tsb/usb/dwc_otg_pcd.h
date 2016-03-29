@@ -284,4 +284,9 @@ extern void update_ring_dma_desc_chain(dwc_otg_core_if_t * core_if,
 extern void init_fifo_dma_desc_chain(dwc_otg_core_if_t * core_if,
 				     dwc_otg_pcd_ep_t *ep);
 #endif
+
+#if defined(DWC_ENHANCED_SG_DMA_OUT) && defined(CONFIG_ARA_USB_DEV)
+void dump_ring_dma_desc_chain(dwc_otg_pcd_t * pcd, void *ep_handle);
+#endif
+
 #endif /* DWC_HOST_ONLY */

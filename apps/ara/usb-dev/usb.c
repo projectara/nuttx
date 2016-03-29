@@ -85,7 +85,9 @@ static void usb_dump_usage(int exit_status)
     printf("    -h: print this message and exit\n");
     printf("\n");
     printf("    -g: Dump the global device registers.\n");
-    printf("    -e <epnum>: Endpoint's registers to dump.\n");
+    printf("    -r: Dump device registers.\n");
+    printf("    -d: Dump DMA descriptors.\n");
+    printf("    -e <epnum>: Endpoint to dump.\n");
     exit(exit_status);
 }
 
@@ -98,8 +100,10 @@ static int usb_dump(int argc, char *argv[])
 
     int epnum = -1;
     int global = 0;
+    int dump_registers = 0;
+    int dump_descriptors = 0;
 
-    const char opts[] = "he:g";
+    const char opts[] = "he:grd";
 
     argc--;
     optind = -1; /* Force NuttX's getopt() to reinitialize. */
@@ -123,6 +127,12 @@ static int usb_dump(int argc, char *argv[])
         case 'g':
             global = true;
             break;
+        case 'r':
+            dump_registers = true;
+            break;
+        case 'd':
+            dump_descriptors = true;
+            break;
         default:
             printf("Unrecognized argument '%c'.\n", (char)c);
             usb_dump_usage(EXIT_FAILURE);
@@ -131,12 +141,28 @@ static int usb_dump(int argc, char *argv[])
 
     if (global)
         usb_dump_global_device();
-    if (epnum == -1) {
-        for (i = 0; i < DWC_NENDPOINTS; i++) {
-            usb_dump_ep(i);
+    if (dump_registers) {
+        if (epnum == -1) {
+            for (i = 0; i < DWC_NENDPOINTS; i++) {
+                usb_dump_ep(i);
+            }
+        } else {
+            usb_dump_ep(epnum);
         }
-    } else {
-        usb_dump_ep(epnum);
+    }
+
+    if (dump_descriptors) {
+#ifdef CONFIG_DWC_ENHANCED_BULK_OUT
+        if (epnum == -1) {
+            for (i = 0; i < DWC_NENDPOINTS; i++) {
+                usb_dump_ring_descriptor(i);
+            }
+        } else {
+            usb_dump_ring_descriptor(epnum);
+        }
+#else
+        printf("Please enable CONFIG_DWC_ENHANCED_BULK_OUT to use this option\n");
+#endif
     }
 
     return rc;

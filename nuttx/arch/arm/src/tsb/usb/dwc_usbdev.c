@@ -977,3 +977,18 @@ struct device_driver tsb_usb_pcd_driver = {
     .desc = "DWC2 USB 2.0 Device Controller Driver",
     .ops = &tsb_usb_pcd_driver_ops,
 };
+
+#if defined(DWC_ENHANCED_SG_DMA_OUT) && defined(CONFIG_ARA_USB_DEV)
+void usbdev_dump_ring_descriptor(struct usbdev_ep_s *usb_ep)
+{
+    dwc_otg_pcd_t *pcd;
+    struct dwc_usbdev_ep_s *privep;
+    struct dwc_usbdev_s *priv;
+
+    privep = (struct dwc_usbdev_ep_s *)usb_ep;
+    priv = (struct dwc_usbdev_s *)privep->usbdev;
+    pcd = priv->dwc_otg_device.pcd;
+    dump_ring_dma_desc_chain(pcd, usb_ep);
+
+}
+#endif

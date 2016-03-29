@@ -2652,6 +2652,28 @@ static void dwc_otg_pcd_ep_resume(dwc_otg_pcd_ep_t *ep)
 	DWC_MODIFY_REG32(&GET_CORE_IF(pcd)->dev_if->out_ep_regs[dwc_ep->num]->doepctl, 0, depctl.d32);
 
 }
+
+/* This is only used by usb dev debug app for debug purpose */
+#ifdef CONFIG_ARA_USB_DEV
+#include <syslog.h>
+void dump_ring_dma_desc_chain(dwc_otg_pcd_t * pcd, void *ep_handle)
+{
+	int i;
+	dwc_otg_dev_dma_desc_t *dma_desc;
+	dev_dma_desc_sts_t sts = {.d32 = 0 };
+	dwc_otg_pcd_ep_t *ep;
+
+	ep = get_ep_from_handle(pcd, ep_handle);
+	dma_desc = &(ep->dwc_ep.desc_addr[0]);
+	for (i = 0; i < ep->dwc_ep.desc_cnt; ++i, ++dma_desc) {
+		sts.d32 = dma_desc->status.d32;
+		lowsyslog("Desc %d/%d:\n", i+1, ep->dwc_ep.desc_cnt);
+		lowsyslog(" bs: %d\n", sts.b.bs);
+		lowsyslog(" sts: %d\n", sts.b.sts);
+		lowsyslog(" buf: %x\n", dma_desc->buf);
+	}
+}
+#endif
 #endif /* DWC_ENHANCED_SG_DMA_OUT */
 
 #ifdef DWC_ENHANCED_SG_DMA_IN
