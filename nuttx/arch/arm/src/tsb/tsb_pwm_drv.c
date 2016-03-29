@@ -1093,11 +1093,14 @@ static int tsb_pwm_dev_probe(struct device *dev)
 
     return ret;
 
-err_irq:
-    irqrestore(flags);
 err_req_pinshare:
     irq_detach(info->pwm_irq);
 err_resc:
+    free(info);
+    return ret;
+
+err_irq:
+    irqrestore(flags);
     free(info);
     return ret;
 }
