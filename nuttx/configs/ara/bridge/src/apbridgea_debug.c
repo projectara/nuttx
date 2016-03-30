@@ -88,6 +88,42 @@ static int latency_tag_dis_vendor_request_out(struct usbdev_s *dev, uint8_t req,
     return ret;
 }
 
+static int drop_tx(unsigned int cportid, void *buf, size_t len, void *priv)
+{
+    usb_release_buffer(NULL, buf);
+    return 0;
+}
+
+static int drop_rx(unsigned int cportid, void *buf, size_t len, void *priv)
+{
+    unipro_rxbuf_free(cportid, buf);
+    return 0;
+}
+
+int apbridgea_enable_cport_dropping(unsigned int cport_id)
+{
+    int ret = -EINVAL;
+    struct apbridge_dev_s *priv = get_apbridge_dev();
+
+    if (cport_id < unipro_cport_count()) {
+        ret = register_cport_callback(priv, cport_id, drop_rx, drop_tx);
+        lldbg("Enable data dropping on cport %d\n", cport_id);
+    }
+    return ret;
+}
+
+int apbridgea_disable_cport_dropping(unsigned int cport_id)
+{
+    int ret = -EINVAL;
+    struct apbridge_dev_s *priv = get_apbridge_dev();
+
+    if (cport_id < unipro_cport_count()) {
+        ret = unregister_cport_callback(priv, cport_id);
+        lldbg("Disable data dropping on cport %d\n", cport_id);
+    }
+    return ret;
+}
+
 int apbridgea_debug_init(void)
 {
     ts = kmm_malloc(sizeof(struct gb_timestamp) * unipro_cport_count());

@@ -31,5 +31,7 @@
 
 int apbridgea_debug_init(void);
 void apbridgea_debug_free(void);
+int apbridgea_enable_cport_dropping(unsigned int cport_id);
+int apbridgea_disable_cport_dropping(unsigned int cport_id);
 
 #endif /* _APBRIDGEA_DEBUG_H_ */

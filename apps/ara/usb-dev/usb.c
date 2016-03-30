@@ -33,6 +33,8 @@
 #include <unistd.h>
 #include <nuttx/util.h>
 #include <nuttx/config.h>
+#include <nuttx/unipro/unipro.h>
+#include <arch/board/apbridgea_debug.h>
 
 #include "dwc_otg_pcd_debug.h"
 
@@ -51,6 +53,7 @@ enum {
 #ifdef CONFIG_USB_LOG
     LOG,
 #endif
+    DEBUG,
     MAX_CMD,
 };
 
@@ -62,6 +65,7 @@ static const struct command commands[] = {
 #ifdef CONFIG_USB_LOG
     [LOG] = {'l', "log", "set dwc otg driver log level"},
 #endif
+    [DEBUG] = {'D', "debug", "debug commands"}
 };
 
 static void usage(int exit_status) {
@@ -172,6 +176,75 @@ static int usb_log(int argc, char *argv[])
 }
 #endif
 
+static void usb_debug_usage(int exit_status)
+{
+    printf("usb %s: usage:\n", commands[DEBUG].longc);
+    printf("    -h: print this message and exit\n");
+    printf("\n");
+    printf("    -d <cport_id>: Drop data comming from or going to a cport\n");
+    printf("    -t <cport_id>: Transfer data comming from or going to a cport\n");
+    exit(exit_status);
+}
+
+static int usb_debug(int argc, char *argv[])
+{
+    char **args = argv + 1;
+    int c;
+    int rc = 0;
+
+    int drop = 0;
+    int transfer = 0;
+    unsigned int cport_id = -1;
+
+    const char opts[] = "hdtc:";
+
+    argc--;
+    optind = -1; /* Force NuttX's getopt() to reinitialize. */
+
+    if (argc < 2) {
+        usb_debug_usage(EXIT_SUCCESS);
+    }
+
+    while ((c = getopt(argc, args, opts)) != -1) {
+        switch (c) {
+        case 'h':
+            usb_debug_usage(EXIT_SUCCESS);
+            break;
+        case 'd':
+            drop = 1;
+            break;
+        case 't':
+            transfer = 1;
+            break;
+        case 'c':
+            rc = sscanf(optarg, "%u", &cport_id);
+            if (rc != 1 || cport_id >= unipro_cport_count()) {
+                printf("A valid cport id is expected\n");
+                usb_debug_usage(EXIT_FAILURE);
+            }
+            break;
+        default:
+            printf("Unrecognized argument '%c'.\n", (char)c);
+            usb_debug_usage(EXIT_FAILURE);
+        }
+    }
+
+    if (cport_id == -1 && (drop || transfer)) {
+        printf("A cport id is expected\n");
+        usb_debug_usage(EXIT_FAILURE);
+    }
+
+    if (drop) {
+        apbridgea_enable_cport_dropping(cport_id);
+    }
+
+    if (transfer) {
+        apbridgea_disable_cport_dropping(cport_id);
+    }
+
+    return rc;
+}
+
 #ifdef CONFIG_BUILD_KERNEL
 int main(int argc, FAR char *argv[])
 #else
@@ -216,6 +289,9 @@ int usb_main(int argc, char *argv[])
         rc = usb_log(argc, argv);
         break;
 #endif
+    case DEBUG:
+        rc = usb_debug(argc, argv);
+        break;
     default:
         usage(EXIT_FAILURE);
     }
