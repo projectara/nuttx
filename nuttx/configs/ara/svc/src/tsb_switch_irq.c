@@ -255,7 +255,7 @@ static void switch_port_irq_reenable(struct tsb_switch *sw, uint8_t port)
     }
 }
 
-int switch_irq_handler(struct tsb_switch *sw) {
+static int switch_threaded_irq_handler(struct tsb_switch *sw) {
     uint32_t swint, swins, port_irq_status, attr_value;
     int i, j, rc;
 
@@ -421,7 +421,7 @@ int _switch_irq_pending_worker(int argc, char *argv[])
             break;
 
         /* Calls the low level handler to clear the interrupt source */
-        switch_irq_handler(sw);
+        switch_threaded_irq_handler(sw);
     }
 
     return 0;
