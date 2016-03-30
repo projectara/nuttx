@@ -155,7 +155,7 @@ static int interface_config(struct interface *iface)
  * @param iface Interface whose reference clock to enable
  * @return 0 on success, <0 on error
  */
-static int interface_refclk_enable(struct interface *iface)
+int interface_refclk_enable(struct interface *iface)
 {
     int rc;
 
@@ -186,7 +186,7 @@ static int interface_refclk_enable(struct interface *iface)
  * @param iface Interface whose reference clock to disable
  * @return 0 on success, <0 on error
  */
-static int interface_refclk_disable(struct interface *iface)
+int interface_refclk_disable(struct interface *iface)
 {
     int rc;
 
@@ -207,16 +207,16 @@ static int interface_refclk_disable(struct interface *iface)
 }
 
 /**
- * @brief Turn on the power to this interface
+ * @brief Turn on VSYS power to this interface
  *
- * This function attempts to apply power, clock, etc. to the
- * interface, and updates the interface's power state accordingly.
- * This affects the value returned by interface_get_pwr_state(iface).
+ * This function attempts to apply VSYS power to the interface, and
+ * updates the interface's power state accordingly.  This affects the
+ * value returned by interface_get_pwr_state(iface).
  *
- * @param iface Interface whose power to enable
+ * @param iface Interface whose VSYS power to enable
  * @return 0 on success, <0 on error
  */
-static int interface_power_enable(struct interface *iface)
+int interface_vsys_enable(struct interface *iface)
 {
     int rc;
 
@@ -238,16 +238,16 @@ static int interface_power_enable(struct interface *iface)
 
 
 /**
- * @brief Turn off the power to this interface
+ * @brief Turn off VSYS power to this interface
  *
- * This function attempts to remove power, clock, etc. from the
- * interface, and updates the interface's power state accordingly.
- * This affects the value returned by interface_get_pwr_state(iface).
+ * This function attempts to remove VSYS power from the interface, and
+ * updates the interface's power state accordingly.  This affects the
+ * value returned by interface_get_pwr_state(iface).
  *
- * @param iface Interface whose power to disable
+ * @param iface Interface whose VSYS power to disable
  * @return 0 on success, <0 on error
  */
-static int interface_power_disable(struct interface *iface)
+int interface_vsys_disable(struct interface *iface)
 {
     int rc;
 
@@ -566,7 +566,7 @@ int interface_cancel_wakeout_atomic(struct interface *iface)
  * @param iface Interface whose power state to retrieve
  * @return iface's power state, or ARA_IFACE_PWR_ERROR if iface == NULL.
  */
-enum ara_iface_pwr_state interface_get_power_state(struct interface *iface)
+enum ara_iface_pwr_state interface_get_vsys_state(struct interface *iface)
 {
     if (!iface) {
         return ARA_IFACE_PWR_ERROR;
@@ -580,8 +580,7 @@ enum ara_iface_pwr_state interface_get_power_state(struct interface *iface)
  * @param iface Interface whose refclk state to retrieve
  * @return iface's refclk state, or ARA_IFACE_PWR_ERROR if iface == NULL.
  */
-static enum ara_iface_pwr_state
-interface_get_refclk_state(struct interface *iface)
+enum ara_iface_pwr_state interface_get_refclk_state(struct interface *iface)
 {
     if (!iface) {
         return ARA_IFACE_PWR_ERROR;
@@ -623,7 +622,7 @@ static int interface_power_off(struct interface *iface)
     }
 
     /* Power off the interface */
-    rc = interface_power_disable(iface);
+    rc = interface_vsys_disable(iface);
     if (rc < 0) {
         return rc;
     }
@@ -734,8 +733,8 @@ static int interface_power_on(struct interface *iface)
     }
 
     /* If powered OFF, power it ON now */
-    if (!interface_get_power_state(iface)) {
-        rc = interface_power_enable(iface);
+    if (!interface_get_vsys_state(iface)) {
+        rc = interface_vsys_enable(iface);
         if (rc < 0) {
             return rc;
         }
@@ -801,7 +800,7 @@ out_port:
 out_refclk:
     interface_refclk_disable(iface);
 out_power:
-    interface_power_disable(iface);
+    interface_vsys_disable(iface);
 
     return rc;
 }
@@ -1545,8 +1544,8 @@ static int interface_forcibly_eject(struct interface *iface, uint32_t delay)
         if (gpio_is_valid(wd->gpio)) {
             gpio_direction_in(wd->gpio);
             if ((gpio_get_value(wd->gpio) == wd->polarity) &&
-                (interface_get_power_state(iface) != ARA_IFACE_PWR_UP)) {
-                interface_power_enable(iface);
+                    (interface_get_vsys_state(iface) != ARA_IFACE_PWR_UP)) {
+                interface_vsys_enable(iface);
             }
         }
         break;

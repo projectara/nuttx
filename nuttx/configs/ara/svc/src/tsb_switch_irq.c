@@ -317,7 +317,7 @@ static int switch_threaded_irq_handler(struct tsb_switch *sw) {
          */
         for (i = 0; i < SWITCH_PORT_MAX; i++) {
             if (sw->rdata->rflags & TSB_SWITCH_RFLAG_REENABLE_PORT_IRQ_HACK) {
-                if (interface_get_power_state(interface_get_by_portid(i)) ==
+                if (interface_get_vsys_state(interface_get_by_portid(i)) ==
                     ARA_IFACE_PWR_UP) {
                     switch_port_irq_reenable(sw, (uint8_t)i);
                 }

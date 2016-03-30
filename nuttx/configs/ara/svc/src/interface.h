@@ -180,7 +180,12 @@ uint8_t interface_get_spring_count(void);
 #define MOD_RELEASE_PULSE_WIDTH 1500U /* ms */
 
 const char *interface_get_name(struct interface *iface);
-enum ara_iface_pwr_state interface_get_power_state(struct interface *iface);
+enum ara_iface_pwr_state interface_get_vsys_state(struct interface *iface);
+enum ara_iface_pwr_state interface_get_refclk_state(struct interface *iface);
+int interface_refclk_enable(struct interface *iface);
+int interface_refclk_disable(struct interface *iface);
+int interface_vsys_enable(struct interface *iface);
+int interface_vsys_disable(struct interface *iface);
 
 /**
  * @brief Test if an interface connects to a built-in peer on the board.
