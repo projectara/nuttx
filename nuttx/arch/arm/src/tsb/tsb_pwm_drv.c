@@ -915,7 +915,7 @@ static int tsb_pwm_irq_handler(int irq, void *context)
     info->int_state = tsb_pwm_read(info->reg_base, TSB_PWM_INTSTATUS);
 
     if (info->handle) {
-        info->handle(&info->int_state);
+        info->handle(info->int_state);
     }
 
     tsb_pwm_write(info->reg_base, TSB_PWM_INTSTATUS, info->int_state);
