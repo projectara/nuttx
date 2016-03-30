@@ -1172,12 +1172,6 @@ static struct device_pwm_type_ops tsb_pwm_type_ops = {
     /** sync mode, pulse count mode, pattern mode.. etc. */
     .set_mode     = tsb_pwm_op_set_mode,
 
-    /** Enable controller power/clock */
-    .setup        = tsb_pwm_op_setup,
-
-    /** Disable controller power/clock if need */
-    .shutdown           = tsb_pwm_op_shutdown,
-
     /** Start generators of pulse concurrently */
     .sync_output        = tsb_pwm_op_sync,
 

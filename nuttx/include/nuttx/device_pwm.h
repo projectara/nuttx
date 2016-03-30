@@ -97,12 +97,6 @@ struct device_pwm_type_ops {
     int (*set_mode)(struct device *dev, uint16_t  which, enum pwm_mode mode,
                     void *param);
 
-    /** PWM setup power/clock of PWM controller function pointer. */
-    int (*setup)(struct device *dev);
-
-    /** PWM shutdown power/clock of controller function pointer. */
-    int (*shutdown)(struct device *dev, bool force_off);
-
     /** PWM multiple generator of concurrent output. */
     int (*sync_output)(struct device *dev, bool enable);
 
@@ -303,49 +297,6 @@ static inline int device_pwm_request_set_mode(struct device *dev,
 
     return DEVICE_DRIVER_GET_OPS(dev, pwm)->set_mode(dev, which, mode, param);
 }
-
-/**
- * @brief Setup power/clock of PWM controller.
- *
- * @param dev Opened device driver handle.
- */
-static inline int device_pwm_request_setup(struct device *dev)
-{
-    DEVICE_DRIVER_ASSERT_OPS(dev);
-
-    if (!device_is_open(dev)) {
-        return -ENODEV;
-    }
-
-    if (!DEVICE_DRIVER_GET_OPS(dev, pwm)->setup) {
-        return -ENOSYS;
-    }
-
-    return DEVICE_DRIVER_GET_OPS(dev, pwm)->setup(dev);
-}
-
-/**
- * @brief Shutdown power/clock of PWM controller.
- *
- * @param dev Opened device driver handle.
- * @param off true for force power off, 0 for checking reference count before
- *            power off.
- */
-static inline int device_pwm_request_shutdown(struct device *dev, bool off)
-{
-    DEVICE_DRIVER_ASSERT_OPS(dev);
-
-    if (!device_is_open(dev)) {
-        return -ENODEV;
-    }
-
-    if (!DEVICE_DRIVER_GET_OPS(dev, pwm)->shutdown) {
-        return -ENOSYS;
-    }
-
-    return DEVICE_DRIVER_GET_OPS(dev, pwm)->shutdown(dev, off);
-}
-
 
 /**
  * @brief Enable generate waveforms with the same FREQUENCY.
