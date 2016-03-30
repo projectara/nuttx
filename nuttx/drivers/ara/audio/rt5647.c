@@ -42,6 +42,9 @@
 #include <nuttx/ara/audio_board.h>
 #include <nuttx/ara/codec.h>
 
+#include <nuttx/power/pm.h>
+#include <arch/tsb/pm.h>
+
 #undef ENABLE_HAPTIC_TEST
 #define MIN_SPEAKER_SUPPORT
 
@@ -1150,6 +1153,26 @@ void *get_codec_write_func(struct device *dev)
     return (void*)info->codec_write;
 }
 
+#ifdef CONFIG_PM
+/**
+ * @brief notify PM framework about activity and check if state is ready
+ *
+ * @param dev - pointer to structure of device data
+ * @return 0 on success, negative errno on error
+ */
+static int codec_pm_activity(struct device *dev)
+{
+    pm_activity(TSB_CODEC_ACTIVITY);
+
+    return tsb_pm_wait_for_wakeup();
+}
+#else
+static int codec_pm_activity(struct device *dev)
+{
+    return 0;
+}
+#endif
+
 /**
  * @brief read data from codec register
  *
@@ -1163,6 +1186,7 @@ static uint32_t rt5647_codec_hw_read(uint32_t reg, uint32_t *value)
     struct rt5647_info *info = NULL;
     uint8_t cmd = 0;
     uint16_t data = 0;
+    int ret;
 
     /*
      * rt5647 i2c read format :
@@ -1195,6 +1219,10 @@ static uint32_t rt5647_codec_hw_read(uint32_t reg, uint32_t *value)
 
     cmd = (uint8_t)reg;
 
+    if ((ret = codec_pm_activity(dev))) {
+        return ret;
+    }
+
     if (device_i2c_transfer(info->i2c, msg, 2)) {
         return -EIO;
     }
@@ -1216,6 +1244,7 @@ static uint32_t rt5647_codec_hw_write(uint32_t reg, uint32_t value)
     struct device *dev = get_codec_dev();
     struct rt5647_info *info = NULL;
     uint8_t cmd[3] = {0x00, 0x00, 0x00};
+    int ret;
 
     /*
      * rt5647 i2c write format :
@@ -1244,6 +1273,10 @@ static uint32_t rt5647_codec_hw_write(uint32_t reg, uint32_t value)
     cmd[0] = (uint8_t)reg;
     cmd[1] = (uint8_t)((value >> 8) & 0xFF);
     cmd[2] = (uint8_t)(value & 0xFF);
+
+    if ((ret = codec_pm_activity(dev))) {
+        return ret;
+    }
 
     if (device_i2c_transfer(info->i2c, msg, 1)) {
         return -EIO;

@@ -45,8 +45,10 @@
 #include <nuttx/device_pll.h>
 #include <nuttx/device_i2s.h>
 #include <nuttx/ring_buf.h>
+#include <nuttx/power/pm.h>
 
 #include <arch/byteorder.h>
+#include <arch/tsb/pm.h>
 
 #include "up_arch.h"
 #include "tsb_scm.h"
@@ -460,6 +462,15 @@ static void tsb_i2s_unmute(struct tsb_i2s_info *info, enum tsb_i2s_block block)
                         TSB_I2S_REG_MUTE_MUTEN);
 }
 
+static void tsb_i2s_reset(struct tsb_i2s_info *info)
+{
+    if (!tsb_i2s_device_is_enabled(info))
+        return;
+
+    tsb_reset(TSB_RST_I2SSYS);
+    tsb_reset(TSB_RST_I2SBIT);
+}
+
 static void tsb_i2s_enable(struct tsb_i2s_info *info)
 {
     if (tsb_i2s_device_is_enabled(info))
@@ -467,9 +478,6 @@ static void tsb_i2s_enable(struct tsb_i2s_info *info)
 
     tsb_clk_enable(TSB_CLK_I2SSYS);
     tsb_clk_enable(TSB_CLK_I2SBIT);
-
-    tsb_reset(TSB_RST_I2SSYS);
-    tsb_reset(TSB_RST_I2SBIT);
 
     info->flags |= TSB_I2S_FLAG_ENABLED;
 }
@@ -479,14 +487,25 @@ static void tsb_i2s_disable(struct tsb_i2s_info *info)
     if (!tsb_i2s_device_is_enabled(info))
         return;
 
-    tsb_reset(TSB_RST_I2SBIT);
-    tsb_reset(TSB_RST_I2SSYS);
-
     tsb_clk_disable(TSB_CLK_I2SBIT);
     tsb_clk_disable(TSB_CLK_I2SSYS);
 
     info->flags &= ~TSB_I2S_FLAG_ENABLED;
 }
+
+#ifdef CONFIG_PM
+static int i2s_pm_activity(struct device *dev)
+{
+    pm_activity(TSB_I2S_ACTIVITY);
+
+    return tsb_pm_wait_for_wakeup();
+}
+#else
+static int i2s_pm_activity(struct device *dev)
+{
+    return 0;
+}
+#endif
 
 static void tsb_i2s_init_block(struct tsb_i2s_info *info,
                                enum tsb_i2s_block block)
@@ -1019,7 +1038,13 @@ static int tsb_i2s_op_prepare_receiver(struct device *dev,
     }
 
     if (!tsb_i2s_tx_is_prepared(info)) {
+        if ((ret = i2s_pm_activity(dev))) {
+            goto err_unlock;
+        }
+#ifndef CONFIG_PM
         tsb_i2s_enable(info);
+#endif
+        tsb_i2s_reset(info);
 
         ret = tsb_i2s_config_hw(info);
         if (ret)
@@ -1049,8 +1074,13 @@ static int tsb_i2s_op_prepare_receiver(struct device *dev,
     return 0;
 
 err_disable:
-    if (!tsb_i2s_tx_is_prepared(info))
+    if (!tsb_i2s_tx_is_prepared(info)) {
+        tsb_i2s_reset(info);
+#ifndef CONFIG_PM
         tsb_i2s_disable(info);
+#endif
+    }
+
 err_unlock:
     sem_post(&info->lock);
 
@@ -1124,7 +1154,10 @@ static int tsb_i2s_op_shutdown_receiver(struct device *dev)
 
     if (!tsb_i2s_tx_is_prepared(info)) {
         tsb_i2s_stop_clocks(info);
+        tsb_i2s_reset(info);
+#ifndef CONFIG_PM
         tsb_i2s_disable(info);
+#endif
     }
 
     info->rx_rb = NULL;
@@ -1158,7 +1191,13 @@ static int tsb_i2s_op_prepare_transmitter(struct device *dev,
     }
 
     if (!tsb_i2s_rx_is_prepared(info)) {
+        if ((ret = i2s_pm_activity(dev))) {
+            goto err_unlock;
+        }
+#ifndef CONFIG_PM
         tsb_i2s_enable(info);
+#endif
+        tsb_i2s_reset(info);
 
         ret = tsb_i2s_config_hw(info);
         if (ret)
@@ -1187,8 +1226,13 @@ static int tsb_i2s_op_prepare_transmitter(struct device *dev,
     return 0;
 
 err_disable:
-    if (!tsb_i2s_rx_is_prepared(info))
+    if (!tsb_i2s_rx_is_prepared(info)) {
+        tsb_i2s_reset(info);
+#ifndef CONFIG_PM
         tsb_i2s_disable(info);
+#endif
+    }
+
 err_unlock:
     sem_post(&info->lock);
 
@@ -1262,7 +1306,10 @@ static int tsb_i2s_op_shutdown_transmitter(struct device *dev)
 
     if (!tsb_i2s_rx_is_prepared(info)) {
         tsb_i2s_stop_clocks(info);
+        tsb_i2s_reset(info);
+#ifndef CONFIG_PM
         tsb_i2s_disable(info);
+#endif
     }
 
     info->tx_rb = NULL;
@@ -1294,6 +1341,11 @@ static int tsb_i2s_dev_open(struct device *dev)
         info->flags = TSB_I2S_FLAG_OPEN;
     }
 
+#ifdef CONFIG_PM
+    tsb_i2s_enable(info);
+    tsb_i2s_reset(info);
+#endif
+
 err_unlock:
     sem_post(&info->lock);
 
@@ -1322,6 +1374,11 @@ static void tsb_i2s_dev_close(struct device *dev)
         tsb_i2s_op_shutdown_transmitter(dev);
 
     tsb_i2s_xfer_close(info);
+
+#ifdef CONFIG_PM
+    tsb_i2s_reset(info);
+    tsb_i2s_disable(info);
+#endif
 
     info->flags = 0;
 
@@ -1386,6 +1443,111 @@ static int tsb_i2s_extract_resources(struct device *dev,
     return 0;
 }
 
+static int tsb_i2s_suspend(struct device *dev)
+{
+    struct tsb_i2s_info *info = device_get_private(dev);
+
+    tsb_i2s_reset(info);
+    tsb_i2s_disable(info);
+
+    return 0;
+}
+
+static int tsb_i2s_poweroff(struct device *dev)
+{
+    return tsb_i2s_suspend(dev);
+}
+
+static int tsb_i2s_resume(struct device *dev)
+{
+    struct tsb_i2s_info *info = device_get_private(dev);
+
+    tsb_i2s_enable(info);
+    tsb_i2s_reset(info);
+
+    return 0;
+}
+
+#ifdef CONFIG_PM
+static void tsb_i2s_pm_notify(struct pm_callback_s *cb,
+                              enum pm_state_e pmstate)
+{
+    struct device *dev;
+    irqstate_t flags;
+
+    dev = cb->priv;
+
+    flags = irqsave();
+
+    switch (pmstate) {
+    case PM_NORMAL:
+        if (tsb_pm_getstate() == PM_SLEEP) {
+            tsb_i2s_resume(dev);
+        }
+        break;
+    case PM_IDLE:
+    case PM_STANDBY:
+        /* Nothing to do in idle or standby. */
+        break;
+    case PM_SLEEP:
+        tsb_i2s_suspend(dev);
+        break;
+    default:
+        /* Can never happen. */
+        PANIC();
+    }
+
+    irqrestore(flags);
+}
+
+static int tsb_i2s_pm_prepare(struct pm_callback_s *cb,
+                              enum pm_state_e pmstate)
+{
+    struct device *dev;
+    struct tsb_i2s_info *info = NULL;
+    irqstate_t flags;
+
+    dev = cb->priv;
+    info = device_get_private(dev);
+
+    flags = irqsave();
+
+    switch (pmstate) {
+    case PM_NORMAL:
+        break;
+    case PM_IDLE:
+    case PM_STANDBY:
+        /* Nothing to do in idle or standby. */
+        break;
+    case PM_SLEEP:
+        if (tsb_i2s_rx_is_prepared(info) || tsb_i2s_tx_is_prepared(info)) {
+            irqrestore(flags);
+            return -EBUSY;
+        }
+        break;
+    default:
+        /* Can never happen. */
+        PANIC();
+    }
+
+    irqrestore(flags);
+
+    return OK;
+}
+#else
+static void tsb_i2s_pm_notify(struct pm_callback_s *cb,
+                              enum pm_state_e pmstate)
+{
+
+}
+
+static int tsb_i2s_pm_prepare(struct pm_callback_s *cb,
+                              enum pm_state_e pmstate)
+{
+    return OK;
+}
+#endif
+
 static int tsb_i2s_dev_probe(struct device *dev)
 {
     struct tsb_i2s_info *info;
@@ -1430,8 +1592,15 @@ static int tsb_i2s_dev_probe(struct device *dev)
 
     irqrestore(flags);
 
+    ret = tsb_pm_register(tsb_i2s_pm_prepare, tsb_i2s_pm_notify, dev);
+    if (ret < 0) {
+        goto err_pm;
+    }
+
     return 0;
 
+err_pm:
+    tsb_pin_release(PIN_I2S0);
 err_detach_serr_irq:
     tsb_i2s_xfer_irq_detach(info);
 err_detach_sioerr_irq:
@@ -1473,6 +1642,12 @@ static void tsb_i2s_dev_remove(struct device *dev)
     free(info);
 }
 
+static struct device_pm_ops tsb_i2s_pm_ops = {
+    .suspend    = tsb_i2s_suspend,
+    .poweroff   = tsb_i2s_poweroff,
+    .resume     = tsb_i2s_resume,
+};
+
 static struct device_i2s_type_ops tsb_i2s_type_ops = {
     .get_caps                     = tsb_i2s_op_get_caps,
     .set_config                   = tsb_i2s_op_set_config,
@@ -1501,4 +1676,5 @@ struct device_driver tsb_i2s_driver = {
     .name   = "tsb_i2s",
     .desc   = "TSB I2S Driver",
     .ops    = &tsb_i2s_driver_ops,
+    .pm     = &tsb_i2s_pm_ops,
 };
