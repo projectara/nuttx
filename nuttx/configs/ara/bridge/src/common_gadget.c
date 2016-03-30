@@ -302,6 +302,33 @@ struct usbdev_req_s *find_request_by_priv(const void *priv)
 }
 
 /*
+ * Look up a request in request pool using the endpoint
+ * \param ep the endpoint
+ * \return request's pointer or NULL if request can not be found
+ */
+struct usbdev_req_s *find_request_by_ep(struct usbdev_ep_s *ep)
+{
+    struct list_head *pool_iter, *req_iter;
+    struct request_pool *pool;
+    struct request_list *req_list;
+    irqstate_t flags;
+
+    list_foreach(&request_pool, pool_iter) {
+        pool = list_entry(pool_iter, struct request_pool, pool);
+        flags = irqsave();
+        list_foreach(&pool->request_in_use, req_iter) {
+            req_list = list_entry(req_iter, struct request_list, list);
+            if (req_list->ep == ep) {
+                irqrestore(flags);
+                return req_list->req;
+            }
+        }
+        irqrestore(flags);
+    }
+    return NULL;
+}
+
+/*
  * Get the endpoint that use the request
  * \param req request's pointer
  * \return a pointer to endpoint

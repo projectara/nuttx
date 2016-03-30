@@ -86,6 +86,7 @@ struct usbdev_req_s *get_request(struct usbdev_ep_s *ep,
                                  size_t len, void *priv);
 void put_request(struct usbdev_req_s *req);
 struct usbdev_req_s *find_request_by_priv(const void *priv);
+struct usbdev_req_s *find_request_by_ep(struct usbdev_ep_s *ep);
 struct usbdev_ep_s *request_to_ep(struct usbdev_req_s *req);
 void request_set_priv(struct usbdev_req_s *req, void *priv);
 void *request_get_priv(struct usbdev_req_s *req);

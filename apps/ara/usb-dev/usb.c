@@ -183,6 +183,7 @@ static void usb_debug_usage(int exit_status)
     printf("\n");
     printf("    -d <cport_id>: Drop data comming from or going to a cport\n");
     printf("    -t <cport_id>: Transfer data comming from or going to a cport\n");
+    printf("    -C <epnum>: Cancel pending requests\n");
     exit(exit_status);
 }
 
@@ -194,9 +195,10 @@ static int usb_debug(int argc, char *argv[])
 
     int drop = 0;
     int transfer = 0;
+    unsigned int epnum;
     unsigned int cport_id = -1;
 
-    const char opts[] = "hdtc:";
+    const char opts[] = "hdtc:C:";
 
     argc--;
     optind = -1; /* Force NuttX's getopt() to reinitialize. */
@@ -223,6 +225,13 @@ static int usb_debug(int argc, char *argv[])
                 usb_debug_usage(EXIT_FAILURE);
             }
             break;
+        case 'C':
+            rc = sscanf(optarg, "%u", &epnum);
+            if (rc != 1 || usb_debug_ep_cancel(epnum)) {
+                printf("A valid endpoint number is expected\n");
+                usb_debug_usage(EXIT_FAILURE);
+            }
+            return 0;
         default:
             printf("Unrecognized argument '%c'.\n", (char)c);
             usb_debug_usage(EXIT_FAILURE);

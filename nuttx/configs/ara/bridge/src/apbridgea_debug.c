@@ -34,6 +34,8 @@
 #include <arch/board/common_gadget.h>
 #include <arch/board/apbridgea_gadget.h>
 #include <arch/board/apbridgea_unipro.h>
+#include <nuttx/usb/usb.h>
+#include <nuttx/usb/usbdev.h>
 
 static struct gb_timestamp *ts;
 
@@ -122,6 +124,29 @@ int apbridgea_disable_cport_dropping(unsigned int cport_id)
         lldbg("Disable data dropping on cport %d\n", cport_id);
     }
     return ret;
+}
+
+int usb_debug_ep_cancel(int epnum)
+{
+    struct usbdev_ep_s *ep;
+    struct usbdev_req_s *req;
+    struct apbridge_dev_s *priv;
+
+    priv = get_apbridge_dev();
+    ep = get_apbridge_ep(priv, epnum);
+
+    if (!ep) {
+        return -EINVAL;
+    }
+
+    do {
+        req = find_request_by_ep(ep);
+        if (req) {
+            EP_CANCEL(ep, req);
+        }
+    } while (req);
+
+    return 0;
 }
 
 int apbridgea_debug_init(void)
