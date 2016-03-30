@@ -823,6 +823,180 @@ int svc_route_destroy(uint8_t intf1_id, uint8_t intf2_id) {
 }
 
 /**
+ * @brief Turn on VSYS power to this interface.
+ *
+ * @param intf_id Interface whose VSYS power is to be enabled.
+ * @return 0 on success, <0 on error
+ */
+int svc_intf_vsys_enable(uint8_t intf_id)
+{
+    struct interface *iface;
+
+    iface = interface_get(intf_id - 1);
+    if (!iface) {
+        return -EINVAL;
+    }
+
+    return interface_vsys_enable(iface);
+}
+
+/**
+ * @brief Turn off VSYS power on this interface.
+ *
+ * @param intf_id Interface whose VSYS power is to be disabled.
+ * @return 0 on success, <0 on error
+ */
+int svc_intf_vsys_disable(uint8_t intf_id)
+{
+    struct interface *iface;
+
+    iface = interface_get(intf_id - 1);
+    if (!iface) {
+        return -EINVAL;
+    }
+
+    return interface_vsys_disable(iface);
+}
+
+/**
+ * @brief Turn on refclk to this interface.
+ *
+ * @param intf_id Interface whose refclk is to be enabled.
+ * @return 0 on success, <0 on error
+ */
+int svc_intf_refclk_enable(uint8_t intf_id)
+{
+    struct interface *iface;
+
+    iface = interface_get(intf_id - 1);
+    if (!iface) {
+        return -EINVAL;
+    }
+
+    return interface_refclk_enable(iface);
+}
+
+/**
+ * @brief Turn off refclk to this interface.
+ *
+ * @param intf_id Interface whose refclk is to be disabled.
+ * @return 0 on success, <0 on error
+ */
+int svc_intf_refclk_disable(uint8_t intf_id)
+{
+    struct interface *iface;
+
+    iface = interface_get(intf_id - 1);
+    if (!iface) {
+        return -EINVAL;
+    }
+
+    return interface_refclk_disable(iface);
+}
+
+/**
+ * @brief Enable UniPro switch port for this interface.
+ *
+ * @param intf_id Interface whose UniPro switch port is to be enabled.
+ * @return 0 on success, <0 on error
+ */
+int svc_intf_unipro_enable(uint8_t intf_id)
+{
+    bool release_mutex;
+    int rc;
+    struct interface *iface;
+    unsigned int switch_portid;
+
+    rc = pthread_mutex_lock(&svc->lock);
+    release_mutex = !rc;
+    if (rc != 0 && rc != EDEADLK) {
+        return rc;
+    }
+
+    iface = interface_get(intf_id - 1);
+    if (!iface) {
+        rc = -EINVAL;
+        goto err_unlock;
+    }
+
+    switch_portid = interface_get_portid(iface);
+
+    rc = switch_enable_port(svc->sw, switch_portid, true);
+    if (rc) {
+        dbg_error("%s: Failed to enable switch port %u, intf %u, err = %d\n",
+                __func__, switch_portid, intf_id, rc);
+        goto err_unlock;
+    }
+
+    rc = switch_port_irq_enable(svc->sw, switch_portid, true);
+    if (rc) {
+        dbg_error("%s: Failed to enable IRQs for switch port %u, intf %u, err = %d\n",
+                __func__, switch_portid, intf_id, rc);
+        goto err_disable;
+    }
+
+    if (release_mutex) {
+        pthread_mutex_unlock(&svc->lock);
+    }
+
+    return 0;
+
+err_disable:
+    (void)switch_enable_port(svc->sw, switch_portid, false);
+err_unlock:
+    if (release_mutex) {
+        pthread_mutex_unlock(&svc->lock);
+    }
+    return rc;
+}
+
+/**
+ * @brief Disable UniPro switch port for this interface.
+ *
+ * @param intf_id Interface whose UniPro switch port is to be disabled.
+ * @return 0 on success, <0 on error
+ */
+int svc_intf_unipro_disable(uint8_t intf_id)
+{
+    bool release_mutex;
+    int rc1 = 0, rc2 = 0;
+    struct interface *iface;
+    unsigned int switch_portid;
+
+    rc1 = pthread_mutex_lock(&svc->lock);
+    release_mutex = !rc1;
+    if (rc1 != 0 && rc1 != EDEADLK) {
+        return rc1;
+    }
+
+    iface = interface_get(intf_id - 1);
+    if (!iface) {
+        rc1 = -EINVAL;
+        goto out_unlock;
+    }
+
+    switch_portid = interface_get_portid(iface);
+
+    rc1 = switch_port_irq_enable(svc->sw, switch_portid, false);
+    if (rc1) {
+        dbg_error("%s: Failed to disable IRQs for switch port %u, intf %u, err =%d\n",
+                __func__, switch_portid, intf_id, rc1);
+    }
+
+    rc2 = switch_enable_port(svc->sw, switch_portid, false);
+    if (rc2) {
+        dbg_error("%s: Failed to disable switch port %u, intf %u, err = %d\n",
+                __func__, switch_portid, intf_id, rc2);
+    }
+
+out_unlock:
+    if (release_mutex) {
+        pthread_mutex_unlock(&svc->lock);
+    }
+    return rc2 ? rc2 : rc1;
+}
+
+/**
  * @brief Configure the power mode of an interface
  */
 int svc_intf_set_power_mode(uint8_t intf_id, struct unipro_link_cfg *cfg)
