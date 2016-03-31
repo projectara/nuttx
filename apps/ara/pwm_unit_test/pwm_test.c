@@ -89,15 +89,14 @@ static int pwm_configure(struct device *dev, struct pwm_app_info *info,
         return ret;
     }
 
-    ret = device_pwm_request_config(dev, info->index, info->duty,
-                                    info->period);
+    ret = device_pwm_config(dev, info->index, info->duty, info->period);
     if (ret) {
         printf("pwm_test: config generator(%u) return error(%x)\n",
                info->index, ret);
         goto err_configure;
     }
 
-    ret = device_pwm_request_set_polarity(dev, info->index, info->polarity);
+    ret = device_pwm_set_polarity(dev, info->index, info->polarity);
     if (ret) {
         printf("pwm_test: set generator(%u) polarity return error(%x)\n",
                info->index, ret);
@@ -105,8 +104,8 @@ static int pwm_configure(struct device *dev, struct pwm_app_info *info,
     }
 
     if (mode_test) {
-        ret = device_pwm_request_set_mode(dev, info->index, info->mode_num,
-                                          &info->param);
+        ret = device_pwm_set_mode(dev, info->index, info->mode_num,
+                                  &info->param);
         if (ret) {
             printf("pwm_test: configure mode %u return error(%x)\n",
                    info->mode_num, ret);
@@ -116,12 +115,12 @@ static int pwm_configure(struct device *dev, struct pwm_app_info *info,
         if (info->mode_num == PWM_PULSECOUNT_MODE) {
             /* Test PWM1 interrupt function here!!!!*/
             val = 0;
-            device_pwm_request_callback(dev, 0x02, intr_handler);
+            device_pwm_register_callback(dev, 0x02, intr_handler);
         }
 
     }
 
-    ret = device_pwm_request_enable(dev, info->index);
+    ret = device_pwm_enable(dev, info->index);
     if (ret) {
         printf("pwm_test: enable generator(%u) return error(%x)\n",
                info->index, ret);
@@ -131,7 +130,7 @@ static int pwm_configure(struct device *dev, struct pwm_app_info *info,
     return ret;
 
 err_configure:
-    device_pwm_request_deactivate(dev, info->index);
+    device_pwm_deactivate(dev, info->index);
     return ret;
 }
 
@@ -246,7 +245,7 @@ int pwm_test_main(int argc, char *argv[]) {
         goto err_free_info;
     }
 
-    device_pwm_request_count(dev, &count);
+    device_pwm_get_count(dev, &count);
 
     if (info->index > count) {
         printf("pwm_test: pwm%u > maximum supported number %u\n", info->index,
@@ -297,23 +296,22 @@ int pwm_test_main(int argc, char *argv[]) {
              */
             info->param = 1;
             for (i = 0; i < count; i++) {
-                ret = device_pwm_request_activate(dev, i);
+                ret = device_pwm_activate(dev, i);
                 if (ret) {
                     printf("pwm_test: mode2, active generator(%d) return "
                            "error(%x)\n", i, ret);
                     break;
                 }
 
-                ret = device_pwm_request_config(dev, i, info->period /(2+i),
-                                                info->period);
+                ret = device_pwm_config(dev, i, info->period /(2+i),
+                                        info->period);
                 if (ret) {
                     printf("pwm_test: mode2, config generator(%d) return "
                            "error(%x)\n", i, ret);
                     break;
                 }
 
-                ret = device_pwm_request_set_mode(dev, i, info->mode_num,
-                                                  &info->param);
+                ret = device_pwm_set_mode(dev, i, info->mode_num, &info->param);
                 if (ret) {
                     printf("pwm_test: mode 2, set generator(%d) of SELENB bit "
                            "return error(%x)\n", i, ret);
@@ -327,12 +325,12 @@ int pwm_test_main(int argc, char *argv[]) {
                  * error.
                  */
                 for (; i >= 0; i--) {
-                    device_pwm_request_deactivate(dev, i);
+                    device_pwm_deactivate(dev, i);
                 }
                 goto err_out;
             }
 
-            device_pwm_request_sync(dev, true);
+            device_pwm_sync_output(dev, true);
             break;
         default:
             print_usage();

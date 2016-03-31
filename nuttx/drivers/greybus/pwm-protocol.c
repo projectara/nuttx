@@ -116,7 +116,7 @@ static uint8_t gb_pwm_protocol_count(struct gb_operation *operation)
         return GB_OP_NO_MEMORY;
     }
 
-    ret = device_pwm_request_count(bundle->dev, &count);
+    ret = device_pwm_get_count(bundle->dev, &count);
     if (ret) {
         gb_info("%s(): %x error in ops\n", __func__, ret);
         return GB_OP_UNKNOWN_ERROR;
@@ -180,7 +180,7 @@ static uint8_t gb_pwm_protocol_activate(struct gb_operation *operation)
         return GB_OP_INVALID;
     }
 
-    ret = device_pwm_request_activate(bundle->dev, request->which);
+    ret = device_pwm_activate(bundle->dev, request->which);
     if (ret) {
         gb_info("%s(): %x error in ops\n", __func__, ret);
         return GB_OP_UNKNOWN_ERROR;
@@ -192,7 +192,7 @@ static uint8_t gb_pwm_protocol_activate(struct gb_operation *operation)
 /**
  * @brief Deactivate an active generator.
  *
- * This function will parse the device_pwm_request_deactivate to get specific
+ * This function will parse the device_pwm_deactivate to get specific
  * generator number then calls PWM controller driver to deactivate it.
  *
  * @param operation Pointer to structure of gb_operation.
@@ -226,7 +226,7 @@ static uint8_t gb_pwm_protocol_deactivate(struct gb_operation *operation)
         return GB_OP_INVALID;
     }
 
-    ret = device_pwm_request_deactivate(bundle->dev, request->which);
+    ret = device_pwm_deactivate(bundle->dev, request->which);
     if (ret) {
         gb_info("%s(): %x error in ops\n", __func__, ret);
         return GB_OP_UNKNOWN_ERROR;
@@ -276,8 +276,7 @@ static uint8_t gb_pwm_protocol_config(struct gb_operation *operation)
 
     duty = le32_to_cpu(request->duty);
     period = le32_to_cpu(request->period);
-    ret = device_pwm_request_config(bundle->dev, request->which, duty,
-                                    period);
+    ret = device_pwm_config(bundle->dev, request->which, duty, period);
     if (ret) {
         gb_info("%s(): %x error in ops\n", __func__, ret);
         return GB_OP_UNKNOWN_ERROR;
@@ -324,7 +323,7 @@ static uint8_t gb_pwm_protocol_polarity(struct gb_operation *operation)
         return GB_OP_INVALID;
     }
 
-    ret = device_pwm_request_set_polarity(bundle->dev, request->which,
+    ret = device_pwm_set_polarity(bundle->dev, request->which,
                                           request->polarity);
     if (ret) {
         gb_info("%s(): %x error in ops\n", __func__, ret);
@@ -372,7 +371,7 @@ static uint8_t gb_pwm_protocol_enable(struct gb_operation *operation)
         return GB_OP_INVALID;
     }
 
-    ret = device_pwm_request_enable(bundle->dev, request->which);
+    ret = device_pwm_enable(bundle->dev, request->which);
     if (ret) {
         gb_info("%s(): error %x in ops return\n", __func__, ret);
         return GB_OP_UNKNOWN_ERROR;
@@ -419,7 +418,7 @@ static uint8_t gb_pwm_protocol_disable(struct gb_operation *operation)
         return GB_OP_INVALID;
     }
 
-    ret = device_pwm_request_disable(bundle->dev, request->which);
+    ret = device_pwm_disable(bundle->dev, request->which);
     if (ret) {
         gb_info("%s(): %x error in ops\n", __func__, ret);
         return GB_OP_UNKNOWN_ERROR;

@@ -115,7 +115,7 @@ struct device_pwm_type_ops {
  * @param count A pointer to the variable of maximum number of supported
  *              generators.
  */
-static inline int device_pwm_request_count(struct device *dev, uint16_t *count)
+static inline int device_pwm_get_count(struct device *dev, uint16_t *count)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -136,8 +136,7 @@ static inline int device_pwm_request_count(struct device *dev, uint16_t *count)
  * @param dev Opened device driver handle.
  * @param which The number of Specific generator for operating.
  */
-static inline int device_pwm_request_activate(struct device *dev,
-                                              uint16_t which)
+static inline int device_pwm_activate(struct device *dev, uint16_t which)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -158,8 +157,7 @@ static inline int device_pwm_request_activate(struct device *dev,
  * @param dev Opened device driver handle.
  * @param which The number of Specific generator for operating.
  */
-static inline int device_pwm_request_deactivate(struct device *dev,
-                                                uint16_t which)
+static inline int device_pwm_deactivate(struct device *dev, uint16_t which)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -182,9 +180,8 @@ static inline int device_pwm_request_deactivate(struct device *dev,
  * @param duty Active time (in nanoseconds).
  * @param period Sum of active and deactive time (in nanoseconds).
  */
-static inline int device_pwm_request_config(struct device *dev,
-                                            uint16_t which,
-                                            uint32_t duty, uint32_t period)
+static inline int device_pwm_config(struct device *dev, uint16_t which,
+                                    uint32_t duty, uint32_t period)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -206,9 +203,8 @@ static inline int device_pwm_request_config(struct device *dev,
  * @param which The number of Specific generator for operating.
  * @param polarity 0 for normal, 1 for inverted.
  */
-static inline int device_pwm_request_set_polarity(struct device *dev,
-                                                  uint16_t which,
-                                                  bool polarity)
+static inline int device_pwm_set_polarity(struct device *dev, uint16_t which,
+                                          bool polarity)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -229,8 +225,7 @@ static inline int device_pwm_request_set_polarity(struct device *dev,
  * @param dev Opened device driver handle.
  * @param which The number of Specific generator for operating.
  */
-static inline int device_pwm_request_enable(struct device *dev,
-                                            uint16_t which)
+static inline int device_pwm_enable(struct device *dev, uint16_t which)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -251,8 +246,7 @@ static inline int device_pwm_request_enable(struct device *dev,
  * @param dev Opened device driver handle.
  * @param which The number of Specific generator for operating.
  */
-static inline int device_pwm_request_disable(struct device *dev,
-                                             uint16_t which)
+static inline int device_pwm_disable(struct device *dev, uint16_t which)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -280,10 +274,8 @@ static inline int device_pwm_request_disable(struct device *dev,
  *              For mode 1, false is low level, true is high level.
  *              For mode 2, true to start sync.
  */
-static inline int device_pwm_request_set_mode(struct device *dev,
-                                              uint16_t which,
-                                              enum pwm_mode mode,
-                                              void *param)
+static inline int device_pwm_set_mode(struct device *dev, uint16_t which,
+                                      enum pwm_mode mode, void *param)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -304,7 +296,7 @@ static inline int device_pwm_request_set_mode(struct device *dev,
  * @param dev Opened device driver handle.
  * @param enable True for enable, false for disable.
  */
-static inline int device_pwm_request_sync(struct device *dev, bool enable)
+static inline int device_pwm_sync_output(struct device *dev, bool enable)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -327,9 +319,9 @@ static inline int device_pwm_request_sync(struct device *dev, bool enable)
  * @param callback Pointer to a callback handler.
  * @param state Pointer to a variable of interrupt status.
  */
-static inline int device_pwm_request_callback(struct device *dev,
-                                              uint32_t mask,
-                                              pwm_event_callback callback)
+static inline int device_pwm_register_callback(struct device *dev,
+                                               uint32_t mask,
+                                               pwm_event_callback callback)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
