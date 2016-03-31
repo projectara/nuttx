@@ -195,10 +195,14 @@ static struct gpio_pinsharing_conf tsb_apb_gpio_pinsharing[] = {
 
 static struct gpio_pinsharing_conf *tsb_gpio_pinsharing;
 
+static int tsb_gpio_get_direction(void *driver_data, uint8_t which);
+
 static uint8_t tsb_gpio_get_value(void *driver_data, uint8_t which)
 {
-    pm_activity(TSB_GPIO_ACTIVITY);
-    return !!(getreg32(GPIO_DATA) & (1 << which));
+    if (tsb_gpio_get_direction(driver_data, which))
+        return !!(getreg32(GPIO_DATA) & (1 << which));
+    else
+        return !!(getreg32(GPIO_ODATA) & (1 << which));
 }
 
 static void tsb_gpio_set_value(void *driver_data, uint8_t which, uint8_t value)
