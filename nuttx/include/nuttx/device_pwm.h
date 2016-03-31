@@ -104,7 +104,7 @@ struct device_pwm_type_ops {
      * PWM interrupt callback handling() to notify caller and return status
      * value for further caller and return status value for further processing.
      */
-    int (*pwm_intr_callback)(struct device *dev, uint32_t mask,
+    int (*register_callback)(struct device *dev, uint32_t mask,
                              pwm_event_callback callback);
 };
 
@@ -337,11 +337,11 @@ static inline int device_pwm_request_callback(struct device *dev,
         return -ENODEV;
     }
 
-    if (!DEVICE_DRIVER_GET_OPS(dev, pwm)->pwm_intr_callback) {
+    if (!DEVICE_DRIVER_GET_OPS(dev, pwm)->register_callback) {
         return -ENOSYS;
     }
 
-    return DEVICE_DRIVER_GET_OPS(dev, pwm)->pwm_intr_callback(dev, mask,
+    return DEVICE_DRIVER_GET_OPS(dev, pwm)->register_callback(dev, mask,
                                                               callback);
 }
 

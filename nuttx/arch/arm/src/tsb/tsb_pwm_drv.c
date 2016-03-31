@@ -1179,7 +1179,7 @@ static struct device_pwm_type_ops tsb_pwm_type_ops = {
      * Provide the caller to register interrupt callback handler or mask bit
      * to disable interrupt.
      */
-    .pwm_intr_callback  = tsb_pwm_op_intr_callback,
+    .register_callback  = tsb_pwm_op_intr_callback,
 };
 
 static struct device_driver_ops tsb_pwm_driver_ops = {
