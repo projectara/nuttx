@@ -44,6 +44,9 @@
 
 #define TSB_GENERATOR_COUNTS    2
 
+#define TSB_PWM_STATUS_MASK         0x3
+#define TSB_PWM_ERR_STATUS_SHIFT    16
+
 static uint32_t pwm_pclk[TSB_GENERATOR_COUNTS] = {
     /** For PWM0 */
     TSB_PWM_CLK,
@@ -106,8 +109,6 @@ struct pwm_ctlr_info {
      * mask value.
      */
     pwm_event_callback handle;
-
-    uint32_t int_state;
 
     /** Power/clock refere count. */
     uint32_t refcount;
@@ -845,18 +846,20 @@ err_set_mode:
  * power/clock is turn on.
  *
  * @param dev Pointer to the device structure for PWM controller.
- * @param mask Required interrupt monitor state.
+ * @param mask_int Mask of selected interrupt events
+ * @param mask_err Mask of selected error events
+ * @param mode Interrupt mode (0: end of cycle interrupts, 1: update interrupts)
  * @param callback Pointer to a callback handler. If this pointer is NULL, this
  *                 function will set the interrupt mask only, otherwise, store
  *                 the callback handler.
- * @param state Pointer to a variable for interrupt status.
- *
  * @return 0: Success, error code on failure.
  */
-static int tsb_pwm_op_intr_callback(struct device *dev, uint32_t mask,
+static int tsb_pwm_op_intr_callback(struct device *dev, uint32_t mask_int,
+                                    uint32_t mask_err, uint32_t mode,
                                     pwm_event_callback callback)
 {
     struct pwm_ctlr_info *info = NULL;
+    uint32_t mask;
     uint32_t reg_cr;
 
     if (!dev || !device_get_private(dev)) {
@@ -864,6 +867,9 @@ static int tsb_pwm_op_intr_callback(struct device *dev, uint32_t mask,
     }
 
     info = device_get_private(dev);
+
+    mask = (mask_err & TSB_PWM_STATUS_MASK) << TSB_PWM_ERR_STATUS_SHIFT
+        | mask_int & TSB_PWM_STATUS_MASK;
 
     if (info->refcount) {
         if (!callback) {
@@ -876,8 +882,7 @@ static int tsb_pwm_op_intr_callback(struct device *dev, uint32_t mask,
         } else {
             info->handle = callback;
 
-            reg_cr = tsb_pwm_read(info->reg_base, TSB_PWM_INTCONFIG);
-            reg_cr |= mask;
+            reg_cr = mode;
             tsb_pwm_write(info->reg_base, TSB_PWM_INTCONFIG, reg_cr);
 
             reg_cr = tsb_pwm_read(info->reg_base, TSB_PWM_INTMASK);
@@ -904,6 +909,7 @@ static int tsb_pwm_op_intr_callback(struct device *dev, uint32_t mask,
  */
 static int tsb_pwm_irq_handler(int irq, void *context)
 {
+    uint32_t int_state;
     struct pwm_ctlr_info *info = NULL;
 
     if (!device_get_private(saved_dev)) {
@@ -912,13 +918,14 @@ static int tsb_pwm_irq_handler(int irq, void *context)
 
     info = device_get_private(saved_dev);
 
-    info->int_state = tsb_pwm_read(info->reg_base, TSB_PWM_INTSTATUS);
+    int_state = tsb_pwm_read(info->reg_base, TSB_PWM_INTSTATUS);
 
     if (info->handle) {
-        info->handle(info->int_state);
+        info->handle(int_state & TSB_PWM_STATUS_MASK,
+                (int_state >> TSB_PWM_ERR_STATUS_SHIFT) & TSB_PWM_STATUS_MASK);
     }
 
-    tsb_pwm_write(info->reg_base, TSB_PWM_INTSTATUS, info->int_state);
+    tsb_pwm_write(info->reg_base, TSB_PWM_INTSTATUS, int_state);
 
     return OK;
 }

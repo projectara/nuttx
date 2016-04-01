@@ -39,7 +39,8 @@
 #include <tsb_pwm.h>
 
 /** Globe variable for interrupt status */
-uint32_t val;
+uint32_t val_int;
+uint32_t val_err;
 
 struct pwm_app_info {
     uint16_t    index;
@@ -69,9 +70,10 @@ static void print_usage(void) {
     printf("    -p: 1 for normal, 0 for inverted.\n");
 }
 
-static pwm_event_callback intr_handler(uint32_t state)
+static pwm_event_callback intr_handler(uint32_t mask_int, uint32_t mask_err)
 {
-    val = state;
+    val_int = mask_int;
+    val_err = mask_err;
 }
 
 /**
@@ -114,7 +116,8 @@ static int pwm_configure(struct device *dev, struct pwm_app_info *info,
 
         if (info->mode_num == PWM_PULSECOUNT_MODE) {
             /* Test PWM1 interrupt function here!!!!*/
-            val = 0;
+            val_int = 0;
+            val_err = 0;
             device_pwm_register_callback(dev, 0x02, intr_handler);
         }
 
@@ -347,8 +350,8 @@ int pwm_test_main(int argc, char *argv[]) {
     sleep((unsigned int)info->secs);
 
     if (info->is_mode_test && (info->mode_num == PWM_PULSECOUNT_MODE)) {
-        printf("pwm_test: test completed, interrupt callback return value "
-               "= %u\n", val);
+        printf("pwm_test: test completed, callback interrupt value "
+               "= %u and error value = %u\n", val_int, val_err);
     } else {
         printf("pwm_test: test completed\n");
     }

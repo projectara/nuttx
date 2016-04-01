@@ -61,9 +61,10 @@ enum pwm_mode {
  * This callback function is registered with the PWM controller and is called
  * whenever one of the selected interrupt events occur.
  *
- * @param state Content of PWM interrupt state register
+ * @param mask_int Mask of selected interrupt events
+ * @param mask_err Mask of selected error events
  */
-typedef void (*pwm_event_callback)(uint32_t state);
+typedef void (*pwm_event_callback)(uint32_t mask_int, uint32_t mask_err);
 
 /** PWM device driver operations */
 struct device_pwm_type_ops {
@@ -134,11 +135,16 @@ struct device_pwm_type_ops {
     /** Register callback function to be notified when one of the selected
      * interrupt events occur
      * @param dev Pointer to the PWM device controller
-     * @param mask Mask of selected interrupt events
-     * @param callback The callback function to be called on an event
+     * @param mask_int Mask of selected interrupt events
+     * @param mask_err Mask of selected error events
+     * @param mode Interrupt mode (0: end of cycle interrupts, 1: update
+     * interrupts)
+     * @param callback The callback function to be called on an event, when
+     * NULL deregister the existing callback for the specified masks of events
      * @return 0 on success, negative errno on failure
      */
-    int (*register_callback)(struct device *dev, uint32_t mask,
+    int (*register_callback)(struct device *dev, uint32_t mask_int,
+                             uint32_t mask_err, uint32_t mode,
                              pwm_event_callback callback);
 };
 
@@ -336,12 +342,17 @@ static inline int device_pwm_sync_output(struct device *dev, bool enable)
 /** Register callback function to be notified when one of the selected
  * interrupt events occur
  * @param dev Pointer to the PWM device controller
- * @param mask Mask of selected interrupt events
- * @param callback The callback function to be called on an event
+ * @param mask_int Mask of selected interrupt events
+ * @param mask_err Mask of selected error events
+ * @param mode Interrupt mode (0: end of cycle interrupts, 1: update interrupts)
+ * @param callback The callback function to be called on an event, when NULL
+ * deregister the existing callback for the specified masks of events
  * @return 0 on success, negative errno on failure
  */
 static inline int device_pwm_register_callback(struct device *dev,
-                                               uint32_t mask,
+                                               uint32_t mask_int,
+                                               uint32_t mask_err,
+                                               uint32_t mode,
                                                pwm_event_callback callback)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
@@ -354,7 +365,10 @@ static inline int device_pwm_register_callback(struct device *dev,
         return -ENOSYS;
     }
 
-    return DEVICE_DRIVER_GET_OPS(dev, pwm)->register_callback(dev, mask,
+    return DEVICE_DRIVER_GET_OPS(dev, pwm)->register_callback(dev,
+                                                              mask_int,
+                                                              mask_err,
+                                                              mode,
                                                               callback);
 }
 
