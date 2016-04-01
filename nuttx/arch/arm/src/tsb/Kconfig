@@ -81,18 +81,6 @@ config ARCH_UNIPROTX_DMA_WMB
     default y
     depends on ARCH_UNIPROTX_USE_DMA
 
-choice
-	prompt "Toshiba PinShare1 conflict"
-	default ARCH_CHIP_PINSHARE1_NONE
-	---help---
-		The Toshiba GPBridge PWM, SPI Bitbang, and UART drivers
-		conflict at PinShare1 so only one can be enabled at a time.
-
-config ARCH_CHIP_PINSHARE1_NONE
-	bool "None"
-	---help---
-		Disable PWM, SPI, and UART drivers
-
 config ARCH_CHIP_DEVICE_PWM
 	bool "PWM Support"
 	select DEVICE_CORE
@@ -111,8 +99,6 @@ config ARCH_CHIP_DEVICE_UART
 	select DEVICE_CORE
 	---help---
 		TSB UART Driver
-
-endchoice
 
 choice
 	prompt "Toshiba PinShare4 conflict"
