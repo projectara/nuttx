@@ -138,8 +138,12 @@ static int event_linkup_ind(struct tsb_switch_event *ev) {
     bool release_mutex;
 
     rc = pthread_mutex_lock(&svc->lock);
-    if (rc != 0 && rc != EDEADLK) {
-        return rc;
+    if (rc) {
+        if (rc == EDEADLK) {
+            dbg_error("%s: mutex DEADLOCK detected, fix required\n", __func__);
+        } else {
+            return rc;
+        }
     }
     release_mutex = !rc;
 
@@ -203,16 +207,19 @@ static int event_linkup_ind(struct tsb_switch_event *ev) {
 }
 
 static int event_linkup(struct tsb_switch_event *ev) {
-    int rc = 0;
+    int rc;
     char *linkup_result;
     struct interface *iface;
     bool release_mutex;
 
     rc = pthread_mutex_lock(&svc->lock);
-    if (rc != 0 && rc != EDEADLK) {
-        return rc;
+    if (rc) {
+        if (rc == EDEADLK) {
+            dbg_error("%s: mutex DEADLOCK detected, fix required\n", __func__);
+        } else {
+            return rc;
+        }
     }
-
     release_mutex = !rc;
 
     switch (ev->linkup.val) {
@@ -917,13 +924,17 @@ static int svc_consume_hotplug_events(void)
 int svc_hot_plug(uint8_t portid, bool lock_interface)
 {
     bool release_mutex;
-    int retval;
+    int rc;
 
-    retval = pthread_mutex_lock(&svc->lock);
-    release_mutex = !retval;
-    if (retval != 0 && retval != EDEADLK) {
-        return retval;
+    rc = pthread_mutex_lock(&svc->lock);
+    if (rc) {
+        if (rc == EDEADLK) {
+            dbg_error("%s: mutex DEADLOCK detected, fix required\n", __func__);
+        } else {
+            return rc;
+        }
     }
+    release_mutex = !rc;
 
     switch_port_irq_enable(svc->sw, portid, true);
     if (!svc->ap_initialized) {
@@ -945,13 +956,17 @@ int svc_hot_unplug(uint8_t portid, bool lock_interface)
 {
     bool release_mutex;
     struct svc_event *svc_ev;
-    int rc = 0;
+    int rc;
 
     rc = pthread_mutex_lock(&svc->lock);
-    release_mutex = !rc;
-    if (rc != 0 && rc != EDEADLK) {
-        return rc;
+    if (rc) {
+        if (rc == EDEADLK) {
+            dbg_error("%s: mutex DEADLOCK detected, fix required\n", __func__);
+        } else {
+            return rc;
+        }
     }
+    release_mutex = !rc;
 
     if (svc->ap_initialized) {
         /*
