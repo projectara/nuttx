@@ -66,6 +66,7 @@ static unsigned int nr_interfaces;
 static unsigned int nr_spring_interfaces;
 static struct vreg *vlatch_vdd;
 static struct vreg *latch_ilim;
+static pthread_mutex_t latch_ilim_lock = PTHREAD_MUTEX_INITIALIZER;
 static uint8_t mod_sense;
 
 static void interface_power_cycle(void *data);
@@ -597,6 +598,7 @@ static void interface_linkup_timeout(int argc, uint32_t arg1, ...)
 
 /*
  * Requires calling context to hold iface->mutex
+ * Takes and releases latch_lim_lock
  */
 static int interface_detect_order(struct interface *iface)
 {
@@ -607,6 +609,7 @@ static int interface_detect_order(struct interface *iface)
         return -ENOTSUP;
     }
 
+    pthread_mutex_lock_debug(&latch_ilim_lock);
     retval = vreg_get(vlatch_vdd);
     if (retval) {
         dbg_error("couldn't enable VLATCH_VDD_EN, aborting order detection...\n");
@@ -622,15 +625,12 @@ static int interface_detect_order(struct interface *iface)
     gpio_set_value(iface->release_gpio, 0);
 
     retval = vreg_put(vlatch_vdd);
-    if (retval) {
-        goto error_put_vlatch_vdd;
-    }
-
-    return 0;
+    goto done;
 
 error_get_vlatch_vdd:
     iface->if_order = ARA_IFACE_ORDER_UNKNOWN;
-error_put_vlatch_vdd:
+done:
+    pthread_mutex_unlock_debug(&latch_ilim_lock);
     return retval;
 }
 
@@ -1389,6 +1389,19 @@ uint32_t interface_pm_get_spin(struct interface *iface)
     return iface->pm->spin;
 }
 
+/*
+ * @brief - forcibly eject an interface
+ * Requires two mutexes to be held in the following order
+ *
+ * lock(ifc->mutex)
+ * lock(latch_ilim_lock)
+ * interface_forcibly_eject
+ * unlock(latch_ilim_lock)
+ * unlock(ifc->mutex)
+ *
+ * As a result this function may not call another other function
+ * that can take either of those mutexes.
+ */
 static int interface_forcibly_eject(struct interface *ifc, uint32_t delay)
 {
     uint8_t gpio = ifc->release_gpio;
@@ -1508,7 +1521,11 @@ int interface_forcibly_eject_atomic(struct interface *iface, uint32_t delay)
     int retval;
 
     pthread_mutex_lock_debug(&iface->mutex);
+    pthread_mutex_lock_debug(&latch_ilim_lock);
+
     retval = interface_forcibly_eject(iface, delay);
+
+    pthread_mutex_unlock_debug(&latch_ilim_lock);
     pthread_mutex_unlock_debug(&iface->mutex);
 
     return retval;
