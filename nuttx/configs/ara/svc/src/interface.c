@@ -536,7 +536,7 @@ static int interface_power_off(struct interface *iface)
     /* Cancel LinkUp and WAKEOUT pulse for the interface */
     iface->linkup_req_sent = false;
     wd_cancel(&iface->linkup_wd);
-    rc = interface_cancel_wakeout_atomic(iface);
+    rc = interface_cancel_wakeout(iface);
 
     /* Disable Switch port IRQs */
     switch_port_irq_enable(svc->sw, iface->switch_portid, false);
