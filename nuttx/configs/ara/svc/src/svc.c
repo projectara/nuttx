@@ -956,7 +956,7 @@ static int svc_handle_events(void) {
  */
 static int svc_ara_key_longpress_callback(void *priv)
 {
-    interface_forcibly_eject_all(MOD_RELEASE_PULSE_WIDTH);
+    interface_forcibly_eject_all_atomic(MOD_RELEASE_PULSE_WIDTH);
     return 0;
 }
 

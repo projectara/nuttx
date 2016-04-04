@@ -1869,7 +1869,7 @@ static int release(int argc, char *argv[]) {
             printf("ERROR: cannot find module named = %s\n", iface_name);
         }
     } else {
-        interface_forcibly_eject_all(delay);
+        interface_forcibly_eject_all_atomic(delay);
     }
 
     return EXIT_SUCCESS;

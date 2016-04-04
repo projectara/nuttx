@@ -1389,6 +1389,46 @@ uint32_t interface_pm_get_spin(struct interface *iface)
     return iface->pm->spin;
 }
 
+static int interface_eject_completion(struct interface *iface)
+{
+    uint8_t gpio = iface->release_gpio;
+    int retval = 0;
+
+    /* De-assert the release line */
+    gpio_set_value(gpio, 0);
+
+    switch (iface->if_type) {
+    case ARA_IFACE_TYPE_MODULE_PORT:
+        /* Do nothing here, let hotplug handle the module detection */
+        break;
+    case ARA_IFACE_TYPE_MODULE_PORT2:
+        /* Release the latch resources */
+        retval = vreg_put(latch_ilim);
+        if (retval) {
+            vreg_put(vlatch_vdd);
+        }
+        retval = vreg_put(vlatch_vdd);
+        break;
+    case ARA_IFACE_TYPE_BUILTIN:
+        break;
+    default:
+        dbg_error("%s(): unsupported interface port type: %d\n", __func__,
+                  iface->if_type);
+        return -ENOTSUP;
+    }
+
+    return retval;
+}
+
+static void interface_eject_completion_atomic(void *data)
+{
+    struct interface *iface = data;
+
+    pthread_mutex_lock_debug(&iface->mutex);
+    interface_eject_completion(iface);
+    pthread_mutex_unlock_debug(&iface->mutex);
+}
+
 /*
  * @brief - forcibly eject an interface
  * Requires two mutexes to be held in the following order
@@ -1402,25 +1442,24 @@ uint32_t interface_pm_get_spin(struct interface *iface)
  * As a result this function may not call another other function
  * that can take either of those mutexes.
  */
-static int interface_forcibly_eject(struct interface *ifc, uint32_t delay)
+static int interface_forcibly_eject(struct interface *iface, uint32_t delay)
 {
-    uint8_t gpio = ifc->release_gpio;
-    struct wd_data *wd = &ifc->detect_in;
-    bool enable_power = false;
+    uint8_t gpio = iface->release_gpio;
+    struct wd_data *wd = &iface->detect_in;
     int retval = 0;
 
-    if (!ifc->ejectable) {
+    if (!iface->ejectable) {
         return -ENOTTY;
     }
 
     /* Secondary interface do not contain the ejection circuitry */
-    if (ifc->if_order == ARA_IFACE_ORDER_SECONDARY) {
-        dbg_warn("Trying to eject secondary interface: %s\n", ifc->name);
+    if (iface->if_order == ARA_IFACE_ORDER_SECONDARY) {
+        dbg_warn("Trying to eject secondary interface: %s\n", iface->name);
     }
 
-    dbg_info("Module %s ejecting: using gpio 0x%02X\n", ifc->name, gpio);
+    dbg_info("Module %s ejecting: using gpio 0x%02X\n", iface->name, gpio);
 
-    switch (ifc->if_type) {
+    switch (iface->if_type) {
     case ARA_IFACE_TYPE_MODULE_PORT:
         /*
          * HACK: if there is a module in the slot, but it isn't powered on
@@ -1428,10 +1467,9 @@ static int interface_forcibly_eject(struct interface *ifc, uint32_t delay)
          */
         if (gpio_is_valid(wd->gpio)) {
             gpio_direction_in(wd->gpio);
-            if ( (gpio_get_value(wd->gpio) == wd->polarity) &&
-                    (interface_get_power_state(ifc) != ARA_IFACE_PWR_UP) ){
-                interface_power_enable(ifc);
-                enable_power = true;
+            if ((gpio_get_value(wd->gpio) == wd->polarity) &&
+                (interface_get_power_state(iface) != ARA_IFACE_PWR_UP)) {
+                interface_power_enable(iface);
             }
         }
         break;
@@ -1439,10 +1477,10 @@ static int interface_forcibly_eject(struct interface *ifc, uint32_t delay)
     case ARA_IFACE_TYPE_MODULE_PORT2:
         DEBUGASSERT(vlatch_vdd && latch_ilim);
 
-        retval = interface_power_off(ifc);
+        retval = interface_power_off(iface);
         if (retval) {
             dbg_error("couldn't power off interface '%s' before ejecting, aborting...\n",
-                      ifc->name);
+                      iface->name);
             return retval;
         }
 
@@ -1465,37 +1503,33 @@ static int interface_forcibly_eject(struct interface *ifc, uint32_t delay)
 
     default:
         dbg_error("%s(): unsupported interface port type: %d\n", __func__,
-                  ifc->if_type);
+                  iface->if_type);
         return -ENOTSUP;
     }
 
+    /* Generate a pulse on the relase pin */
     gpio_set_value(gpio, 1);
-    usleep(delay * 1000);
-    gpio_set_value(gpio, 0);
 
-    switch (ifc->if_type) {
-    case ARA_IFACE_TYPE_MODULE_PORT:
-        if (enable_power) {
-            interface_power_disable(ifc);
-        }
-        break;
-
-    case ARA_IFACE_TYPE_MODULE_PORT2:
-        retval = vreg_put(latch_ilim);
-        if (retval) {
-            vreg_put(vlatch_vdd);
-        }
-
-        retval = vreg_put(vlatch_vdd);
-        break;
-
-    case ARA_IFACE_TYPE_BUILTIN:
-        break;
-
-    default:
-        dbg_error("%s(): unsupported interface port type: %d\n", __func__,
-                  ifc->if_type);
-        return -ENOTSUP;
+    /*
+     * Keep the line asserted for the given duration. After timeout
+     * de-assert the line.
+     */
+    if (!work_available(&iface->eject_work)) {
+        retval = work_cancel(HPWORK, &iface->eject_work);
+        /*
+         * work_cancel() doesn't fail in the current
+         * implementation. And if it did, we'd be dead in the water
+         * anyway.
+         */
+        DEBUGASSERT(!retval);
+    }
+    retval = work_queue(HPWORK, &iface->eject_work,
+                        interface_eject_completion_atomic,
+                        iface, MSEC2TICK(delay));
+    if (retval) {
+        dbg_error("%s: Could not schedule eject completion work for %s\n",
+                      __func__, iface->name);
+        interface_eject_completion(iface);
     }
 
     return retval;
@@ -1506,13 +1540,13 @@ static int interface_forcibly_eject(struct interface *ifc, uint32_t delay)
  *        defined
  * @param delay pulse width in ms (~10ms precision)
  */
-void interface_forcibly_eject_all(uint32_t delay)
+void interface_forcibly_eject_all_atomic(uint32_t delay)
 {
     unsigned int i;
-    struct interface *ifc;
+    struct interface *iface;
 
-    interface_foreach(ifc, i) {
-        interface_forcibly_eject_atomic(ifc, delay);
+    interface_foreach(iface, i) {
+        interface_forcibly_eject_atomic(iface, delay);
     }
 }
 

@@ -142,6 +142,7 @@ struct interface {
     pthread_mutex_t mutex;
     bool handler_active;
     struct work_s wakeout_work; /* WAKEOUT pulse completion work */
+    struct work_s eject_work;   /* Module ejection completion work */
 };
 
 #define interface_foreach(iface, idx)                       \
@@ -200,7 +201,7 @@ uint32_t interface_pm_get_spin(struct interface *iface);
 int interface_set_devid_by_id_atomic(uint8_t intf_id, uint8_t dev_id);
 void interface_set_linkup_retries_atomic(struct interface *iface, uint8_t val);
 void interface_cancel_linkup_wd_atomic(struct interface *iface);
-void interface_forcibly_eject_all(uint32_t delay);
+void interface_forcibly_eject_all_atomic(uint32_t delay);
 int interface_forcibly_eject_atomic(struct interface *iface, uint32_t delay);
 int interface_power_off_atomic(struct interface *iface);
 int interface_power_on_atomic(struct interface *iface);
