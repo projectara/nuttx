@@ -154,7 +154,7 @@ static void stmpe811_worker(FAR void *arg)
  *
  ****************************************************************************/
 
-static int stmpe811_interrupt(int irq, FAR void *context)
+static int stmpe811_interrupt(int irq, void *context)
 {
   FAR struct stmpe811_dev_s    *priv;
   FAR struct stmpe811_config_s *config;

@@ -180,7 +180,7 @@ static void dispatch_syscall(void)
  *
  ****************************************************************************/
 
-int up_svcall(int irq, FAR void *context)
+int up_svcall(int irq, void *context)
 {
   uint32_t *regs = (uint32_t*)context;
   uint32_t cmd;

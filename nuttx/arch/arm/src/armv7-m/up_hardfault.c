@@ -119,7 +119,7 @@
  *
  ****************************************************************************/
 
-int up_hardfault(int irq, FAR void *context)
+int up_hardfault(int irq, void *context)
 {
 #if defined(CONFIG_DEBUG_HARDFAULT) || !defined(CONFIG_ARMV7M_USEBASEPRI)
   uint32_t *regs = (uint32_t*)context;

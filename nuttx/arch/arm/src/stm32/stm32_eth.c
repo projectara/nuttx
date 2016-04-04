@@ -642,7 +642,7 @@ static int  stm32_recvframe(FAR struct stm32_ethmac_s *priv);
 static void stm32_receive(FAR struct stm32_ethmac_s *priv);
 static void stm32_freeframe(FAR struct stm32_ethmac_s *priv);
 static void stm32_txdone(FAR struct stm32_ethmac_s *priv);
-static int  stm32_interrupt(int irq, FAR void *context);
+static int  stm32_interrupt(int irq, void *context);
 
 /* Watchdog timer expirations */
 
@@ -1831,7 +1831,7 @@ static void stm32_txdone(FAR struct stm32_ethmac_s *priv)
  *
  ****************************************************************************/
 
-static int stm32_interrupt(int irq, FAR void *context)
+static int stm32_interrupt(int irq, void *context)
 {
   register FAR struct stm32_ethmac_s *priv = &g_stm32ethmac[0];
   uint32_t dmasr;

@@ -130,7 +130,7 @@ static void     stm32_setwindow(FAR struct stm32_lowerhalf_s *priv,
 
 /* Interrupt hanlding *******************************************************/
 
-static int      stm32_interrupt(int irq, FAR void *context);
+static int      stm32_interrupt(int irq, void *context);
 
 /* "Lower half" driver methods **********************************************/
 
@@ -294,7 +294,7 @@ static void stm32_setwindow(FAR struct stm32_lowerhalf_s *priv, uint8_t window)
  *
  ****************************************************************************/
 
-static int stm32_interrupt(int irq, FAR void *context)
+static int stm32_interrupt(int irq, void *context)
 {
   FAR struct stm32_lowerhalf_s *priv = &g_wdgdev;
   uint16_t regval;

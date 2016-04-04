@@ -127,7 +127,7 @@
 /* Enable error log */
 #define lldbg_error lowsyslog
 
-extern int irq_unexpected_isr(int irq, FAR void *context);
+extern int irq_unexpected_isr(int irq, void *context);
 
 struct tca64xx_platform_data {
     tca64xx_part part;

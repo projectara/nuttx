@@ -253,7 +253,7 @@ static uint8_t gb_gpio_irq_unmask(struct gb_operation *operation)
     return GB_OP_SUCCESS;
 }
 
-int gb_gpio_irq_event(int irq, FAR void *context)
+int gb_gpio_irq_event(int irq, void *context)
 {
     struct gb_gpio_irq_event_request *request;
     struct gb_operation *operation;

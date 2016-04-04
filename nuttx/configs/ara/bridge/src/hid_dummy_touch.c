@@ -530,7 +530,7 @@ static int touch_set_feature_report(struct device *dev, uint8_t report_id,
  *
  * @param context - pointer to structure of device data
  */
-int touch_irq_event(int irq, FAR void *context)
+int touch_irq_event(int irq, void *context)
 {
     struct device *dev = touch_dev;
     struct touch_info *tuh_info = NULL;

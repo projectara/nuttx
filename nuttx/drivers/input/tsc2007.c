@@ -193,7 +193,7 @@ static int tsc2007_activate(FAR struct tsc2007_dev_s *priv, uint8_t cmd);
 #endif
 static int tsc2007_transfer(FAR struct tsc2007_dev_s *priv, uint8_t cmd);
 static void tsc2007_worker(FAR void *arg);
-static int tsc2007_interrupt(int irq, FAR void *context);
+static int tsc2007_interrupt(int irq, void *context);
 
 /* Character driver methods */
 
@@ -740,7 +740,7 @@ errout:
  * Name: tsc2007_interrupt
  ****************************************************************************/
 
-static int tsc2007_interrupt(int irq, FAR void *context)
+static int tsc2007_interrupt(int irq, void *context)
 {
   FAR struct tsc2007_dev_s    *priv;
   FAR struct tsc2007_config_s *config;

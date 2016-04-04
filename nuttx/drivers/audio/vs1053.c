@@ -1207,7 +1207,7 @@ err_out:
  *
  ****************************************************************************/
 
-static int vs1053_dreq_isr(int irq, FAR void *context)
+static int vs1053_dreq_isr(int irq, void *context)
 {
   struct vs1053_struct_s *dev = NULL;
   struct audio_msg_s      msg;

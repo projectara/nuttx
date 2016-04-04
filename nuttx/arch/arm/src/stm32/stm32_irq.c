@@ -146,7 +146,7 @@ static void stm32_dumpnvic(const char *msg, int irq)
  ****************************************************************************/
 
 #ifdef CONFIG_DEBUG
-static int stm32_nmi(int irq, FAR void *context)
+static int stm32_nmi(int irq, void *context)
 {
   (void)irqsave();
   dbg("PANIC!!! NMI received\n");
@@ -154,7 +154,7 @@ static int stm32_nmi(int irq, FAR void *context)
   return 0;
 }
 
-static int stm32_busfault(int irq, FAR void *context)
+static int stm32_busfault(int irq, void *context)
 {
   (void)irqsave();
   dbg("PANIC!!! Bus fault received: %08x\n", getreg32(NVIC_CFAULTS));
@@ -162,7 +162,7 @@ static int stm32_busfault(int irq, FAR void *context)
   return 0;
 }
 
-static int stm32_usagefault(int irq, FAR void *context)
+static int stm32_usagefault(int irq, void *context)
 {
   (void)irqsave();
   dbg("PANIC!!! Usage fault received: %08x\n", getreg32(NVIC_CFAULTS));
@@ -170,7 +170,7 @@ static int stm32_usagefault(int irq, FAR void *context)
   return 0;
 }
 
-static int stm32_pendsv(int irq, FAR void *context)
+static int stm32_pendsv(int irq, void *context)
 {
   (void)irqsave();
   dbg("PANIC!!! PendSV received\n");
@@ -178,7 +178,7 @@ static int stm32_pendsv(int irq, FAR void *context)
   return 0;
 }
 
-static int stm32_dbgmonitor(int irq, FAR void *context)
+static int stm32_dbgmonitor(int irq, void *context)
 {
   (void)irqsave();
   dbg("PANIC!!! Debug Monitor receieved\n");
@@ -186,7 +186,7 @@ static int stm32_dbgmonitor(int irq, FAR void *context)
   return 0;
 }
 
-static int stm32_reserved(int irq, FAR void *context)
+static int stm32_reserved(int irq, void *context)
 {
   (void)irqsave();
   dbg("PANIC!!! Reserved interrupt\n");
