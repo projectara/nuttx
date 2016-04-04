@@ -344,8 +344,7 @@ static void stm32_tim_setperiod(FAR struct stm32_tim_dev_s *dev,
   stm32_putreg32(dev, STM32_BTIM_ARR_OFFSET, period);
 }
 
-static int stm32_tim_setisr(FAR struct stm32_tim_dev_s *dev,
-                            int (*handler)(int irq, void *context),
+static int stm32_tim_setisr(FAR struct stm32_tim_dev_s *dev, xcpt_t handler,
                             int source)
 {
   int vectorno;

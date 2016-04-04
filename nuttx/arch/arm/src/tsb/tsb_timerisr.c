@@ -137,7 +137,7 @@ static inline void timer_snapshot(uint32_t *tick_count, uint32_t *clock_value)
     *clock_value = clock;
 }
 
-int up_timerisr(int irq, uint32_t *regs)
+int up_timerisr(int irq, void *context)
 {
     /* Process timer interrupt */
     sched_process_timer();

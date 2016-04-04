@@ -106,7 +106,7 @@
  *
  ****************************************************************************/
 
-int up_timerisr(int irq, uint32_t *regs)
+int up_timerisr(int irq, void *context)
 {
    /* Process timer interrupt */
 

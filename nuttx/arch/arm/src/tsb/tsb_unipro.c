@@ -131,8 +131,8 @@ static void configure_transfer_mode(int);
 static void dump_regs(void);
 
 /* irq handlers */
-static int irq_rx_eom(int, void*);
-static int irq_unipro(int, void*);
+static int irq_rx_eom(int irq, void *context);
+static int irq_unipro(int irq, void *context);
 
 /* Pointer to Unipro TX Calltable provided upon successful init */
 static struct unipro_tx_calltable *tx_calltable;

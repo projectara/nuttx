@@ -293,7 +293,7 @@ struct up_dev_s
   const unsigned int rxdma_channel; /* DMA channel assigned */
 #endif
 
-  int (* const vector)(int irq, void *context); /* Interrupt handler */
+  xcpt_t vector;               /* Interrupt handler */
 
   /* RX DMA state */
 
