@@ -802,7 +802,7 @@ static struct vreg_data evt2_refclk_main_vreg_data[] = {
 };
 DECLARE_VREG(evt2_refclk_main_vreg, evt2_refclk_main_vreg_data);
 
-static int uart_msm_rx_gpio_handler(int irq, void *context)
+static int uart_msm_rx_gpio_handler(int irq, void *context, void *priv)
 {
     return OK;
 }

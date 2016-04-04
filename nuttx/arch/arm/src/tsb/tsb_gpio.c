@@ -383,7 +383,7 @@ static int tsb_set_gpio_triggering(void *driver_data, uint8_t which, int trigger
     return 0;
 }
 
-static int tsb_gpio_irq_debounce_handler(int irq, void *context)
+static int tsb_gpio_irq_debounce_handler(int irq, void *context, void *priv)
 {
     /* preserve ISR context */
     tsb_gpio_irq_vectors[irq].debounce.context = context;
@@ -435,11 +435,11 @@ static int tsb_gpio_irq_debounce_handler(int irq, void *context)
 call_irq:
     /* reset debounce state and call attached irq handler */
     tsb_gpio_irq_vectors[irq].debounce.db_state = DB_ST_INVALID;
-    tsb_gpio_irq_vectors[irq].irq_vector(irq, context);
+    tsb_gpio_irq_vectors[irq].irq_vector(irq, context, priv);
     return 0;
 }
 
-static int tsb_gpio_irq_handler(int irq, void *context)
+static int tsb_gpio_irq_handler(int irq, void *context, void *priv)
 {
     /*
      * Handle each pending GPIO interrupt.  "The GPIO MIS register is the masked
@@ -471,10 +471,10 @@ static int tsb_gpio_irq_handler(int irq, void *context)
 
             if (tsb_gpio_irq_vectors[pin].debounce.ms == 0) {
                 /* no debouncing, call attached irq handler */
-                tsb_gpio_irq_vectors[pin].irq_vector(base + pin, context);
+                tsb_gpio_irq_vectors[pin].irq_vector(base + pin, context, priv);
             } else {
                 /* else, call debounce handler */
-                tsb_gpio_irq_debounce_handler(base + pin, context);
+                tsb_gpio_irq_debounce_handler(base + pin, context, priv);
             }
         }
     }
@@ -593,7 +593,7 @@ static void tsb_gpio_initialize(void)
     tsb_gpio_irqinitialize();
 
     /* Attach Interrupt Handler */
-    irq_attach(TSB_IRQ_GPIO, tsb_gpio_irq_handler);
+    irq_attach(TSB_IRQ_GPIO, tsb_gpio_irq_handler, NULL);
 
     /* Enable Interrupt Handler */
     up_enable_irq(TSB_IRQ_GPIO);

@@ -106,7 +106,7 @@
  *
  ****************************************************************************/
 
-int up_timerisr(int irq, void *context)
+int up_timerisr(int irq, void *context, void *priv)
 {
    /* Process timer interrupt */
 
@@ -152,7 +152,7 @@ void up_timer_initialize(void)
 
   /* Attach the timer interrupt vector */
 
-  (void)irq_attach(STM32_IRQ_SYSTICK, (xcpt_t)up_timerisr);
+  (void)irq_attach(STM32_IRQ_SYSTICK, up_timerisr, NULL);
 
   /* Enable SysTick interrupts */
 

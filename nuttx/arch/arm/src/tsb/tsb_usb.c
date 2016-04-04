@@ -123,9 +123,10 @@ static struct dwc_otg_hcd_function_ops hcd_fops = {
  *
  * @param irq IRQ number
  * @param context context of the preempted task
+ * @param priv Attached private data
  * @return 0 if successful
  */
-static int hsic_irq_handler(int irq, void *context)
+static int hsic_irq_handler(int irq, void *context, void *priv)
 {
     DEBUGASSERT(g_dev);
     DEBUGASSERT(g_dev->hcd);
@@ -213,7 +214,7 @@ static int hcd_core_init(void)
         dwc_otg_enable_global_interrupts(g_dev->core_if);
     }
 
-    irq_attach(TSB_IRQ_HSIC, hsic_irq_handler);
+    irq_attach(TSB_IRQ_HSIC, hsic_irq_handler, NULL);
     up_enable_irq(TSB_IRQ_HSIC);
 
     return 0;

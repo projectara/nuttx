@@ -142,7 +142,8 @@ int timesync_get_state(void) {
  *
  * Handily the amount to append to the frame-time will always be 0x100000000
  */
-static int timesync_frame_time_rollover_handler(int irq, void *context) {
+static int timesync_frame_time_rollover_handler(int irq, void *context,
+                                                void *priv) {
 
     STM32_TIM_ACKINT(timesync_rollover_slave_timer, irq);
     timesync_frame_time += TIMESYNC_ROLLOVER_CASCADE_TOTAL;
@@ -207,7 +208,7 @@ static void timesync_strobe(uint32_t strobe_mask, uint64_t *latch_frame_time) {
  * the TIMESYNC_STATE_DEBUT_INIT state depending on CONFIG_ARCH_TIMESYNC_DEBUG.
  *
  */
-static int timesync_strobe_handler(int irq, void *context) {
+static int timesync_strobe_handler(int irq, void *context, void *priv) {
     irqstate_t flags;
     uint64_t strobe_time;
 

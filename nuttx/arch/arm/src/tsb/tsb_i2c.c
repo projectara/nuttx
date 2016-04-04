@@ -567,7 +567,7 @@ static uint32_t tsb_i2c_read_clear_intrbits(struct tsb_i2c_info *info)
 }
 
 /** I2C interrupt service routine */
-static int tsb_i2c_irq_handler(int irq, void *context)
+static int tsb_i2c_irq_handler(int irq, void *context, void *priv)
 {
     uint32_t stat, enabled;
     struct tsb_i2c_info *info;
@@ -793,7 +793,7 @@ static int tsb_i2c_dev_probe(struct device *dev)
 
     flags = irqsave();
 
-    ret = irq_attach(info->i2c_irq, tsb_i2c_irq_handler);
+    ret = irq_attach(info->i2c_irq, tsb_i2c_irq_handler, NULL);
     if (ret) {
         irqrestore(flags);
         lldbg("i2c irq attach error!\n");

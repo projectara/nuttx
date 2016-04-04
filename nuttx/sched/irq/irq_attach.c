@@ -76,7 +76,7 @@
  *
  ****************************************************************************/
 
-int irq_attach(int irq, xcpt_t isr)
+int irq_attach(int irq, xcpt_t isr, void *priv)
 {
 #if NR_IRQS > 0
   int ret = ERROR;
@@ -116,6 +116,7 @@ int irq_attach(int irq, xcpt_t isr)
       /* Save the new ISR in the table. */
 
       g_irqvector[irq] = isr;
+      g_irqpriv[irq] = priv;
       irqrestore(state);
       ret = OK;
     }

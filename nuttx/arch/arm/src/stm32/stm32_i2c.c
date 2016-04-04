@@ -333,13 +333,13 @@ static int stm32_i2c_isr(struct stm32_i2c_priv_s * priv);
 
 #ifndef CONFIG_I2C_POLLED
 #ifdef CONFIG_STM32_I2C1
-static int stm32_i2c1_isr(int irq, void *context);
+static int stm32_i2c1_isr(int irq, void *context, void *priv);
 #endif
 #ifdef CONFIG_STM32_I2C2
-static int stm32_i2c2_isr(int irq, void *context);
+static int stm32_i2c2_isr(int irq, void *context, void *priv);
 #endif
 #ifdef CONFIG_STM32_I2C3
-static int stm32_i2c3_isr(int irq, void *context);
+static int stm32_i2c3_isr(int irq, void *context, void *priv);
 #endif
 #endif /* !CONFIG_I2C_POLLED */
 
@@ -1414,7 +1414,7 @@ static int stm32_i2c_isr(struct stm32_i2c_priv_s *priv)
 
 #ifndef CONFIG_I2C_POLLED
 #ifdef CONFIG_STM32_I2C1
-static int stm32_i2c1_isr(int irq, void *context)
+static int stm32_i2c1_isr(int irq, void *context, void *priv)
 {
   return stm32_i2c_isr(&stm32_i2c1_priv);
 }
@@ -1429,7 +1429,7 @@ static int stm32_i2c1_isr(int irq, void *context)
  ************************************************************************************/
 
 #ifdef CONFIG_STM32_I2C2
-static int stm32_i2c2_isr(int irq, void *context)
+static int stm32_i2c2_isr(int irq, void *context, void *priv)
 {
   return stm32_i2c_isr(&stm32_i2c2_priv);
 }
@@ -1444,7 +1444,7 @@ static int stm32_i2c2_isr(int irq, void *context)
  ************************************************************************************/
 
 #ifdef CONFIG_STM32_I2C3
-static int stm32_i2c3_isr(int irq, void *context)
+static int stm32_i2c3_isr(int irq, void *context, void *priv)
 {
   return stm32_i2c_isr(&stm32_i2c3_priv);
 }
@@ -1489,8 +1489,8 @@ static int stm32_i2c_init(FAR struct stm32_i2c_priv_s *priv)
   /* Attach ISRs */
 
 #ifndef CONFIG_I2C_POLLED
-  irq_attach(priv->config->ev_irq, priv->config->isr);
-  irq_attach(priv->config->er_irq, priv->config->isr);
+  irq_attach(priv->config->ev_irq, priv->config->isr, NULL);
+  irq_attach(priv->config->er_irq, priv->config->isr, NULL);
   up_enable_irq(priv->config->ev_irq);
   up_enable_irq(priv->config->er_irq);
 #endif

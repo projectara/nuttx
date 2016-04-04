@@ -114,7 +114,7 @@ static int ads7843e_sample(FAR struct ads7843e_dev_s *priv,
 static int ads7843e_waitsample(FAR struct ads7843e_dev_s *priv,
                                FAR struct ads7843e_sample_s *sample);
 static void ads7843e_worker(FAR void *arg);
-static int ads7843e_interrupt(int irq, void *context);
+static int ads7843e_interrupt(int irq, void *context, void *private);
 
 /* Character driver methods */
 
@@ -747,7 +747,7 @@ ignored:
  * Name: ads7843e_interrupt
  ****************************************************************************/
 
-static int ads7843e_interrupt(int irq, void *context)
+static int ads7843e_interrupt(int irq, void *context, void *private)
 {
   FAR struct ads7843e_dev_s    *priv;
   FAR struct ads7843e_config_s *config;

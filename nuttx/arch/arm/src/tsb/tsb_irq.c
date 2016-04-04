@@ -225,8 +225,8 @@ void up_irqinitialize(void) {
      * must also be caught because a SVCall may show up as a Hard Fault
      * under certain conditions.
      */
-    irq_attach(TSB_IRQ_SVCALL, up_svcall);
-    irq_attach(TSB_IRQ_HARDFAULT, up_hardfault);
+    irq_attach(TSB_IRQ_SVCALL, up_svcall, NULL);
+    irq_attach(TSB_IRQ_HARDFAULT, up_hardfault, NULL);
 
     irqenable();
 }

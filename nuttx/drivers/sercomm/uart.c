@@ -308,7 +308,7 @@ static void uart_irq_handler_cons(__unused enum irq_nr irqnr)
 }
 #endif
 
-static void uart_irq_handler_sercomm(int irq, void *context)
+static void uart_irq_handler_sercomm(int irq, void *context, void *priv)
 {
   const uint8_t uart = SERCOMM_UART_NR;
   uint8_t iir, ch;
@@ -390,7 +390,7 @@ void uart_init(uint8_t uart, uint8_t interrupts)
   if (uart == SERCOMM_UART_NR)
     {
       sercomm_init();
-      irq_attach(IRQ_UART_MODEM, uart_irq_handler_sercomm);
+      irq_attach(IRQ_UART_MODEM, uart_irq_handler_sercomm, NULL);
       up_enable_irq(IRQ_UART_MODEM);
       uart_irq_enable(uart, UART_IRQ_RX_CHAR, 1);
     }

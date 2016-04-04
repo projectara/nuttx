@@ -467,9 +467,10 @@ static void ua_recvchars(struct tsb_uart_info *uart_info, uint8_t int_id)
  *
  * @param irq The IRQ number from OS.
  * @param context The context for this interrupt.
+ * @param priv Attached private data
  * @return None.
  */
-static int ua_irq_handler(int irq, void *context)
+static int ua_irq_handler(int irq, void *context, void *priv)
 {
     struct tsb_uart_info *uart_info = device_get_private(saved_dev);
     uint8_t interrupt_id = 0;
@@ -1310,7 +1311,7 @@ static int tsb_uart_dev_probe(struct device *dev)
 
     flags = irqsave();
 
-    ret = irq_attach(uart_info->uart_irq, ua_irq_handler);
+    ret = irq_attach(uart_info->uart_irq, ua_irq_handler, NULL);
     if (ret) {
         irqrestore(flags);
         goto err_destroy_rx_sem;

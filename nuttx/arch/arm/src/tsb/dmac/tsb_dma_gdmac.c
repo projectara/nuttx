@@ -727,7 +727,7 @@ static void gdmac_wait_for_channel_completed(struct tsb_dma_chan *tsb_chan)
     return;
 }
 
-int gdmac_irq_handler(int irq, void *context)
+int gdmac_irq_handler(int irq, void *context, void *priv)
 {
     struct tsb_dma_gdmac_control_regs *control_regs =
             (struct tsb_dma_gdmac_control_regs*) GDMAC_CONTROL_REGS_ADDRESS;
@@ -1028,7 +1028,7 @@ int tsb_gdmac_allocal_mem2Mem_chan(struct device *dev,
 
     /* Set interrupt handler for this GDMAC UniPro TX channel. */
     retval = irq_attach(GDMAC_EVENT_TO_IRQN(gdmac_chan->end_of_tx_event),
-            gdmac_irq_handler);
+            gdmac_irq_handler, NULL);
     if (retval != OK) {
         lldbg("gdmac: Failed to attach interrupt %d.\n",
                 GDMAC_EVENT_TO_IRQN(gdmac_chan->end_of_tx_event));
@@ -1288,7 +1288,7 @@ int tsb_gdmac_allocal_mem2unipro_chan(struct device *dev,
 
     /* Set interrupt handler for this GDMAC UniPro TX channel. */
     retval = irq_attach(GDMAC_EVENT_TO_IRQN(gdmac_chan->end_of_tx_event),
-            gdmac_irq_handler);
+            gdmac_irq_handler, NULL);
     if (retval != OK) {
         lldbg("gdmac: Failed to attach interrupt %d.\n",
                 GDMAC_EVENT_TO_IRQN(gdmac_chan->end_of_tx_event));
@@ -1630,7 +1630,7 @@ int tsb_gdmac_allocal_mem2io_chan(struct device *dev,
 
     /* Set interrupt handler for this GDMAC UniPro TX channel. */
     retval = irq_attach(GDMAC_EVENT_TO_IRQN(gdmac_chan->end_of_tx_event),
-            gdmac_irq_handler);
+            gdmac_irq_handler, NULL);
     if (retval != OK) {
         lldbg("gdmac: Failed to attach interrupt %d.\n",
                 GDMAC_EVENT_TO_IRQN(gdmac_chan->end_of_tx_event));
@@ -1945,7 +1945,7 @@ int tsb_gdmac_allocal_io2mem_chan(struct device *dev,
 
     /* Set interrupt handler for this GDMAC UniPro TX channel. */
     retval = irq_attach(GDMAC_EVENT_TO_IRQN(gdmac_chan->end_of_tx_event),
-            gdmac_irq_handler);
+            gdmac_irq_handler, NULL);
     if (retval != OK) {
         lldbg("gdmac: Failed to attach interrupt %d.\n",
                 GDMAC_EVENT_TO_IRQN(gdmac_chan->end_of_tx_event));
@@ -2102,7 +2102,7 @@ int gdmac_stop_op(struct device *dev, struct tsb_dma_chan *tsb_chan,
     return retval;
 }
 
-int gdmac_irq_abort_handler(int irq, void *context)
+int gdmac_irq_abort_handler(int irq, void *context, void *priv)
 {
     struct tsb_dma_gdmac_control_regs *control_regs =
             (struct tsb_dma_gdmac_control_regs*) GDMAC_CONTROL_REGS_ADDRESS;
@@ -2182,7 +2182,7 @@ int gdmac_init_controller(struct device *dev)
     tsb_clk_enable(TSB_CLK_GDMA);
     tsb_reset(TSB_RST_GDMA);
 
-    retval = irq_attach(TSB_IRQ_GDMACABORT, gdmac_irq_abort_handler);
+    retval = irq_attach(TSB_IRQ_GDMACABORT, gdmac_irq_abort_handler, NULL);
     if (retval != OK) {
         lldbg("gdmac: Failed to attach GDMAC Abort interrupt.\n");
         return retval;
@@ -2201,7 +2201,7 @@ void gdmac_deinit_controller(struct device *dev)
 
     up_disable_irq(TSB_IRQ_GDMACABORT);
 
-    retval = irq_attach(TSB_IRQ_GDMACABORT, NULL);
+    retval = irq_attach(TSB_IRQ_GDMACABORT, NULL, NULL);
     if (retval != OK) {
         lldbg("gdmac: Failed to detach GDMAC Abort interrupt.\n");
     }

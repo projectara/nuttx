@@ -44,7 +44,7 @@ static struct tsb_tmr_ctx *tickless_timer;
 
 static uint32_t freerun_seconds = 0;
 
-static int freerun_isr(int irq, void *regs)
+static int freerun_isr(int irq, void *regs, void *priv)
 {
     tsb_tmr_ack_irq(freerun_timer);
     freerun_seconds += FREERUN_PERIOD_SECONDS;
@@ -52,7 +52,7 @@ static int freerun_isr(int irq, void *regs)
     return 0;
 }
 
-static int tickless_isr(int irq, void *regs)
+static int tickless_isr(int irq, void *regs, void *priv)
 {
     tsb_tmr_ack_irq(tickless_timer);
     tsb_tmr_cancel(tickless_timer);

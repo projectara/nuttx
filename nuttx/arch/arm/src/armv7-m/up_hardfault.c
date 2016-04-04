@@ -119,7 +119,7 @@
  *
  ****************************************************************************/
 
-int up_hardfault(int irq, void *context)
+int up_hardfault(int irq, void *context, void *priv)
 {
 #if defined(CONFIG_DEBUG_HARDFAULT) || !defined(CONFIG_ARMV7M_USEBASEPRI)
   uint32_t *regs = (uint32_t*)context;
@@ -161,7 +161,7 @@ int up_hardfault(int irq, void *context)
 
       if (insn == INSN_SVC0)
         {
-          return up_svcall(irq, context);
+          return up_svcall(irq, context, priv);
         } else {
           hfdbg("  PC: %p INSN: %04x\n", pc, insn);
         }

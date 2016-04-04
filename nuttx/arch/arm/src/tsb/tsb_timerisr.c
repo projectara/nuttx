@@ -137,7 +137,7 @@ static inline void timer_snapshot(uint32_t *tick_count, uint32_t *clock_value)
     *clock_value = clock;
 }
 
-int up_timerisr(int irq, void *context)
+int up_timerisr(int irq, void *context, void *priv)
 {
     /* Process timer interrupt */
     sched_process_timer();
@@ -149,7 +149,7 @@ void up_timer_initialize(void)
 {
     putreg32(SYSTICK_RELOAD, NVIC_SYSTICK_RELOAD);
 
-    irq_attach(TSB_IRQ_SYSTICK, (xcpt_t)up_timerisr);
+    irq_attach(TSB_IRQ_SYSTICK, up_timerisr, NULL);
 
     putreg32(NVIC_SYSTICK_CTRL_CLKSOURCE |
              NVIC_SYSTICK_CTRL_TICKINT   |

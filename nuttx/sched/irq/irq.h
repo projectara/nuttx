@@ -55,6 +55,7 @@
  ****************************************************************************/
 
 extern xcpt_t g_irqvector[NR_IRQS+1];
+extern void* g_irqpriv[NR_IRQS+1];
 
 /****************************************************************************
  * Public Variables
@@ -73,7 +74,7 @@ extern "C"
 #endif
 
 void weak_function irq_initialize(void);
-int irq_unexpected_isr(int irq, void *context);
+int irq_unexpected_isr(int irq, void *context, void *priv);
 
 #undef EXTERN
 #ifdef __cplusplus

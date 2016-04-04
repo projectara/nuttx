@@ -128,7 +128,7 @@ static int  adc_setup(FAR struct adc_dev_s *dev);
 static void adc_shutdown(FAR struct adc_dev_s *dev);
 static void adc_rxint(FAR struct adc_dev_s *dev, bool enable);
 static int  adc_ioctl(FAR struct adc_dev_s *dev, int cmd, unsigned long arg);
-static int  adc_interrupt(int irq, void *context);
+static int  adc_interrupt(int irq, void *context, void *private);
 
 /****************************************************************************
  * ad_private Data
@@ -220,7 +220,7 @@ static int  adc_setup(FAR struct adc_dev_s *dev)
 {
   FAR struct up_dev_s *priv = (FAR struct up_dev_s *)dev->ad_priv;
   FAR struct spi_dev_s *spi = priv->spi;
-  int ret = irq_attach(priv->irq, adc_interrupt);
+  int ret = irq_attach(priv->irq, adc_interrupt, NULL);
 
   if (ret == OK)
     {
@@ -282,7 +282,7 @@ static int  adc_ioctl(FAR struct adc_dev_s *dev, int cmd, unsigned long arg)
   return 0;
 }
 
-static int adc_interrupt(int irq, void *context)
+static int adc_interrupt(int irq, void *context, void *private)
 {
   FAR struct up_dev_s *priv = (FAR struct up_dev_s *)g_adcdev.ad_priv;
   FAR struct spi_dev_s *spi = priv->spi;

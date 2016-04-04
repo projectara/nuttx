@@ -110,7 +110,7 @@ static void ara_key_irqworker(void *priv)
  * called as the debounce handler, IRQs are probably not already disabled when
  * entering this function.
  */
-static int ara_key_irqhandler(int irq, void *context)
+static int ara_key_irqhandler(int irq, void *context, void *priv)
 {
     struct ara_key_context *key = &the_ara_key;
     bool value, active;

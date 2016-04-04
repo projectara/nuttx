@@ -547,7 +547,7 @@ static int rtc_resume(void)
  ************************************************************************************/
 
 #if CONFIG_RTC_ALARM
-static int rtc_interrupt(int irq, void *context)
+static int rtc_interrupt(int irq, void *context, void *priv)
 {
 #warning "Missing logic"
   return OK;
@@ -668,7 +668,7 @@ int up_rtcinitialize(void)
 
   /* Then attach the ALARM interrupt handler */
 
-  irq_attach(STM32_IRQ_RTC_WKUP, rtc_interrupt);
+  irq_attach(STM32_IRQ_RTC_WKUP, rtc_interrupt, NULL);
   up_enable_irq(STM32_IRQ_RTC_WKUP);
 #endif
 

@@ -61,7 +61,7 @@
  */
 struct device *saved_dev;
 
-static int tsb_i2s_irq_so_handler(int irq, void *context)
+static int tsb_i2s_irq_so_handler(int irq, void *context, void *priv)
 {
     struct tsb_i2s_info *info = device_get_private(saved_dev);
     uint32_t intstat;
@@ -76,7 +76,7 @@ static int tsb_i2s_irq_so_handler(int irq, void *context)
     return 0;
 }
 
-static int tsb_i2s_irq_si_handler(int irq, void *context)
+static int tsb_i2s_irq_si_handler(int irq, void *context, void *priv)
 {
     struct tsb_i2s_info *info = device_get_private(saved_dev);
     uint32_t intstat;
@@ -97,13 +97,13 @@ static int tsb_i2s_xfer_irq_attach(struct tsb_i2s_info *info)
 {
     int retval = 0;
 
-    retval = irq_attach(info->so_irq, tsb_i2s_irq_so_handler);
+    retval = irq_attach(info->so_irq, tsb_i2s_irq_so_handler, NULL);
     if (retval) {
         lldbg("Failed to attach I2SO irq.\n");
         return retval;
     }
 
-    retval = irq_attach(info->si_irq, tsb_i2s_irq_si_handler);
+    retval = irq_attach(info->si_irq, tsb_i2s_irq_si_handler, NULL);
     if (retval) {
         lldbg("Failed to attach I2SI irq.\n");
         return retval;
@@ -827,7 +827,7 @@ enum device_i2s_event tsb_i2s_intstat2event(uint32_t intstat)
     return event;
 }
 
-static int tsb_i2s_irq_so_err_handler(int irq, void *context)
+static int tsb_i2s_irq_so_err_handler(int irq, void *context, void *priv)
 {
     struct tsb_i2s_info *info = device_get_private(saved_dev);
     enum device_i2s_event event;
@@ -849,7 +849,7 @@ static int tsb_i2s_irq_so_err_handler(int irq, void *context)
     return OK;
 }
 
-static int tsb_i2s_irq_si_err_handler(int irq, void *context)
+static int tsb_i2s_irq_si_err_handler(int irq, void *context, void *priv)
 {
     struct tsb_i2s_info *info = device_get_private(saved_dev);
     enum device_i2s_event event;
@@ -1405,11 +1405,11 @@ static int tsb_i2s_dev_probe(struct device *dev)
 
     flags = irqsave();
 
-    ret = irq_attach(info->soerr_irq, tsb_i2s_irq_so_err_handler);
+    ret = irq_attach(info->soerr_irq, tsb_i2s_irq_so_err_handler, NULL);
     if (ret != OK)
         goto err_irqrestore;
 
-    ret = irq_attach(info->sierr_irq, tsb_i2s_irq_si_err_handler);
+    ret = irq_attach(info->sierr_irq, tsb_i2s_irq_si_err_handler, NULL);
     if (ret != OK)
         goto err_detach_soerr_irq;
 

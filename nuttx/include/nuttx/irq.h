@@ -52,7 +52,7 @@
  */
 
 #ifndef __ASSEMBLY__
-# define irq_detach(isr) irq_attach(isr, NULL)
+# define irq_detach(isr) irq_attach(isr, NULL, NULL)
 #endif
 
 /****************************************************************************
@@ -62,7 +62,7 @@
 /* This struct defines the way the registers are stored */
 
 #ifndef __ASSEMBLY__
-typedef int (*xcpt_t)(int irq, void *context);
+typedef int (*xcpt_t)(int irq, void *context, void *priv);
 #endif
 
 /* Now include architecture-specific types */
@@ -95,7 +95,7 @@ extern "C"
  *
  ****************************************************************************/
 
-int irq_attach(int irq, xcpt_t isr);
+int irq_attach(int irq, xcpt_t isr, void *priv);
 
 #undef EXTERN
 #ifdef __cplusplus

@@ -131,8 +131,8 @@ static void configure_transfer_mode(int);
 static void dump_regs(void);
 
 /* irq handlers */
-static int irq_rx_eom(int irq, void *context);
-static int irq_unipro(int irq, void *context);
+static int irq_rx_eom(int irq, void *context, void *priv);
+static int irq_unipro(int irq, void *context, void *priv);
 
 /* Pointer to Unipro TX Calltable provided upon successful init */
 static struct unipro_tx_calltable *tx_calltable;
@@ -234,7 +234,7 @@ static void enable_int(unsigned int cportid) {
 
     irqn = cportid_to_irqn(cportid);
     enable_rx_interrupt(cport);
-    irq_attach(irqn, irq_rx_eom);
+    irq_attach(irqn, irq_rx_eom, NULL);
     up_enable_irq(irqn);
 }
 
@@ -357,8 +357,9 @@ static inline void enable_rx_interrupt(struct cport *cport) {
  * @brief RX EOM interrupt handler
  * @param irq irq number
  * @param context register context (unused)
+ * @param priv Attached private data
  */
-static int irq_rx_eom(int irq, void *context) {
+static int irq_rx_eom(int irq, void *context, void *priv) {
     struct cport *cport = irqn_to_cport(irq);
     void *data = cport->rx_buf;
     uint32_t transferred_size;
@@ -482,7 +483,7 @@ static void unipro_evt_handler(enum unipro_event evt)
     }
 }
 
-static int irq_unipro(int irq, void *context) {
+static int irq_unipro(int irq, void *context, void *priv) {
     int rc;
     uint32_t val;
 
@@ -793,7 +794,7 @@ void unipro_init(void)
         unipro_write(CPB_RX_E2EFC_EN_1, 0);
     }
 
-    irq_attach(TSB_IRQ_UNIPRO, irq_unipro);
+    irq_attach(TSB_IRQ_UNIPRO, irq_unipro, NULL);
     up_enable_irq(TSB_IRQ_UNIPRO);
 
 #ifdef UNIPRO_DEBUG

@@ -1342,7 +1342,7 @@ done:
 }
 
 /* Wake-Detect interrupt handler - IRQ context */
-static int interface_wd_irq_handler(int irq, void *context)
+static int interface_wd_irq_handler(int irq, void *context, void *priv)
 {
     struct interface *iface;
     struct wd_data *wd;

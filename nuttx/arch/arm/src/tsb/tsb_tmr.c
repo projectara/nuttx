@@ -181,7 +181,7 @@ void tsb_tmr_configure(struct tsb_tmr_ctx *tmr, int mode, xcpt_t isr)
     }
 
     if (isr) {
-        irq_attach(tmr->irq, isr);
+        irq_attach(tmr->irq, isr, NULL);
         up_enable_irq(tmr->irq);
     }
 

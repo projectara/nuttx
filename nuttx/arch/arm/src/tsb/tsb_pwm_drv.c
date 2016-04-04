@@ -904,10 +904,10 @@ static int tsb_pwm_op_intr_callback(struct device *dev, uint32_t mask_int,
  *
  * @param irq IRQ number.
  * @param context Pointer to ARM of interrupt registers.
- *
+ * @param priv Attached private data
  * @return 0: Success.
  */
-static int tsb_pwm_irq_handler(int irq, void *context)
+static int tsb_pwm_irq_handler(int irq, void *context, void *priv)
 {
     uint32_t int_state;
     struct pwm_ctlr_info *info = NULL;
@@ -1070,7 +1070,7 @@ static int tsb_pwm_dev_probe(struct device *dev)
 
     info->pwm_irq = (uint32_t)r->start;
 
-    ret = irq_attach(info->pwm_irq, tsb_pwm_irq_handler);
+    ret = irq_attach(info->pwm_irq, tsb_pwm_irq_handler, NULL);
     if (ret) {
         ret = -EINTR;
         goto err_irq;

@@ -149,13 +149,13 @@ static void adc_rccreset(struct stm32_dev_s *priv, bool reset);
 
 static int adc_interrupt(FAR struct adc_dev_s *dev);
 #if defined(CONFIG_STM32_STM32F10XX) && (defined(CONFIG_STM32_ADC1) || defined(CONFIG_STM32_ADC2))
-static int adc12_interrupt(int irq, void *context);
+static int adc12_interrupt(int irq, void *context, void *priv);
 #endif
 #if defined(CONFIG_STM32_STM32F10XX) && defined (CONFIG_STM32_ADC3)
-static int adc3_interrupt(int irq, void *context);
+static int adc3_interrupt(int irq, void *context, void *priv);
 #endif
 #if defined(CONFIG_STM32_STM32F20XX) || defined(CONFIG_STM32_STM32F40XX)
-static int adc123_interrupt(int irq, void *context);
+static int adc123_interrupt(int irq, void *context, void *priv);
 #endif
 
 /* ADC Driver Methods */
@@ -1171,7 +1171,7 @@ static int adc_setup(FAR struct adc_dev_s *dev)
 
   /* Attach the ADC interrupt */
 
-  ret = irq_attach(priv->irq, priv->isr);
+  ret = irq_attach(priv->irq, priv->isr, NULL);
   if (ret == OK)
     {
       /* Make sure that the ADC device is in the powered up, reset state */
@@ -1347,7 +1347,7 @@ static int adc_interrupt(FAR struct adc_dev_s *dev)
  ****************************************************************************/
 
 #if defined(CONFIG_STM32_STM32F10XX) && (defined(CONFIG_STM32_ADC1) || defined(CONFIG_STM32_ADC2))
-static int adc12_interrupt(int irq, void *context)
+static int adc12_interrupt(int irq, void *context, void *priv)
 {
   uint32_t regval;
   uint32_t pending;
@@ -1394,7 +1394,7 @@ static int adc12_interrupt(int irq, void *context)
  ****************************************************************************/
 
 #if defined (CONFIG_STM32_STM32F10XX) && defined (CONFIG_STM32_ADC3)
-static int adc3_interrupt(int irq, void *context)
+static int adc3_interrupt(int irq, void *context, void *priv)
 {
   uint32_t regval;
   uint32_t pending;
@@ -1427,7 +1427,7 @@ static int adc3_interrupt(int irq, void *context)
  ****************************************************************************/
 
 #if defined(CONFIG_STM32_STM32F20XX) || defined(CONFIG_STM32_STM32F40XX)
-static int adc123_interrupt(int irq, void *context)
+static int adc123_interrupt(int irq, void *context, void *priv)
 {
   uint32_t regval;
   uint32_t pending;

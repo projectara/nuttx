@@ -137,7 +137,7 @@ void irq_dispatch(int irq, FAR void *context)
 
   /* Then dispatch to the interrupt handler */
 
-  vector(irq, context);
+  vector(irq, context, g_irqpriv[irq]);
 
 #if defined(CONFIG_USEC_MEASURE_PERF)
   /* stop tracking current interrupt and go back to tracking current tcb */

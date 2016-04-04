@@ -356,7 +356,7 @@ static void tim_putreg(struct stm32_chan_s *chan, int offset, uint32_t value);
 /* Interrupt handler */
 
 #if defined(CONFIG_STM32_STM32F20XX) || defined(CONFIG_STM32_STM32F40XX)
-static int  dac_interrupt(int irq, void *context);
+static int  dac_interrupt(int irq, void *context, void *priv);
 #endif
 
 /* DAC methods */
@@ -548,7 +548,7 @@ static void tim_modifyreg(struct stm32_chan_s *chan, int offset,
  ****************************************************************************/
 
 #if defined(CONFIG_STM32_STM32F20XX) || defined(CONFIG_STM32_STM32F40XX)
-static int dac_interrupt(int irq, void *context)
+static int dac_interrupt(int irq, void *context, void *priv)
 {
 #warning "Missing logic"
   return OK;

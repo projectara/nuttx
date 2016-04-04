@@ -42,7 +42,7 @@
 #endif
 
 /* TODO: hook some actions to this event handler */
-static int wakeup_irq_event(int irq, void *context) {
+static int wakeup_irq_event(int irq, void *context, void *priv) {
     gpio_irq_mask(WD_PIN);
     timesync_strobe_handler();
     gpio_irq_unmask(WD_PIN);

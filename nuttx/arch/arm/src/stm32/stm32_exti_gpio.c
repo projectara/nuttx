@@ -113,7 +113,7 @@ static struct stm32_exti_handlers_priv_t stm32_exti_handlers[16];
  * Interrupt Service Routines - Dispatchers
  ****************************************************************************/
 
-static int stm32_exti0_isr(int irq, void *context)
+static int stm32_exti0_isr(int irq, void *context, void *priv)
 {
   int ret = OK;
 
@@ -125,7 +125,7 @@ static int stm32_exti0_isr(int irq, void *context)
   if (!stm32_exti_handlers[0].priv_enabled) {
     if (stm32_exti_handlers[0].handler.stm32_exti_callback) {
           ret = stm32_exti_handlers[0].handler.stm32_exti_callback(
-                     irq, context);
+                     irq, context, priv);
     }
   } else {
     if (stm32_exti_handlers[0].handler.stm32_exti_callback_priv) {
@@ -138,7 +138,7 @@ static int stm32_exti0_isr(int irq, void *context)
   return ret;
 }
 
-static int stm32_exti1_isr(int irq, void *context)
+static int stm32_exti1_isr(int irq, void *context, void *priv)
 {
   int ret = OK;
 
@@ -150,7 +150,7 @@ static int stm32_exti1_isr(int irq, void *context)
   if (!stm32_exti_handlers[1].priv_enabled) {
     if (stm32_exti_handlers[1].handler.stm32_exti_callback) {
           ret = stm32_exti_handlers[1].handler.stm32_exti_callback(
-                     irq, context);
+                     irq, context, priv);
     }
   } else {
     if (stm32_exti_handlers[1].handler.stm32_exti_callback_priv) {
@@ -163,7 +163,7 @@ static int stm32_exti1_isr(int irq, void *context)
   return ret;
 }
 
-static int stm32_exti2_isr(int irq, void *context)
+static int stm32_exti2_isr(int irq, void *context, void *priv)
 {
   int ret = OK;
 
@@ -175,7 +175,7 @@ static int stm32_exti2_isr(int irq, void *context)
   if (!stm32_exti_handlers[2].priv_enabled) {
     if (stm32_exti_handlers[2].handler.stm32_exti_callback) {
           ret = stm32_exti_handlers[2].handler.stm32_exti_callback(
-                     irq, context);
+                     irq, context, priv);
     }
   } else {
     if (stm32_exti_handlers[2].handler.stm32_exti_callback_priv) {
@@ -188,7 +188,7 @@ static int stm32_exti2_isr(int irq, void *context)
   return ret;
 }
 
-static int stm32_exti3_isr(int irq, void *context)
+static int stm32_exti3_isr(int irq, void *context, void *priv)
 {
   int ret = OK;
 
@@ -200,7 +200,7 @@ static int stm32_exti3_isr(int irq, void *context)
   if (!stm32_exti_handlers[3].priv_enabled) {
     if (stm32_exti_handlers[3].handler.stm32_exti_callback) {
           ret = stm32_exti_handlers[3].handler.stm32_exti_callback(
-                     irq, context);
+                     irq, context, priv);
     }
   } else {
     if (stm32_exti_handlers[3].handler.stm32_exti_callback_priv) {
@@ -213,7 +213,7 @@ static int stm32_exti3_isr(int irq, void *context)
   return ret;
 }
 
-static int stm32_exti4_isr(int irq, void *context)
+static int stm32_exti4_isr(int irq, void *context, void *priv)
 {
   int ret = OK;
 
@@ -225,7 +225,7 @@ static int stm32_exti4_isr(int irq, void *context)
   if (!stm32_exti_handlers[4].priv_enabled) {
     if (stm32_exti_handlers[4].handler.stm32_exti_callback) {
           ret = stm32_exti_handlers[4].handler.stm32_exti_callback(
-                     irq, context);
+                     irq, context, priv);
     }
   } else {
     if (stm32_exti_handlers[4].handler.stm32_exti_callback_priv) {
@@ -267,7 +267,7 @@ static int stm32_exti_multiisr(int irq, void *context, int first, int last)
           if (!stm32_exti_handlers[pin].priv_enabled) {
             if (stm32_exti_handlers[pin].handler.stm32_exti_callback) {
               tmp = stm32_exti_handlers[pin].handler.stm32_exti_callback(
-                         irq, context);
+                         irq, context, NULL);
             }
           } else {
             if (stm32_exti_handlers[pin].handler.stm32_exti_callback_priv) {
@@ -287,12 +287,12 @@ static int stm32_exti_multiisr(int irq, void *context, int first, int last)
   return ret;
 }
 
-static int stm32_exti95_isr(int irq, void *context)
+static int stm32_exti95_isr(int irq, void *context, void *priv)
 {
   return stm32_exti_multiisr(irq, context, 5, 9);
 }
 
-static int stm32_exti1510_isr(int irq, void *context)
+static int stm32_exti1510_isr(int irq, void *context, void *priv)
 {
   return stm32_exti_multiisr(irq, context, 10, 15);
 }
@@ -365,7 +365,7 @@ static uint32_t stm32_gpio_setevent(uint32_t pinset, bool risingedge,
 
   if (func)
     {
-      irq_attach(irq, handler);
+      irq_attach(irq, handler, NULL);
       up_enable_irq(irq);
     }
   else

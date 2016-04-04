@@ -1196,9 +1196,10 @@ static int sdio_software_reset(struct tsb_sdio_info *info)
  *
  * @param irq Number of irq.
  * @param context Pointer to structure of device data.
+ * @param priv Attached private data
  * @return 0 on success, negative errno on error.
  */
-int sdio_irq_event(int irq, void *context)
+int sdio_irq_event(int irq, void *context, void *priv)
 {
     struct tsb_sdio_info *info = device_get_private(sdio_dev);
     uint8_t value = 0;
@@ -1259,9 +1260,10 @@ int sdio_irq_event(int irq, void *context)
  *
  * @param irq The IRQ number from OS.
  * @param context The context for this interrupt.
+ * @param priv Attached private data
  * @return None.
  */
-static int sdio_irq_handler(int irq, void *context)
+static int sdio_irq_handler(int irq, void *context, void *priv)
 {
     struct tsb_sdio_info *info = device_get_private(sdio_dev);
     uint32_t timeout_error = DATA_TIMEOUT_ERROR | CMD_TIMEOUT_ERROR;
@@ -2434,7 +2436,7 @@ static int tsb_sdio_dev_probe(struct device *dev)
 
     flags = irqsave();
 
-    ret = irq_attach(info->sdio_irq, sdio_irq_handler);
+    ret = irq_attach(info->sdio_irq, sdio_irq_handler, NULL);
     if (ret) {
         goto err_destroy_card_detect_sem;
     }

@@ -566,7 +566,7 @@ static const struct dwc_otg_pcd_function_ops fops = {
     .reset = _reset,
 };
 
-int dwc_irq_handler(int irq, void *context)
+int dwc_irq_handler(int irq, void *context, void *private)
 {
     struct dwc_usbdev_s *priv = &g_usbdev;
     dwc_otg_pcd_t *pcd = priv->dwc_otg_device.pcd;
@@ -646,7 +646,7 @@ int up_usbinitialize_core(struct dwc_usbdev_s *priv)
      */
     DWC_DEBUGPL(DBG_CIL, "registering (common) handler for irq%d\n",
                 TSB_IRQ_HSIC);
-    if (irq_attach(TSB_IRQ_HSIC, dwc_irq_handler) != 0) {
+    if (irq_attach(TSB_IRQ_HSIC, dwc_irq_handler, NULL) != 0) {
         DWC_ERROR("Can't register HSIC IRQ\n");
         goto fail;
     } else {

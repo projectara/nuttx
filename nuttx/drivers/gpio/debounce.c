@@ -34,7 +34,7 @@ static void debounce_delayed_worker(void *data)
 {
     struct debounce_data *db = data;
 
-    db->isr(db->gpio, db->context);
+    db->isr(db->gpio, db->context, NULL);
 }
 
 /* queue debounce timeout handler if not already scheduled */

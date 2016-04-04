@@ -108,7 +108,7 @@ static int max11802_sample(FAR struct max11802_dev_s *priv,
 static int max11802_waitsample(FAR struct max11802_dev_s *priv,
                                FAR struct max11802_sample_s *sample);
 static void max11802_worker(FAR void *arg);
-static int max11802_interrupt(int irq, void *context);
+static int max11802_interrupt(int irq, void *context, void *private);
 
 /* Character driver methods */
 
@@ -728,7 +728,7 @@ ignored:
  * Name: max11802_interrupt
  ****************************************************************************/
 
-static int max11802_interrupt(int irq, void *context)
+static int max11802_interrupt(int irq, void *context, void *private)
 {
   FAR struct max11802_dev_s    *priv;
   FAR struct max11802_config_s *config;

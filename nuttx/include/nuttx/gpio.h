@@ -147,7 +147,8 @@ uint8_t gpio_line_count(void);
 /**
  * @brief Attach an interrupt handler to a GPIO line
  * @param which The number of the GPIO line
- * @param isr The interrupt handler (int (*xcpt_t)(int irq, void *context))
+ * @param isr The interrupt handler
+ * (int (*xcpt_t)(int irq, void *context, void *priv))
  * @return 0 on success, !=0 on failure
  */
 int gpio_irq_attach(uint8_t which, xcpt_t isr);

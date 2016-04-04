@@ -765,9 +765,10 @@ int tsb_spi_process_tx(struct tsb_spi_dev_info *info)
  *
  * @param irq interrupt number
  * @param context argument for interrupt handler
+ * @param priv Attached private data
  * @return 0 if successful, negative error code otherwise.
  */
-static int tsb_spi_irq_handler(int irq, void *context)
+static int tsb_spi_irq_handler(int irq, void *context, void *priv)
 {
     struct device *dev = spi_dev;
     struct tsb_spi_dev_info *info = NULL;
@@ -1039,7 +1040,7 @@ static int tsb_spi_dev_open(struct device *dev)
         goto err_hwinit;
     }
     /* register SPI IRQ number */
-    ret = irq_attach(TSB_IRQ_SPI, tsb_spi_irq_handler);
+    ret = irq_attach(TSB_IRQ_SPI, tsb_spi_irq_handler, NULL);
     if (ret != OK) {
         ret = -EIO;
         goto err_irq;

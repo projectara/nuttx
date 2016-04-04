@@ -146,8 +146,8 @@ static bool can_txempty(FAR struct can_dev_s *dev);
 
 /* CAN interrupt handling */
 
-static int  can_rx0interrupt(int irq, void *context);
-static int  can_txinterrupt(int irq, void *context);
+static int  can_rx0interrupt(int irq, void *context, void *private);
+static int  can_txinterrupt(int irq, void *context, void *private);
 
 /* Initialization */
 
@@ -616,14 +616,14 @@ static int can_setup(FAR struct can_dev_s *dev)
 
   /* Attach the CAN RX FIFO 0 interrupt and TX interrupts.  The others are not used */
 
-  ret = irq_attach(priv->canrx0, can_rx0interrupt);
+  ret = irq_attach(priv->canrx0, can_rx0interrupt, NULL);
   if (ret < 0)
     {
       canlldbg("Failed to attach CAN%d RX0 IRQ (%d)", priv->port, priv->canrx0);
       return ret;
     }
 
-  ret = irq_attach(priv->cantx, can_txinterrupt);
+  ret = irq_attach(priv->cantx, can_txinterrupt, NULL);
   if (ret < 0)
     {
       canlldbg("Failed to attach CAN%d TX IRQ (%d)", priv->port, priv->cantx);
@@ -1025,7 +1025,7 @@ static bool can_txempty(FAR struct can_dev_s *dev)
  *
  ****************************************************************************/
 
-static int can_rx0interrupt(int irq, void *context)
+static int can_rx0interrupt(int irq, void *context, void *private)
 {
   FAR struct can_dev_s *dev = NULL;
   FAR struct stm32_can_s *priv;
@@ -1145,7 +1145,7 @@ errout:
  *
  ****************************************************************************/
 
-static int can_txinterrupt(int irq, void *context)
+static int can_txinterrupt(int irq, void *context, void *private)
 {
   FAR struct can_dev_s *dev = NULL;
   FAR struct stm32_can_s *priv;

@@ -127,7 +127,7 @@
 /* Enable error log */
 #define lldbg_error lowsyslog
 
-extern int irq_unexpected_isr(int irq, void *context);
+extern int irq_unexpected_isr(int irq, void *context, void *priv);
 
 struct tca64xx_platform_data {
     tca64xx_part part;
@@ -836,7 +836,7 @@ static void _tca64xx_gpio_irq_handler(void *data)
              pin++, irqstat >>= 1) {
             if (irqstat & 1) {
                 base = tca64xx->gpio_base[pin];
-                tca64xx->irq_vector[pin] (base + pin, context);
+                tca64xx->irq_vector[pin] (base + pin, context, NULL);
                 tca64xx_gpio_clear_interrupt(data, pin);
             }
         }
@@ -863,7 +863,7 @@ static int tca64xx_trigger_worker(struct tca64xx_platform_data *tca64xx)
     return 0;
 }
 
-static int tca64xx_gpio_irq_handler(int irq, void *context)
+static int tca64xx_gpio_irq_handler(int irq, void *context, void *priv)
 {
     struct tca64xx_platform_data *tca64xx = get_pdata(irq);
 

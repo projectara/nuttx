@@ -187,7 +187,8 @@ int timesync_strobe_handler(void) {
  * @brief Responsible for handling roll-over of the lower 32 bit integer into the 64 bit frame-time
  *
  */
-static int timesync_frame_time_rollover_handler(int irq, void *context) {
+static int timesync_frame_time_rollover_handler(int irq, void *context,
+                                                void *priv) {
     tsb_tmr_ack_irq(timesync_rollover_timer);
     timesync_frame_time += timesync_increment;
     return 0;

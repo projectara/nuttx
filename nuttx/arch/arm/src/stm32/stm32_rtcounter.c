@@ -309,7 +309,7 @@ static inline void up_rtc_breakout(FAR const struct timespec *tp,
  ************************************************************************************/
 
 #if defined(CONFIG_RTC_HIRES) || defined(CONFIG_RTC_ALARM)
-static int stm32_rtc_interrupt(int irq, void *context)
+static int stm32_rtc_interrupt(int irq, void *context, void *priv)
 {
   uint16_t source = getreg16(STM32_RTC_CRL);
 
@@ -387,7 +387,7 @@ int up_rtcinitialize(void)
   /* Configure RTC interrupt to catch overflow and alarm interrupts. */
 
 #if defined(CONFIG_RTC_HIRES) || defined(CONFIG_RTC_ALARM)
-  irq_attach(STM32_IRQ_RTC, stm32_rtc_interrupt);
+  irq_attach(STM32_IRQ_RTC, stm32_rtc_interrupt, NULL);
   up_enable_irq(STM32_IRQ_RTC);
 #endif
 

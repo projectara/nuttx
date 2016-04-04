@@ -56,6 +56,7 @@
  ****************************************************************************/
 
 xcpt_t g_irqvector[NR_IRQS+1];
+void* g_irqpriv[NR_IRQS+1];
 
 /****************************************************************************
  * Private Variables
@@ -86,6 +87,7 @@ void irq_initialize(void)
   for (i = 0; i < NR_IRQS; i++)
     {
       g_irqvector[i] = irq_unexpected_isr;
+      g_irqpriv[i] = NULL;
     }
 }
 
