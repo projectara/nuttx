@@ -297,7 +297,7 @@ static int stm32_gpio_irqattach(void *driver_data, uint8_t pin, xcpt_t isr,
                             stm32_gpio[pin].flags & STM32_GPIO_FLAG_RISING,
                             stm32_gpio[pin].flags & STM32_GPIO_FLAG_FALLING,
                             true,
-                            (xcpt_priv_t) stm32_gpio[pin].isr,
+                            stm32_gpio[pin].isr,
                             NULL);
 
     return ret;
@@ -349,7 +349,7 @@ static int stm32_gpio_set_triggering(void *driver_data, uint8_t pin,
                             stm32_gpio[pin].flags & STM32_GPIO_FLAG_RISING,
                             stm32_gpio[pin].flags & STM32_GPIO_FLAG_FALLING,
                             true,
-                            (xcpt_priv_t) stm32_gpio[pin].isr,
+                            stm32_gpio[pin].isr,
                             NULL);
 
     return ret;
@@ -376,7 +376,7 @@ static int stm32_gpio_mask_irq(void *driver_data, uint8_t pin)
                             false,
                             false,
                             true,
-                            (xcpt_priv_t) stm32_gpio[pin].isr,
+                            stm32_gpio[pin].isr,
                             NULL);
 
     return ret;
@@ -403,7 +403,7 @@ static int stm32_gpio_unmask_irq(void *driver_data, uint8_t pin)
                             stm32_gpio[pin].flags & STM32_GPIO_FLAG_RISING,
                             stm32_gpio[pin].flags & STM32_GPIO_FLAG_FALLING,
                             true,
-                            (xcpt_priv_t) stm32_gpio[pin].isr,
+                            stm32_gpio[pin].isr,
                             NULL);
 
     return ret;

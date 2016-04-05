@@ -93,7 +93,7 @@ extern "C" {
  ************************************************************************************/
 
 /************************************************************************************
- * Name: stm32_gpiosetevent
+ * Name: stm32_gpiosetevent_priv
  *
  * Description:
  *   Sets/clears GPIO based event and interrupt triggers.
@@ -103,6 +103,7 @@ extern "C" {
  *  - rising/falling edge: enables
  *  - event:  generate event when set
  *  - func:   when non-NULL, generate interrupt
+ *  - priv: attached private data to be returned to the handler
  *
  * Returns:
  *  The previous value of the interrupt handler function pointer.  This value may,
@@ -111,20 +112,9 @@ extern "C" {
  *
  ************************************************************************************/
 
-EXTERN xcpt_t stm32_gpiosetevent(uint32_t pinset, bool risingedge, bool fallingedge,
-                                 bool event, xcpt_t func);
-
-/*
- * stm32_gpiosetevent_priv
- *
- * Extension of stm32_gpiosetevent with an extra parameter for private data
- * that will be passed to the handler.
- */
-typedef int (*xcpt_priv_t)(int irq, void *context, void *priv);
-
-EXTERN xcpt_priv_t stm32_gpiosetevent_priv(uint32_t pinset, bool risingedge,
+EXTERN xcpt_t stm32_gpiosetevent_priv(uint32_t pinset, bool risingedge,
                                            bool fallingedge, bool event,
-                                           xcpt_priv_t func, void *priv);
+                                           xcpt_t func, void *priv);
 
 /****************************************************************************
  * Name: stm32_exti_alarm
