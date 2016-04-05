@@ -191,6 +191,7 @@ struct stm32_tim_priv_s
   struct stm32_tim_ops_s *ops;
   stm32_tim_mode_t        mode;
   uint32_t                base;   /* TIMn base address */
+  int                     id;
 };
 
 /************************************************************************************
@@ -1021,6 +1022,7 @@ FAR struct stm32_tim_dev_s *stm32_tim_init(int timer)
       return NULL;
     }
 
+  ((struct stm32_tim_priv_s*)dev)->id = timer;
   stm32_tim_reset(dev);
 
   return dev;
