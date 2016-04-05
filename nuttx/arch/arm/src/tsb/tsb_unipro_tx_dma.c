@@ -114,8 +114,18 @@ static void unipro_write(uint32_t offset, uint32_t v) {
 static struct dma_channel *pick_dma_channel(struct cport *cport)
 {
     struct dma_channel *chan;
+    uint32_t chan_index;
 
-    chan = &unipro_dma.dma_channels[cport->cportid % unipro_dma.max_channel];
+    /*
+     * Reserve GDMAC channel 0 for CPort 0 to avoid control data operations on
+     * CPort 0 be blocked by other CPort operations.
+     */
+    chan_index = (cport->cportid == 0) ?
+            0 : (((cport->cportid - 1) % (unipro_dma.max_channel - 1)) + 1);
+
+    DEBUGASSERT(chan_index < unipro_dma.max_channel);
+
+    chan = &unipro_dma.dma_channels[chan_index];
 
     return chan;
 }
@@ -598,6 +608,8 @@ int unipro_tx_init_dma(struct unipro_tx_calltable **table)
     if (avail_chan > ARRAY_SIZE(unipro_dma.dma_channels)) {
         avail_chan = ARRAY_SIZE(unipro_dma.dma_channels);
     }
+
+    DEBUGASSERT(avail_chan > 1);
 
     dst_device = DEVICE_DMA_DEV_UNIPRO;
 

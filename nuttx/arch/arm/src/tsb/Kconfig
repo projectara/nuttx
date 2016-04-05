@@ -74,6 +74,7 @@ config ARCH_UNIPROTX_USE_DMA
 config ARCH_UNIPROTX_DMA_NUM_CHANNELS
 	int "Number of UniPro TX Channels"
 	default 6
+	range 2 8
 	depends on ARCH_UNIPROTX_USE_DMA
 
 config ARCH_UNIPROTX_DMA_WMB
