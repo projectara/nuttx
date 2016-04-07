@@ -82,14 +82,14 @@
 #define REFCLK_4B_EN      U4570_GPIO_PIN(9)
 #define REFCLK_5_EN       U4570_GPIO_PIN(10)
 
-#define EVT2_REFCLK_1_EN       U4430_GPIO_PIN(0) /* Modules */
-#define EVT2_REFCLK_2_EN       U4430_GPIO_PIN(1)
-#define EVT2_REFCLK_3A_EN      U4430_GPIO_PIN(2)
-#define EVT2_REFCLK_3B_EN      U4430_GPIO_PIN(3)
-#define EVT2_REFCLK_4A_EN      U4430_GPIO_PIN(4)
-#define EVT2_REFCLK_4B_EN      U4430_GPIO_PIN(5)
-#define EVT2_REFCLK_SVC_EN     U4430_GPIO_PIN(8) /* SVC */
-#define EVT2_REFCLK_SW_EN      U4430_GPIO_PIN(9) /* Switch */
+#define EVT2_REFCLK_1_EN       U4430_GPIO_PIN(4) /* Modules */
+#define EVT2_REFCLK_2_EN       U4430_GPIO_PIN(5)
+#define EVT2_REFCLK_3A_EN      U4430_GPIO_PIN(6)
+#define EVT2_REFCLK_3B_EN      U4430_GPIO_PIN(7)
+#define EVT2_REFCLK_4A_EN      U4430_GPIO_PIN(8)
+#define EVT2_REFCLK_4B_EN      U4430_GPIO_PIN(9)
+#define EVT2_REFCLK_SVC_EN     U4430_GPIO_PIN(1) /* SVC */
+#define EVT2_REFCLK_SW_EN      U4430_GPIO_PIN(3) /* Switch */
 
 /* Wake/detect pins */
 #define WD_1_DET_IN_GPIO    (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN1)
