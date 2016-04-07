@@ -159,28 +159,26 @@ static void *tsb_dma_process_completed_op(void *arg)
             } else {
                 uint32_t callback_events = dma_op->op.callback_events;
 
-                if ((callback_events & DEVICE_DMA_CALLBACK_EVENT_COMPLETE) &&
-                    (dma_op->state == TSB_DMA_OP_STATE_COMPLETED)) {
-                    dma_op->op.callback(dev, &dma_info->chans[chan_id],
-                            &dma_op->op,
-                            DEVICE_DMA_CALLBACK_EVENT_COMPLETE,
-                            dma_op->op.callback_arg);
-                }
-
-                if ((callback_events & DEVICE_DMA_CALLBACK_EVENT_ERROR) &&
-                    (dma_op->state == TSB_DMA_OP_STATE_ERROR)) {
-                    dma_op->op.callback(dev, &dma_info->chans[chan_id],
-                            &dma_op->op,
-                            DEVICE_DMA_CALLBACK_EVENT_ERROR,
-                            dma_op->op.callback_arg);
-                }
-
-                if ((callback_events & DEVICE_DMA_CALLBACK_EVENT_DEQUEUED) &&
-                    (dma_op->state == TSB_DMA_OP_STATE_DEQUEUED)) {
-                    dma_op->op.callback(dev, &dma_info->chans[chan_id],
-                            &dma_op->op,
-                            DEVICE_DMA_CALLBACK_EVENT_DEQUEUED,
-                            dma_op->op.callback_arg);
+                switch (dma_op->state) {
+                case TSB_DMA_OP_STATE_COMPLETED:
+                    if (callback_events & DEVICE_DMA_CALLBACK_EVENT_COMPLETE) {
+                        dma_op->op.callback(dev, &dma_info->chans[chan_id],
+                                            &dma_op->op,
+                                            DEVICE_DMA_CALLBACK_EVENT_COMPLETE,
+                                            dma_op->op.callback_arg);
+                    }
+                    break;
+                case TSB_DMA_OP_STATE_DEQUEUED:
+                    if (callback_events & DEVICE_DMA_CALLBACK_EVENT_DEQUEUED) {
+                        dma_op->op.callback(dev, &dma_info->chans[chan_id],
+                                            &dma_op->op,
+                                            DEVICE_DMA_CALLBACK_EVENT_DEQUEUED,
+                                            dma_op->op.callback_arg);
+                    }
+                    break;
+                default:
+                    lldbg("gdmac: Internal error.\n");
+                    break;
                 }
             }
 
