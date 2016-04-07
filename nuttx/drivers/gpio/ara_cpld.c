@@ -39,7 +39,7 @@
 #include <syslog.h>
 
 /* Line counts */
-#define ARA_CPLD_CLK_LINE_COUNT     9
+#define ARA_CPLD_CLK_LINE_COUNT     11
 #define ARA_CPLD_WAKE_LINE_COUNT    0 /* not implemented yet */
 
 #define ARA_CPLD_LINE_COUNT (ARA_CPLD_CLK_LINE_COUNT + ARA_CPLD_WAKE_LINE_COUNT)
