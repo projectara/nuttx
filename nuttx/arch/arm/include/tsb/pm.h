@@ -31,6 +31,17 @@
 
 #include <nuttx/power/pm.h>
 
+/*
+ * All the tsb pm_activity() priority values are defined here, so that when
+ * the time for optimization comes, we'll be able to tweak them easily.
+ */
+#define TSB_UART_ACTIVITY       9
+#define TSB_SPI_ACTIVITY        9
+#define TSB_SDIO_ACTIVITY       9
+#define TSB_UNIPRO_ACTIVITY     9
+#define TSB_GPIO_ACTIVITY       9
+#define TSB_I2C_ACTIVITY        9
+
 #ifdef CONFIG_PM
 int tsb_pm_getstate(void);
 void tsb_pm_disable(void);

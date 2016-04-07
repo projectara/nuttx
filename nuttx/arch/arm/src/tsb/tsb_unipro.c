@@ -37,6 +37,7 @@
 #include <nuttx/unipro/unipro.h>
 #include <nuttx/greybus/tsb_unipro.h>
 #include <nuttx/power/pm.h>
+#include <arch/tsb/pm.h>
 #include <arch/tsb/irq.h>
 #include <errno.h>
 
