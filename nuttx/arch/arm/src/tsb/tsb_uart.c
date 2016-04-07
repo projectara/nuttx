@@ -609,7 +609,7 @@ int tsb_uart_lowsetup(int baud)
  * @param flow 0 for disable flow control, 1 for enable flow control.
  * @return 0 for success, -errno for failures.
  */
-static int tsb_uart_set_configuration(struct device *dev, enum uart_baudrate baud,
+static int tsb_uart_set_configuration(struct device *dev, unsigned int baud,
                                       enum uart_parity parity, int databits,
                                       enum uart_stopbit stopbit, int flow)
 {
@@ -1280,7 +1280,7 @@ static int tsb_uart_dev_probe(struct device *dev)
     int ret;
 
     /* Configure the UART clock and pinshare */
-    ret = tsb_uart_lowsetup(BAUD_115200);
+    ret = tsb_uart_lowsetup(115200);
     if (ret) {
         return ret;
     }
