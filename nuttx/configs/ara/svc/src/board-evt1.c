@@ -88,8 +88,6 @@
 #define EVT2_REFCLK_3B_EN      U4430_GPIO_PIN(3)
 #define EVT2_REFCLK_4A_EN      U4430_GPIO_PIN(4)
 #define EVT2_REFCLK_4B_EN      U4430_GPIO_PIN(5)
-#define EVT2_REFCLK_APB1_EN    U4430_GPIO_PIN(6) /* Built-in bridges */
-#define EVT2_REFCLK_APB2_EN    U4430_GPIO_PIN(7)
 #define EVT2_REFCLK_SVC_EN     U4430_GPIO_PIN(8) /* SVC */
 #define EVT2_REFCLK_SW_EN      U4430_GPIO_PIN(9) /* Switch */
 
@@ -269,24 +267,6 @@ DECLARE_MODULE_PORT_INTERFACE(apb1, INTF_APB1, apb1_vsys_vreg_data,
                               ARA_IFACE_WD_ACTIVE_HIGH, false, 0);
 DECLARE_MODULE_PORT_INTERFACE(apb2, INTF_APB2, apb2_vsys_vreg_data,
                               apb2_refclk_vreg_data, 1, WD_8B_DET,
-                              ARA_IFACE_WD_ACTIVE_HIGH, false, 0);
-
-/*
- * EVT2 built-in bridges
- */
-static struct vreg_data evt2_apb1_refclk_vreg_data[] = {
-    INIT_MODULE_CLK_DATA(EVT2_REFCLK_APB1_EN),
-};
-
-static struct vreg_data evt2_apb2_refclk_vreg_data[] = {
-    INIT_MODULE_CLK_DATA(EVT2_REFCLK_APB2_EN),
-};
-
-DECLARE_MODULE_PORT_INTERFACE(evt2_apb1, INTF_APB1, apb1_vsys_vreg_data,
-                              evt2_apb1_refclk_vreg_data, 3, WD_8A_DET,
-                              ARA_IFACE_WD_ACTIVE_HIGH, false, 0);
-DECLARE_MODULE_PORT_INTERFACE(evt2_apb2, INTF_APB2, apb2_vsys_vreg_data,
-                              evt2_apb2_refclk_vreg_data, 1, WD_8B_DET,
                               ARA_IFACE_WD_ACTIVE_HIGH, false, 0);
 
 /*
@@ -665,8 +645,8 @@ DECLARE_MODULE_PORT_INTERFACE2(evt2_module_4B, "module_4b",
 #endif
 
 static struct interface *evt2_interfaces[] = {
-    &evt2_apb1_interface,
-    &evt2_apb2_interface,
+    &apb1_interface,
+    &apb2_interface,
     &evt2_module_1_interface,
     &evt2_module_2_interface,
     &evt2_module_3A_interface,
