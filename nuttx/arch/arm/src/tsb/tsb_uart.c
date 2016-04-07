@@ -27,6 +27,7 @@
  */
 
 #include <stddef.h>
+#include <stdint.h>
 #include <string.h>
 #include <errno.h>
 #include <nuttx/lib.h>
@@ -694,6 +695,8 @@ static int tsb_uart_set_configuration(struct device *dev, unsigned int baud,
     /* set baud rate divisor */
     /* baud rate = serial clock freq / (16 * divider) */
     divisor = (UART_CLOCK >> 4) / baud;
+    if (divisor == 0 || divisor > UINT16_MAX)
+        return -EINVAL;
     ua_set_divisor(uart_info->reg_base, divisor);
 
     /* Enable TX and RX FIFO */
