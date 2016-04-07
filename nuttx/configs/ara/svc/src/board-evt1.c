@@ -720,6 +720,26 @@ static struct vreg_data sw_vreg_data[] = {
 };
 DECLARE_VREG(sw_vreg, sw_vreg_data);
 
+static struct vreg_data evt2_sw_vreg_data[] = {
+    INIT_ACTIVE_HIGH_VREG_DATA(SW_1P1_EN, HOLD_TIME_SW_1P1),
+
+    /*
+     * HACK: put the 1.8V power supplies into PWM mode always.
+     *
+     * TODO [SW-1934] investigate methods for allowing supply to
+     *      alternate between PWM/PFM modes automatically without
+     *      causing voltage droops observed in DB3 bringup.
+     */
+    INIT_ACTIVE_HIGH_VREG_DATA(SW_UNIPRO_1P8_PWM, 0),
+    INIT_ACTIVE_HIGH_VREG_DATA(SW_IO_1P8_PWM, 0),
+    /* END HACK */
+
+    INIT_ACTIVE_HIGH_VREG_DATA(SW_1P8_IO_EN, 0),
+    INIT_ACTIVE_HIGH_VREG_DATA(SW_1P8_UNIPRO_EN, HOLD_TIME_SW_1P8),
+    INIT_ACTIVE_HIGH_VREG_DATA(EVT2_REFCLK_SW_EN, HOLD_TIME_SW_CLK_US),
+};
+DECLARE_VREG(evt2_sw_vreg, evt2_sw_vreg_data);
+
 /*
  * I/O expanders
  */
@@ -1045,7 +1065,7 @@ static int evt2_board_init(struct ara_board_info *board_info) {
     stm32_configgpio(SW_STANDBY_N);
 
     /* Configure the switch power supply lines. */
-    rc = vreg_config(&sw_vreg);
+    rc = vreg_config(&evt2_sw_vreg);
     if (rc) {
         dbg_error("%s: can't configure switch regulators: %d\n", __func__, rc);
         return rc;
@@ -1096,7 +1116,7 @@ struct ara_board_info evt2_board_info = {
     .nr_spring_interfaces = 0,
 
     .sw_data = {
-        .vreg               = &sw_vreg,
+        .vreg               = &evt2_sw_vreg,
         .gpio_reset         = SVC_RST_SW_GPIO,
         .gpio_irq           = SW_TO_SVC_INT_GPIO,
         .irq_rising_edge    = false,
