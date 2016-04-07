@@ -202,7 +202,10 @@ uint32_t interface_pm_get_spin(struct interface *iface);
 int interface_set_devid_by_id_atomic(uint8_t intf_id, uint8_t dev_id);
 void interface_set_linkup_retries_atomic(struct interface *iface, uint8_t val);
 void interface_cancel_linkup_wd_atomic(struct interface *iface);
-void interface_forcibly_eject_all_atomic(uint32_t delay);
+/*
+ * This is the low level ejection function, called from svc.c.
+ * High level code shall call the ejection request function from svc.c.
+ */
 int interface_forcibly_eject_atomic(struct interface *iface, uint32_t delay);
 int interface_power_off_atomic(struct interface *iface);
 int interface_power_on_atomic(struct interface *iface);

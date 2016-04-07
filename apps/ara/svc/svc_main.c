@@ -1864,12 +1864,12 @@ static int release(int argc, char *argv[]) {
         struct interface *iface = interface_get_by_name(iface_name);
         if (iface) {
             printf("ejecting name = %s\n", iface_name);
-            interface_forcibly_eject_atomic(iface, delay);
+            svc_interface_eject_request(iface, delay);
         } else {
             printf("ERROR: cannot find module named = %s\n", iface_name);
         }
     } else {
-        interface_forcibly_eject_all_atomic(delay);
+        svc_interface_eject_request_all(delay);
     }
 
     return EXIT_SUCCESS;

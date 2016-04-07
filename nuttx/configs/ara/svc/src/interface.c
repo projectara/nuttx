@@ -1414,8 +1414,11 @@ static int interface_eject_completion(struct interface *iface)
     default:
         dbg_error("%s(): unsupported interface port type: %d\n", __func__,
                   iface->if_type);
-        return -ENOTSUP;
+        retval = -ENOTSUP;
     }
+
+    /* Notify the SVC of the completion */
+    svc_interface_eject_completion_notify(iface);
 
     return retval;
 }
@@ -1457,7 +1460,8 @@ static int interface_forcibly_eject(struct interface *iface, uint32_t delay)
         dbg_warn("Trying to eject secondary interface: %s\n", iface->name);
     }
 
-    dbg_info("Module %s ejecting: using gpio 0x%02X\n", iface->name, gpio);
+    dbg_info("Module %s ejecting: using gpio 0x%02X, delay=%u\n",
+             iface->name, gpio, delay);
 
     switch (iface->if_type) {
     case ARA_IFACE_TYPE_MODULE_PORT:
@@ -1529,25 +1533,11 @@ static int interface_forcibly_eject(struct interface *iface, uint32_t delay)
     if (retval) {
         dbg_error("%s: Could not schedule eject completion work for %s\n",
                       __func__, iface->name);
+        /* If completion work cannot be scheduled, finish the work now */
         interface_eject_completion(iface);
     }
 
     return retval;
-}
-
-/**
- * @brief Toggle the MOD_RELEASE_ signal for all interfaces with such a GPIO
- *        defined
- * @param delay pulse width in ms (~10ms precision)
- */
-void interface_forcibly_eject_all_atomic(uint32_t delay)
-{
-    unsigned int i;
-    struct interface *iface;
-
-    interface_foreach(iface, i) {
-        interface_forcibly_eject_atomic(iface, delay);
-    }
 }
 
 int interface_forcibly_eject_atomic(struct interface *iface, uint32_t delay)

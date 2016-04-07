@@ -56,6 +56,8 @@ struct svc {
 
 extern struct svc *svc;
 
+struct interface;
+
 int svc_intf_device_id(uint8_t, uint8_t);
 int svc_route_create(uint8_t, uint8_t, uint8_t, uint8_t);
 int svc_route_destroy(uint8_t, uint8_t);
@@ -64,14 +66,19 @@ int svc_dme_peer_get(uint8_t, uint16_t, uint16_t, uint16_t*, uint32_t*);
 int svc_dme_peer_set(uint8_t, uint16_t, uint16_t, uint32_t, uint16_t*);
 int svc_connection_destroy(uint8_t, uint16_t, uint8_t, uint16_t);
 int svc_hot_unplug(uint8_t, bool);
+/* Eject interface given the interface ID */
 int svc_intf_eject(uint8_t);
+/* Request of interface ejection */
+int svc_interface_eject_request(struct interface *, uint32_t delay);
+/* Request to eject all interfaces */
+int svc_interface_eject_request_all(uint32_t delay);
+/* Notify the completion of interface ejection */
+int svc_interface_eject_completion_notify(struct interface *);
 int svc_intf_set_power_mode(uint8_t, struct unipro_link_cfg *);
 
 int svcd_start(void);
 void svcd_stop(void);
 int svcd_power_down(void);
-
-struct interface;
 
 int svc_connect_interfaces(struct interface *iface1, uint16_t cportid1,
                            struct interface *iface2, uint16_t cportid2,
