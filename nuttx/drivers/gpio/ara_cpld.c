@@ -62,7 +62,7 @@ static int ara_cpld_gpio2reg(uint8_t which)
 
     if (which >= ARA_CPLD_CLK_LINE_BASE &&
         which < ARA_CPLD_CLK_LINE_BASE + ARA_CPLD_CLK_LINE_COUNT) {
-        return REFCLK_REG_0 + ((which - ARA_CPLD_CLK_LINE_BASE) % 8);
+        return REFCLK_REG_0 + ((which - ARA_CPLD_CLK_LINE_BASE) / 8);
     }
 
     return -EINVAL;
