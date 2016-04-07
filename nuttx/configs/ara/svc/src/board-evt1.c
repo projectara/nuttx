@@ -55,7 +55,7 @@
  * defines match schematic net names.)
  */
 #define IOEXP_I2C_BUS           1
-#define IOEXP_U4430_I2C_ADDR    0x0a
+#define IOEXP_U4430_I2C_ADDR    0x42
 #define IOEXP_U4550_I2C_ADDR    0x21
 #define IOEXP_U4570_I2C_ADDR    0x20
 #define IOEXP_U4430_RESET       U4550_GPIO_PIN(14)
