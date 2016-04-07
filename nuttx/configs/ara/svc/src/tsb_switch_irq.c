@@ -84,17 +84,7 @@ static uint16_t unipro_irq_attr[SWITCH_IRQ_MAX] = {
     [IRQ_STATUS_LINKLOSTIND]          = TSB_DME_LINKLOSTIND,
     [IRQ_STATUS_HIBERNATEENTERIND]    = TSB_DME_HIBERNATEENTERIND,
     [IRQ_STATUS_HIBERNATEEXITIND]     = TSB_DME_HIBERNATEEXITIND,
-
-    /*
-     * FIXME: hackaround until SW-1237 is implemented.
-     *
-     * The proper attribute is TSB_DME_POWERMODEIND, but that's
-     * currently polled by switch_apply_power_mode() to determine when
-     * a power mode change is done, after writing PA_PWRMODE. We would
-     * race with that thread if we read it in the IRQ worker.
-     */
-    [IRQ_STATUS_POWERMODEIND]         = 0, /* TSB_DME_POWERMODEIND */
-
+    [IRQ_STATUS_POWERMODEIND]         = TSB_DME_POWERMODEIND,
     [IRQ_STATUS_TESTMODEIND]          = TSB_DME_TESTMODEIND,
     [IRQ_STATUS_ERRORPHYIND]          = TSB_DME_ERRORPHYIND,
     [IRQ_STATUS_ERRORPAIND]           = TSB_DME_ERRORPAIND,
@@ -359,6 +349,15 @@ static int switch_threaded_irq_handler(struct tsb_switch *sw) {
                         uint32_t irq_type = j;
                         uint32_t port = i;
                         switch (irq_type) {
+                        case IRQ_STATUS_POWERMODEIND: {
+                            struct interface *iface;
+                            iface = interface_get_by_portid(port);
+                            if (iface) {
+                                atomic_init(&iface->dme_powermodeind,
+                                            attr_value);
+                            }
+                            break;
+                        }
                         case IRQ_STATUS_LINKSTARTUPIND: {
                             struct tsb_switch_event e;
                             e.type = TSB_SWITCH_EVENT_LINKUP_IND;

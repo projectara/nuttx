@@ -143,6 +143,7 @@ struct interface {
     bool handler_active;
     struct work_s wakeout_work; /* WAKEOUT pulse completion work */
     struct work_s eject_work;   /* Module ejection completion work */
+    atomic_t dme_powermodeind;
 };
 
 #define interface_foreach(iface, idx)                       \

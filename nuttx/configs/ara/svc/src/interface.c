@@ -1614,6 +1614,7 @@ int interface_early_init(struct interface **ints, size_t nr_ints,
     }
 
     interface_foreach(ifc, i) {
+        atomic_init(&ifc->dme_powermodeind, TSB_DME_POWERMODEIND_NONE);
         rc = interface_config(ifc);
         if (rc < 0) {
             dbg_error("Failed to configure interface %s\n", ifc->name);

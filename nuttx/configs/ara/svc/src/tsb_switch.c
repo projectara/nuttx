@@ -2232,24 +2232,22 @@ static int switch_apply_power_mode(struct tsb_switch *sw,
     int rc;
     uint32_t val;
     int i;
+    struct interface *iface;
 
     dbg_insane("%s(): enter, port=%u, pwr_mode=0x%x\n", __func__, port_id,
                pwr_mode);
 
-    /*
-     * Clear out the results of a previous failed or timed-out power
-     * mode change, if any.
-     */
-    rc = switch_dme_get(sw, port_id, TSB_DME_POWERMODEIND,
-                        UNIPRO_SELINDEX_NULL, &val);
-    if (!rc) {
-        dbg_verbose("%s(): previous TSB_DME_POWERMODEIND=0x%x\n",
-                    __func__, val);
-    } else {
-        dbg_error("%s(): can't clear TSB_DME_POWERMODEIND: %d\n",
-                  __func__, rc);
+    iface = interface_get_by_portid(port_id);
+    if (!iface) {
+        dbg_error("%s: No interface for portId %u, aborting\n",
+                  __func__, port_id);
+        return -ENODEV;
     }
+    val = atomic_get(&iface->dme_powermodeind);
+    dbg_verbose("%s(): previous TSB_DME_POWERMODEIND=0x%x\n",
+                __func__, val);
 
+    /* Trigger power mode change */
     rc = switch_dme_set(sw, port_id, PA_PWRMODE, UNIPRO_SELINDEX_NULL,
                         pwr_mode);
     if (rc) {
@@ -2266,21 +2264,15 @@ static int switch_apply_power_mode(struct tsb_switch *sw,
         }
         goto out;
     }
+
+    /* Read power mode change result */
     for (i = 0; i < max_tries; i++) {
         /*
          * Wait until the power mode change completes.
          *
          * FIXME other error handling (UniPro specification 5.7.12.5).
          */
-        rc = switch_dme_get(sw, port_id, TSB_DME_POWERMODEIND,
-                            UNIPRO_SELINDEX_NULL, &val);
-        if (rc) {
-            dbg_error("%s: failed to read power mode indication: %d\n",
-                      __func__,
-                      rc);
-            goto out;
-        }
-
+        val = atomic_get(&iface->dme_powermodeind);
         switch (val) {
         case TSB_DME_POWERMODEIND_NONE:
             /* This happens sometimes, and seems harmless. */
@@ -2321,6 +2313,8 @@ static int switch_apply_power_mode(struct tsb_switch *sw,
         if (val == TSB_DME_POWERMODEIND_LOCAL) {
             break;
         }
+        /* Wait a little bit for the power mode to complete */
+        usleep(500);
     }
     if (val != TSB_DME_POWERMODEIND_LOCAL) {
         rc = -ETIMEDOUT;
