@@ -65,6 +65,7 @@ struct svc *svc = &the_svc;
 #define SVC_EVENT_TYPE_READY_AP     0x1
 #define SVC_EVENT_TYPE_READY_OTHER  0x2
 #define SVC_EVENT_TYPE_HOT_UNPLUG   0x3
+#define SVC_EVENT_TYPE_EJECT        0x4
 
 #define INA230_SHUNT_VALUE          2 /* mohm */
 #define DEFAULT_CURRENT_LSB         100 /* 100uA current LSB */
@@ -77,16 +78,36 @@ struct svc_event_hot_unplug {
     uint8_t port;
 };
 
+enum svc_eject_action {
+    SVC_EJECT_START,
+    SVC_EJECT_COMPLETED,
+};
+
+struct svc_event_eject {
+    enum svc_eject_action action;
+    struct interface *iface;
+    uint32_t delay;
+};
+
 struct svc_event {
     int type;
     struct list_head events;
     union {
         struct svc_event_ready_other ready_other;
         struct svc_event_hot_unplug hot_unplug;
+        struct svc_event_eject eject;
     } data;
 };
 
 static struct list_head svc_events;
+
+/* List of interfaces to eject */
+struct svc_eject_entry {
+    struct interface *iface;
+    uint32_t delay;
+    struct list_head list;
+};
+static struct list_head svc_eject_list;
 
 static struct svc_event *svc_event_create(int type) {
     struct svc_event *event;
@@ -325,6 +346,108 @@ static int event_mailbox(struct tsb_switch_event *ev) {
     return rc;
 }
 
+/**
+ * @brief Request to eject an interface
+ *
+ * This is the public facing function, to be called to request the
+ * ejection.
+ */
+int svc_interface_eject_request(struct interface *iface, uint32_t delay)
+{
+    bool release_mutex;
+    struct svc_event *svc_ev;
+    int rc;
+
+    rc = pthread_mutex_lock(&svc->lock);
+    if (rc) {
+        if (rc == EDEADLK) {
+            dbg_error("%s: mutex DEADLOCK detected, fix required\n", __func__);
+        } else {
+            return rc;
+        }
+    }
+    release_mutex = !rc;
+
+    svc_ev = svc_event_create(SVC_EVENT_TYPE_EJECT);
+    if (!svc_ev) {
+        dbg_error("Couldn't create SVC_EVENT_TYPE_EJECT event\n");
+        rc = -ENOMEM;
+    } else {
+        svc_ev->data.eject.iface = iface;
+        svc_ev->data.eject.action = SVC_EJECT_START;
+        svc_ev->data.eject.delay = delay;
+        list_add(&svc_events, &svc_ev->events);
+        pthread_cond_signal(&svc->cv);
+    }
+
+    if (release_mutex) {
+        pthread_mutex_unlock(&svc->lock);
+    }
+
+    return rc;
+}
+
+/**
+ * @brief Notify the completion of the interface ejection
+ *
+ * This is the public facing function
+ */
+int svc_interface_eject_completion_notify(struct interface *iface)
+{
+    bool release_mutex;
+    struct svc_event *svc_ev;
+    int rc;
+
+    rc = pthread_mutex_lock(&svc->lock);
+    if (rc) {
+        if (rc == EDEADLK) {
+            dbg_error("%s: mutex DEADLOCK detected, fix required\n", __func__);
+        } else {
+            return rc;
+        }
+    }
+    release_mutex = !rc;
+
+    svc_ev = svc_event_create(SVC_EVENT_TYPE_EJECT);
+    if (!svc_ev) {
+        dbg_error("Couldn't create SVC_EVENT_TYPE_EJECT event\n");
+        rc = -ENOMEM;
+    } else {
+        svc_ev->data.eject.iface = iface;
+        svc_ev->data.eject.action = SVC_EJECT_COMPLETED;
+        list_add(&svc_events, &svc_ev->events);
+        pthread_cond_signal(&svc->cv);
+    }
+
+    if (release_mutex) {
+        pthread_mutex_unlock(&svc->lock);
+    }
+
+    return rc;
+}
+
+/**
+ * @brief Request to eject all interfaces
+ *
+ * This is the public facing function, to be called to request the
+ * ejections.
+ */
+int svc_interface_eject_request_all(uint32_t delay)
+{
+    unsigned int i;
+    struct interface *iface;
+    int rc;
+
+    interface_foreach(iface, i) {
+        rc = svc_interface_eject_request(iface, delay);
+        if (rc) {
+            return rc;
+        }
+    }
+
+    return 0;
+}
+
 static int svc_event_init(void) {
     list_init(&svc_events);
     switch_event_register_listener(svc->sw, &evl);
@@ -447,7 +570,8 @@ static int svc_mailbox_poke(uint8_t intf_id, uint8_t cport) {
 /**
  * @brief Eject a device given an interface id
  */
-int svc_intf_eject(uint8_t intf_id) {
+int svc_intf_eject(uint8_t intf_id)
+{
     struct interface *iface;
 
     iface = interface_get(intf_id - 1);
@@ -455,7 +579,7 @@ int svc_intf_eject(uint8_t intf_id) {
         return -EINVAL;
     }
 
-    return interface_forcibly_eject_atomic(iface, MOD_RELEASE_PULSE_WIDTH);
+    return svc_interface_eject_request(iface, MOD_RELEASE_PULSE_WIDTH);
 }
 
 /**
@@ -923,6 +1047,83 @@ out:
     return rc;
 }
 
+static int svc_handle_eject(struct interface *iface,
+                            enum svc_eject_action action,
+                            uint32_t delay)
+{
+    struct svc_eject_entry *entry;
+    struct list_head *iter, *iter_next;
+    int rc = 0;
+
+    if (!iface) {
+        dbg_error("%s called with NULL interface\n", __func__);
+        return -ENODEV;
+    }
+
+    switch (action) {
+    case SVC_EJECT_START:
+        /*
+         * New interface to eject, add the entry to the list.
+         * If the list was empty start the ejection.
+         */
+        dbg_verbose("Eject request for interface %s\n", iface->name);
+        if (list_is_empty(&svc_eject_list)) {
+            rc = interface_forcibly_eject_atomic(iface, delay);
+            /* If ejection fails do not add the entry to the list */
+            if (rc) {
+                break;
+            }
+        }
+        entry = malloc(sizeof(struct svc_eject_entry));
+        if (!entry) {
+            return -ENOMEM;
+        }
+        entry->iface = iface;
+        entry->delay = delay;
+        list_init(&entry->list);
+        list_add(&svc_eject_list, &entry->list);
+        break;
+    case SVC_EJECT_COMPLETED:
+        dbg_verbose("Done ejecting interface %s\n", iface->name);
+        /*
+         * Last interface eject is completed, remove the entry and
+         * start next one.
+         */
+        list_foreach_safe(&svc_eject_list, iter, iter_next) {
+            entry = list_entry(iter, struct svc_eject_entry, list);
+            if (entry->iface == iface) {
+                list_del(iter);
+                free(entry);
+                break;
+            }
+        }
+        /* If list is empty we are done */
+        if (list_is_empty(&svc_eject_list)) {
+            dbg_verbose("Done ejecting interfaces\n");
+            break;
+        }
+        /* Start ejection of the next interface from the list */
+        list_foreach_safe(&svc_eject_list, iter, iter_next) {
+            entry = list_entry(iter, struct svc_eject_entry, list);
+            dbg_verbose("Ejecting next interface %s\n", entry->iface->name);
+            rc = interface_forcibly_eject_atomic(entry->iface, entry->delay);
+            /* If ejection fails remove the entry from the list */
+            if (rc) {
+                list_del(iter);
+                free(entry);
+            }
+            /* We are done with one interface from the list */
+            break;
+        }
+        break;
+    default:
+        dbg_error("Unknonw eject action value %d\n", action);
+        break;
+    }
+
+    return rc;
+}
+
 /**
  * @brief Main event loop processing routine
  */
@@ -939,6 +1140,11 @@ static int svc_handle_events(void) {
         case SVC_EVENT_TYPE_HOT_UNPLUG:
             svc_handle_hot_unplug(event->data.hot_unplug.port);
             break;
+        case SVC_EVENT_TYPE_EJECT:
+            svc_handle_eject(event->data.eject.iface,
+                             event->data.eject.action,
+                             event->data.eject.delay);
+            break;
         default:
             dbg_error("Unknown event %d\n", event->type);
         }
@@ -951,13 +1157,11 @@ static int svc_handle_events(void) {
 
 /*
  * EMERGENCY MODULE RELEASE: The svc event queue is only processed after
- * ap_initialized is true. To allow emergency releases even ap_initialized
- * has failed to be set, we bypass the event queue.
+ * ap_initialized is true.
  */
 static int svc_ara_key_longpress_callback(void *priv)
 {
-    interface_forcibly_eject_all_atomic(MOD_RELEASE_PULSE_WIDTH);
-    return 0;
+    return svc_interface_eject_request_all(MOD_RELEASE_PULSE_WIDTH);
 }
 
 /* state helpers */
@@ -1012,6 +1216,8 @@ static int svcd_startup(void) {
         goto error2;
     }
 
+    list_init(&svc_eject_list);
+
     /* Power on all provided interfaces */
     if (!info->interfaces) {
         dbg_error("%s: No interface information provided\n", __func__);
@@ -1065,6 +1271,11 @@ static int svcd_cleanup(void) {
 
     list_foreach_safe(&svc_events, node, next) {
         svc_event_destroy(list_entry(node, struct svc_event, events));
+    }
+
+    list_foreach_safe(&svc_eject_list, node, next) {
+        list_del(node);
+        free(node);
     }
 
     return 0;
