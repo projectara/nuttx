@@ -388,8 +388,6 @@ int timesync_disable(void) {
  */
 int timesync_enable(uint8_t strobe_count, uint64_t frame_time,
                     uint32_t strobe_delay, uint32_t refclk) {
-    struct interface *intf_apb1, *intf_apb2;
-
     if (!strobe_count || strobe_count > GB_TIMESYNC_MAX_STROBES) {
         return -EINVAL;
     }
