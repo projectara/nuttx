@@ -1549,7 +1549,7 @@ static int power_down_ina231(void)
     int i;
     int j;
     pwrmon_board_info *board_info;
-    int pwrmon_num_devs;
+    size_t pwrmon_num_devs;
 
     board_info = board_get_pwrmon_info();
     if (!board_info) {
