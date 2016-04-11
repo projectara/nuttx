@@ -311,7 +311,8 @@ static uint8_t gb_control_timesync_authoritative(struct gb_operation *operation)
     return gb_errno_to_op_result(retval);
 }
 
-static uint8_t gb_control_timesync_get_last_event(struct gb_control *operation)
+static uint8_t gb_control_timesync_get_last_event(
+                                                struct gb_operation *operation)
 {
     uint64_t frame_time;
     struct gb_control_timesync_get_last_event_response *response;
