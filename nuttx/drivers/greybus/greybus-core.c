@@ -48,6 +48,7 @@
 
 #define DEFAULT_STACK_SIZE      2048
 #define TIMEOUT_IN_MS           1000
+#define GB_PING_TYPE            0x00
 
 #define ONE_SEC_IN_MSEC         1000
 #define ONE_MSEC_IN_NSEC        1000000
@@ -196,6 +197,11 @@ static void gb_process_request(struct gb_operation_hdr *hdr,
 {
     struct gb_operation_handler *op_handler;
     uint8_t result;
+
+    if (hdr->type == GB_PING_TYPE) {
+        gb_operation_send_response(operation, GB_OP_SUCCESS);
+        return;
+    }
 
     op_handler = find_operation_handler(hdr->type, operation->cport);
     if (!op_handler) {
