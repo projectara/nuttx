@@ -68,27 +68,6 @@ static int ara_cpld_gpio2reg(uint8_t which)
     return -EINVAL;
 }
 
-static int ara_cpld_read(struct ara_cpld_pdata *pdata, uint8_t reg,
-                         uint8_t *value)
-{
-    struct i2c_msg_s msg[] = {
-        {
-            .addr = pdata->i2c_addr,
-            .buffer = &reg,
-            .length = 1,
-        },
-        {
-            .addr = pdata->i2c_addr,
-            .flags = I2C_M_READ,
-            .buffer = value,
-            .length = 1,
-        },
-    };
-
-    I2C_SETADDRESS(pdata->i2c_dev, pdata->i2c_addr, 7);
-    return I2C_TRANSFER(pdata->i2c_dev, msg, 2);
-}
-
 static int ara_cpld_write(struct ara_cpld_pdata *pdata, uint8_t reg,
                           uint8_t value)
 {
@@ -105,25 +84,33 @@ static int ara_cpld_write(struct ara_cpld_pdata *pdata, uint8_t reg,
     return I2C_TRANSFER(pdata->i2c_dev, msg, 1);
 }
 
+static uint8_t *ara_cpld_gpio2regvalue(struct ara_cpld_pdata *pdata,
+                                       uint8_t which)
+{
+    if (which >= ARA_CPLD_LINE_COUNT || !pdata) {
+        return NULL;
+    }
+
+    if (which >= ARA_CPLD_CLK_LINE_BASE &&
+        which < ARA_CPLD_CLK_LINE_BASE + ARA_CPLD_CLK_LINE_COUNT) {
+        return &pdata->refclk_state[(which - ARA_CPLD_CLK_LINE_BASE) / 8];
+    }
+
+    return NULL;
+}
+
 static uint8_t ara_cpld_get_value(void *drv, uint8_t which)
 {
-    uint8_t val;
-    int retval;
-    int reg;
+    uint8_t *reg_addr;
 
-    reg = ara_cpld_gpio2reg(which);
-    if (reg < 0) {
-        lowsyslog("%s(): invalid gpio %hhu\n", __func__, which);
+    reg_addr = ara_cpld_gpio2regvalue(drv, which);
+    if (!reg_addr) {
+        lowsyslog("%s(): cannot get register value for gpio %hhu\n", __func__,
+                  which);
         return 0;
     }
 
-    retval = ara_cpld_read(drv, reg, &val);
-    if (retval) {
-        lowsyslog("%s(): failed to read gpio value: %hhu\n", __func__, which);
-        return 0;
-    }
-
-    return val & (1 << (which % 8));
+    return *reg_addr;
 }
 
 static void ara_cpld_set_value(void *drv, uint8_t which, uint8_t value)
@@ -131,6 +118,8 @@ static void ara_cpld_set_value(void *drv, uint8_t which, uint8_t value)
     uint8_t val;
     int retval;
     int reg;
+    struct ara_cpld_pdata *pdata = drv;
+    uint8_t *reg_addr;
 
     reg = ara_cpld_gpio2reg(which);
     if (reg < 0) {
@@ -138,17 +127,22 @@ static void ara_cpld_set_value(void *drv, uint8_t which, uint8_t value)
         return;
     }
 
-    retval = ara_cpld_read(drv, reg, &val);
-    if (retval) {
-        lowsyslog("%s(): failed to read gpio value: %hhu\n", __func__, which);
+    reg_addr = ara_cpld_gpio2regvalue(pdata, which);
+    if (!reg_addr) {
+        lowsyslog("%s(): cannot get register value for gpio %hhu\n", __func__,
+                  which);
         return;
     }
+
+    val = *reg_addr;
 
     if (value) {
         val |= 1 << (which % 8);
     } else {
         val &= ~(1 << (which % 8));
     }
+
+    *reg_addr = val;
 
     retval = ara_cpld_write(drv, reg, val);
     if (retval) {
