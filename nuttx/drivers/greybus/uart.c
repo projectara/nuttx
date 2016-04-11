@@ -687,8 +687,7 @@ static uint8_t gb_uart_send_data(struct gb_operation *operation)
 static uint8_t gb_uart_set_line_coding(struct gb_operation *operation)
 {
     int ret;
-    uint32_t _baud;
-    enum uart_baudrate baud;
+    uint32_t baud;
     enum uart_parity parity;
     enum uart_stopbit stopbit;
     uint8_t databits;
@@ -704,21 +703,7 @@ static uint8_t gb_uart_set_line_coding(struct gb_operation *operation)
     bundle = gb_operation_get_bundle(operation);
     DEBUGASSERT(bundle);
 
-    _baud = le32_to_cpu(request->rate);
-    switch(_baud) {
-        case BAUD_115200:
-        case BAUD_57600:
-        case BAUD_38400:
-        case BAUD_19200:
-        case BAUD_9600:
-        case BAUD_4800:
-        case BAUD_2400:
-        case BAUD_1800:
-            baud = _baud;
-            break;
-        default:
-            return GB_OP_INVALID;
-    }
+    baud = le32_to_cpu(request->rate);
 
     switch (request->format) {
     case GB_SERIAL_1_STOP_BITS:

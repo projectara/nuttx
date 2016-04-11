@@ -38,26 +38,6 @@
 /** UART Device type */
 #define DEVICE_TYPE_UART_HW                     "UART"
 
-/** UART Baudrate setting */
-enum uart_baudrate {
-    /** 115200 baud **/
-    BAUD_115200 = 115200,
-    /** 57600 baud **/
-    BAUD_57600 = 57600,
-    /** 38400 baud **/
-    BAUD_38400 = 38400,
-    /** 19200 baud **/
-    BAUD_19200 = 19200,
-    /** 9600 baud **/
-    BAUD_9600 = 9600,
-    /** 4800 baud **/
-    BAUD_4800 = 4800,
-    /** 2400 baud **/
-    BAUD_2400 = 2400,
-    /** 1800 baud **/
-    BAUD_1800 = 1800,
-};
-
 /** UART Parity setting */
 enum uart_parity {
     /** No parity */
@@ -175,7 +155,7 @@ struct device_uart_type_ops {
      * @param flow 0 for disabling flow control, 1 for enabling
      * @return 0 on success, negative errno on failure
      */
-    int (*set_configuration)(struct device *dev, enum uart_baudrate baud,
+    int (*set_configuration)(struct device *dev, unsigned int baud,
                              enum uart_parity parity, int databits,
                              enum uart_stopbit stopbit, int flow);
     /** Get the Modem Control register of a UART device controller
@@ -276,7 +256,7 @@ struct device_uart_type_ops {
  * @return 0 on success, negative errno on failure
  */
 static inline int device_uart_set_configuration(struct device *dev,
-                                                enum uart_baudrate baud,
+                                                unsigned int baud,
                                                 enum uart_parity parity,
                                                 int databits,
                                                 enum uart_stopbit stopbit,
