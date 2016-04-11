@@ -48,7 +48,6 @@
 
 #define DEFAULT_STACK_SIZE      2048
 #define TIMEOUT_IN_MS           1000
-#define GB_INVALID_TYPE         0
 
 #define ONE_SEC_IN_MSEC         1000
 #define ONE_MSEC_IN_NSEC        1000000

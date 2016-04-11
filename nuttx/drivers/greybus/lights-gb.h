@@ -34,7 +34,7 @@
 #define NAME_LENGTH                             32
 
 /* Greybus Lights request types */
-#define GB_LIGHTS_TYPE_INVALID                  0x00
+#define GB_LIGHTS_TYPE_INVALID                  GB_INVALID_TYPE
 #define GB_LIGHTS_TYPE_PROTOCOL_VERSION         0x01
 #define GB_LIGHTS_TYPE_GET_LIGHTS               0x02
 #define GB_LIGHTS_TYPE_GET_LIGHT_CONFIG         0x03

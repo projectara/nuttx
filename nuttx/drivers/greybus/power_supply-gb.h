@@ -32,7 +32,7 @@
 #include <nuttx/greybus/types.h>
 
 /* Greybus power supply operation types */
-#define GB_POWER_SUPPLY_TYPE_INVALID              0x00
+#define GB_POWER_SUPPLY_TYPE_INVALID              GB_INVALID_TYPE
 #define GB_POWER_SUPPLY_TYPE_VERSION              0x01
 #define GB_POWER_SUPPLY_TYPE_GET_SUPPLIES         0x02
 #define GB_POWER_SUPPLY_TYPE_GET_DESCRIPTION      0x03
