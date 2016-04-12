@@ -67,7 +67,6 @@ static struct {
     int enabled;
     unsigned short drive_ma;
     unsigned short drive_ma_save;
-    uint32_t etm_pinshare_save;
     uint32_t cpsr_save;
     uint32_t sppr_save;
     uint32_t cr_save;
@@ -171,11 +170,6 @@ int main(int argc, FAR char *argv[]) {
             } else
                 printf("WARNING: ETM is already enabled\n");
         } else {
-            /*
-             * perhaps we ought to be recording the old value
-             * but the present API doesn't expose it
-             */
-            etm.etm_pinshare_save = tsb_get_pinshare() & TSB_PIN_ETM;
 #ifndef CONFIG_TSB_PINSHARE_ETM
             retval = tsb_request_pinshare(TSB_PIN_ETM);
             if (retval) {
@@ -252,10 +246,6 @@ int main(int argc, FAR char *argv[]) {
 
             /* Restore the original drive strength */
             set_trace_drive_ma(etm.drive_ma_save);
-
-            /* Clear the ETM pinshare if it wasn't set on entry */
-            if (!etm.etm_pinshare_save)
-                tsb_clr_pinshare(TSB_PIN_ETM);
 
 #ifndef CONFIG_TSB_PINSHARE_ETM
             tsb_release_pinshare(TSB_PIN_ETM);
