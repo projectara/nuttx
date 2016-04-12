@@ -36,6 +36,7 @@
 
 #include "tsb_scm.h"
 #include "tsb_lowputc.h"
+#include "tsb_pinshare.h"
 
 #ifdef DEBUG_EARLY_BOOT
 #define dbg(x) up_lowputc(x)
@@ -93,6 +94,9 @@ void tsb_start(void) {
      * anything starts using the CDSI IP, so we are preloading the value here.
      */
     tsb_get_product_id();
+
+    /* Initialize the pinsharing subsystem */
+    tsb_pinshare_init();
 
 #ifdef CONFIG_UART_SERIAL_CONSOLE
     /*

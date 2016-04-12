@@ -71,7 +71,7 @@ CHIP_ASRCS  = tsb_vectors.S
 
 CHIP_CSRCS  = tsb_start.c up_allocateheap.c tsb_idle.c tsb_irq.c
 CHIP_CSRCS += tsb_main.c tsb_lowputc.c tsb_serial.c
-CHIP_CSRCS += tsb_scm.c
+CHIP_CSRCS += tsb_scm.c tsb_pinshare.c
 CHIP_CSRCS += tsb_gpio.c
 CHIP_CSRCS += $(USB_CSRCS)
 CHIP_CSRCS += tsb_cdsi.c
