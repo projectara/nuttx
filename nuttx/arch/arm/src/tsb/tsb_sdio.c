@@ -42,6 +42,7 @@
 #include <nuttx/gpio.h>
 #include "up_arch.h"
 #include "tsb_scm.h"
+#include "tsb_pinshare.h"
 
 /* SDIO flags */
 #define SDIO_FLAG_OPEN  BIT(0)
@@ -2393,14 +2394,11 @@ static int tsb_sdio_dev_probe(struct device *dev)
     /* Assert the DLL enable */
     sdio_reg_bit_set(SYSCTL_BASE, UHSSD_DLLCTRL, DLL_ENABLE);
 
-    ret = tsb_request_pinshare(TSB_PIN_SDIO);
+    ret = tsb_pin_request(PIN_SD);
     if (ret) {
-        lowsyslog("SDIO: cannot get ownership of SDIO pin\n");
+        lowsyslog("SDIO: cannot get ownership of PIN_SD\n");
         goto err_req_pinshare;
     }
-
-    /* Switch the pin share mode for SD Interfaces */
-    tsb_set_pinshare(TSB_PIN_SDIO);
 
     ret = sdio_extract_resources(dev, info);
     if (ret) {
@@ -2510,7 +2508,7 @@ static void tsb_sdio_dev_remove(struct device *dev)
     free(info);
     sdio_dev = NULL;
     device_set_private(dev, NULL);
-    tsb_release_pinshare(TSB_PIN_SDIO);
+    tsb_pin_release(PIN_SD);
 }
 
 static struct device_pm_ops tsb_sdio_pm_ops = {
