@@ -50,6 +50,7 @@
 
 #include "up_arch.h"
 #include "tsb_scm.h"
+#include "tsb_pinshare.h"
 
 #include "tsb_i2s.h"
 #include "tsb_i2s_xfer.h"
@@ -1417,18 +1418,11 @@ static int tsb_i2s_dev_probe(struct device *dev)
     if (ret != OK)
         goto err_detach_sioerr_irq;
 
-    ret = tsb_request_pinshare(TSB_PIN_ETM | TSB_PIN_GPIO16 | TSB_PIN_GPIO18 |
-                               TSB_PIN_GPIO19 | TSB_PIN_GPIO20);
+    ret = tsb_pin_request(PIN_I2S0);
     if (ret) {
-        lowsyslog("I2S: cannot get ownership of I2S pins.\n");
+        lowsyslog("I2S: cannot get ownership of PIN_I2S0\n");
         goto err_detach_serr_irq;
     }
-
-    tsb_clr_pinshare(TSB_PIN_ETM);
-    tsb_clr_pinshare(TSB_PIN_GPIO16);
-    tsb_clr_pinshare(TSB_PIN_GPIO18);
-    tsb_clr_pinshare(TSB_PIN_GPIO19);
-    tsb_clr_pinshare(TSB_PIN_GPIO20);
 
     info->dev = dev;
     device_set_private(dev, info);
@@ -1459,8 +1453,7 @@ static void tsb_i2s_dev_remove(struct device *dev)
     struct tsb_i2s_info *info = device_get_private(dev);
     irqstate_t flags;
 
-    tsb_release_pinshare(TSB_PIN_ETM | TSB_PIN_GPIO16 | TSB_PIN_GPIO18 |
-                         TSB_PIN_GPIO19 | TSB_PIN_GPIO20);
+    tsb_pin_release(PIN_I2S0);
 
     flags = irqsave();
 
