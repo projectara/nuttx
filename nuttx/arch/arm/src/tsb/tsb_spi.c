@@ -44,6 +44,7 @@
 
 #include "up_arch.h"
 #include "tsb_scm.h"
+#include "tsb_pinshare.h"
 
 /* minimum speed 15 kHz, one data timing is 66 usec */
 #define ONE_DATA_TIME_USEC      66
@@ -926,18 +927,15 @@ static int tsb_spi_get_device_config(struct device *dev, uint8_t devid,
  */
 static void tsb_spi_hw_deinit(struct tsb_spi_dev_info *info)
 {
-    uint32_t pinshare = 0;
-
     /* Disable SPI controller */
     tsb_spi_write(info->reg_base, DW_SPI_SSIENR, 0);
 
     /* release SPIM_CLK, SPIM_SDI and SPIM_SDO */
-    pinshare |= TSB_PIN_GPIO13;
+    tsb_pin_release(PIN_SPIM);
 #if !defined(CONFIG_TSB_SPI_GPIO)
     /* release also SPIM_CS0 and SPIM_CS1 */
-    pinshare |= (TSB_PIN_GPIO15 | TSB_PIN_SDIO | TSB_PIN_SPIM_CS1);
+    tsb_pin_release(PIN_SPIM_CSX_N);
 #endif
-    tsb_release_pinshare(pinshare);
 
     tsb_clk_disable(TSB_CLK_SPIP);
     tsb_clk_disable(TSB_CLK_SPIS);
@@ -952,7 +950,7 @@ static void tsb_spi_hw_deinit(struct tsb_spi_dev_info *info)
  */
 static int tsb_spi_hw_init(struct tsb_spi_dev_info *info)
 {
-    uint32_t ctrl0, pinshare = 0;
+    uint32_t ctrl0;
     int ret = 0;
 
     /* Enable Clock */
@@ -980,29 +978,24 @@ static int tsb_spi_hw_init(struct tsb_spi_dev_info *info)
     tsb_spi_write(info->reg_base, DW_SPI_CTRLR0, ctrl0);
 
     /* get SPIM_CLK, SPIM_SDI and SPIM_SDO */
-    pinshare |= TSB_PIN_GPIO13;
-#if !defined(CONFIG_TSB_SPI_GPIO)
-    /* get also SPIM_CS0 */
-    pinshare |= TSB_PIN_GPIO15;
-    /* and SPIM_CS1 */
-    pinshare |= (TSB_PIN_SDIO | TSB_PIN_SPIM_CS1);
-#endif
-
-    ret = tsb_request_pinshare(pinshare);
+    ret = tsb_pin_request(PIN_SPIM);
     if (ret) {
-        lowsyslog("SPI: cannot get ownership of SPI pins\n");
+        lowsyslog("SPI: cannot get ownership of PIN_SPIM\n");
         goto err_req_pinshare;
     }
-    /* Configure pin functionality for SPI */
-    /* CLK, SDO, SDI */
-    tsb_clr_pinshare(TSB_PIN_GPIO13);
 #if !defined(CONFIG_TSB_SPI_GPIO)
-    /* CS0_N */
-    tsb_clr_pinshare(TSB_PIN_GPIO15);
-    /* CS1_N */
-    tsb_clr_pinshare(TSB_PIN_SDIO);
-    tsb_set_pinshare(TSB_PIN_SPIM_CS1);
+    /* get also SPIM_CS0_N and SPIM_CS1_N */
+    ret = tsb_pin_request(PIN_SPIM_CSX_N);
+    if (ret) {
+        lowsyslog("SPI: cannot get ownership of PIN_SPIM_CSX_N\n");
+        goto err_req_pinshare_gpio;
+    }
 #endif
+
+    return 0;
+
+err_req_pinshare_gpio:
+    tsb_pin_release(PIN_SPIM);
 err_req_pinshare:
     return ret;
 }
