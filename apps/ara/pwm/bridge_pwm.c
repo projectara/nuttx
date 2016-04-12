@@ -41,6 +41,7 @@
 #include <arch/tsb/chip.h>
 
 #include <tsb_scm.h>
+#include <tsb_pinshare.h>
 
 #include <up_arch.h>
 
@@ -166,39 +167,21 @@ int main(int argc, FAR char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    /*
-     * GPIO9 - PWM1 and SDIO - PWM0 share the same pin on the Bridge ASICs
-     * and are therefore mutually exclusive.
-     *
-     * Setting the TSB_PIN_UART_CTSRTS bit of the PINSHARE register also blocks PWM1 output.
-     *
-     * Therefore, if we want to see PWM1 output, we need to ensure that the TSB_PIN_GPIO9
-     * and TSB_PIN_UART_CTSRTS bits in the PINSHARE register are clear..
-     * For PWM0 output we need to clear the PWM0/SDIO pin.
-     */
     switch (pwm_id) {
     case 0:
-        ret = tsb_request_pinshare(TSB_PIN_SDIO);
+        ret = tsb_pin_request(PIN_PWM0);
         if (ret) {
-            fprintf(stderr, "PWM: pins already held by another driver.\n");
+            fprintf(stderr, "PIN_PWM0 already held by another driver.\n");
             return ret;
         }
-
-        tsb_clr_pinshare(TSB_PIN_SDIO);
         break;
 
     case 1:
-        /*
-         * We don't request the pinshare here because the driver is already
-         * requesting it.
-         * The architecture of the driver is not really good right now because
-         * the driver shall be the one requesting the pinshare for all the pins
-         * and we shouldn't have to configure them here.
-         * Until the PWM driver is fixed to correctly handle the pinsharing,
-         * lets just not request it here.
-         */
-
-        tsb_clr_pinshare(TSB_PIN_GPIO9 | TSB_PIN_UART_CTSRTS);
+        ret = tsb_pin_request(PIN_PWM1);
+        if (ret) {
+            fprintf(stderr, "PIN_PWM1 already held by another driver.\n");
+            return ret;
+        }
         break;
     }
 
@@ -216,7 +199,10 @@ int main(int argc, FAR char *argv[]) {
 
     switch (pwm_id) {
     case 0:
-        tsb_release_pinshare(TSB_PIN_SDIO);
+        tsb_pin_release(PIN_PWM0);
+        break;
+    case 1:
+        tsb_pin_release(PIN_PWM1);
         break;
     }
 
