@@ -37,12 +37,17 @@
 #include <nuttx/gpio.h>
 #include <nuttx/device_spi.h>
 #include <nuttx/device_spi_board.h>
+#include <nuttx/clock.h>
 #include <nuttx/ara/spi_board.h>
 #include <nuttx/power/pm.h>
 #include <arch/tsb/pm.h>
 
 #include "up_arch.h"
 #include "tsb_scm.h"
+
+/* minimum speed 15 kHz, one data timing is 66 usec */
+#define ONE_DATA_TIME_USEC      66
+
 
 #define DW_SPI_CTRLR0   0x00
 #define DW_SPI_CTRLR1   0x04
@@ -623,7 +628,7 @@ static int tsb_spi_exchange(struct device *dev,
                              struct device_spi_transfer *transfer)
 {
     struct tsb_spi_dev_info *info = NULL;
-    uint32_t imr_reg;
+    uint32_t imr_reg, delay_time;
     int ret = 0;
     struct timespec abstime;
 
@@ -660,12 +665,25 @@ static int tsb_spi_exchange(struct device *dev,
     tsb_spi_write(info->reg_base, DW_SPI_IMR,
                   (tsb_spi_read(info->reg_base, DW_SPI_IMR) | imr_reg));
 
-    (void)clock_gettime(CLOCK_REALTIME, &abstime);
-    abstime.tv_nsec += info->curr_xfer.tx_remaining * (100 * 1000);
+    (void)clock_gettime(CLOCK_MONOTONIC, &abstime);
+
+    /* Calculate the timeout value:
+     * (tx size + rx size) * 6 usec (minimum speed 15 kHz of data timing)
+     */
+    delay_time = (transfer->nwords * 2) * ONE_DATA_TIME_USEC * NSEC_PER_USEC;
+    if ((delay_time + abstime.tv_nsec) >= NSEC_PER_SEC) {
+        abstime.tv_sec += 1;
+        abstime.tv_nsec = (delay_time + abstime.tv_nsec) - NSEC_PER_SEC;
+    } else {
+        abstime.tv_nsec += delay_time;
+    }
 
     /* Enable SPI controller */
     tsb_spi_write(info->reg_base, DW_SPI_SSIENR, 1);
     ret = sem_timedwait(&info->xfer_completed, &abstime);
+    if (ret) {
+        lldbg("(): wait data exchange timeout\n");
+    }
 
     /* get transmission status */
     if (info->curr_xfer.status) {
