@@ -61,7 +61,6 @@
 static long double timesync_frame_time;
 static uint64_t timesync_frame_time_offset;
 static uint64_t timesync_strobe_time[GB_TIMESYNC_MAX_STROBES];
-static uint32_t timesync_counter_time[GB_TIMESYNC_MAX_STROBES];
 static double timesync_div;
 static double timesync_increment;
 static double timesync_ns_per_clock;
@@ -76,11 +75,13 @@ static uint32_t timesync_strobe_delay_ns;
 static uint32_t timesync_refclk;
 static int timesync_strobe_count;
 static int timesync_strobe_index;
-static sem_t dbg_thread_sem;
 static struct tsb_tmr_ctx *timesync_rollover_timer;
 static uint64_t timesync_rx_strobes;
 
 #ifdef CONFIG_ARCH_TIMESYNC_DEBUG
+static uint32_t timesync_counter_time[GB_TIMESYNC_MAX_STROBES];
+static sem_t dbg_thread_sem;
+
 #define timesync_notify_dbg() sem_post(&dbg_thread_sem)
 #else
 #define timesync_notify_dbg()
@@ -384,7 +385,9 @@ void timesync_exit(void) {
  * System entrypoint. CONFIG_USER_ENTRYPOINT should point to this function.
  */
 int timesync_init(void) {
+#ifdef CONFIG_ARCH_TIMESYNC_DEBUG
     int rc;
+#endif
 
     timesync_rollover_timer = tsb_tmr_get(TSB_TMR_TMR3);
     if (!timesync_rollover_timer) {
