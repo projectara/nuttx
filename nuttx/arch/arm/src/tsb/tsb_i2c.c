@@ -45,6 +45,7 @@
 
 #include "chip.h"
 #include "tsb_scm.h"
+#include "tsb_pinshare.h"
 #include "tsb_i2c.h"
 
 #define TSB_I2C_FLAG_OPENED     BIT(0)
@@ -803,16 +804,11 @@ static int tsb_i2c_dev_probe(struct device *dev)
 
     irqrestore(flags);
 
-    ret = tsb_request_pinshare(TSB_PIN_I2C | TSB_PIN_GPIO21 | TSB_PIN_GPIO22);
+    ret = tsb_pin_request(PIN_I2C);
     if (ret) {
-        lowsyslog("I2C: cannot get ownership of I2C pins\n");
+        lowsyslog("I2C: cannot get ownership of PIN_I2C\n");
         goto err_irq_detach;
     }
-
-    /* enable I2C pins */
-    tsb_clr_pinshare(TSB_PIN_I2C);
-    tsb_clr_pinshare(TSB_PIN_GPIO21);
-    tsb_clr_pinshare(TSB_PIN_GPIO22);
 
     /* enable I2C clocks */
     tsb_clk_enable(TSB_CLK_I2CP);
@@ -844,7 +840,7 @@ static int tsb_i2c_dev_probe(struct device *dev)
     return 0;
 
 err_pm:
-    tsb_release_pinshare(TSB_PIN_I2C | TSB_PIN_GPIO21 | TSB_PIN_GPIO22);
+    tsb_pin_release(PIN_I2C);
     wd_delete(info->timeout);
     device_set_private(dev, NULL);
     sem_destroy(&info->mutex);
@@ -874,7 +870,7 @@ static void tsb_i2c_dev_remove(struct device *dev)
 
     info = device_get_private(dev);
 
-    tsb_release_pinshare(TSB_PIN_I2C | TSB_PIN_GPIO21 | TSB_PIN_GPIO22);
+    tsb_pin_release(PIN_I2C);
 
     sem_destroy(&info->mutex);
     sem_destroy(&info->wait);
