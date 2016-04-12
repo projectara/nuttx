@@ -137,49 +137,6 @@
 #define TSB_RST_CDSI1_TX_AIO    (TSB_SCM_REG2 | 6)
 #define TSB_RST_CDSI1_RX_AIO    (TSB_SCM_REG2 | 7)
 
-
-/* PINSHARE bits */
-#define TSB_PIN_UART_RXTX_BIT   0
-#define TSB_PIN_UART_CTSRTS_BIT 1
-#define TSB_PIN_SDIO_BIT        2
-#define TSB_PIN_GPIO9_BIT       3
-#define TSB_PIN_ETM_BIT         4
-#define TSB_PIN_GPIO10_BIT      5
-#define TSB_PIN_GPIO13_BIT      6
-#define TSB_PIN_GPIO15_BIT      7
-#define TSB_PIN_I2C_BIT         8
-#define TSB_PIN_GPIO16_BIT      10
-#define TSB_PIN_GPIO18_BIT      11
-#define TSB_PIN_GPIO19_BIT      12
-#define TSB_PIN_GPIO20_BIT      13
-#define TSB_PIN_GPIO21_BIT      14
-#define TSB_PIN_GPIO22_BIT      15
-#define TSB_PIN_GPIO27_BIT      16
-#define TSB_PIN_GPIO29_BIT      17
-#define TSB_PIN_GPIO31_BIT      19
-#define TSB_PIN_SPIM_CS1_BIT    20
-
-#define TSB_PIN_UART_RXTX       BIT(TSB_PIN_UART_RXTX_BIT)
-#define TSB_PIN_UART_CTSRTS     BIT(TSB_PIN_UART_CTSRTS_BIT)
-#define TSB_PIN_SDIO            BIT(TSB_PIN_SDIO_BIT)
-#define TSB_PIN_GPIO9           BIT(TSB_PIN_GPIO9_BIT)
-#define TSB_PIN_ETM             BIT(TSB_PIN_ETM_BIT)
-#define TSB_PIN_GPIO10          BIT(TSB_PIN_GPIO10_BIT)
-#define TSB_PIN_GPIO13          BIT(TSB_PIN_GPIO13_BIT)
-#define TSB_PIN_GPIO15          BIT(TSB_PIN_GPIO15_BIT)
-#define TSB_PIN_I2C             BIT(TSB_PIN_I2C_BIT)
-#define TSB_PIN_GPIO16          BIT(TSB_PIN_GPIO16_BIT)
-#define TSB_PIN_GPIO18          BIT(TSB_PIN_GPIO18_BIT)
-#define TSB_PIN_GPIO19          BIT(TSB_PIN_GPIO19_BIT)
-#define TSB_PIN_GPIO20          BIT(TSB_PIN_GPIO20_BIT)
-#define TSB_PIN_GPIO21          BIT(TSB_PIN_GPIO21_BIT)
-#define TSB_PIN_GPIO22          BIT(TSB_PIN_GPIO22_BIT)
-#define TSB_PIN_GPIO27          BIT(TSB_PIN_GPIO27_BIT)
-#define TSB_PIN_GPIO29          BIT(TSB_PIN_GPIO29_BIT)
-#define TSB_PIN_GPIO31          BIT(TSB_PIN_GPIO31_BIT)
-#define TSB_PIN_SPIM_CS1        BIT(TSB_PIN_SPIM_CS1_BIT)
-
-
 /* IO_DRIVE_STRENGTH: 2 Bits per Output */
 
 enum tsb_drivestrength {
@@ -251,14 +208,9 @@ void tsb_clk_disable(uint32_t clk);
 uint32_t tsb_clk_status(uint32_t clk);
 void tsb_clk_dump(void);
 void tsb_reset(uint32_t rst);
-int tsb_set_pinshare(uint32_t pin);
-int tsb_clr_pinshare(uint32_t pin);
-uint32_t tsb_get_pinshare(void);
 void tsb_set_drivestrength(uint32_t ds_id, enum tsb_drivestrength value);
 enum tsb_drivestrength tsb_get_drivestrength(uint32_t ds_id);
 enum tsb_product_id tsb_get_product_id(void);
 enum tsb_rev_id tsb_get_rev_id(void);
-int tsb_request_pinshare(uint32_t bits);
-int tsb_release_pinshare(uint32_t bits);
 
 #endif /* __ARCH_ARM_SRC_TSB_TSB_SCM_H */
