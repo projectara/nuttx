@@ -35,6 +35,7 @@
 #include "up_arch.h"
 
 #include "tsb_scm.h"
+#include "tsb_pinshare.h"
 
 #define UART_RBR_THR_DLL    (UART_BASE + 0x0)
 #define UART_IER_DLH        (UART_BASE + 0x4)
@@ -62,12 +63,11 @@ void tsb_lowsetup(void) {
     int i;
 
     /* enable UART RX/TX pins */
-    retval = tsb_request_pinshare(TSB_PIN_UART_RXTX);
+    retval = tsb_pin_request(PIN_UART);
     if (retval) {
         return;
     }
 
-    tsb_set_pinshare(TSB_PIN_UART_RXTX);
     own_pinshare = true;
 
     /* enable UART clocks */
