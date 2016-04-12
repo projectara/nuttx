@@ -40,6 +40,7 @@
 
 #include "up_arch.h"
 #include "tsb_scm.h"
+#include "tsb_pinshare.h"
 #include "tsb_pwm.h"
 
 #define TSB_GENERATOR_COUNTS    2
@@ -1078,24 +1079,18 @@ static int tsb_pwm_dev_probe(struct device *dev)
     irqrestore(flags);
 
     /** For PWM0 */
-    ret = tsb_request_pinshare(TSB_PIN_SDIO);
+    ret = tsb_pin_request(PIN_PWM0);
     if (ret) {
-        lowsyslog("PWM: cannot get ownership of PWM0 pin\n");
+        lowsyslog("PWM: cannot get ownership of PIN_PWM0\n");
         goto err_req_pinshare_pwm0;
     }
 
-    tsb_clr_pinshare(TSB_PIN_SDIO);
-
-
     /** For PWM1 */
-    ret = tsb_request_pinshare(TSB_PIN_GPIO9 | TSB_PIN_UART_CTSRTS);
+    ret = tsb_pin_request(PIN_PWM1);
     if (ret) {
-        lowsyslog("PWM: cannot get ownership of PWM1 pins\n");
+        lowsyslog("PWM: cannot get ownership of PIN_PWM1\n");
         goto err_req_pinshare;
     }
-
-    tsb_clr_pinshare(TSB_PIN_GPIO9);
-    tsb_clr_pinshare(TSB_PIN_UART_CTSRTS);
 
     info->dev = dev;
     device_set_private(dev, info);
@@ -1113,7 +1108,7 @@ static int tsb_pwm_dev_probe(struct device *dev)
     return ret;
 
 err_req_pinshare:
-    tsb_release_pinshare(TSB_PIN_SDIO);
+    tsb_pin_release(PIN_PWM0);
 err_req_pinshare_pwm0:
     irq_detach(info->pwm_irq);
 err_resc:
@@ -1142,7 +1137,8 @@ static void tsb_pwm_dev_remove(struct device *dev)
         return;
     }
 
-    tsb_release_pinshare(TSB_PIN_GPIO9 | TSB_PIN_UART_CTSRTS | TSB_PIN_SDIO);
+    tsb_pin_release(PIN_PWM0);
+    tsb_pin_release(PIN_PWM1);
 
     info = device_get_private(dev);
 
