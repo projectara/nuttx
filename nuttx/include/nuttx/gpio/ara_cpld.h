@@ -31,6 +31,9 @@
 #ifndef __ARA_CPLD_H__
 #define __ARA_CPLD_H__
 
+/* Reg counts */
+#define ARA_CPLD_CLK_REG_COUNT 2
+
 struct ara_cpld_pdata {
     int i2c_bus;
     uint8_t i2c_addr;
@@ -39,6 +42,7 @@ struct ara_cpld_pdata {
 
     /* priv */
     struct i2c_dev_s *i2c_dev;
+    uint8_t refclk_state[ARA_CPLD_CLK_REG_COUNT];
 };
 
 int ara_cpld_register(struct ara_cpld_pdata *pdata);

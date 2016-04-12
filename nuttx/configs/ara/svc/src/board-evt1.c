@@ -55,7 +55,7 @@
  * defines match schematic net names.)
  */
 #define IOEXP_I2C_BUS           1
-#define IOEXP_U4430_I2C_ADDR    0x0a
+#define IOEXP_U4430_I2C_ADDR    0x42
 #define IOEXP_U4550_I2C_ADDR    0x21
 #define IOEXP_U4570_I2C_ADDR    0x20
 #define IOEXP_U4430_RESET       U4550_GPIO_PIN(14)
@@ -82,16 +82,14 @@
 #define REFCLK_4B_EN      U4570_GPIO_PIN(9)
 #define REFCLK_5_EN       U4570_GPIO_PIN(10)
 
-#define EVT2_REFCLK_1_EN       U4430_GPIO_PIN(0) /* Modules */
-#define EVT2_REFCLK_2_EN       U4430_GPIO_PIN(1)
-#define EVT2_REFCLK_3A_EN      U4430_GPIO_PIN(2)
-#define EVT2_REFCLK_3B_EN      U4430_GPIO_PIN(3)
-#define EVT2_REFCLK_4A_EN      U4430_GPIO_PIN(4)
-#define EVT2_REFCLK_4B_EN      U4430_GPIO_PIN(5)
-#define EVT2_REFCLK_APB1_EN    U4430_GPIO_PIN(6) /* Built-in bridges */
-#define EVT2_REFCLK_APB2_EN    U4430_GPIO_PIN(7)
-#define EVT2_REFCLK_SVC_EN     U4430_GPIO_PIN(8) /* SVC */
-#define EVT2_REFCLK_SW_EN      U4430_GPIO_PIN(9) /* Switch */
+#define EVT2_REFCLK_1_EN       U4430_GPIO_PIN(4) /* Modules */
+#define EVT2_REFCLK_2_EN       U4430_GPIO_PIN(5)
+#define EVT2_REFCLK_3A_EN      U4430_GPIO_PIN(6)
+#define EVT2_REFCLK_3B_EN      U4430_GPIO_PIN(7)
+#define EVT2_REFCLK_4A_EN      U4430_GPIO_PIN(8)
+#define EVT2_REFCLK_4B_EN      U4430_GPIO_PIN(9)
+#define EVT2_REFCLK_SVC_EN     U4430_GPIO_PIN(1) /* SVC */
+#define EVT2_REFCLK_SW_EN      U4430_GPIO_PIN(3) /* Switch */
 
 /* Wake/detect pins */
 #define WD_1_DET_IN_GPIO    (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTA | GPIO_PIN1)
@@ -269,24 +267,6 @@ DECLARE_MODULE_PORT_INTERFACE(apb1, INTF_APB1, apb1_vsys_vreg_data,
                               ARA_IFACE_WD_ACTIVE_HIGH, false, 0);
 DECLARE_MODULE_PORT_INTERFACE(apb2, INTF_APB2, apb2_vsys_vreg_data,
                               apb2_refclk_vreg_data, 1, WD_8B_DET,
-                              ARA_IFACE_WD_ACTIVE_HIGH, false, 0);
-
-/*
- * EVT2 built-in bridges
- */
-static struct vreg_data evt2_apb1_refclk_vreg_data[] = {
-    INIT_MODULE_CLK_DATA(EVT2_REFCLK_APB1_EN),
-};
-
-static struct vreg_data evt2_apb2_refclk_vreg_data[] = {
-    INIT_MODULE_CLK_DATA(EVT2_REFCLK_APB2_EN),
-};
-
-DECLARE_MODULE_PORT_INTERFACE(evt2_apb1, INTF_APB1, apb1_vsys_vreg_data,
-                              evt2_apb1_refclk_vreg_data, 3, WD_8A_DET,
-                              ARA_IFACE_WD_ACTIVE_HIGH, false, 0);
-DECLARE_MODULE_PORT_INTERFACE(evt2_apb2, INTF_APB2, apb2_vsys_vreg_data,
-                              evt2_apb2_refclk_vreg_data, 1, WD_8B_DET,
                               ARA_IFACE_WD_ACTIVE_HIGH, false, 0);
 
 /*
@@ -665,8 +645,8 @@ DECLARE_MODULE_PORT_INTERFACE2(evt2_module_4B, "module_4b",
 #endif
 
 static struct interface *evt2_interfaces[] = {
-    &evt2_apb1_interface,
-    &evt2_apb2_interface,
+    &apb1_interface,
+    &apb2_interface,
     &evt2_module_1_interface,
     &evt2_module_2_interface,
     &evt2_module_3A_interface,
@@ -739,6 +719,26 @@ static struct vreg_data sw_vreg_data[] = {
     INIT_ACTIVE_HIGH_VREG_DATA(REFCLK_SW_EN, HOLD_TIME_SW_CLK_US),
 };
 DECLARE_VREG(sw_vreg, sw_vreg_data);
+
+static struct vreg_data evt2_sw_vreg_data[] = {
+    INIT_ACTIVE_HIGH_VREG_DATA(SW_1P1_EN, HOLD_TIME_SW_1P1),
+
+    /*
+     * HACK: put the 1.8V power supplies into PWM mode always.
+     *
+     * TODO [SW-1934] investigate methods for allowing supply to
+     *      alternate between PWM/PFM modes automatically without
+     *      causing voltage droops observed in DB3 bringup.
+     */
+    INIT_ACTIVE_HIGH_VREG_DATA(SW_UNIPRO_1P8_PWM, 0),
+    INIT_ACTIVE_HIGH_VREG_DATA(SW_IO_1P8_PWM, 0),
+    /* END HACK */
+
+    INIT_ACTIVE_HIGH_VREG_DATA(SW_1P8_IO_EN, 0),
+    INIT_ACTIVE_HIGH_VREG_DATA(SW_1P8_UNIPRO_EN, HOLD_TIME_SW_1P8),
+    INIT_ACTIVE_HIGH_VREG_DATA(EVT2_REFCLK_SW_EN, HOLD_TIME_SW_CLK_US),
+};
+DECLARE_VREG(evt2_sw_vreg, evt2_sw_vreg_data);
 
 /*
  * I/O expanders
@@ -1065,7 +1065,7 @@ static int evt2_board_init(struct ara_board_info *board_info) {
     stm32_configgpio(SW_STANDBY_N);
 
     /* Configure the switch power supply lines. */
-    rc = vreg_config(&sw_vreg);
+    rc = vreg_config(&evt2_sw_vreg);
     if (rc) {
         dbg_error("%s: can't configure switch regulators: %d\n", __func__, rc);
         return rc;
@@ -1116,7 +1116,7 @@ struct ara_board_info evt2_board_info = {
     .nr_spring_interfaces = 0,
 
     .sw_data = {
-        .vreg               = &sw_vreg,
+        .vreg               = &evt2_sw_vreg,
         .gpio_reset         = SVC_RST_SW_GPIO,
         .gpio_irq           = SW_TO_SVC_INT_GPIO,
         .irq_rising_edge    = false,
