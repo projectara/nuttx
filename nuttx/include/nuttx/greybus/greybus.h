@@ -37,6 +37,7 @@
 #include <arch/atomic.h>
 #include <nuttx/list.h>
 #include <nuttx/util.h>
+#include <nuttx/unipro/unipro.h>
 #include <nuttx/greybus/types.h>
 
 #define GB_MTU                  2048
@@ -99,6 +100,8 @@ struct gb_transport_backend {
     int (*listen)(unsigned int cport);
     int (*stop_listening)(unsigned int cport);
     int (*send)(unsigned int cport, const void *buf, size_t len);
+    int (*send_async)(unsigned int cportid, const void *buf, size_t len,
+                      unipro_send_completion_t callback, void *priv);
     void *(*alloc_buf)(size_t size);
     void (*free_buf)(void *ptr);
 };
@@ -241,6 +244,9 @@ int gb_notify(unsigned cport, enum gb_event event);
 void gb_operation_destroy(struct gb_operation *operation);
 void *gb_operation_alloc_response(struct gb_operation *operation, size_t size);
 int gb_operation_send_response(struct gb_operation *operation, uint8_t result);
+int gb_operation_send_request_nowait(struct gb_operation *operation,
+                                     gb_operation_callback callback,
+                                     bool need_response);
 int gb_operation_send_request_sync(struct gb_operation *operation);
 int gb_operation_send_request(struct gb_operation *operation,
                               gb_operation_callback callback,

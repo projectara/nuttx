@@ -661,6 +661,62 @@ static void gb_operation_timeout(int argc, uint32_t cport, ...)
     irqrestore(flags);
 }
 
+static int gb_operation_send_request_nowait_cb(int status, const void *buf,
+                                               void *priv)
+{
+    struct gb_operation *operation = priv;
+    struct gb_operation_hdr *hdr = operation->request_buffer;
+
+    hdr->result = status ? GB_OP_INTERNAL : 0;
+
+    if (operation->callback) {
+        operation->callback(operation);
+    }
+
+    gb_operation_unref(operation);
+
+    return 0;
+}
+
+int gb_operation_send_request_nowait(struct gb_operation *operation,
+                                     gb_operation_callback callback,
+                                     bool need_response)
+{
+    struct gb_operation_hdr *hdr = operation->request_buffer;
+    int retval = 0;
+    irqstate_t flags;
+
+    DEBUGASSERT(operation);
+    DEBUGASSERT(transport_backend);
+    DEBUGASSERT(transport_backend->send_async);
+
+    if (g_cport[operation->cport].exit_worker) {
+        return -ENETDOWN;
+    }
+
+    if (need_response) {
+        return -ENOTSUP;
+    }
+
+    hdr->id = 0;
+    operation->callback = callback;
+
+    gb_dump(operation->request_buffer, hdr->size);
+
+    gb_operation_ref(operation);
+
+    flags = irqsave();
+    retval = transport_backend->send_async(operation->cport,
+                                           operation->request_buffer,
+                                           le16_to_cpu(hdr->size),
+                                           gb_operation_send_request_nowait_cb,
+                                           operation);
+    op_mark_send_time(operation);
+    irqrestore(flags);
+
+    return retval;
+}
+
 int gb_operation_send_request(struct gb_operation *operation,
                               gb_operation_callback callback,
                               bool need_response)

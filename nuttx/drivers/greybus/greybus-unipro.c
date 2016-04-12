@@ -61,6 +61,7 @@ static int gb_unipro_stop_listening(unsigned int cport)
 struct gb_transport_backend gb_unipro_backend = {
     .init = unipro_init,
     .send = unipro_send,
+    .send_async = unipro_send_async,
     .listen = gb_unipro_listen,
     .stop_listening = gb_unipro_stop_listening,
     .alloc_buf = bufram_alloc,
