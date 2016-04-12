@@ -108,12 +108,10 @@ void tsb_start(void) {
 #endif
 
 #ifdef CONFIG_TSB_PINSHARE_ETM
-    retval = tsb_request_pinshare(TSB_PIN_ETM);
+    retval = tsb_pin_request(PIN_ETM);
     if (retval) {
         lowsyslog("ETM: cannot get ownership of ETM pin.\n");
     } else {
-        tsb_set_pinshare(TSB_PIN_ETM);
-
         uint32_t trace_drive_strength = TSB_TRACE_DRIVESTRENGTH;
         if (tsb_get_rev_id() == tsb_rev_es2)
             trace_drive_strength = ES2_TSB_TRACE_DRIVESTRENGTH;

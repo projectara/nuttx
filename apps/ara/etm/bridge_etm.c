@@ -171,14 +171,12 @@ int main(int argc, FAR char *argv[]) {
                 printf("WARNING: ETM is already enabled\n");
         } else {
 #ifndef CONFIG_TSB_PINSHARE_ETM
-            retval = tsb_request_pinshare(TSB_PIN_ETM);
+            retval = tsb_pin_request(PIN_ETM);
             if (retval) {
                 fprintf(stderr, "ETM pin already held by another driver.\n");
                 return retval;
             }
 #endif
-
-            tsb_set_pinshare(TSB_PIN_ETM);
 
             /* set drive strength for the TRACE signals to the specified value */
             etm.drive_ma_save = get_trace_drive_ma();
@@ -248,7 +246,7 @@ int main(int argc, FAR char *argv[]) {
             set_trace_drive_ma(etm.drive_ma_save);
 
 #ifndef CONFIG_TSB_PINSHARE_ETM
-            tsb_release_pinshare(TSB_PIN_ETM);
+            tsb_pin_release(PIN_ETM);
 #endif
 
             etm.enabled = 0;
