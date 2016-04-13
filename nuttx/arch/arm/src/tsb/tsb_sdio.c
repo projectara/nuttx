@@ -131,6 +131,7 @@
 #define READ_TRANSFER_ACTIVE  BIT(9)
 #define BUFFER_WRITE_ENABLE   BIT(10)
 #define BUFFER_READ_ENABLE    BIT(11)
+#define CARD_STATE_STABLE     BIT(17)
 
 /* HOST_PWR_BLKGAP_WAKEUP_CNTRL bit field details */
 #define DATA_TRASFER_WIDTH BIT(1)
@@ -435,6 +436,9 @@
 
 /* UniPro register time definition */
 #define UNIPRO_REGISTER_TIME 500000 /* 500ms */
+
+/* Card detect timeout definition */
+#define MAX_CARD_STABLE_COUNT 400
 
 /* SDIO buffer structure */
 struct sdio_buffer
@@ -1203,52 +1207,11 @@ static int sdio_software_reset(struct tsb_sdio_info *info)
 int sdio_irq_event(int irq, void *context, void *priv)
 {
     struct tsb_sdio_info *info = device_get_private(sdio_dev);
-    uint8_t value = 0;
 
     pm_activity(TSB_SDIO_ACTIVITY);
 
     gpio_irq_mask(irq);
-    value = gpio_get_value(info->cd_pin_number);
-
-    if (value) { /* Card remove */
-        /* Disable command interrupts */
-        sdio_reg_bit_clr(info->sdio_reg_base, INT_ERR_STATUS_EN,
-                         CMD_TIMEOUT_ERR_STAT_EN | CMD_COMPLETE_STAT_EN);
-        sdio_reg_bit_clr(info->sdio_reg_base, INT_ERR_SIGNAL_EN,
-                         CMD_TIMEOUT_ERR_EN | CMD_COMPLETE_EN);
-        /* Disable data error interrupt */
-        sdio_reg_bit_clr(info->sdio_reg_base, INT_ERR_STATUS_EN,
-                         DATA_TIMEOUT_ERR_STAT_EN);
-        sdio_disable_bus_power(info);
-        sdio_reg_bit_clr(info->sdio_reg_base, CLOCK_SWRST_TIMEOUT_CONTROL,
-                         SD_CLOCK_ENABLE);
-        info->card_event = HC_SDIO_CARD_REMOVED;
-        /* Recover error interrupt if have */
-        sdio_error_interrupt_recovery(info);
-    } else { /* Card insert */
-        /* Recover error interrupt if have */
-        sdio_error_interrupt_recovery(info);
-        /* Enable command interrupts */
-        sdio_reg_bit_set(info->sdio_reg_base, INT_ERR_STATUS_EN,
-                         CMD_TIMEOUT_ERR_STAT_EN | CMD_COMPLETE_STAT_EN);
-        sdio_reg_bit_set(info->sdio_reg_base, INT_ERR_SIGNAL_EN,
-                         CMD_TIMEOUT_ERR_EN | CMD_COMPLETE_EN);
-        /* Enable data error interrupt */
-        sdio_reg_bit_set(info->sdio_reg_base, INT_ERR_STATUS_EN,
-                         DATA_TIMEOUT_ERR_STAT_EN);
-        sdio_enable_bus_power(info);
-        sdio_reg_bit_set(info->sdio_reg_base, CLOCK_SWRST_TIMEOUT_CONTROL,
-                         SD_CLOCK_ENABLE);
-        info->card_event = HC_SDIO_CARD_INSERTED;
-    }
-
-    if (info->pre_card_event != info->card_event) {
-        if (info->callback) {
-            info->callback(info->event_data, info->card_event);
-        }
-        info->pre_card_event = info->card_event;
-    }
-
+    sem_post(&info->card_detect_sem);
     gpio_irq_unmask(irq);
 
     return 0;
@@ -1358,7 +1321,7 @@ static void sdio_write_fifo_data(struct tsb_sdio_info *info)
     uint32_t data_mask = BUFFER_READ_ENABLE | BUFFER_WRITE_ENABLE |
                          READ_TRANSFER_ACTIVE | WRITE_TRANSFER_ACTIVE |
                          DAT_LINE_ACTIVE | COMMAND_INHIBIT_DAT;
-    int16_t remaining = 0, i = 0;
+    int16_t remaining = 0;
     uint8_t *wbuf = info->write_buf.buffer;
     uint8_t retry = 0;
 
@@ -1436,7 +1399,7 @@ static void sdio_read_fifo_data(struct tsb_sdio_info *info)
     uint32_t data_mask = BUFFER_READ_ENABLE | BUFFER_WRITE_ENABLE |
                          READ_TRANSFER_ACTIVE | WRITE_TRANSFER_ACTIVE |
                          DAT_LINE_ACTIVE | COMMAND_INHIBIT_DAT;
-    int16_t remaining = 0, i = 0;
+    int16_t remaining = 0;
     uint8_t *rbuf = info->read_buf.buffer;
     uint8_t retry = 0;
 
@@ -1555,6 +1518,27 @@ static void *sdio_read_data_thread(void *data)
 static void *sdio_card_detect_thread(void *data)
 {
     struct tsb_sdio_info *info = data;
+    uint8_t value = 0;
+    uint32_t presentstate;
+    int timeout = MAX_CARD_STABLE_COUNT;
+
+    /* We found the host need to wait some time (around 4 seconds) until host
+     * stable after SDIO host reset on ES3 chip, if SDIO driver doesn't waiting
+     * some time, it causes sdio command no response, but on ES2 chip we don't
+     * find this problem, so I add some code to check 'card_state_stable' bit of
+     * PRESENTSTATE register to wait state stable before starting to recognize
+     * sdcard. However this is a workaround for that behavior.
+     */
+    presentstate = sdio_getreg(info->sdio_reg_base, PRESENTSTATE);
+    while (timeout && !(presentstate & CARD_STATE_STABLE)) {
+        usleep(REGISTER_INTERVAL);
+        presentstate = sdio_getreg(info->sdio_reg_base, PRESENTSTATE);
+        timeout--;
+    }
+    if (!timeout) {
+        /* card state stable timeout */
+        return NULL;
+    }
 
     while (1) {
         sem_wait(&info->card_detect_sem);
@@ -1563,9 +1547,43 @@ static void *sdio_card_detect_thread(void *data)
             break;
         }
 
+        usleep(UNIPRO_REGISTER_TIME);
+        value = gpio_get_value(info->cd_pin_number);
+
+        if (value) { /* Card remove */
+            /* Disable command interrupts */
+            sdio_reg_bit_clr(info->sdio_reg_base, INT_ERR_STATUS_EN,
+                             CMD_TIMEOUT_ERR_STAT_EN | CMD_COMPLETE_STAT_EN);
+            sdio_reg_bit_clr(info->sdio_reg_base, INT_ERR_SIGNAL_EN,
+                             CMD_TIMEOUT_ERR_EN | CMD_COMPLETE_EN);
+            /* Disable data error interrupt */
+            sdio_reg_bit_clr(info->sdio_reg_base, INT_ERR_STATUS_EN,
+                             DATA_TIMEOUT_ERR_STAT_EN);
+            sdio_disable_bus_power(info);
+            sdio_reg_bit_clr(info->sdio_reg_base, CLOCK_SWRST_TIMEOUT_CONTROL,
+                             SD_CLOCK_ENABLE);
+            info->card_event = HC_SDIO_CARD_REMOVED;
+            /* Recover error interrupt if have */
+            sdio_error_interrupt_recovery(info);
+        } else { /* Card insert */
+            /* Recover error interrupt if have */
+            sdio_error_interrupt_recovery(info);
+            /* Enable command interrupts */
+            sdio_reg_bit_set(info->sdio_reg_base, INT_ERR_STATUS_EN,
+                             CMD_TIMEOUT_ERR_STAT_EN | CMD_COMPLETE_STAT_EN);
+            sdio_reg_bit_set(info->sdio_reg_base, INT_ERR_SIGNAL_EN,
+                             CMD_TIMEOUT_ERR_EN | CMD_COMPLETE_EN);
+            /* Enable data error interrupt */
+            sdio_reg_bit_set(info->sdio_reg_base, INT_ERR_STATUS_EN,
+                             DATA_TIMEOUT_ERR_STAT_EN);
+            sdio_enable_bus_power(info);
+            sdio_reg_bit_set(info->sdio_reg_base, CLOCK_SWRST_TIMEOUT_CONTROL,
+                             SD_CLOCK_ENABLE);
+            info->card_event = HC_SDIO_CARD_INSERTED;
+        }
+
         if (info->pre_card_event != info->card_event) {
             if (info->callback) {
-                usleep(UNIPRO_REGISTER_TIME);
                 info->callback(info->event_data, info->card_event);
             }
             info->pre_card_event = info->card_event;
@@ -2245,22 +2263,10 @@ static int tsb_sdio_dev_open(struct device *dev)
     }
 
     usleep(REGISTER_INTERVAL);
-    value = gpio_get_value(info->cd_pin_number);
 
+    value = gpio_get_value(info->cd_pin_number);
     /* Card is inserted before SDIO device open. */
     if (!value) {
-        /* Enable command interrupts */
-        sdio_reg_bit_set(info->sdio_reg_base, INT_ERR_STATUS_EN,
-                         CMD_TIMEOUT_ERR_STAT_EN | CMD_COMPLETE_STAT_EN);
-        sdio_reg_bit_set(info->sdio_reg_base, INT_ERR_SIGNAL_EN,
-                         CMD_TIMEOUT_ERR_EN | CMD_COMPLETE_EN);
-        /* Enable data error interrupt */
-        sdio_reg_bit_set(info->sdio_reg_base, INT_ERR_STATUS_EN,
-                         DATA_TIMEOUT_ERR_STAT_EN);
-        sdio_enable_bus_power(info);
-        sdio_reg_bit_set(info->sdio_reg_base, CLOCK_SWRST_TIMEOUT_CONTROL,
-                         SD_CLOCK_ENABLE);
-        info->card_event = HC_SDIO_CARD_INSERTED;
         sem_post(&info->card_detect_sem);
     }
 
