@@ -56,6 +56,10 @@ static uint32_t pwm_pclk[TSB_GENERATOR_COUNTS] = {
     TSB_PWM_CLK
 };
 
+static uint8_t pwm_pin[TSB_GENERATOR_COUNTS] = {
+    PIN_PWM0, PIN_PWM1,
+};
+
 /**
  * Data struct for a generator.
  *
@@ -410,6 +414,12 @@ static int tsb_pwm_op_activate(struct device *dev, uint16_t which)
         return -EINVAL;
     }
 
+    ret = tsb_pin_request(pwm_pin[which]);
+    if (ret) {
+        lowsyslog("PWM: cannot get ownership of PWM%d\n", which);
+        return ret;
+    }
+
     info = device_get_private(dev);
 
     sem_wait(&info->op_mutex);
@@ -494,6 +504,8 @@ static int tsb_pwm_op_deactivate(struct device *dev, uint16_t which)
     if (!dev_info) {
         goto no_deactivated;
     }
+
+    tsb_pin_release(pwm_pin[which]);
 
     if (dev_info->gntr_flag & TSB_PWM_FLAG_ENABLED) {
         reg_cr = tsb_pwm_read(dev_info->gntr_base, TSB_PWM_CR);
@@ -1078,20 +1090,6 @@ static int tsb_pwm_dev_probe(struct device *dev)
 
     irqrestore(flags);
 
-    /** For PWM0 */
-    ret = tsb_pin_request(PIN_PWM0);
-    if (ret) {
-        lowsyslog("PWM: cannot get ownership of PIN_PWM0\n");
-        goto err_req_pinshare_pwm0;
-    }
-
-    /** For PWM1 */
-    ret = tsb_pin_request(PIN_PWM1);
-    if (ret) {
-        lowsyslog("PWM: cannot get ownership of PIN_PWM1\n");
-        goto err_req_pinshare;
-    }
-
     info->dev = dev;
     device_set_private(dev, info);
     device_set_init_data(dev, pwm_pclk);
@@ -1107,16 +1105,9 @@ static int tsb_pwm_dev_probe(struct device *dev)
 
     return ret;
 
-err_req_pinshare:
-    tsb_pin_release(PIN_PWM0);
-err_req_pinshare_pwm0:
-    irq_detach(info->pwm_irq);
-err_resc:
-    free(info);
-    return ret;
-
 err_irq:
     irqrestore(flags);
+err_resc:
     free(info);
     return ret;
 }
@@ -1136,9 +1127,6 @@ static void tsb_pwm_dev_remove(struct device *dev)
     if (!dev || !device_get_private(dev)) {
         return;
     }
-
-    tsb_pin_release(PIN_PWM0);
-    tsb_pin_release(PIN_PWM1);
 
     info = device_get_private(dev);
 
