@@ -72,29 +72,24 @@ COBJS = $(CSRCS:.c=$(OBJEXT))
 SRCS = $(ASRCS) $(CSRCS)
 OBJS = $(AOBJS) $(COBJS)
 
-ifeq ($(CONFIG_MANIFEST_ALL), y)
- MANIFEST = all-modules
-endif
-
-ifeq ($(CONFIG_CUSTOM_MANIFEST), y)
- MANIFEST = $(subst ",,$(CONFIG_MANIFEST))
-endif
-
 ifeq ($(CONFIG_OOT_MANIFEST), y)
- ifndef OOT_MANIFEST
-  $(error "out-of-tree manifest selected in Kconfig but global OOT_MANIFEST variable is undefined")
- endif
+  ifndef OOT_MANIFEST
+   $(error "out-of-tree manifest selected in Kconfig but global OOT_MANIFEST variable is undefined")
+  endif
+  MANIFEST_NAME = $(subst .mnfs,,$(OOT_MANIFEST))
+  MNFB = $(addsuffix .mnfb, $(MANIFEST_NAME))
+else
+  ifeq ($(CONFIG_MANIFEST_ALL), y)
+   MANIFEST_NAME = all-modules
+  endif
 
- MANIFEST = $(OOT_MANIFEST)
- MANIFESTS = $(subst .mnfs,,$(OOT_MANIFEST))
+  ifeq ($(CONFIG_CUSTOM_MANIFEST), y)
+   MANIFEST_NAME = $(subst ",,$(CONFIG_CUSTOM_MANIFEST_FILE))
+  endif
+
+  MANIFEST_PATH = $(addprefix manifests/, $(MANIFEST_NAME))
+  MNFB = $(addsuffix .mnfb, $(MANIFEST_PATH))
 endif
-
-MANIFESTS ?= $(addprefix manifests/, $(MANIFEST))
-MNFS = $(addsuffix .mnfs, $(MANIFESTS))
-MNFB = $(addsuffix .mnfb, $(MANIFESTS))
-
-ALL_MNFS = $(wildcard manifests/*.mnfs) $(OOT_MANIFEST)
-ALL_MNFB = $(subst .mnfs,.mnfb,$(ALL_MNFS))
 
 ifeq ($(CONFIG_WINDOWS_NATIVE),y)
   BIN		= ..\libapps$(LIBEXT)
@@ -147,7 +142,7 @@ depend: .depend
 clean:
 	$(call DELFILE, .built)
 	$(call CLEAN)
-	$(call DELFILE, manifest.inc $(ALL_MNFB))
+	$(call DELFILE, manifest.inc $(MNFB))
 
 distclean: clean
 	$(call DELFILE, Make.dep)

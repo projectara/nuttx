@@ -58,10 +58,10 @@ endchoice
 
 choice
 	prompt "Select a predefined Manifest"
-config MANIFEST_ALL
-	bool "All Protocols"
+config ALL_PROT_MANIFEST
+	bool "All-protocol source manifest"
 config CUSTOM_MANIFEST
-	bool "Custom manifest"
+	bool "Custom source manifest"
 config OOT_MANIFEST
 	bool "Out-of-tree manifest"
 	---help---
@@ -69,7 +69,7 @@ config OOT_MANIFEST
 		linked to the in-tree object files.
 endchoice
 
-config MANIFEST
-	string "manifest name"
+config CUSTOM_MANIFEST_FILE
+	string "Custom manifest file name"
 	depends on CUSTOM_MANIFEST
 
