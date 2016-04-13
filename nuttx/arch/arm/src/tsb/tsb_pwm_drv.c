@@ -377,7 +377,6 @@ static int tsb_pwm_op_count(struct device *dev, uint16_t *count)
 
     sem_wait(&info->op_mutex);
 
-    info->gntr_counts = TSB_GENERATOR_COUNTS;
     *count = info->gntr_counts;
 
     sem_post(&info->op_mutex);
@@ -1102,6 +1101,8 @@ static int tsb_pwm_dev_probe(struct device *dev)
     device_set_private(dev, info);
     device_set_init_data(dev, pwm_pclk);
     saved_dev = dev;
+
+    info->gntr_counts = TSB_GENERATOR_COUNTS;
 
     info->pwm_list.prev = &info->pwm_list;
     info->pwm_list.next = &info->pwm_list;
