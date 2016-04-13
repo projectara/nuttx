@@ -76,8 +76,7 @@ ifeq ($(CONFIG_OOT_MANIFEST), y)
   ifndef OOT_MANIFEST
    $(error "out-of-tree manifest selected in Kconfig but global OOT_MANIFEST variable is undefined")
   endif
-  MANIFEST_NAME = $(subst .mnfs,,$(OOT_MANIFEST))
-  MNFB = $(addsuffix .mnfb, $(MANIFEST_NAME))
+  MNFB = $(OOT_MANIFEST)
 else
   ifeq ($(CONFIG_MANIFEST_ALL), y)
    MANIFEST_NAME = all-modules

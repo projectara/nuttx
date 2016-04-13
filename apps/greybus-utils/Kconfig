@@ -63,10 +63,10 @@ config ALL_PROT_MANIFEST
 config CUSTOM_MANIFEST
 	bool "Custom source manifest"
 config OOT_MANIFEST
-	bool "Out-of-tree manifest"
+	bool "Out-of-tree binary manifest"
 	---help---
-		With this choice, the manifest in OOT_MANIFEST will be compiled and
-		linked to the in-tree object files.
+		With this choice, the binary manifest in env variable $OOT_MANIFEST will
+		be linked to the in-tree object files.
 endchoice
 
 config CUSTOM_MANIFEST_FILE
