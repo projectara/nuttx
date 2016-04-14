@@ -73,8 +73,10 @@ SRCS = $(ASRCS) $(CSRCS)
 OBJS = $(AOBJS) $(COBJS)
 
 ifeq ($(CONFIG_OOT_MANIFEST), y)
-  ifndef OOT_MANIFEST
-   $(error "out-of-tree manifest selected in Kconfig but global OOT_MANIFEST variable is undefined")
+  ifeq (,$(findstring clean,$(MAKECMDGOALS)))
+    ifndef OOT_MANIFEST
+      $(error "out-of-tree manifest selected in Kconfig but global OOT_MANIFEST variable is undefined")
+    endif
   endif
   MNFB = $(OOT_MANIFEST)
 else
