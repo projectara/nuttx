@@ -137,7 +137,7 @@ struct device_spi_type_ops {
      * @param mode The mode to use
      * @return 0 on success, negative errno on failure
      */
-    int (*setmode)(struct device *dev, uint8_t devid, uint8_t mode);
+    int (*setmode)(struct device *dev, uint8_t devid, uint16_t mode);
     /** Configure the number of bits per word before a transmission
      * @param dev Pointer to the SPI master
      * @param devid The identifier of the SPI slave whose number of bits per
@@ -271,7 +271,7 @@ static inline int device_spi_setfrequency(struct device *dev, uint8_t devid,
  * @return 0 on success, negative errno on failure
  */
 static inline int device_spi_setmode(struct device *dev, uint8_t devid,
-                                     uint8_t mode)
+                                     uint16_t mode)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 

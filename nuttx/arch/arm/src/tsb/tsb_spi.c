@@ -482,7 +482,7 @@ err_freq_set:
  * @param mode SPI protocol mode requested
  * @return 0 on success, negative errno on error
  */
-static int tsb_spi_setmode(struct device *dev, uint8_t devid, uint8_t mode)
+static int tsb_spi_setmode(struct device *dev, uint8_t devid, uint16_t mode)
 {
     struct tsb_spi_dev_info *info = NULL;
     uint32_t ctrl0 = 0;
