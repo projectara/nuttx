@@ -88,6 +88,11 @@ CSRCS += sdio_board.c
 endif
 
 ifeq ($(CONFIG_ARA_BRIDGE_BOARD_OOT),y)
+  ifeq (,$(findstring clean,$(MAKECMDGOALS)))
+    ifndef OOT_BOARD
+      $(error "out-of-tree board support selected in Kconfig but global OOT_BOARD variable is undefined")
+    endif
+  endif
 CSRCS += $(OOT_BOARD)
 endif
 
