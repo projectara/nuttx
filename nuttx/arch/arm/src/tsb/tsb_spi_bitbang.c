@@ -1020,9 +1020,6 @@ static struct device_spi_type_ops tsb_spi_type_ops = {
     .unlock         = tsb_spi_unlock,
     .select         = tsb_spi_select,
     .deselect       = tsb_spi_deselect,
-    .setfrequency   = tsb_spi_setfrequency,
-    .setmode        = tsb_spi_setmode,
-    .setbits        = tsb_spi_setbits,
     .exchange       = tsb_spi_exchange,
     .getcaps        = tsb_spi_getcaps,
 };

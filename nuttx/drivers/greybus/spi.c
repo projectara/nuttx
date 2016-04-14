@@ -214,29 +214,10 @@ static uint8_t gb_spi_protocol_transfer(struct gb_operation *operation)
         return (ret == -EINVAL)? GB_OP_INVALID : GB_OP_UNKNOWN_ERROR;
     }
 
-    /* set SPI mode */
-    ret = device_spi_setmode(bundle->dev, request->chip_select, request->mode);
-    if (ret) {
-        goto spi_err;
-    }
-
     /* parse all transfer request from AP host side */
     for (i = 0; i < op_count; i++) {
         desc = &request->transfers[i];
         freq = le32_to_cpu(desc->speed_hz);
-
-        /* set SPI bits-per-word */
-        ret = device_spi_setbpw(bundle->dev, request->chip_select,
-                                 desc->bits_per_word);
-        if (ret) {
-            goto spi_err;
-        }
-
-        /* set SPI clock */
-        ret = device_spi_setfrequency(bundle->dev, request->chip_select, &freq);
-        if (ret) {
-            goto spi_err;
-        }
 
         /* assert chip-select pin */
         if (!selected) {

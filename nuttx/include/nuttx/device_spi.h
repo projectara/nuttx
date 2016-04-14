@@ -122,30 +122,6 @@ struct device_spi_type_ops {
      * @return 0 on success, negative errno on failure
      */
     int (*deselect)(struct device *dev, uint8_t devid);
-    /** Configure the frequency before a transmission
-     * @param dev Pointer to the SPI master
-     * @param devid The identifier of the SPI slave whose frequency is to be
-     * configured
-     * @param frequency The frequency to use
-     * @return 0 on success, negative errno on failure
-     */
-    int (*setfrequency)(struct device *dev, uint8_t devid, uint32_t *frequency);
-    /** Configure the mode before a transmission
-     * @param dev Pointer to the SPI master
-     * @param devid The identifier of the SPI slave whose mode is to be
-     * configured
-     * @param mode The mode to use
-     * @return 0 on success, negative errno on failure
-     */
-    int (*setmode)(struct device *dev, uint8_t devid, uint16_t mode);
-    /** Configure the number of bits per word before a transmission
-     * @param dev Pointer to the SPI master
-     * @param devid The identifier of the SPI slave whose number of bits per
-     * word is to be configured
-     * @param bpw The number of bits per word to use
-     * @return 0 on success, negative errno on failure
-     */
-    int (*setbpw)(struct device *dev, uint8_t devid, uint8_t bpw);
     /** Perform a SPI transmission
      * @param dev Pointer to the SPI master
      * @param transfer Pointer to a SPI transfer structure
@@ -243,69 +219,6 @@ static inline int device_spi_deselect(struct device *dev, uint8_t devid)
     }
     if (DEVICE_DRIVER_GET_OPS(dev, spi)->deselect) {
         return DEVICE_DRIVER_GET_OPS(dev, spi)->deselect(dev, devid);
-    }
-    return -ENOSYS;
-}
-
-/** Configure the frequency before a transmission
- * @param dev Pointer to the SPI master
- * @param devid The identifier of the SPI slave whose frequency is to be
- * configured
- * @param frequency The frequency to use
- * @return 0 on success, negative errno on failure
- */
-static inline int device_spi_setfrequency(struct device *dev, uint8_t devid,
-                                          uint32_t *frequency)
-{
-    DEVICE_DRIVER_ASSERT_OPS(dev);
-
-    if (!device_is_open(dev)) {
-        return -ENODEV;
-    }
-    if (DEVICE_DRIVER_GET_OPS(dev, spi)->setfrequency) {
-        return DEVICE_DRIVER_GET_OPS(dev, spi)->setfrequency(dev, devid,
-                                                             frequency);
-    }
-    return -ENOSYS;
-}
-
-/** Configure the mode before a transmission
- * @param dev Pointer to the SPI master
- * @param devid The identifier of the SPI slave whose mode is to be configured
- * @param mode The mode to use
- * @return 0 on success, negative errno on failure
- */
-static inline int device_spi_setmode(struct device *dev, uint8_t devid,
-                                     uint16_t mode)
-{
-    DEVICE_DRIVER_ASSERT_OPS(dev);
-
-    if (!device_is_open(dev)) {
-        return -ENODEV;
-    }
-    if (DEVICE_DRIVER_GET_OPS(dev, spi)->setmode) {
-        return DEVICE_DRIVER_GET_OPS(dev, spi)->setmode(dev, devid, mode);
-    }
-    return -ENOSYS;
-}
-
-/** Configure the number of bits per word before a transmission
- * @param dev Pointer to the SPI master
- * @param devid The identifier of the SPI slave whose number of bits per word is to
- * be configured
- * @param bpw The number of bits per word to use
- * @return 0 on success, negative errno on failure
- */
-static inline int device_spi_setbpw(struct device *dev, uint8_t devid,
-                                     uint8_t bpw)
-{
-    DEVICE_DRIVER_ASSERT_OPS(dev);
-
-    if (!device_is_open(dev)) {
-        return -ENODEV;
-    }
-    if (DEVICE_DRIVER_GET_OPS(dev, spi)->setbpw) {
-        return DEVICE_DRIVER_GET_OPS(dev, spi)->setbpw(dev, devid, bpw);
     }
     return -ENOSYS;
 }

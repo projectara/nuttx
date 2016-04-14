@@ -96,18 +96,6 @@ static int spi_xfer(uint16_t mode, uint32_t nbits, uint32_t freq, void* txbuf,
     transfer.status = 0;
 
     device_spi_lock(spi_dev);
-    result = device_spi_setmode(spi_dev, mode);
-    if (result != 0) {
-        goto err_config;
-    }
-    result = device_spi_setbits(spi_dev, nbits);
-    if (result != 0) {
-        goto err_config;
-    }
-    result = device_spi_setfrequency(spi_dev, &freq);
-    if (result != 0) {
-        goto err_config;
-    }
 
     /* fill out config */
     config.max_speed_hz = freq;
@@ -115,8 +103,10 @@ static int spi_xfer(uint16_t mode, uint32_t nbits, uint32_t freq, void* txbuf,
     config.mode = mode;
 
     device_spi_select(spi_dev, 0);
-    device_spi_exchange(spi_dev, &transfer, 0, &config);
+    result = device_spi_exchange(spi_dev, &transfer, 0, &config);
     device_spi_deselect(spi_dev, 0);
+    if (result)
+        goto err_config;
 
     /* dump the SPI buffer data */
     for (i = 0; i < transfer.nwords; i++) {
