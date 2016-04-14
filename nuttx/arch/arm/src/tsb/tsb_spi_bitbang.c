@@ -624,12 +624,9 @@ static int tsb_spi_setfrequency(struct device *dev, uint32_t *frequency)
     }
 
     info = device_get_private(dev);
-    sem_wait(&info->lock);
 
-    if (info->state != TSB_SPI_STATE_LOCKED) {
-        sem_post(&info->lock);
+    if (info->state != TSB_SPI_STATE_LOCKED)
         return -EPERM;
-    }
 
     info->frequency = *frequency;
 
@@ -651,7 +648,6 @@ static int tsb_spi_setfrequency(struct device *dev, uint32_t *frequency)
     }
 
     *frequency = info->frequency;
-    sem_post(&info->lock);
     return 0;
 }
 
@@ -681,18 +677,14 @@ static int tsb_spi_setmode(struct device *dev, uint16_t mode)
     }
 
     info = device_get_private(dev);
-    sem_wait(&info->lock);
 
-    if (info->state != TSB_SPI_STATE_LOCKED) {
-        ret = -EPERM;
-        goto err_unlock;
-    }
+    if (info->state != TSB_SPI_STATE_LOCKED)
+        return -EPERM;
 
     /* check hardware mode capabilities */
-    if (mode & ~info->caps.modes) {
-        ret = -ENOSYS;
-        goto err_unlock;
-    }
+    if (mode & ~info->caps.modes)
+        return -ENOSYS;
+
     info->modes = mode;
     switch (mode & (SPI_MODE_CPHA | SPI_MODE_CPOL)) {
         case SPI_MODE_0:
@@ -723,8 +715,6 @@ static int tsb_spi_setmode(struct device *dev, uint16_t mode)
         gpio_set_value(info->chipselect[i], value);
     }
 
-err_unlock:
-    sem_post(&info->lock);
     return ret;
 }
 
@@ -751,21 +741,15 @@ static int tsb_spi_setbits(struct device *dev, int nbits)
     }
 
     info = device_get_private(dev);
-    sem_wait(&info->lock);
 
-    if (info->state != TSB_SPI_STATE_LOCKED) {
-        ret = -EPERM;
-        goto err_unlock;
-    }
+    if (info->state != TSB_SPI_STATE_LOCKED)
+        return -EPERM;
 
     /* check hardware bpw capabilities */
-    if ((BIT(nbits - 1) & info->caps.bpw) == 0) {
-        ret = -ENOSYS;
-        goto err_unlock;
-    }
+    if ((BIT(nbits - 1) & info->caps.bpw) == 0)
+        return -ENOSYS;
+
     info->bpw = nbits;
-err_unlock:
-    sem_post(&info->lock);
     return ret;
 }
 
@@ -780,12 +764,21 @@ err_unlock:
  *
  * @param dev pointer to structure of device data
  * @param transfer pointer to the spi transfer request
+ * @param devid the specific chip number
+ * @param config pointer to the device_spi_device_config structure to set
+ * the configuration for the chip. If config is NULL, the configuration
+ * associated with devid will be used.
  * @return 0 on success, negative errno on error
  */
 static int tsb_spi_exchange(struct device *dev,
-                             struct device_spi_transfer *transfer)
+                            struct device_spi_transfer *transfer,
+                            uint8_t devid,
+                            struct device_spi_device_config *config)
 {
     struct tsb_spi_info *info = NULL;
+    uint8_t bpw;
+    uint16_t mode;
+    uint32_t frequency;
     int ret = 0;
 
     /* check input parameters */
@@ -799,12 +792,44 @@ static int tsb_spi_exchange(struct device *dev,
     }
 
     info = device_get_private(dev);
+
+    if (devid >= info->num_boards)
+        return -EINVAL;
+
     sem_wait(&info->lock);
 
     if (info->state != TSB_SPI_STATE_LOCKED) {
         ret = -EPERM;
         goto err_unlock;
     }
+
+    if (config == NULL) {
+        /* get master config values from devid */
+        struct device *slave_dev = info->dev_spi_board[devid];
+        device_spi_board_get_max_speed_hz(slave_dev, &frequency);
+        device_spi_board_get_bpw(slave_dev, &bpw);
+        device_spi_board_get_mode(slave_dev, &mode);
+    } else {
+        /* get master config values from provided config parameter */
+        frequency = config->max_speed_hz;
+        bpw = config->bpw;
+        mode = config->mode;
+    }
+
+    /* set master frequency */
+    ret = tsb_spi_setfrequency(dev, devid, &frequency);
+    if (ret)
+        goto err_unlock;
+
+    /* set master bits per word */
+    ret = tsb_spi_setbpw(dev, devid, bpw);
+    if (ret)
+        goto err_unlock;
+
+    /* set master mode */
+    ret = tsb_spi_setmode(dev, devid, mode);
+    if (ret)
+        goto err_unlock;
 
     if (info->bpw <= 8) {
         tsb_spi_transfer_8(info, transfer);

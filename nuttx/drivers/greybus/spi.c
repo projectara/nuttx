@@ -165,6 +165,7 @@ static uint8_t gb_spi_protocol_transfer(struct gb_operation *operation)
     struct gb_spi_transfer_request *request;
     struct gb_spi_transfer_response *response;
     struct device_spi_transfer transfer;
+    struct device_spi_device_config config;
     uint32_t size = 0, freq = 0;
     uint8_t *write_data, *read_buf;
     bool selected = false;
@@ -258,8 +259,14 @@ static uint8_t gb_spi_protocol_transfer(struct gb_operation *operation)
 
         transfer.nwords = le32_to_cpu(desc->len);
 
+        /* set SPI configuration */
+        config.max_speed_hz = freq;
+        config.mode = request->mode;
+        config.bpw = desc->bits_per_word;
+
         /* start SPI transfer */
-        ret = device_spi_exchange(bundle->dev, &transfer);
+        ret = device_spi_exchange(bundle->dev, &transfer, request->chip_select,
+                                  &config);
         if (ret) {
             goto spi_err;
         }

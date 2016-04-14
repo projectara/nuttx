@@ -67,6 +67,7 @@ static int spi_xfer(uint16_t mode, uint32_t nbits, uint32_t freq, void* txbuf,
 {
     struct device *spi_dev = NULL;
     struct device_spi_transfer transfer;
+    struct device_spi_device_config config;
     int result = 0, i = 0;
 
     printf("SPI FREQUENCY       : %u Hz\n", freq);
@@ -107,8 +108,14 @@ static int spi_xfer(uint16_t mode, uint32_t nbits, uint32_t freq, void* txbuf,
     if (result != 0) {
         goto err_config;
     }
+
+    /* fill out config */
+    config.max_speed_hz = freq;
+    config.bpw = nbits;
+    config.mode = mode;
+
     device_spi_select(spi_dev, 0);
-    device_spi_exchange(spi_dev, &transfer);
+    device_spi_exchange(spi_dev, &transfer, 0, &config);
     device_spi_deselect(spi_dev, 0);
 
     /* dump the SPI buffer data */

@@ -149,9 +149,14 @@ struct device_spi_type_ops {
     /** Perform a SPI transmission
      * @param dev Pointer to the SPI master
      * @param transfer Pointer to a SPI transfer structure
+     * @param devid the specific chip number
+     * @param config pointer to the device_spi_device_config structure to set
+     * the configuration for the chip. If config is NULL, the configuration
+     * associated with devid will be used.
      * @return 0 on success, negative errno on failure
      */
-    int (*exchange)(struct device *dev, struct device_spi_transfer *transfer);
+    int (*exchange)(struct device *dev, struct device_spi_transfer *transfer,
+                    uint8_t devid, struct device_spi_device_config *config);
     /** Get the SPI master configuration
      * @param dev Pointer to the SPI master
      * @param master_cfg Pointer to a variable whose value is to be filled out
@@ -308,10 +313,16 @@ static inline int device_spi_setbpw(struct device *dev, uint8_t devid,
 /** Perform a SPI transmission
  * @param dev Pointer to the SPI master
  * @param transfer Pointer to a SPI transfer structure
+ * @param devid the specific chip number
+ * @param config pointer to the device_spi_device_config structure to set
+ * the configuration for the chip. If config is NULL, the configuration
+ * associated with devid will be used.
  * @return 0 on success, negative errno on failure
  */
 static inline int device_spi_exchange(struct device *dev,
-                                      struct device_spi_transfer *transfer)
+                                      struct device_spi_transfer *transfer,
+                                      uint8_t devid,
+                                      struct device_spi_device_config *config)
 {
     DEVICE_DRIVER_ASSERT_OPS(dev);
 
@@ -319,7 +330,8 @@ static inline int device_spi_exchange(struct device *dev,
         return -ENODEV;
     }
     if (DEVICE_DRIVER_GET_OPS(dev, spi)->exchange) {
-        return DEVICE_DRIVER_GET_OPS(dev, spi)->exchange(dev, transfer);
+        return DEVICE_DRIVER_GET_OPS(dev, spi)->exchange(dev, transfer,
+                                                         devid, config);
     }
     return -ENOSYS;
 }

@@ -424,45 +424,33 @@ static int tsb_spi_setfrequency(struct device *dev, uint8_t devid,
 
     info = device_get_private(dev);
 
-    sem_wait(&info->lock);
+    if (devid >= info->num_boards)
+        return -EINVAL;
 
-    if (devid >= info->num_boards) {
-        ret = -EINVAL;
-        goto err_freq_set;
-    }
-
-    if (info->state != TSB_SPI_STATE_LOCKED) {
-        ret = -EPERM;
-        goto err_freq_set;
-    }
+    if (info->state != TSB_SPI_STATE_LOCKED)
+        return -EPERM;
 
     freq = *frequency;
     ret = device_spi_board_get_max_speed_hz(info->dev_spi_board[devid], &max_freq_slave);
     if (ret)
-        goto err_freq_set;
+        return ret;
 
     /* check the frequency range */
-    if (freq > SPI_MAX_FREQ || freq < SPI_MIN_FREQ || freq > max_freq_slave) {
-        ret = -EINVAL;
-        goto err_freq_set;
-    }
+    if (freq > SPI_MAX_FREQ || freq < SPI_MIN_FREQ || freq > max_freq_slave)
+        return -EINVAL;
 
     div = SPI_BUS_CLOCK / freq;
     /* the 'div' doesn't support odd number */
     div = (div + 1) & 0xFFFE;
 
-    if (div > SPI_MAX_DIV) {
-        ret = -EINVAL;
-        goto err_freq_set;
-    }
+    if (div > SPI_MAX_DIV)
+        return -EINVAL;
 
     freq = SPI_BUS_CLOCK / div;
 
     tsb_spi_write(info->reg_base, DW_SPI_BAUDR, div);
 
     *frequency = freq;
-err_freq_set:
-    sem_post(&info->lock);
     return ret;
 }
 
@@ -496,28 +484,19 @@ static int tsb_spi_setmode(struct device *dev, uint8_t devid, uint16_t mode)
 
     info = device_get_private(dev);
 
-    sem_wait(&info->lock);
+    if (devid >= info->num_boards)
+        return-EINVAL;
 
-    if (devid >= info->num_boards) {
-        ret = -EINVAL;
-        goto err_setmode;
-    }
-
-    if (info->state != TSB_SPI_STATE_LOCKED) {
-        ret = -EPERM;
-        goto err_setmode;
-    }
+    if (info->state != TSB_SPI_STATE_LOCKED)
+        return -EPERM;
 
     ret = device_spi_board_get_mode(info->dev_spi_board[devid], &mode_slave);
     if (ret)
-        goto err_setmode;
+        return ret;
 
     /* check hardware mode capabilities */
-    if (((mode & SPI_DEFAULT_MODE) != mode) &&
-            ((mode & mode_slave) != mode)) {
-        ret = -EINVAL;
-        goto err_setmode;
-    }
+    if (((mode & SPI_DEFAULT_MODE) != mode) && ((mode & mode_slave) != mode))
+        return -EINVAL;
 
     ctrl0 = tsb_spi_read(info->reg_base, DW_SPI_CTRLR0);
 
@@ -547,8 +526,6 @@ static int tsb_spi_setmode(struct device *dev, uint8_t devid, uint16_t mode)
 
     tsb_spi_write(info->reg_base, DW_SPI_CTRLR0, ctrl0);
 
-err_setmode:
-    sem_post(&info->lock);
     return ret;
 }
 
@@ -578,27 +555,19 @@ static int tsb_spi_setbpw(struct device *dev, uint8_t devid, uint8_t bpw)
 
     info = device_get_private(dev);
 
-    sem_wait(&info->lock);
+    if (devid >= info->num_boards)
+        return -EINVAL;
 
-    if (devid >= info->num_boards) {
-        ret = -EINVAL;
-        goto exit_setbit;
-    }
-
-    if (info->state != TSB_SPI_STATE_LOCKED) {
-        ret = -EPERM;
-        goto exit_setbit;
-    }
+    if (info->state != TSB_SPI_STATE_LOCKED)
+        return -EPERM;
 
     ret = device_spi_board_get_bpw(info->dev_spi_board[devid], &bpw_slave);
     if (ret)
-        goto exit_setbit;
+        return ret;
 
     /* check hardware bpw capabilities */
-    if (!(BIT(bpw - 1) & SPI_BPW_MASK) || (bpw != bpw_slave)) {
-        ret = -EINVAL;
-        goto exit_setbit;
-    }
+    if (!(BIT(bpw - 1) & SPI_BPW_MASK) || (bpw != bpw_slave))
+        return -EINVAL;
 
     ctrl0 = tsb_spi_read(info->reg_base, DW_SPI_CTRLR0);
     ctrl0 &= ~SPI_CTRLR0_DFS32_MASK;
@@ -607,8 +576,6 @@ static int tsb_spi_setbpw(struct device *dev, uint8_t devid, uint8_t bpw)
     tsb_spi_write(info->reg_base, DW_SPI_CTRLR0, ctrl0);
     info->curr_xfer.bpw = bpw;
 
-exit_setbit:
-    sem_post(&info->lock);
     return ret;
 }
 
@@ -623,15 +590,24 @@ exit_setbit:
  *
  * @param dev pointer to structure of device data
  * @param transfer pointer to the spi transfer request
+ * @param devid the specific chip number
+ * @param config pointer to the device_spi_device_config structure to set
+ * the configuration for the chip. If config is NULL, the configuration
+ * associated with devid will be used.
  * @return 0 on success, negative errno on error
  */
 static int tsb_spi_exchange(struct device *dev,
-                             struct device_spi_transfer *transfer)
+                            struct device_spi_transfer *transfer,
+                            uint8_t devid,
+                            struct device_spi_device_config *config)
 {
     struct tsb_spi_dev_info *info = NULL;
     uint32_t imr_reg, delay_time;
     int ret = 0;
     struct timespec abstime;
+    uint8_t bpw;
+    uint16_t mode;
+    uint32_t frequency;
 
     /* check input parameters */
     if (!dev || !device_get_private(dev) || !transfer) {
@@ -645,12 +621,43 @@ static int tsb_spi_exchange(struct device *dev,
 
     info = device_get_private(dev);
 
+    if (devid >= info->num_boards)
+        return -EINVAL;
+
     sem_wait(&info->lock);
 
     if (info->state != TSB_SPI_STATE_LOCKED) {
         ret = -EPERM;
         goto err_unlock;
     }
+
+    if (config == NULL) {
+        /* get master config values from devid */
+        struct device *slave_dev = info->dev_spi_board[devid];
+        device_spi_board_get_max_speed_hz(slave_dev, &frequency);
+        device_spi_board_get_bpw(slave_dev, &bpw);
+        device_spi_board_get_mode(slave_dev, &mode);
+    } else {
+        /* get master config values from provided config parameter */
+        frequency = config->max_speed_hz;
+        bpw = config->bpw;
+        mode = config->mode;
+    }
+
+    /* set master frequency */
+    ret = tsb_spi_setfrequency(dev, devid, &frequency);
+    if (ret)
+       goto err_unlock;
+
+    /* set master bits per word */
+    ret = tsb_spi_setbpw(dev, devid, bpw);
+    if (ret)
+        goto err_unlock;
+
+    /* set master mode */
+    ret = tsb_spi_setmode(dev, devid, mode);
+    if (ret)
+        goto err_unlock;
 
     info->curr_xfer.status = 0;
     info->curr_xfer.tx = transfer->txbuffer;
