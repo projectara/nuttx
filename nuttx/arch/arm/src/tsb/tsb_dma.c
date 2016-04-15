@@ -91,6 +91,11 @@ static int tsb_dma_restart_chan(struct device *dev,
 
     flags = irqsave();
 
+    /*
+     * we use list_foreach here to get to the first item in the list since
+     * there is no macro was define in list.h allowing us to access the first
+     * item in the list easily.
+     */
     list_foreach(&dma_chan->queue, next_op)
     {
         struct tsb_dma_op
@@ -111,19 +116,30 @@ static int tsb_dma_restart_chan(struct device *dev,
 
             irqrestore(flags);
 
-            retval = gdmac_start_op(dev, dma_chan, &dma_op->op, &dma_op->error);
+            retval = gdmac_prepare_op(dev, dma_chan,
+                                      &dma_op->op, &dma_op->error);
 
             flags = irqsave();
-
-            if (retval == OK) {
-                /* there is a chance the op already completed when we get to
-                 * here. If that is the case we don't need to set the op state
-                 * to running because it might already set to completed state.
-                 */
-                if (dma_op->state == TSB_DMA_OP_STATE_STARTING) {
+            /*
+             * If prepare transfer failed or some one changed the state
+             * from TSB_DMA_OP_STATE_STARTING (dequeue the op, for example),
+             * we skip starting the channel and goto recovery mode.
+             */
+            if ((retval == OK) &&
+                (dma_op->state == TSB_DMA_OP_STATE_STARTING)) {
+                retval = gdmac_start_op(dev, dma_chan, &dma_op->op);
+                if (retval == OK) {
                     dma_op->state = TSB_DMA_OP_STATE_RUNNING;
                 }
-            } else {
+            }
+
+            /*
+             * By now, we should be in running state, otherwise goto
+             * recovery mode.
+             */
+            if (dma_op->state != TSB_DMA_OP_STATE_RUNNING) {
+                dma_op->state = TSB_DMA_OP_STATE_ERROR;
+
                 gdmac_recover_from_op_error(dev, dma_chan);
             }
         }

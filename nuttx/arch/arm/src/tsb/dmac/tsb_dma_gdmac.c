@@ -380,7 +380,7 @@ struct io_to_mem_chan {
 };
 #endif
 
-typedef int (*gdmac_transfer)(struct device *dev, struct tsb_dma_chan *chan,
+typedef int (*gdmac_prepare_transfer)(struct device *dev, struct tsb_dma_chan *chan,
         struct device_dma_op *op, enum device_dma_error *error);
 
 typedef void (*gdmac_release_channel)(struct tsb_dma_chan *chan);
@@ -391,9 +391,10 @@ struct gdmac_chan {
     struct tsb_dma_chan tsb_chan;
     struct device *gdmac_dev;
     unsigned int end_of_tx_event;
-    gdmac_transfer do_dma_transfer;
+    gdmac_prepare_transfer prepare_transfer;
     gdmac_release_channel release_channel;
     gdmac_error_handler error_handler;
+    void *gdmac_start_address;
 
     uint32_t burst_size;
     uint32_t burst_len;
@@ -640,7 +641,7 @@ static inline void dma_execute_instruction(uint8_t* insn)
     putreg32(0, &dbg_regs->dbg_cmd);
 }
 
-static bool inline dma_start_thread(uint8_t thread_id, uint8_t* program_addr)
+static bool inline gdmac_start_thread(uint8_t thread_id, uint8_t* program_addr)
 {
     irqstate_t flags;
     uint8_t go_instr[] = { DMAGO(thread_id, ns, program_addr) };
@@ -769,7 +770,7 @@ void gdmac_mem2mem_release_channel(struct tsb_dma_chan *tsb_chan)
     free(gdmac_chan);
 }
 
-static int gdmac_mem2mem_transfer(struct device *dev,
+static int gdmac_mem2mem_prepare_transfer(struct device *dev,
         struct tsb_dma_chan *tsb_chan, struct device_dma_op *op,
         enum device_dma_error *error)
 {
@@ -927,12 +928,8 @@ static int gdmac_mem2mem_transfer(struct device *dev,
         pl330_code++;
     }
 
-    pl330_code = &mem2mem_chan->pl330_code[GDMAC_MAX_DESC - op->sg_count];
-    /* Start the transfer and wait for end of transfer interrupt. */
-    if (dma_start_thread(tsb_chan->chan_id, (uint8_t *)pl330_code)
-            == false) {
-        retval = -EIO;
-    }
+    gdmac_chan->gdmac_start_address =
+        &mem2mem_chan->pl330_code[GDMAC_MAX_DESC - op->sg_count];
 
     return retval;
 }
@@ -1042,7 +1039,7 @@ int tsb_gdmac_allocal_mem2Mem_chan(struct device *dev,
     }
 
     /* Set the transfer and transfer done handlers */
-    gdmac_chan->do_dma_transfer = gdmac_mem2mem_transfer;
+    gdmac_chan->prepare_transfer = gdmac_mem2mem_prepare_transfer;
     gdmac_chan->release_channel = gdmac_mem2mem_release_channel;
     gdmac_chan->error_handler = NULL;
     gdmac_chan->gdmac_dev = dev;
@@ -1060,8 +1057,8 @@ void gdmac_mem2unipro_error_handler(struct tsb_dma_chan *tsb_chan)
     struct mem_to_unipro_chan *mem2unipro_chan = &gdmac_chan->mem2unipro_chan;
     bool retval;
 
-    retval = dma_start_thread(tsb_chan->chan_id,
-                              (uint8_t *)mem2unipro_chan->flush_code);
+    retval = gdmac_start_thread(tsb_chan->chan_id,
+                                mem2unipro_chan->flush_code);
 
     if (retval == false) {
         lldbg("gdmac: failed to start recovery channel program.\n");
@@ -1084,7 +1081,7 @@ void gdmac_mem2unipro_release_channel(struct tsb_dma_chan *tsb_chan)
     free(gdmac_chan);
 }
 
-static int gdmac_mem2unipro_transfer(struct device *dev,
+static int gdmac_mem2unipro_prepare_transfer(struct device *dev,
         struct tsb_dma_chan *tsb_chan, struct device_dma_op *op,
         enum device_dma_error *error)
 {
@@ -1183,12 +1180,8 @@ static int gdmac_mem2unipro_transfer(struct device *dev,
         pl330_code++;
     }
 
-    pl330_code = &mem2unipro_chan->pl330_code[GDMAC_MAX_DESC - op->sg_count];
-    /* Start the transfer and wait for end of transfer interrupt. */
-    if (dma_start_thread(tsb_chan->chan_id, (uint8_t *)pl330_code)
-            == false) {
-        retval = -EIO;
-    }
+    gdmac_chan->gdmac_start_address =
+        &mem2unipro_chan->pl330_code[GDMAC_MAX_DESC - op->sg_count];
 
     return retval;
 }
@@ -1302,7 +1295,7 @@ int tsb_gdmac_allocal_mem2unipro_chan(struct device *dev,
     }
 
     /* Set the transfer and transfer done handlers */
-    gdmac_chan->do_dma_transfer = gdmac_mem2unipro_transfer;
+    gdmac_chan->prepare_transfer = gdmac_mem2unipro_prepare_transfer;
     gdmac_chan->release_channel = gdmac_mem2unipro_release_channel;
     gdmac_chan->error_handler = gdmac_mem2unipro_error_handler;
     gdmac_chan->gdmac_dev = dev;
@@ -1328,7 +1321,7 @@ void gdmac_mem2io_release_channel(struct tsb_dma_chan *tsb_chan)
     free(gdmac_chan);
 }
 
-static int gdmac_mem2io_transfer(struct device *dev,
+static int gdmac_mem2io_prepare_transfer(struct device *dev,
         struct tsb_dma_chan *tsb_chan, struct device_dma_op *op,
         enum device_dma_error *error)
 {
@@ -1525,12 +1518,8 @@ static int gdmac_mem2io_transfer(struct device *dev,
          pl330_code++;
      }
 
-     pl330_code = &mem2io_chan->pl330_code[GDMAC_MAX_DESC - op->sg_count];
-     /* Start the transfer and wait for end of transfer interrupt. */
-     if (dma_start_thread(tsb_chan->chan_id, (uint8_t *)pl330_code)
-             == false) {
-         retval = -EIO;
-     }
+     gdmac_chan->gdmac_start_address =
+         &mem2io_chan->pl330_code[GDMAC_MAX_DESC - op->sg_count];
 
      return retval;
 }
@@ -1644,7 +1633,7 @@ int tsb_gdmac_allocal_mem2io_chan(struct device *dev,
     }
 
     /* Set the transfer and transfer done handlers */
-    gdmac_chan->do_dma_transfer = gdmac_mem2io_transfer;
+    gdmac_chan->do_dma_transfer = gdmac_mem2io_prepare_transfer;
     gdmac_chan->release_channel = gdmac_mem2io_release_channel;
     gdmac_chan->error_handler = NULL;
     gdmac_chan->gdmac_dev = dev;
@@ -1670,7 +1659,7 @@ void gdmac_io2mem_release_channel(struct tsb_dma_chan *tsb_chan)
     free(gdmac_chan);
 }
 
-static int gdmac_io2mem_transfer(struct device *dev,
+static int gdmac_io2mem_prepare_transfer(struct device *dev,
         struct tsb_dma_chan *tsb_chan, struct device_dma_op *op,
         enum device_dma_error *error)
 {
@@ -1845,13 +1834,8 @@ static int gdmac_io2mem_transfer(struct device *dev,
          pl330_code++;
      }
 
-     pl330_code = &io2mem_chan->pl330_code[GDMAC_MAX_DESC - op->sg_count];
-
-     /* Start the transfer and wait for end of transfer interrupt. */
-     if (dma_start_thread(tsb_chan->chan_id, (uint8_t *)pl330_code)
-             == false) {
-         retval = -EIO;
-     }
+     gdmac_chan->gdmac_start_address =
+         &io2mem_chan->pl330_code[GDMAC_MAX_DESC - op->sg_count];
 
      return retval;
 }
@@ -1959,7 +1943,7 @@ int tsb_gdmac_allocal_io2mem_chan(struct device *dev,
     }
 
     /* Set the transfer and transfer done handlers */
-    gdmac_chan->do_dma_transfer = gdmac_io2mem_transfer;
+    gdmac_chan->prepare_transfer = gdmac_io2mem_prepare_transfer;
     gdmac_chan->release_channel = gdmac_io2mem_release_channel;
     gdmac_chan->error_handler = NULL;
     gdmac_chan->gdmac_dev = dev;
@@ -2039,17 +2023,40 @@ int gdmac_chan_alloc(struct device *dev, struct device_dma_params *params,
     return retval;
 }
 
-int gdmac_start_op(struct device *dev, struct tsb_dma_chan *tsb_chan,
+int gdmac_prepare_op(struct device *dev, struct tsb_dma_chan *tsb_chan,
         struct device_dma_op *op, enum device_dma_error *error)
 {
     int retval = OK;
     struct gdmac_chan *gdmac_chan =
             containerof(tsb_chan, struct gdmac_chan, tsb_chan);
 
-    if (gdmac_chan->do_dma_transfer != NULL) {
-        retval = gdmac_chan->do_dma_transfer(dev, tsb_chan, op, error);
+    if (gdmac_chan->prepare_transfer != NULL) {
+        retval = gdmac_chan->prepare_transfer(dev, tsb_chan, op, error);
     } else {
+        retval = -ENOSYS;
+    }
+
+    return retval;
+}
+
+int gdmac_start_op(struct device *dev, struct tsb_dma_chan *tsb_chan,
+        struct device_dma_op *op)
+{
+    int retval = OK;
+    struct gdmac_chan *gdmac_chan =
+            containerof(tsb_chan, struct gdmac_chan, tsb_chan);
+
+    DEBUGASSERT(gdmac_chan->gdmac_start_address != NULL);
+
+    /* Start the transfer and wait for end of transfer interrupt. */
+    if (gdmac_start_thread(tsb_chan->chan_id,
+                           gdmac_chan->gdmac_start_address) == false) {
         retval = -EIO;
+    } else {
+        /*
+         * set the GDMAC program address to null once we started the channel.
+         */
+        gdmac_chan->gdmac_start_address = NULL;
     }
 
     return retval;
