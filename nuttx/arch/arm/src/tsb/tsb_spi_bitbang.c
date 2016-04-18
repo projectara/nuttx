@@ -43,14 +43,14 @@
 
 /**
  * Since the Toshiba bridge chip doesn't support SPI master feature on ES1/ES2
- * chip, we implemented the SPI bit-bang driver to simulate SPI signal, the
- * Toshiba bridge chip has 16 GPIO pins, but GPIO#1~GPIO#15 pins has been
+ * chip, we implemented the SPI bitbang driver to simulate SPI signal. The
+ * Toshiba bridge chip has 16 GPIO pins, but GPIO#1~GPIO#15 pins have been
  * assigned to other purposes on BDB1B board.
  *
- * SPI bit-bang driver need 4 GPIO pins to simulate SPI signal, the BDB1B board
- * can't provide enough free GPIO pins for SPI bit-bang driver used.
- * So I shared the JTAG debug pins (GPIO#10~GPIO#12) and GPIO#0 for SPI
- * bit-bang driver used.
+ * The SPI bitbang driver needs 4 GPIO pins to simulate SPI signal and the
+ * BDB1B board can't provide enough free GPIO pins for the SPI bitbang driver
+ * to be used. So I shared the JTAG debug pins (GPIO#10~GPIO#12) and GPIO#0 for SPI
+ * bitbang driver used.
  */
 #define SPI_SDO             10          /* GPIO 10 */
 #define SPI_SDI             0           /* GPIO  0 */
@@ -59,11 +59,10 @@
 
 #define NUMOFCS             1
 
-/**
- * Because we using a simple delay loops mechanism to simulate SPI signal, so
- * some extra operation will impact the SPI timing, we need to eliminate these
- * factors, so I minus these bit transfer overhead.
- * I using oscilloscope to calibrate XFER_OVERHEAD value to meet the SPI timing
+/* Because we use a simple delay loop mechanism to simulate the SPI signal,
+ * any extra operation will impact the SPI timing. We need to eliminate such
+ * factors, and to do so I minused out the bit transfer overhead, using an
+ * oscilloscope to calibrate the XFER_OVERHEAD value to meet the SPI timing
  * signal.
  */
 #define XFER_OVERHEAD       3           /* 3 microseconds */
@@ -97,7 +96,7 @@ struct tsb_spi_info {
     uint32_t bpw;
     /** SPI frequency */
     uint32_t frequency;
-    /** hold time in microseconds */
+    /** holdtime in microseconds */
     uint32_t holdtime;
 
     /** selected device id */
@@ -116,8 +115,8 @@ struct tsb_spi_info {
 /**
  * @brief Hardware initialization
  *
- * The function initializes the GPIO pins used in the bit-bang interface and
- * also assigned a default output value for SPI signal.
+ * The function initializes the GPIO pins used in the bitbang interface and
+ * also assigns a default output value for SPI signal.
  *
  * @param dev pointer to structure of device data
  * @return 0 on success, negative errno on error
@@ -154,7 +153,7 @@ static int tsb_spi_hw_init(struct device *dev)
 }
 
 /**
- * @brief Hardware de-initialization
+ * @brief Hardware deinitialization
  *
  * @param dev pointer to structure of device data
  * @return 0 on success, negative errno on error
@@ -184,7 +183,7 @@ static int tsb_spi_hw_deinit(struct device *dev) {
 /**
  * @brief Exchange one bit in mode 0
  *
- * The function simulates SPI one bit transaction function in SPI mode 0.
+ * The function simulates a one bit transaction function in SPI mode 0.
  *
  * @param outdata data for SPI output
  * @param holdtime SPI hold time timing
@@ -207,7 +206,7 @@ static uint8_t tsb_spi_bitexchange0(uint32_t outdata, uint32_t holdtime, bool lo
 /**
  * @brief Exchange one bit in mode 1
  *
- * The function simulates SPI one bit transaction function in SPI mode 1.
+ * The function simulates a one bit transaction function in SPI mode 1.
  *
  * @param outdata data for SPI output
  * @param holdtime SPI hold time timing
@@ -231,7 +230,7 @@ static uint8_t tsb_spi_bitexchange1(uint32_t outdata, uint32_t holdtime, bool lo
 /**
  * @brief Exchange one bit in mode 2
  *
- * The function simulates SPI one bit transaction function in SPI mode 2.
+ * The function simulates a one bit transaction function in SPI mode 2.
  *
  * @param outdata data for SPI output
  * @param holdtime SPI hold time timing
@@ -255,7 +254,7 @@ static uint8_t tsb_spi_bitexchange2(uint32_t outdata, uint32_t holdtime, bool lo
 /**
  * @brief Exchange one bit in mode 3
  *
- * The function simulates SPI one bit transaction function in SPI mode 3.
+ * The function simulates a one bit transaction function in SPI mode 3.
  *
  * @param outdata data for SPI output
  * @param holdtime SPI hold time timing
@@ -279,7 +278,7 @@ static uint8_t tsb_spi_bitexchange3(uint32_t outdata, uint32_t holdtime, bool lo
 /**
  * @brief 8-bits SPI data transfer
  *
- * The function transfer one word (8-bits) to SPI hardware
+ * The function transfers one word (8 bits) to SPI hardware
  *
  * @param info pointer to the data of tsb_spi_info
  * @param transfer pointer to the spi transfer request
@@ -327,7 +326,7 @@ static int tsb_spi_transfer_8(struct tsb_spi_info *info,
 /**
  * @brief 16-bits SPI data transfer
  *
- * The function transfer one word (16-bits) to SPI hardware
+ * The function transfers one word (16 bits) to SPI hardware
  *
  * @param info pointer to the data of tsb_spi_info
  * @param transfer pointer to the spi transfer request
@@ -374,7 +373,7 @@ static int tsb_spi_transfer_16(struct tsb_spi_info *info,
 /**
  * @brief 32-bits SPI data transfer
  *
- * The function transfer one word (32-bits) to SPI hardware
+ * The function transfers one word (32 bits) to SPI hardware
  *
  * @param info pointer to the data of tsb_spi_info
  * @param transfer pointer to the spi transfer request
@@ -424,9 +423,9 @@ static int tsb_spi_transfer_32(struct tsb_spi_info *info,
  * On SPI buses where there are multiple devices, it will be necessary to lock
  * SPI to have exclusive access to the buses for a sequence of transfers.
  * The bus should be locked before the chip is selected. After locking the SPI
- * bus, the caller should then also call the setfrequency(), setbits() , and
+ * bus, the caller should then also call the setfrequency(), setbits(), and
  * setmode() methods to make sure that the SPI is properly configured for the
- * device. If the SPI buses is being shared, then it may have been left in an
+ * device. If the SPI bus is being shared, then it may have been left in an
  * incompatible state.
  *
  * @param dev pointer to structure of device data
@@ -489,7 +488,7 @@ static int tsb_spi_unlock(struct device *dev)
  *
  * The implementation of this method must include handshaking. If a device is
  * selected, it must hold off all the other attempts to select the device
- * until the device is deselected. This function should be called after lock(),
+ * until the device is deselected. This function should be called after lock();
  * if the driver isn’t in lock state, it returns an error code to notify a
  * problem.
  *
@@ -534,7 +533,7 @@ static int tsb_spi_select(struct device *dev, int devid)
     }
 
     for (i = 0; i < info->caps.csnum; i++) {
-        /* only selected pin can be actived */
+        /* only selected pin can be activated */
         gpio_set_value(info->chipselect[i], (i == devid)? selected : !selected);
     }
 err_unlock:
@@ -547,7 +546,7 @@ err_unlock:
  *
  * The implementation of this method must include handshaking. If a device is
  * selected, it must hold off all the other attempts to select the device
- * until the device is deselected. This function should be called after lock(),
+ * until the device is deselected. This function should be called after lock();
  * if the driver isn’t in lock state, it returns an error code to notify a
  * problem.
  *
@@ -592,7 +591,7 @@ static int tsb_spi_deselect(struct device *dev, int devid)
     }
 
     for (i = 0; i < info->caps.csnum; i++) {
-        /* deactive all chip-select pin */
+        /* deactivate all chip-select pins */
         gpio_set_value(info->chipselect[i], selected);
     }
 err_unlock:
@@ -601,13 +600,13 @@ err_unlock:
 }
 
 /**
- * @brief Configure SPI clock.
+ * @brief Configure SPI clock
  *
  * If SPI hardware doesn’t support this frequency value, this function should
- * find the nearest lower frequency in which hardware supported and then
+ * find the nearest lower frequency that is hardware supported and then
  * configure SPI clock to this value. It will return the actual frequency
- * selected value back to the caller via parameter frequency.
- * This function should be called after lock(), if the driver is not in lock
+ * value back to the caller via parameter frequency.
+ * This function should be called after lock(); if the driver is not in lock
  * state, it returns an error code to notify a problem.
  *
  * @param dev pointer to structure of device data
@@ -630,7 +629,7 @@ static int tsb_spi_setfrequency(struct device *dev, uint32_t *frequency)
 
     info->frequency = *frequency;
 
-    /* We only supported SPI frequency from 1KHz to 500KHz */
+    /* We support SPI frequency range from 1kHz to 500kHz */
     if (info->frequency <= 1000) {
         info->frequency = 1000;
     }
@@ -652,15 +651,14 @@ static int tsb_spi_setfrequency(struct device *dev, uint32_t *frequency)
 }
 
 /**
- * @brief Configure SPI mode.
+ * @brief Configure SPI mode
  *
- * To configure SPI configuration such as clock polarity and phase via the mode
- * parameter. Other possible definition of SPI mode can be found in SPI mode
- * definition. If the value of mode parameter is out of SPI mode definition or
- * this mode isn’t supported by the current hardware, this function should
- * return -ENOSYS error code.
- * This function should be called after lock(), if driver is not in lock state,
- * function returns -EPERM error code.
+ * The mode parameter is used to configure the clock polarity and phase of the
+ * SPI master. This function will accept a value for one of the standard SPI
+ * modes. If the value of the mode parameter is out of bounds or the requested
+ * SPI mode is not supported by this hardware, an -ENOSYS error will be
+ * returned. This function should be called after lock(); if the driver is not
+ * in a locked state, this function will return -EPERM.
  *
  * @param dev pointer to structure of device data
  * @param mode SPI protocol mode requested
@@ -706,10 +704,10 @@ static int tsb_spi_setmode(struct device *dev, uint16_t mode)
     /* After changed SPI mode, we need to change the CS default output level */
     for (i = 0; i < info->caps.csnum; i++) {
         if (mode & SPI_MODE_CS_HIGH) {
-            /* if not selected, set default CS outpot level to low */
+            /* if not selected, set default CS output level to low */
             value = (i == info->selected)? 1 : 0;
         } else {
-            /* if not selected, set default CS outpot level to high */
+            /* if not selected, set default CS output level to high */
             value = (i == info->selected)? 0 : 1;
         }
         gpio_set_value(info->chipselect[i], value);
@@ -719,14 +717,14 @@ static int tsb_spi_setmode(struct device *dev, uint16_t mode)
 }
 
 /**
- * @brief Set the number of bits per word in transmission.
+ * @brief Set the number of bits per word in transmission
  *
- * This function should be called after lock(), if driver is not in lock state,
+ * This function should be called after lock(); if driver is not in lock state,
  * this function returns -EPERM error code.
  *
  * @param dev pointer to structure of device data
  * @param nbits The number of bits requested. The nbits value range is from
- *        1 to 32. The generic nbits value is 8, 16, 32, but this value still
+ *        1 to 32. The generic nbits value is 8, 16, 32, but the value still
  *        depends on hardware supported.
  * @return 0 on success, negative errno on error
  */
@@ -757,9 +755,9 @@ static int tsb_spi_setbits(struct device *dev, int nbits)
  * @brief Exchange a block of data from SPI
  *
  * Device driver uses this function to transfer and receive data from SPI bus.
- * This function should be called after lock() , if the driver is not in lock
+ * This function should be called after lock(); if the driver is not in lock
  * state, it returns -EPERM error code.
- * The transfer structure is consists of the read/write buffer,transfer length,
+ * The transfer structure consists of the read/write buffer, transfer length,
  * transfer flags and callback function.
  *
  * @param dev pointer to structure of device data
@@ -847,7 +845,7 @@ err_unlock:
 }
 
 /**
- * @brief Get SPI device driver hardware capabilities information.
+ * @brief Get SPI device driver hardware capabilities information
  *
  * This function can be called whether lock() has been called or not.
  *
@@ -877,9 +875,9 @@ static int tsb_spi_getcaps(struct device *dev, struct device_spi_caps *caps)
  * @brief Open SPI device
  *
  * This function is called when the caller is preparing to use this device
- * driver. This function should be called after probe () function and need to
- * check whether the driver already open or not. If driver was opened, it needs
- * to return an error code to the caller to notify the driver was opened.
+ * driver. It should be called after probe() function and needs to
+ * check whether the driver is already open. If driver was opened, it needs
+ * to return an error code to the caller.
  *
  * @param dev pointer to structure of device data
  * @return 0 on success, negative errno on error
@@ -911,10 +909,10 @@ err_unlock:
 /**
  * @brief Close SPI device
  *
- * This function is called when the caller no longer using this driver. It
- * should release or close all resources that allocated by the open() function.
- * This function should be called after the open() function. If the device
- * is not opened yet, this function should return without any operations.
+ * This function is called when the caller is no longer using this driver. It
+ * should release or close all resources that were allocated by the open()
+ * function. This function should be called after the open() function. If the
+ * device is not opened yet, this function should return without any operations.
  *
  * @param dev pointer to structure of device data
  */
@@ -935,8 +933,8 @@ static void tsb_spi_dev_close(struct device *dev)
  * @brief Probe SPI device
  *
  * This function is called by the system to register the driver when the system
- * boot up. This function allocates memory for the private SPI device
- * information, and then setup the hardware resource and interrupt handler.
+ * boots up. This function allocates memory for the private SPI device
+ * information, and then sets up the hardware resource and interrupt handler.
  *
  * @param dev pointer to structure of device data
  * @return 0 on success, negative errno on error
@@ -960,7 +958,7 @@ static int tsb_spi_dev_probe(struct device *dev)
     info->state = TSB_SPI_STATE_CLOSED;
     device_set_private(dev, info);
 
-    /* setup spi hardware capabilities */
+    /* set up spi hardware capabilities */
     caps = &info->caps;
     caps->modes = SPI_MODE_CPHA |
                   SPI_MODE_CPOL |
@@ -989,7 +987,7 @@ static int tsb_spi_dev_probe(struct device *dev)
  *
  * This function is called by the system to unregister the driver. It should
  * release the hardware resource and interrupt setting, and then free memory
- * that allocated by the probe() function.
+ * that was allocated by the probe() function.
  * This function should be called after probe() function. If driver was opened,
  * this function should call close() function before releasing resources.
  *

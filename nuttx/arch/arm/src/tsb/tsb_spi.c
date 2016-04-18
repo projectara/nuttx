@@ -196,7 +196,7 @@ struct tsb_spi_dev_info {
 };
 
 /**
- * @brief Read value from register.
+ * @brief Read value from register
  *
  * This function returns register content by basic register read function.
  *
@@ -211,13 +211,13 @@ static uint32_t tsb_spi_read(uint32_t base, uint32_t addr)
 }
 
 /**
- * @brief Write value to register.
+ * @brief Write value to register
  *
- * This function write value to register by basic register write function.
+ * This function writes value to register by basic register write function.
  *
  * @param base Base address of this Controller.
  * @param addr Specific register of offset.
- * @param val The content will be write for Specific register.
+ * @param val The content will be written for a specific register.
  */
 static void tsb_spi_write(uint32_t base, uint32_t addr, uint32_t val)
 {
@@ -230,9 +230,9 @@ static void tsb_spi_write(uint32_t base, uint32_t addr, uint32_t val)
  * On SPI buses where there are multiple devices, it will be necessary to lock
  * SPI to have exclusive access to the buses for a sequence of transfers.
  * The bus should be locked before the chip is selected. After locking the SPI
- * bus, the caller should then also call the setfrequency(), setbpw() , and
+ * bus, the caller should then also call the setfrequency(), setbpw(), and
  * setmode() methods to make sure that the SPI is properly configured for the
- * device. If the SPI buses is being shared, then it may have been left in an
+ * device. If the SPI bus is being shared, then it may have been left in an
  * incompatible state.
  *
  * @param dev pointer to structure of device data
@@ -301,7 +301,7 @@ static int tsb_spi_unlock(struct device *dev)
  *
  * The implementation of this method must include handshaking. If a device is
  * selected, it must hold off all the other attempts to select the device
- * until the device is deselected. This function should be called after lock(),
+ * until the device is deselected. This function should be called after lock();
  * if the driver isn’t in lock state, it returns an error code to notify a
  * problem.
  *
@@ -336,7 +336,7 @@ static int tsb_spi_select(struct device *dev, uint8_t devid)
     /* from the SPI master's point of view, we fake that we're always talking to
      * slave #1. The trick is that by default, CS1 doesn't belong to the SPI
      * master, so the transaction will still be initiated and meanwhile we can
-     * manually setup the devid with GPIOs the way we want. */
+     * manually set up the devid with GPIOs the way we want. */
     tsb_spi_write(info->reg_base, DW_SPI_SER, 0x2);
 #else
     /* otherwise we really select the slave through the SPI master */
@@ -356,7 +356,7 @@ err_select:
  *
  * The implementation of this method must include handshaking. If a device is
  * selected, it must hold off all the other attempts to select the device
- * until the device is deselected. This function should be called after lock(),
+ * until the device is deselected. This function should be called after lock();
  * if the driver isn’t in lock state, it returns an error code to notify a
  * problem.
  *
@@ -394,13 +394,13 @@ err_deselect:
 }
 
 /**
- * @brief Configure SPI clock.
+ * @brief Configure SPI clock
  *
  * If SPI hardware doesn’t support this frequency value, this function should
- * find the nearest lower frequency in which hardware supported and then
+ * find the nearest lower frequency that is hardware supported and then
  * configure SPI clock to this value. It will return the actual frequency
  * selected value back to the caller via parameter frequency.
- * This function should be called after lock(), if the driver is not in lock
+ * This function should be called after lock(); if the driver is not in lock
  * state, it returns an error code to notify a problem.
  *
  * @param dev pointer to structure of device data
@@ -440,7 +440,7 @@ static int tsb_spi_setfrequency(struct device *dev, uint8_t devid,
         return -EINVAL;
 
     div = SPI_BUS_CLOCK / freq;
-    /* the 'div' doesn't support odd number */
+    /* the 'div' doesn't support odd numbers */
     div = (div + 1) & 0xFFFE;
 
     if (div > SPI_MAX_DIV)
@@ -455,15 +455,14 @@ static int tsb_spi_setfrequency(struct device *dev, uint8_t devid,
 }
 
 /**
- * @brief Configure SPI mode.
+ * @brief Configure SPI mode
  *
- * To configure SPI configuration such as clock polarity and phase via the mode
- * parameter. Other possible definition of SPI mode can be found in SPI mode
- * definition. If the value of mode parameter is out of SPI mode definition or
- * this mode isn’t supported by the current hardware, this function should
- * return -EOPNOTSUPP error code.
- * This function should be called after lock(), if driver is not in lock state,
- * function returns -EPERM error code.
+ * The mode parameter is used to configure the clock polarity and phase of the
+ * SPI master. This function will accept a value for one of the standard SPI
+ * modes. If the value of the mode parameter is out of bounds or the requested
+ * SPI mode is not supported by this hardware, an -ENOSYS error will be
+ * returned. This function should be called after lock(); if the driver is not
+ * in a locked state, this function will return -EPERM.
  *
  * @param dev pointer to structure of device data
  * @param devid the specific chip number
@@ -530,9 +529,9 @@ static int tsb_spi_setmode(struct device *dev, uint8_t devid, uint16_t mode)
 }
 
 /**
- * @brief Set the number of bits per word in transmission.
+ * @brief Set the number of bits per word in transmission
  *
- * This function should be called after lock(), if driver is not in lock state,
+ * This function should be called after lock(); if driver is not in lock state,
  * this function returns -EPERM error code.
  *
  * @param dev pointer to structure of device data
@@ -583,9 +582,9 @@ static int tsb_spi_setbpw(struct device *dev, uint8_t devid, uint8_t bpw)
  * @brief Exchange a block of data from SPI
  *
  * Device driver uses this function to transfer and receive data from SPI bus.
- * This function should be called after lock() , if the driver is not in lock
+ * This function should be called after lock(); if the driver is not in lock
  * state, it returns -EPERM error code.
- * The transfer structure is consists of the read/write buffer, transfer
+ * The transfer structure consists of the read/write buffer, transfer
  * length, transfer flags and callback function.
  *
  * @param dev pointer to structure of device data
@@ -663,7 +662,7 @@ static int tsb_spi_exchange(struct device *dev,
     info->curr_xfer.tx = transfer->txbuffer;
     info->curr_xfer.rx = transfer->rxbuffer;
 
-    /* event has read request, we still need to read data because SPI data
+    /* event has read request; we still need to read data because of SPI data
      * exchange behavior */
     info->curr_xfer.tx_remaining = transfer->nwords;
     info->curr_xfer.rx_remaining = transfer->nwords;
@@ -791,7 +790,7 @@ int tsb_spi_process_tx(struct tsb_spi_dev_info *info)
  *
  * @param irq interrupt number
  * @param context argument for interrupt handler
- * @param priv Attached private data
+ * @param priv attached private data
  * @return 0 if successful, negative error code otherwise.
  */
 static int tsb_spi_irq_handler(int irq, void *context, void *priv)
@@ -851,7 +850,7 @@ static int tsb_spi_irq_handler(int irq, void *context, void *priv)
 }
 
 /**
- * @brief Get SPI device driver hardware capabilities information.
+ * @brief Get SPI device driver hardware capabilities information
  *
  * This function can be called whether lock() has been called or not.
  *
@@ -885,14 +884,14 @@ static int tsb_spi_get_master_config(struct device *dev,
 }
 
 /**
- * @brief Get SPI specific chip configured information.
+ * @brief Get SPI specific chip-configured information
  *
  * This function can be called whether lock() has been called or not.
  *
  * @param dev pointer to structure of device data
  * @param devid the specific chip number
- * @param device_cfg pointer to the device_spi_device_config structure to receive
- * the configuration that be set in chip.
+ * @param device_cfg pointer to the device_spi_device_config structure to
+ * receive the configuration that is set in chip.
  * @return 0 on success, negative errno on error
  */
 static int tsb_spi_get_device_config(struct device *dev, uint8_t devid,
@@ -960,7 +959,7 @@ static int tsb_spi_hw_init(struct tsb_spi_dev_info *info)
     uint32_t ctrl0;
     int ret = 0;
 
-    /* Enable Clock */
+    /* Enable clock */
     tsb_clk_enable(TSB_CLK_SPIP);
     tsb_clk_enable(TSB_CLK_SPIS);
 
@@ -979,7 +978,7 @@ static int tsb_spi_hw_init(struct tsb_spi_dev_info *info)
     /* Clear interrupt status register */
     tsb_spi_read(info->reg_base, DW_SPI_ICR);
 
-    /* The SPI support both transmit and receiver mode */
+    /* SPI supports both transmit and receiver mode */
     ctrl0 = tsb_spi_read(info->reg_base, DW_SPI_CTRLR0);
     ctrl0 &= ~SPI_CTRL0_TMOD_MASK;
     tsb_spi_write(info->reg_base, DW_SPI_CTRLR0, ctrl0);
@@ -1011,9 +1010,9 @@ err_req_pinshare:
  * @brief Open SPI device
  *
  * This function is called when the caller is preparing to use this device
- * driver. This function should be called after probe () function and need to
- * check whether the driver already open or not. If driver was opened, it needs
- * to return an error code to the caller to notify the driver was opened.
+ * driver. This function should be called after probe() function and needs to
+ * check whether the driver is already open. If driver was opened, it needs
+ * to return an error code to the caller.
  *
  * @param dev pointer to structure of device data
  * @return 0 on success, negative errno on error
@@ -1085,10 +1084,10 @@ err_open:
 /**
  * @brief Close SPI device
  *
- * This function is called when the caller no longer using this driver. It
- * should release or close all resources that allocated by the open() function.
- * This function should be called after the open() function. If the device
- * is not opened yet, this function should return without any operations.
+ * This function is called when the caller is no longer using this driver. It
+ * should release or close all resources that were allocated by the open()
+ * function. This function should be called after the open() function. If the
+ * device is not opened yet, this function should return without any operations.
  *
  * @param dev pointer to structure of device data
  */
@@ -1240,8 +1239,8 @@ static int tsb_spi_pm_prepare(struct pm_callback_s *cb,
  * @brief Probe SPI device
  *
  * This function is called by the system to register the driver when the system
- * boot up. This function allocates memory for the private SPI device
- * information, and then setup the hardware resource and interrupt handler.
+ * boots up. This function allocates memory for the private SPI device
+ * information, and then sets up the hardware resource and interrupt handler.
  *
  * @param dev pointer to structure of device data
  * @return 0 on success, negative errno on error
@@ -1298,7 +1297,7 @@ err_freemem:
  *
  * This function is called by the system to unregister the driver. It should
  * release the hardware resource and interrupt setting, and then free memory
- * that allocated by the probe() function.
+ * that was allocated by the probe() function.
  * This function should be called after probe() function. If driver was opened,
  * this function should call close() function before releasing resources.
  *
