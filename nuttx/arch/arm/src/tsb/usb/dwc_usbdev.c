@@ -212,6 +212,13 @@ int dwc_submit(struct usbdev_ep_s *usb_ep, struct usbdev_req_s *req)
 
     dma_addr = (dwc_dma_t) req->buf;
 
+#ifdef DWC_ENHANCED_SG_DMA_OUT
+    /* DMA arbiter workaround: nak on next out transfers */
+    if (USB_ISEPIN(usb_ep->eplog)) {
+        ep_out_global_snak(pcd->core_if);
+    }
+#endif
+
     zero = (req->flags & USBDEV_REQFLAGS_NULLPKT) ? 1 : 0;
     retval = dwc_otg_pcd_ep_queue(pcd, usb_ep, req->buf, dma_addr,
                                   req->len, zero, req,
@@ -371,6 +378,10 @@ struct usbdev_ep_s *dwc_allocep(struct usbdev_s *dev, uint8_t epno,
         }
     }
     privep = &priv->eplist[epno];
+    if (in) {
+        privep->ep.eplog |= USB_DIR_IN;
+    }
+
 
     return &privep->ep;
 }
@@ -464,6 +475,7 @@ static int _setup(dwc_otg_pcd_t * pcd, uint8_t * bytes)
 static int _complete(dwc_otg_pcd_t * pcd, void *ep_handle,
                      void *req_handle, int32_t status, uint32_t actual)
 {
+    struct usbdev_ep_s *usb_ep = ep_handle;
     struct usbdev_req_s *req = (struct usbdev_req_s *)req_handle;
 
     if (req && req->callback) {
@@ -487,9 +499,16 @@ static int _complete(dwc_otg_pcd_t * pcd, void *ep_handle,
 
         }
 
+#ifdef DWC_ENHANCED_SG_DMA_OUT
+    /* DMA arbiter workaround: resume out transfers */
+    if (USB_ISEPIN(usb_ep->eplog)) {
+        ep_out_global_cnak(pcd->core_if);
+    }
+#endif
+
         req->xfrd = actual;
         DWC_SPINUNLOCK(pcd->lock);
-        req->callback(ep_handle, req);
+        req->callback(usb_ep, req);
         DWC_SPINLOCK(pcd->lock);
     }
 
