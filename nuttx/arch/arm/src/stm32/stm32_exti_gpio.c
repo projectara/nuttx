@@ -98,24 +98,43 @@ struct stm32_exti_handlers_priv_t {
     uint32_t pinset;
 };
 
+/* debounce handler prototype */
+static int stm32_exti_debounce_isr(int irq, void *context, void *priv);
+
 /* Handlers that pass private data ptr */
 static struct stm32_exti_handlers_priv_t stm32_exti_handlers[16] = {
-    { .debounce.gpio = 0, .debounce.ms = 0, .debounce.isr = NULL },
-    { .debounce.gpio = 1, .debounce.ms = 0, .debounce.isr = NULL },
-    { .debounce.gpio = 2, .debounce.ms = 0, .debounce.isr = NULL },
-    { .debounce.gpio = 3, .debounce.ms = 0, .debounce.isr = NULL },
-    { .debounce.gpio = 4, .debounce.ms = 0, .debounce.isr = NULL },
-    { .debounce.gpio = 5, .debounce.ms = 0, .debounce.isr = NULL },
-    { .debounce.gpio = 6, .debounce.ms = 0, .debounce.isr = NULL },
-    { .debounce.gpio = 7, .debounce.ms = 0, .debounce.isr = NULL },
-    { .debounce.gpio = 8, .debounce.ms = 0, .debounce.isr = NULL },
-    { .debounce.gpio = 9, .debounce.ms = 0, .debounce.isr = NULL },
-    { .debounce.gpio = 10, .debounce.ms = 0, .debounce.isr = NULL },
-    { .debounce.gpio = 11, .debounce.ms = 0, .debounce.isr = NULL },
-    { .debounce.gpio = 12, .debounce.ms = 0, .debounce.isr = NULL },
-    { .debounce.gpio = 13, .debounce.ms = 0, .debounce.isr = NULL },
-    { .debounce.gpio = 14, .debounce.ms = 0, .debounce.isr = NULL },
-    { .debounce.gpio = 15, .debounce.ms = 0, .debounce.isr = NULL },
+    { .debounce.gpio = 0, .debounce.ms = 0,
+        .debounce.isr = stm32_exti_debounce_isr },
+    { .debounce.gpio = 1, .debounce.ms = 0,
+        .debounce.isr = stm32_exti_debounce_isr },
+    { .debounce.gpio = 2, .debounce.ms = 0,
+        .debounce.isr = stm32_exti_debounce_isr },
+    { .debounce.gpio = 3, .debounce.ms = 0,
+        .debounce.isr = stm32_exti_debounce_isr },
+    { .debounce.gpio = 4, .debounce.ms = 0,
+        .debounce.isr = stm32_exti_debounce_isr },
+    { .debounce.gpio = 5, .debounce.ms = 0,
+        .debounce.isr = stm32_exti_debounce_isr },
+    { .debounce.gpio = 6, .debounce.ms = 0,
+        .debounce.isr = stm32_exti_debounce_isr },
+    { .debounce.gpio = 7, .debounce.ms = 0,
+        .debounce.isr = stm32_exti_debounce_isr },
+    { .debounce.gpio = 8, .debounce.ms = 0,
+        .debounce.isr = stm32_exti_debounce_isr },
+    { .debounce.gpio = 9, .debounce.ms = 0,
+        .debounce.isr = stm32_exti_debounce_isr },
+    { .debounce.gpio = 10, .debounce.ms = 0,
+        .debounce.isr = stm32_exti_debounce_isr },
+    { .debounce.gpio = 11, .debounce.ms = 0,
+        .debounce.isr = stm32_exti_debounce_isr },
+    { .debounce.gpio = 12, .debounce.ms = 0,
+        .debounce.isr = stm32_exti_debounce_isr },
+    { .debounce.gpio = 13, .debounce.ms = 0,
+        .debounce.isr = stm32_exti_debounce_isr },
+    { .debounce.gpio = 14, .debounce.ms = 0,
+        .debounce.isr = stm32_exti_debounce_isr },
+    { .debounce.gpio = 15, .debounce.ms = 0,
+        .debounce.isr = stm32_exti_debounce_isr },
 };
 
 /****************************************************************************
@@ -130,6 +149,46 @@ static struct stm32_exti_handlers_priv_t stm32_exti_handlers[16] = {
  * Interrupt Service Routines - Dispatchers
  ****************************************************************************/
 
+static int stm32_exti_debounce_isr(int irq, void *context, void *priv)
+{
+    int ret = OK;
+
+    /* preserve ISR context */
+    stm32_exti_handlers[irq].debounce.context = context;
+
+    bool value = stm32_gpioread(stm32_exti_handlers[irq].pinset);
+
+    /* check if GPIO value is stable */
+    if (debounce_gpio(&stm32_exti_handlers[irq].debounce, value)) {
+
+        enum debounce_state state = stm32_exti_handlers[irq].debounce.db_state;
+        bool risingedge = stm32_exti_handlers[irq].risingedge;
+        bool fallingedge = stm32_exti_handlers[irq].fallingedge;
+
+        if (risingedge && state == DB_ST_ACTIVE_STABLE)
+            goto call_irq;
+
+        if (fallingedge && state == DB_ST_INACTIVE_STABLE)
+            goto call_irq;
+    }
+
+    return ret;
+
+call_irq:
+    /* reset debounce state */
+    stm32_exti_handlers[irq].debounce.db_state = DB_ST_INVALID;
+
+    /* send off callback function */
+    if (stm32_exti_handlers[irq].stm32_exti_callback) {
+        ret = stm32_exti_handlers[irq].stm32_exti_callback(
+                                                stm32_exti_handlers[irq].pin,
+                                                context,
+                                                stm32_exti_handlers[irq].priv);
+    }
+
+    return ret;
+}
+
 static int stm32_exti0_isr(int irq, void *context, void *priv)
 {
   int ret = OK;
@@ -138,12 +197,17 @@ static int stm32_exti0_isr(int irq, void *context, void *priv)
 
   putreg32(0x0001, STM32_EXTI_PR);
 
-  /* And dispatch the interrupt to the handler */
-  if (stm32_exti_handlers[0].stm32_exti_callback) {
-    ret = stm32_exti_handlers[0].stm32_exti_callback(
+  if (stm32_exti_handlers[0].debounce.ms == 0) {
+    /* And dispatch the interrupt to the handler */
+    if (stm32_exti_handlers[0].stm32_exti_callback) {
+        ret = stm32_exti_handlers[0].stm32_exti_callback(
                                                 stm32_exti_handlers[0].pin,
                                                 context,
                                                 stm32_exti_handlers[0].priv);
+    }
+  } else {
+      /* call debouncing handler */
+      ret = stm32_exti_debounce_isr(stm32_exti_handlers[0].pin, context, NULL);
   }
 
   return ret;
@@ -157,12 +221,17 @@ static int stm32_exti1_isr(int irq, void *context, void *priv)
 
   putreg32(0x0002, STM32_EXTI_PR);
 
-  /* And dispatch the interrupt to the handler */
-  if (stm32_exti_handlers[1].stm32_exti_callback) {
-    ret = stm32_exti_handlers[1].stm32_exti_callback(
+  if (stm32_exti_handlers[1].debounce.ms == 0) {
+    /* And dispatch the interrupt to the handler */
+    if (stm32_exti_handlers[1].stm32_exti_callback) {
+        ret = stm32_exti_handlers[1].stm32_exti_callback(
                                                 stm32_exti_handlers[1].pin,
                                                 context,
                                                 stm32_exti_handlers[1].priv);
+    }
+  } else {
+      /* call debouncing handler */
+      ret = stm32_exti_debounce_isr(stm32_exti_handlers[1].pin, context, NULL);
   }
 
   return ret;
@@ -176,12 +245,17 @@ static int stm32_exti2_isr(int irq, void *context, void *priv)
 
   putreg32(0x0004, STM32_EXTI_PR);
 
-  /* And dispatch the interrupt to the handler */
-  if (stm32_exti_handlers[2].stm32_exti_callback) {
-    ret = stm32_exti_handlers[2].stm32_exti_callback(
+  if (stm32_exti_handlers[2].debounce.ms == 0) {
+    /* And dispatch the interrupt to the handler */
+    if (stm32_exti_handlers[2].stm32_exti_callback) {
+        ret = stm32_exti_handlers[2].stm32_exti_callback(
                                                 stm32_exti_handlers[2].pin,
                                                 context,
                                                 stm32_exti_handlers[2].priv);
+    }
+  } else {
+      /* call debouncing handler */
+      ret = stm32_exti_debounce_isr(stm32_exti_handlers[2].pin, context, NULL);
   }
 
   return ret;
@@ -195,12 +269,17 @@ static int stm32_exti3_isr(int irq, void *context, void *priv)
 
   putreg32(0x0008, STM32_EXTI_PR);
 
-  /* And dispatch the interrupt to the handler */
-  if (stm32_exti_handlers[3].stm32_exti_callback) {
-    ret = stm32_exti_handlers[3].stm32_exti_callback(
+  if (stm32_exti_handlers[3].debounce.ms == 0) {
+    /* And dispatch the interrupt to the handler */
+    if (stm32_exti_handlers[3].stm32_exti_callback) {
+        ret = stm32_exti_handlers[3].stm32_exti_callback(
                                                 stm32_exti_handlers[3].pin,
                                                 context,
                                                 stm32_exti_handlers[3].priv);
+    }
+  } else {
+      /* call debouncing handler */
+      ret = stm32_exti_debounce_isr(stm32_exti_handlers[3].pin, context, NULL);
   }
 
   return ret;
@@ -214,12 +293,17 @@ static int stm32_exti4_isr(int irq, void *context, void *priv)
 
   putreg32(0x0010, STM32_EXTI_PR);
 
-  /* And dispatch the interrupt to the handler */
-  if (stm32_exti_handlers[4].stm32_exti_callback) {
-    ret = stm32_exti_handlers[4].stm32_exti_callback(
+  if (stm32_exti_handlers[4].debounce.ms == 0) {
+    /* And dispatch the interrupt to the handler */
+    if (stm32_exti_handlers[4].stm32_exti_callback) {
+        ret = stm32_exti_handlers[4].stm32_exti_callback(
                                                 stm32_exti_handlers[4].pin,
                                                 context,
                                                 stm32_exti_handlers[4].priv);
+    }
+  } else {
+      /* call debouncing handler */
+      ret = stm32_exti_debounce_isr(stm32_exti_handlers[4].pin, context, NULL);
   }
 
   return ret;
@@ -251,11 +335,17 @@ static int stm32_exti_multiisr(int irq, void *context, int first, int last)
           /* And dispatch the interrupt to the handler */
 
           int tmp = -1;
-          if (stm32_exti_handlers[pin].stm32_exti_callback) {
-            tmp = stm32_exti_handlers[pin].stm32_exti_callback(
+          if (stm32_exti_handlers[pin].debounce.ms == 0) {
+            if (stm32_exti_handlers[pin].stm32_exti_callback) {
+                tmp = stm32_exti_handlers[pin].stm32_exti_callback(
                                                 stm32_exti_handlers[pin].pin,
                                                 context,
                                                 stm32_exti_handlers[pin].priv);
+            }
+          } else {
+            /* call debouncing handler */
+            tmp = stm32_exti_debounce_isr(stm32_exti_handlers[pin].pin,
+                                          context, NULL);
           }
           if (tmp != OK)
           {
