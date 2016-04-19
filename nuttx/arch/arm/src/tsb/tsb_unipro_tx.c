@@ -277,6 +277,21 @@ static int unipro_send_async_memcpy(unsigned int cportid, const void *buf, size_
     return 0;
 }
 
+struct unipro_send_data {
+    sem_t sem;
+    int status;
+};
+
+static int unipro_send_memcpy_cb(int status, const void *buf, void *priv)
+{
+    struct unipro_send_data *data = priv;
+
+    data->status = status;
+    sem_post(&data->sem);
+
+    return 0;
+}
+
 /**
  * @brief send data down a CPort
  * @param cportid cport to send down
@@ -286,40 +301,23 @@ static int unipro_send_async_memcpy(unsigned int cportid, const void *buf, size_
  */
 static int unipro_send_memcpy(unsigned int cportid, const void *buf, size_t len)
 {
-    int ret, sent;
-    bool som;
-    struct cport *cport;
+    int retval;
+    struct unipro_send_data data;
 
-    if (len > CPORT_BUF_SIZE) {
-        return -EINVAL;
+    sem_init(&data.sem, 0, 0);
+
+    retval = unipro_send_async_memcpy(cportid, buf, len, unipro_send_memcpy_cb,
+                                      &data);
+    if (retval) {
+        goto out;
     }
 
-    cport = cport_handle(cportid);
-    if (!cport) {
-        return -EINVAL;
-    }
+    sem_wait(&data.sem);
+    retval = data.status;
 
-    if (cport->pending_reset) {
-        return -EPIPE;
-    }
-
-    for (som = true, sent = 0; sent < len;) {
-        ret = unipro_send_sync(cportid, buf + sent, len - sent, som);
-        if (ret < 0) {
-            return ret;
-        } else if (ret == 0) {
-            continue;
-        }
-        /* Only update state if the CPort TX FIFO was able to accept any data */
-        if (ret > 0) {
-            sent += ret;
-            som = false;
-        }
-    }
-
-    unipro_set_eom_flag(cport);
-
-    return 0;
+out:
+    sem_destroy(&data.sem);
+    return retval;
 }
 
 /**
