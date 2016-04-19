@@ -270,7 +270,7 @@ int gb_gpio_irq_event(int irq, void *context, void *priv)
     gpio_irq_mask(irq);
 
     /* Send unidirectional operation. */
-    gb_operation_send_request(operation, NULL, false);
+    gb_operation_send_request_nowait(operation, NULL, false);
 
     gb_operation_destroy(operation);
 
