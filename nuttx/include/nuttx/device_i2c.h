@@ -34,6 +34,8 @@
  * @file nuttx/device_i2c.h
  * @brief I2C API
  * @author Joel Porquet
+ * @attention This file is officially included in the Firmware Documentation.
+ * Please contact the Firmware Documentation team before modifying it.
  */
 
 #include <errno.h>

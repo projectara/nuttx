@@ -32,6 +32,8 @@
 /**
  * @file nuttx/device_hid.h
  * @brief HID Device driver API
+ * @attention This file is officially included in the Firmware Documentation.
+ * Please contact the Firmware Documentation team before modifying it.
  */
 
 #include <errno.h>

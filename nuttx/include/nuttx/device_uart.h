@@ -29,6 +29,13 @@
 #ifndef __INCLUDE_NUTTX_DEVICE_UART_H
 #define __INCLUDE_NUTTX_DEVICE_UART_H
 
+/**
+ * @file nuttx/device_uart.h
+ * @brief UART API
+ * @attention This file is officially included in the Firmware Documentation.
+ * Please contact the Firmware Documentation team before modifying it.
+ */
+
 #include <errno.h>
 #include <stdint.h>
 

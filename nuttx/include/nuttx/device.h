@@ -33,6 +33,8 @@
  * @file nuttx/device.h
  * @brief Device API
  * @author Mark Greer
+ * @attention This file is officially included in the Firmware Documentation.
+ * Please contact the Firmware Documentation team before modifying it.
  */
 
 #include <assert.h>

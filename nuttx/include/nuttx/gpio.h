@@ -32,6 +32,8 @@
 /**
  * @file nuttx/gpio.h
  * @brief GPIO API
+ * @attention This file is officially included in the Firmware Documentation.
+ * Please contact the Firmware Documentation team before modifying it.
  */
 
 #include <stdbool.h>
