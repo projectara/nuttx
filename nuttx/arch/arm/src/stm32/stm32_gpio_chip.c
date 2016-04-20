@@ -213,22 +213,22 @@ static int stm32_gpio_set_pull(void *driver_data, uint8_t pin,
 
     switch (pull_type)
     {
-	case GPIO_PULL_TYPE_PULL_DOWN:
-	    setting = GPIO_PULLDOWN;
-	    break;
+        case GPIO_PULL_TYPE_PULL_DOWN:
+            setting = GPIO_PULLDOWN;
+            break;
 
-	case GPIO_PULL_TYPE_PULL_UP:
-	    setting = GPIO_PULLUP;
-	    break;
+        case GPIO_PULL_TYPE_PULL_UP:
+            setting = GPIO_PULLUP;
+            break;
 
-	case GPIO_PULL_TYPE_PULL_NONE:
-	    setting = GPIO_FLOAT;
-	    break;
+        case GPIO_PULL_TYPE_PULL_NONE:
+            setting = GPIO_FLOAT;
+            break;
 
-	default:
-	    lldbg("%s: unsupported pull up/pull down type: %d\n",
-		    __func__, pull_type);
-	    return -EINVAL;
+        default:
+            lldbg("%s: unsupported pull up/pull down type: %d\n",
+                __func__, pull_type);
+            return -EINVAL;
     }
 
     stm32_set_pupd(cfgset, setting);
@@ -252,13 +252,13 @@ static enum gpio_pull_type stm32_gpio_get_pull(void *driver_data, uint8_t pin)
     pupd = stm32_get_pupd(cfgset);
 
     switch (pupd) {
-    case GPIO_PULLDOWN:
-	return GPIO_PULL_TYPE_PULL_DOWN;
-    case GPIO_PULLUP:
-	return GPIO_PULL_TYPE_PULL_UP;
-    case GPIO_FLOAT:
-    default:
-	return GPIO_PULL_TYPE_PULL_NONE;
+        case GPIO_PULLDOWN:
+            return GPIO_PULL_TYPE_PULL_DOWN;
+        case GPIO_PULLUP:
+            return GPIO_PULL_TYPE_PULL_UP;
+        case GPIO_FLOAT:
+        default:
+            return GPIO_PULL_TYPE_PULL_NONE;
     }
 }
 
