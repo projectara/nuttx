@@ -84,7 +84,7 @@ static void stm32_gpio_set_direction_in(void *driver_data, uint8_t pin)
 
     ret = map_pin_nr_to_cfgset(pin, &cfgset);
     if (ret) {
-        lldbg("%s: Invalid pin %hhu\n", pin);
+        lldbg("%s: Invalid pin %hhu\n", __func__, pin);
         return;
     }
 
@@ -94,7 +94,7 @@ static void stm32_gpio_set_direction_in(void *driver_data, uint8_t pin)
 
     ret = stm32_configgpio(cfgset);
     if (ret)
-        lldbg("%s: stm32_configgpio returns %d\n", ret);
+        lldbg("%s: stm32_configgpio returns %d\n", __func__, ret);
 }
 
 static void stm32_gpio_set_direction_out(void *driver_data, uint8_t pin,
@@ -107,7 +107,7 @@ static void stm32_gpio_set_direction_out(void *driver_data, uint8_t pin,
 
     ret = map_pin_nr_to_cfgset(pin, &cfgset);
     if (ret) {
-        lldbg("%s: Invalid pin %hhu\n", pin);
+        lldbg("%s: Invalid pin %hhu\n", __func__, pin);
         return;
     }
 
@@ -124,7 +124,7 @@ static void stm32_gpio_set_direction_out(void *driver_data, uint8_t pin,
 
     ret = stm32_configgpio(cfgset);
     if (ret)
-        lldbg("%s: stm32_configgpio returns %d\n", ret);
+        lldbg("%s: stm32_configgpio returns %d\n", __func__, ret);
 }
 
 // STM32 GPIO API does not have a direction query function
@@ -142,7 +142,7 @@ static void stm32_gpio_set(void *driver_data, uint8_t pin, uint8_t val)
 
     ret = map_pin_nr_to_cfgset(pin, &cfgset);
     if (ret) {
-        lldbg("%s: Invalid pin %hhu\n", pin);
+        lldbg("%s: Invalid pin %hhu\n", __func__, pin);
         return;
     }
 
@@ -158,7 +158,7 @@ static uint8_t stm32_gpio_get(void *driver_data, uint8_t pin)
 
     ret = map_pin_nr_to_cfgset(pin, &cfgset);
     if (ret) {
-        lldbg("%s: Invalid pin %hhu\n", pin);
+        lldbg("%s: Invalid pin %hhu\n", __func__, pin);
         return -EINVAL;
     }
 
@@ -185,7 +185,7 @@ static int stm32_gpio_deactivate(void *driver_data, uint8_t pin)
 
     ret = map_pin_nr_to_cfgset(pin, &cfgset);
     if (ret) {
-        lldbg("%s: Invalid pin %hhu\n", pin);
+        lldbg("%s: Invalid pin %hhu\n", __func__, pin);
         return -EINVAL;
     }
 
@@ -207,7 +207,7 @@ static int stm32_gpio_set_pull(void *driver_data, uint8_t pin,
 
     ret = map_pin_nr_to_cfgset(pin, &cfgset);
     if (ret) {
-        lldbg("%s: Invalid pin %hhu\n", pin);
+        lldbg("%s: Invalid pin %hhu\n", __func__, pin);
         return -EINVAL;
     }
 
@@ -245,7 +245,7 @@ static enum gpio_pull_type stm32_gpio_get_pull(void *driver_data, uint8_t pin)
 
     ret = map_pin_nr_to_cfgset(pin, &cfgset);
     if (ret) {
-        lldbg("%s: Invalid pin %hhu\n", pin);
+        lldbg("%s: Invalid pin %hhu\n", __func__, pin);
         return ret;
     }
 
@@ -292,7 +292,7 @@ static int stm32_gpio_irqattach(void *driver_data, uint8_t pin, xcpt_t isr,
 
     ret = map_pin_nr_to_cfgset(pin, &cfgset);
     if (ret) {
-        lldbg("%s: Invalid pin %hhu\n", pin);
+        lldbg("%s: Invalid pin %hhu\n", __func__, pin);
         return ret;
     }
 
@@ -326,7 +326,7 @@ static int stm32_gpio_set_triggering(void *driver_data, uint8_t pin,
 
     ret = map_pin_nr_to_cfgset(pin, &cfgset);
     if (ret) {
-        lldbg("%s: Invalid pin %hhu\n", pin);
+        lldbg("%s: Invalid pin %hhu\n", __func__, pin);
         return ret;
     }
 
@@ -377,7 +377,7 @@ static int stm32_gpio_mask_irq(void *driver_data, uint8_t pin)
 
     ret = map_pin_nr_to_cfgset(pin, &cfgset);
     if (ret) {
-        lldbg("%s: Invalid pin %hhu\n", pin);
+        lldbg("%s: Invalid pin %hhu\n", __func__, pin);
         return ret;
     }
 
@@ -404,7 +404,7 @@ static int stm32_gpio_unmask_irq(void *driver_data, uint8_t pin)
 
     ret = map_pin_nr_to_cfgset(pin, &cfgset);
     if (ret) {
-        lldbg("%s: Invalid pin %hhu\n", pin);
+        lldbg("%s: Invalid pin %hhu\n", __func__, pin);
         return ret;
     }
 
