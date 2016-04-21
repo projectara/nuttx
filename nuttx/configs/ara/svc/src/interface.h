@@ -274,6 +274,7 @@ void interfaces_timesync_fini(void);
     static struct interface MAKE_INTERFACE(_var_name) = {      \
         .name = _name,                                         \
         .if_type = ARA_IFACE_TYPE_MODULE_PORT,                 \
+        .state = ARA_IFACE_STATE_WD_HANDLER_INACTIVE,          \
         .vsys_vreg = &_var_name ## _vsys_vreg,                 \
         .refclk_vreg = &_var_name ## _refclk_vreg,             \
         .switch_portid = portid,                               \
@@ -303,6 +304,7 @@ void interfaces_timesync_fini(void);
     static struct interface MAKE_INTERFACE(_var_name) = {      \
         .name = _name,                                         \
         .if_type = ARA_IFACE_TYPE_MODULE_PORT2,                \
+        .state = ARA_IFACE_STATE_WD_HANDLER_INACTIVE,          \
         .vsys_vreg = &_var_name ## _vsys_vreg,                 \
         .refclk_vreg = &_var_name ## _refclk_vreg,             \
         .switch_portid = portid,                               \

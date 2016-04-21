@@ -1750,7 +1750,6 @@ int interface_init(struct interface **ints, size_t nr_ints,
         ifc->detect_in.db_state = WD_ST_INVALID;
         ifc->detect_in.last_state = WD_ST_INVALID;
         rc = interface_install_wd_handler(ifc, false);
-        ifc->state = ARA_IFACE_STATE_WD_HANDLER_INACTIVE;
 
         /* Power on/off the interface based on the DETECT_IN signal state */
         switch (interface_get_hotplug_state(ifc)) {
