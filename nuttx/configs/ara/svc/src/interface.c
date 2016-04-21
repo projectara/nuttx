@@ -1132,24 +1132,6 @@ enum hotplug_state interface_get_hotplug_state_atomic(struct interface *iface)
     return hs;
 }
 
-/**
- * @brief Get the interface struct from the Wake & Detect gpio
- * @return interface* on success, NULL on error
- */
-static struct interface* interface_get_by_wd(uint32_t gpio)
-{
-    int i;
-    struct interface *ifc;
-
-    interface_foreach(ifc, i) {
-        if (ifc->detect_in.gpio == gpio) {
-            return ifc;
-        }
-    }
-
-    return NULL;
-}
-
 static void interface_wd_delayed_handler(void *data);
 
 /* Delayed debounce check */
@@ -1357,13 +1339,12 @@ done:
 /* Wake-Detect interrupt handler - IRQ context */
 static int interface_wd_irq_handler(int irq, void *context, void *priv)
 {
-    struct interface *iface;
+    struct interface *iface = priv;
     struct wd_data *wd;
     int rc;
 
-    iface = interface_get_by_wd(irq);
     if (!iface) {
-        dbg_error("%s: cannot get interface for pin %d\n", __func__, irq);
+        dbg_error("%s: NULL interface pointer\n", __func__);
         return -ENODEV;
     }
     wd = &iface->detect_in;
@@ -1449,7 +1430,7 @@ static int interface_install_wd_handler(struct interface *iface,
         }
         iface->state = ARA_IFACE_STATE_WD_HANDLER_ACTIVE;
         if (gpio_irq_settriggering(wd->gpio, IRQ_TYPE_EDGE_BOTH) ||
-            gpio_irq_attach(wd->gpio, interface_wd_irq_handler, NULL) ||
+            gpio_irq_attach(wd->gpio, interface_wd_irq_handler, iface) ||
             gpio_irq_unmask(wd->gpio)) {
             dbg_error("Failed to attach Wake & Detect handler for pin %d\n",
                       wd->gpio);
