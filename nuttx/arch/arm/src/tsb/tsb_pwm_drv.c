@@ -880,8 +880,8 @@ static int tsb_pwm_op_intr_callback(struct device *dev, uint32_t mask_int,
 
     info = device_get_private(dev);
 
-    mask = (mask_err & TSB_PWM_STATUS_MASK) << TSB_PWM_ERR_STATUS_SHIFT
-        | mask_int & TSB_PWM_STATUS_MASK;
+    mask = ((mask_err & TSB_PWM_STATUS_MASK) << TSB_PWM_ERR_STATUS_SHIFT) |
+            (mask_int & TSB_PWM_STATUS_MASK);
 
     if (info->refcount) {
         if (!callback) {
