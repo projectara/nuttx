@@ -53,13 +53,13 @@
 #define SPI_MODE_CPOL       0x02
 /** Chip select active high */
 #define SPI_MODE_CS_HIGH    0x04
-/** Transmit Least-Significant-Bits first */
+/** Transmit least significant bits first */
 #define SPI_MODE_LSB_FIRST  0x08
 /** Use only three wires: SI/SO signals are shared */
 #define SPI_MODE_3WIRE      0x10
 /** Loopback mode */
 #define SPI_MODE_LOOP       0x20
-/** Only one slave per bus, no need for chipselect */
+/** Only one slave per bus, no need for chip select */
 #define SPI_MODE_NO_CS      0x40
 /** Slave pulls low to pause */
 #define SPI_MODE_READY      0x80
@@ -124,10 +124,10 @@ struct device_spi_board_type_ops {
      * @return 0 on success, negative errno on failure
      */
     int (*get_bpw)(struct device *dev, uint8_t *bpw);
-    /** Selects the SPI board for a transfer (Chip-Select emulation)
+    /** Selects the SPI board for a transfer (chip-select emulation)
      * @param dev Pointer to the SPI board
-     * @param val Chip-Select value that should be applied in order to select
-     * this SPI Board
+     * @param val Chip-select value that should be applied in order to select
+     * this SPI board
      * @return 0 on success, negative errno on failure
      */
     int (*cs_select)(struct device *dev, uint8_t val);
@@ -232,10 +232,10 @@ static inline int device_spi_board_get_bpw(struct device *dev, uint8_t *bpw)
     return -ENOSYS;
 }
 
-/** Selects the SPI board for a transfer (Chip-Select emulation)
+/** Selects the SPI board for a transfer (chip-select emulation)
  * @param dev Pointer to the SPI board
- * @param val Chip-Select value that should be applied in order to select this
- * SPI Board
+ * @param val Chip-select value that should be applied in order to select this
+ * SPI board
  * @return 0 on success, negative errno on failure
  */
 static inline int device_spi_board_cs_select(struct device *dev, uint8_t val)
