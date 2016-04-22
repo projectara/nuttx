@@ -65,12 +65,16 @@
 #define GB_SVC_TYPE_PWRMON_RAIL_NAMES_GET       0x15
 #define GB_SVC_TYPE_PWRMON_SAMPLE_GET           0x16
 #define GB_SVC_TYPE_PWRMON_INTF_SAMPLE_GET      0x17
-#define GB_SVC_TYPE_INTF_PWR_ENABLE             GB_SVC_TYPE_INVALID
-#define GB_SVC_TYPE_INTF_REFCLK_ENABLE          GB_SVC_TYPE_INVALID
 #define GB_SVC_TYPE_TIMESYNC_WD_PINS_INIT       0x18
 #define GB_SVC_TYPE_TIMESYNC_WD_PINS_FINI       0x19
 #define GB_SVC_TYPE_TIMESYNC_PING               0x1a
 #define GB_SVC_TYPE_PWR_DOWN                    0x1d
+#define GB_SVC_TYPE_INTF_VSYS_ENABLE            0x21
+#define GB_SVC_TYPE_INTF_VSYS_DISABLE           0x22
+#define GB_SVC_TYPE_INTF_REFCLK_ENABLE          0x23
+#define GB_SVC_TYPE_INTF_REFCLK_DISABLE         0x24
+#define GB_SVC_TYPE_INTF_UNIPRO_ENABLE          0x25
+#define GB_SVC_TYPE_INTF_UNIPRO_DISABLE         0x26
 
 struct gb_svc_protocol_version_request {
     __u8        major;
@@ -251,35 +255,38 @@ struct gb_svc_pwrmon_intf_sample_get_response {
     __le32      measurement;
 } __packed;
 
-struct gb_svc_intf_pwr_enable_request {
+struct gb_svc_intf_vsys_enable_request {
     __u8        intf_id;
-    __u8        enable;
-#define GB_SVC_INTF_PWR_DISABLE         0x00
-#define GB_SVC_INTF_PWR_ENABLE          0x01
 } __packed;
 
-struct gb_svc_intf_pwr_enable_response {
+struct gb_svc_intf_vsys_enable_response {
     __u8        result_code;
-#define GB_SVC_INTF_PWR_OK              0x00
-#define GB_SVC_INTF_PWR_BUSY            0x01
-#define GB_SVC_INTF_PWR_ERROR_CAP       0x02
-#define GB_SVC_INTF_PWR_INSUFFICIENT    0x03
-#define GB_SVC_INTF_PWR_FAIL            0x04
+#define GB_SVC_INTF_VSYS_OK              0x00
+#define GB_SVC_INTF_VSYS_BUSY            0x01
+#define GB_SVC_INTF_VSYS_FAIL            0x02
 } __packed;
 
 struct gb_svc_intf_refclk_enable_request {
     __u8        intf_id;
-    __u8        enable;
-#define GB_SVC_INTF_REFCLK_DISABLE      0x00
-#define GB_SVC_INTF_REFCLK_ENABLE       0x01
 } __packed;
 
 struct gb_svc_intf_refclk_enable_response {
     __u8        result_code;
 #define GB_SVC_INTF_REFCLK_OK           0x00
 #define GB_SVC_INTF_REFCLK_BUSY         0x01
-#define GB_SVC_INTF_REFCLK_ERROR_CAP    0x02
-#define GB_SVC_INTF_REFCLK_FAIL         0x03
+#define GB_SVC_INTF_REFCLK_FAIL         0x02
+} __packed;
+
+struct gb_svc_intf_unipro_enable_request {
+    __u8        intf_id;
+} __packed;
+
+struct gb_svc_intf_unipro_enable_response {
+    __u8        result_code;
+#define GB_SVC_INTF_UNIPRO_OK           0x00
+#define GB_SVC_INTF_UNIPRO_BUSY         0x01
+#define GB_SVC_INTF_UNIPRO_FAIL         0x02
+#define GB_SVC_INTF_UNIPRO_NOT_OFF      0x03
 } __packed;
 
 struct gb_svc_timesync_enable_request {
