@@ -47,7 +47,7 @@
 
 /** PWM output modes */
 enum pwm_mode {
-    /** mode 0: use a set pulse width duration */
+    /** mode 0: use a set pulse-width duration */
     PWM_PULSECOUNT_MODE,
     /** mode 1: signal is static high or low when frequency is 0 */
     PWM_STOP_LEVEL_MODE,
@@ -59,7 +59,7 @@ enum pwm_mode {
  * @brief PWM event callback function
  *
  * This callback function is registered with the PWM controller and is called
- * whenever one of the selected interrupt events occur.
+ * whenever one of the selected interrupt events occurs.
  *
  * @param mask_int Mask of selected interrupt events
  * @param mask_err Mask of selected error events
@@ -70,8 +70,8 @@ typedef void (*pwm_event_callback)(uint32_t mask_int, uint32_t mask_err);
 struct device_pwm_type_ops {
     /** Get the number of supported PWM generators
      * @param dev Pointer to the PWM device controller
-     * @param count Pointer to a variable whose is to be filled out with the
-     * number of supported PWM generators
+     * @param count Pointer to a variable to be filled out with the number of
+     * supported PWM generators
      * @return 0 on success, negative errno on failure
      */
     int (*count)(struct device *dev, uint16_t *count);
@@ -96,13 +96,13 @@ struct device_pwm_type_ops {
      */
     int (*config)(struct device *dev, uint16_t which, uint32_t duty,
                   uint32_t period);
-    /** Enable the pulse width output of a PWM generator
+    /** Enable the pulse-width output of a PWM generator
      * @param dev Pointer to the PWM device controller
      * @param which PWM generator device number
      * @return 0 on success, negative errno on failure
      */
     int (*enable)(struct device *dev, uint16_t  which);
-    /** Disable the pulse width output of a PWM generator
+    /** Disable the pulse-width output of a PWM generator
      * @param dev Pointer to the PWM device controller
      * @param which PWM generator device number
      * @return 0 on success, negative errno on failure
@@ -120,8 +120,8 @@ struct device_pwm_type_ops {
      * @param dev Pointer to the PWM device controller
      * @param which PWM generator device number
      * @param mode PWM generator output mode
-     * @param param For mode 0: number of pulses; For mode 1: true for high
-     * level, false for low level; For mode 2: true to enable sync
+     * @param param For mode 0: number of pulses; for mode 1: true for high
+     * level, false for low level; for mode 2: true to enable sync
      * @return 0 on success, negative errno on failure
      */
     int (*set_mode)(struct device *dev, uint16_t  which, enum pwm_mode mode,
@@ -133,14 +133,14 @@ struct device_pwm_type_ops {
      */
     int (*sync_output)(struct device *dev, bool enable);
     /** Register callback function to be notified when one of the selected
-     * interrupt events occur
+     * interrupt events occurs
      * @param dev Pointer to the PWM device controller
      * @param mask_int Mask of selected interrupt events
      * @param mask_err Mask of selected error events
      * @param mode Interrupt mode (0: end of cycle interrupts, 1: update
      * interrupts)
-     * @param callback The callback function to be called on an event, when
-     * NULL deregister the existing callback for the specified masks of events
+     * @param callback The callback function to be called on an event; when
+     * NULL, deregister the existing callback for the specified masks of events
      * @return 0 on success, negative errno on failure
      */
     int (*register_callback)(struct device *dev, uint32_t mask_int,
@@ -255,7 +255,7 @@ static inline int device_pwm_set_polarity(struct device *dev, uint16_t which,
     return DEVICE_DRIVER_GET_OPS(dev, pwm)->set_polarity(dev, which, polarity);
 }
 
-/** Enable the pulse width output of a PWM generator
+/** Enable the pulse-width output of a PWM generator
  * @param dev Pointer to the PWM device controller
  * @param which PWM generator device number
  * @return 0 on success, negative errno on failure
@@ -275,7 +275,7 @@ static inline int device_pwm_enable(struct device *dev, uint16_t which)
     return DEVICE_DRIVER_GET_OPS(dev, pwm)->enable(dev, which);
 }
 
-/** Disable the pulse width output of a PWM generator
+/** Disable the pulse-width output of a PWM generator
  * @param dev Pointer to the PWM device controller
  * @param which PWM generator device number
  * @return 0 on success, negative errno on failure
@@ -299,8 +299,8 @@ static inline int device_pwm_disable(struct device *dev, uint16_t which)
  * @param dev Pointer to the PWM device controller
  * @param which PWM generator device number
  * @param mode PWM generator output mode
- * @param param For mode 0: number of pulses; For mode 1: true for high level,
- * false for low level; For mode 2: true to start sync
+ * @param param For mode 0: number of pulses; for mode 1: true for high level,
+ * false for low level; for mode 2: true to start sync
  * @return 0 on success, negative errno on failure
  */
 static inline int device_pwm_set_mode(struct device *dev, uint16_t which,
@@ -340,12 +340,12 @@ static inline int device_pwm_sync_output(struct device *dev, bool enable)
 }
 
 /** Register callback function to be notified when one of the selected
- * interrupt events occur
+ * interrupt events occurs
  * @param dev Pointer to the PWM device controller
  * @param mask_int Mask of selected interrupt events
  * @param mask_err Mask of selected error events
  * @param mode Interrupt mode (0: end of cycle interrupts, 1: update interrupts)
- * @param callback The callback function to be called on an event, when NULL
+ * @param callback The callback function to be called on an event; when NULL,
  * deregister the existing callback for the specified masks of events
  * @return 0 on success, negative errno on failure
  */
