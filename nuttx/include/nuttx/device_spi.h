@@ -48,7 +48,7 @@
 /** @defgroup SPI_MASTER_FLAGS SPI Master Flags
  * @{
  */
-/** Only supports half-duplex transmission */
+/** Supports only half-duplex transmission */
 #define SPI_FLAG_HALF_DUPLEX    0x0001
 /** Cannot do buffer read */
 #define SPI_FLAG_NO_RX          0x0002
