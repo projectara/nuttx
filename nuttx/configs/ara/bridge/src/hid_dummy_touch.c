@@ -692,7 +692,7 @@ static int touch_hw_initialize(struct device *dev, struct hid_info *dev_info)
     gpio_direction_in(GPIO_TRIGGER);
     gpio_irq_mask(GPIO_TRIGGER);
     gpio_irq_settriggering(GPIO_TRIGGER, IRQ_TYPE_EDGE_BOTH);
-    gpio_irq_attach(GPIO_TRIGGER, touch_irq_event);
+    gpio_irq_attach(GPIO_TRIGGER, touch_irq_event, NULL);
 
     /* initialize waitqueue */
     tuh_info->abort = 0;

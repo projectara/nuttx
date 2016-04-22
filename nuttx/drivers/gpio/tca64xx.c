@@ -145,6 +145,7 @@ struct tca64xx_platform_data {
     struct list_head list;
     xcpt_t irq_vector[TCA64XX_NR_GPIO_MAX];
     uint16_t gpio_base[TCA64XX_NR_GPIO_MAX];
+    void* priv[TCA64XX_NR_GPIO_MAX];
 
     struct work_s work;
     int worker_id;
@@ -836,7 +837,8 @@ static void _tca64xx_gpio_irq_handler(void *data)
              pin++, irqstat >>= 1) {
             if (irqstat & 1) {
                 base = tca64xx->gpio_base[pin];
-                tca64xx->irq_vector[pin] (base + pin, context, NULL);
+                tca64xx->irq_vector[pin] (base + pin, context,
+                                          tca64xx->priv[pin]);
                 tca64xx_gpio_clear_interrupt(data, pin);
             }
         }
@@ -877,7 +879,7 @@ static int tca64xx_gpio_irq_handler(int irq, void *context, void *priv)
 }
 
 int tca64xx_gpio_irqattach(void *driver_data, uint8_t which, xcpt_t isr,
-                           uint8_t base)
+                           uint8_t base, void *priv)
 {
     struct tca64xx_platform_data *tca64xx = driver_data;
     irqstate_t flags;
@@ -896,6 +898,7 @@ int tca64xx_gpio_irqattach(void *driver_data, uint8_t which, xcpt_t isr,
     /* Save the new ISR in the table. */
     tca64xx->irq_vector[which] = isr;
     tca64xx->gpio_base[which] = base;
+    tca64xx->priv[which] = priv;
 
     irqrestore(flags);
 
@@ -992,7 +995,7 @@ int tca64xx_init(void **driver_data, tca64xx_part part, struct i2c_dev_s *dev,
         list_add(&tca64xx_irq_pdata_list, &tca64xx->list);
         gpio_activate(tca64xx->irq);
         gpio_direction_in(tca64xx->irq);
-        gpio_irq_attach(tca64xx->irq, tca64xx_gpio_irq_handler);
+        gpio_irq_attach(tca64xx->irq, tca64xx_gpio_irq_handler, NULL);
         /* Set to EDGE_BOTH to catch missed interrupt */
         gpio_irq_settriggering(tca64xx->irq, IRQ_TYPE_EDGE_BOTH);
         gpio_irq_clear(tca64xx->irq);
@@ -1050,7 +1053,7 @@ void tca64xx_deinit(void *driver_data)
         }
         /* Unregister IRQ */
         gpio_irq_mask(tca64xx->irq);
-        gpio_irq_attach(tca64xx->irq, NULL);
+        gpio_irq_attach(tca64xx->irq, NULL, NULL);
         list_foreach_safe(&tca64xx_irq_pdata_list, iter, iter_next) {
             pdata = list_entry(iter, struct tca64xx_platform_data, list);
             if (pdata == tca64xx) {

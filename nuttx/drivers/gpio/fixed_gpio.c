@@ -111,7 +111,7 @@ static uint8_t fixed_gpio_line_count(void *driver_data)
 }
 
 static int fixed_gpio_irqattach(void *driver_data, uint8_t which, xcpt_t isr,
-                                uint8_t base)
+                                uint8_t base, void *priv)
 {
     return 0;
 }

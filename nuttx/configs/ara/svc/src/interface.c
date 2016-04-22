@@ -1388,7 +1388,7 @@ static void interface_uninstall_wd_handler(struct interface *iface, struct wd_da
     iface->state = ARA_IFACE_STATE_WD_HANDLER_INACTIVE;
     if (wd->gpio) {
         gpio_irq_mask(wd->gpio);
-        gpio_irq_attach(wd->gpio, NULL);
+        gpio_irq_attach(wd->gpio, NULL, NULL);
     }
 }
 
@@ -1449,7 +1449,7 @@ static int interface_install_wd_handler(struct interface *iface,
         }
         iface->state = ARA_IFACE_STATE_WD_HANDLER_ACTIVE;
         if (gpio_irq_settriggering(wd->gpio, IRQ_TYPE_EDGE_BOTH) ||
-            gpio_irq_attach(wd->gpio, interface_wd_irq_handler) ||
+            gpio_irq_attach(wd->gpio, interface_wd_irq_handler, NULL) ||
             gpio_irq_unmask(wd->gpio)) {
             dbg_error("Failed to attach Wake & Detect handler for pin %d\n",
                       wd->gpio);

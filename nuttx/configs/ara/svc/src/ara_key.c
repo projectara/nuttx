@@ -128,7 +128,7 @@ int ara_key_enable(const struct ara_board_info *info,
         gpio_direction_in(info->ara_key_gpio);
         gpio_irq_mask(info->ara_key_gpio);
         gpio_irq_settriggering(info->ara_key_gpio, IRQ_TYPE_EDGE_BOTH);
-        gpio_irq_attach(info->ara_key_gpio, ara_key_irqhandler);
+        gpio_irq_attach(info->ara_key_gpio, ara_key_irqhandler, NULL);
         gpio_set_debounce(info->ara_key_gpio, ARA_KEY_DEBOUNCE_TIME_MS);
     } else {
         gpio_irq_mask(info->ara_key_gpio);

@@ -2241,7 +2241,7 @@ static int tsb_sdio_dev_open(struct device *dev)
         goto err_close_device;
     }
     info->cd_pin_number = pin_number;
-    gpio_irq_attach(info->cd_pin_number, sdio_irq_event);
+    gpio_irq_attach(info->cd_pin_number, sdio_irq_event, NULL);
     gpio_irq_unmask(info->cd_pin_number);
 
     info->thread_abort = false;

@@ -314,7 +314,7 @@ static uint8_t gb_gpio_irq_type(struct gb_operation *operation)
     ret = gpio_irq_settriggering(request->which, trigger);
     if (ret)
         return GB_OP_INVALID;
-    ret = gpio_irq_attach(request->which, gb_gpio_irq_event);
+    ret = gpio_irq_attach(request->which, gb_gpio_irq_event, NULL);
     if (ret)
         return GB_OP_UNKNOWN_ERROR;
     return GB_OP_SUCCESS;

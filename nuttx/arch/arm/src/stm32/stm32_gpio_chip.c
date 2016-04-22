@@ -54,6 +54,7 @@
 /* Internal struct for IRQ edges and ISR management */
 struct stm32_gpio_internal {
     xcpt_t isr;
+    void *priv;
     uint8_t flags;
 };
 
@@ -283,12 +284,12 @@ static int stm32_gpio_set_debounce(void *driver_data, uint8_t pin,
 }
 
 static int stm32_gpio_irqattach(void *driver_data, uint8_t pin, xcpt_t isr,
-                                uint8_t base)
+                                uint8_t base, void *priv)
 {
     uint32_t cfgset;
     int ret = 0;
 
-    lldbg("%s: pin=%hhu, handler=%p\n", __func__, pin, isr);
+    lldbg("%s: pin=%hhu, handler=%p, priv=%p\n", __func__, pin, isr, priv);
 
     ret = map_pin_nr_to_cfgset(pin, &cfgset);
     if (ret) {
@@ -306,12 +307,13 @@ static int stm32_gpio_irqattach(void *driver_data, uint8_t pin, xcpt_t isr,
      * By default cfgset is set as input, floating.
      */
     stm32_gpio[pin].isr = isr;
+    stm32_gpio[pin].priv = priv;
     stm32_gpiosetevent_priv(cfgset,
                             stm32_gpio[pin].flags & STM32_GPIO_FLAG_RISING,
                             stm32_gpio[pin].flags & STM32_GPIO_FLAG_FALLING,
                             true,
                             stm32_gpio[pin].isr,
-                            NULL);
+                            stm32_gpio[pin].priv);
 
     return ret;
 }
@@ -363,7 +365,7 @@ static int stm32_gpio_set_triggering(void *driver_data, uint8_t pin,
                             stm32_gpio[pin].flags & STM32_GPIO_FLAG_FALLING,
                             true,
                             stm32_gpio[pin].isr,
-                            NULL);
+                            stm32_gpio[pin].priv);
 
     return ret;
 }
@@ -390,7 +392,7 @@ static int stm32_gpio_mask_irq(void *driver_data, uint8_t pin)
                             false,
                             true,
                             stm32_gpio[pin].isr,
-                            NULL);
+                            stm32_gpio[pin].priv);
 
     return ret;
 }
@@ -417,7 +419,7 @@ static int stm32_gpio_unmask_irq(void *driver_data, uint8_t pin)
                             stm32_gpio[pin].flags & STM32_GPIO_FLAG_FALLING,
                             true,
                             stm32_gpio[pin].isr,
-                            NULL);
+                            stm32_gpio[pin].priv);
 
     return ret;
 }
@@ -460,6 +462,7 @@ void stm32_gpio_init(void)
     /* Init internal data: default edge triggering and ISR */
     for (i = 0; i < (STM32_NGPIO + 1); i++) {
         stm32_gpio[i].isr = NULL;
+        stm32_gpio[i].priv = NULL;
         stm32_gpio[i].flags = 0;
     }
 

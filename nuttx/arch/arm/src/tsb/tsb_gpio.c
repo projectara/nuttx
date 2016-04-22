@@ -78,6 +78,7 @@
 /* Structure for storing interrupt handlers and debounce data for each GPIO */
 struct tsb_gpio_irq_vectors_s {
     xcpt_t irq_vector;
+    void *priv;
     uint8_t irq_gpio_base;
     struct debounce_data debounce;
     int irq_trigger_type;
@@ -369,10 +370,12 @@ static int tsb_gpio_irq_handler(int irq, void *context, void *priv)
 
             if (tsb_gpio_irq_vectors[pin].debounce.ms == 0) {
                 /* no debouncing, call attached irq handler */
-                tsb_gpio_irq_vectors[pin].irq_vector(base + pin, context, priv);
+                tsb_gpio_irq_vectors[pin].irq_vector(base + pin, context,
+                                            tsb_gpio_irq_vectors[pin].priv);
             } else {
                 /* else, call debounce handler */
-                tsb_gpio_irq_debounce_handler(base + pin, context, priv);
+                tsb_gpio_irq_debounce_handler(base + pin, context,
+                                            tsb_gpio_irq_vectors[pin].priv);
             }
         }
     }
@@ -380,7 +383,8 @@ static int tsb_gpio_irq_handler(int irq, void *context, void *priv)
     return 0;
 }
 
-static int tsb_gpio_irqattach(void *driver_data, uint8_t irq, xcpt_t isr, uint8_t base)
+static int tsb_gpio_irqattach(void *driver_data, uint8_t irq, xcpt_t isr,
+                              uint8_t base, void *priv)
 {
     irqstate_t flags;
 
@@ -400,6 +404,7 @@ static int tsb_gpio_irqattach(void *driver_data, uint8_t irq, xcpt_t isr, uint8_
 
     /* Save the new ISR in the table. */
     tsb_gpio_irq_vectors[irq].irq_vector = isr;
+    tsb_gpio_irq_vectors[irq].priv = priv;
     tsb_gpio_irq_vectors[irq].irq_gpio_base = base;
     irqrestore(flags);
 
@@ -413,6 +418,9 @@ static void tsb_gpio_irqinitialize(void)
     for (i = 0; i < tsb_nr_gpio(); i++) {
         /* Point all interrupt vectors to the unexpected interrupt */
         tsb_gpio_irq_vectors[i].irq_vector = irq_unexpected_isr;
+
+        /* clear private data */
+        tsb_gpio_irq_vectors[i].priv = NULL;
 
         /* Initialize all debounce info */
         tsb_gpio_irq_vectors[i].debounce.gpio = i;

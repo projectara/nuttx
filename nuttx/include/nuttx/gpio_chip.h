@@ -44,7 +44,7 @@ struct gpio_ops_s
     int (*deactivate)(void *driver_data, uint8_t which);
     uint8_t (*line_count)(void *driver_data);
     int (*irqattach)(void *driver_data, uint8_t which, xcpt_t isr,
-                     uint8_t base);
+                     uint8_t base, void *priv);
     int (*set_triggering)(void *driver_data, uint8_t which, int trigger);
     int (*mask_irq)(void *driver_data, uint8_t which);
     int (*unmask_irq)(void *driver_data, uint8_t which);

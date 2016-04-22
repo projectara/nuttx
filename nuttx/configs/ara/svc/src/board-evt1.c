@@ -856,7 +856,7 @@ static int evt1_board_init(struct ara_board_info *board_info) {
      */
     gpio_direction_in(UART_MSM_TX_SVC_RX);
     if (gpio_irq_settriggering(UART_MSM_TX_SVC_RX, IRQ_TYPE_EDGE_BOTH) ||
-        gpio_irq_attach(UART_MSM_TX_SVC_RX, uart_msm_rx_gpio_handler) ||
+        gpio_irq_attach(UART_MSM_TX_SVC_RX, uart_msm_rx_gpio_handler, NULL) ||
         gpio_irq_unmask(UART_MSM_TX_SVC_RX)) {
         dbg_error("%s: cannot install wake-up handler for MSM UART RX\n",
                   __func__);
@@ -968,7 +968,7 @@ static int evt1_5_board_init(struct ara_board_info *board_info) {
      */
     gpio_direction_in(UART_MSM_TX_SVC_RX);
     if (gpio_irq_settriggering(UART_MSM_TX_SVC_RX, IRQ_TYPE_EDGE_BOTH) ||
-        gpio_irq_attach(UART_MSM_TX_SVC_RX, uart_msm_rx_gpio_handler) ||
+        gpio_irq_attach(UART_MSM_TX_SVC_RX, uart_msm_rx_gpio_handler, NULL) ||
         gpio_irq_unmask(UART_MSM_TX_SVC_RX)) {
         dbg_error("%s: cannot install wake-up handler for MSM UART RX\n",
                   __func__);

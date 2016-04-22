@@ -56,7 +56,7 @@ int bridge_wakeup_init(void) {
     gpio_direction_in(WD_PIN);
     gpio_irq_mask(WD_PIN);
     gpio_irq_settriggering(WD_PIN, IRQ_TYPE_EDGE_RISING);
-    gpio_irq_attach(WD_PIN, wakeup_irq_event);
+    gpio_irq_attach(WD_PIN, wakeup_irq_event, NULL);
     gpio_irq_unmask(WD_PIN);
 
     return 0;

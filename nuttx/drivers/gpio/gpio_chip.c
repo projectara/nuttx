@@ -219,7 +219,7 @@ uint8_t gpio_line_count(void)
     return g_gpio_line_count;
 }
 
-int gpio_irq_attach(uint8_t which, xcpt_t isr)
+int gpio_irq_attach(uint8_t which, xcpt_t isr, void *priv)
 {
     struct gpio_chip_s *chip = get_gpio_chip(&which);
 
@@ -227,7 +227,7 @@ int gpio_irq_attach(uint8_t which, xcpt_t isr)
     DEBUGASSERT(chip->ops);
     if (chip->ops->irqattach)
         return chip->ops->irqattach(chip->driver_data, which, isr,
-                                    chip->base);
+                                    chip->base, priv);
     return -EINVAL;
 }
 
