@@ -37,7 +37,7 @@
 #define GB_CONTROL_VERSION_MINOR                0x01
 
 /* Greybus control request types */
-#define GB_CONTROL_TYPE_INVALID                 0x00
+#define GB_CONTROL_TYPE_INVALID                 GB_INVALID_TYPE
 #define GB_CONTROL_TYPE_PROTOCOL_VERSION        0x01
 /* RESERVED                                     0x02 */
 #define GB_CONTROL_TYPE_GET_MANIFEST_SIZE       0x03

@@ -43,6 +43,8 @@
 #define GB_MAX_PAYLOAD_SIZE     (GB_MTU - sizeof(struct gb_operation_hdr))
 #define GB_TIMESYNC_MAX_STROBES 0x04
 
+#define GB_INVALID_TYPE         0x7f
+
 enum gb_event {
     GB_EVT_CONNECTED,
     GB_EVT_DISCONNECTED,

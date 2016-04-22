@@ -32,7 +32,7 @@
 #include <nuttx/greybus/types.h>
 
 /* Greybus Camera request types */
-#define GB_CAMERA_TYPE_INVALID                  0x00
+#define GB_CAMERA_TYPE_INVALID                  GB_INVALID_TYPE
 #define GB_CAMERA_TYPE_PROTOCOL_VERSION         0x01
 #define GB_CAMERA_TYPE_CAPABILITIES             0x02
 #define GB_CAMERA_TYPE_CONFIGURE_STREAMS        0x03

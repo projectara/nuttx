@@ -33,7 +33,7 @@
 #include <nuttx/greybus/types.h>
 
 /* Greybus vibrator request types */
-#define GB_VIBRATOR_TYPE_INVALID             0x00
+#define GB_VIBRATOR_TYPE_INVALID             GB_INVALID_TYPE
 #define GB_VIBRATOR_TYPE_PROTOCOL_VERSION    0x01
 #define GB_VIBRATOR_TYPE_VIBRATOR_ON         0x02
 #define GB_VIBRATOR_TYPE_VIBRATOR_OFF        0x03
