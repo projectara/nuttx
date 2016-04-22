@@ -287,6 +287,9 @@ static int tsb_gpio_irq_debounce_handler(int irq, void *context, void *priv)
     /* preserve ISR context */
     tsb_gpio_irq_vectors[irq].debounce.context = context;
 
+    /* store private data */
+    tsb_gpio_irq_vectors[irq].debounce.priv = priv;
+
     bool value = !!tsb_gpio_get_value(NULL, irq);
 
     /* check if GPIO value is stable */

@@ -156,6 +156,9 @@ static int stm32_exti_debounce_isr(int irq, void *context, void *priv)
     /* preserve ISR context */
     stm32_exti_handlers[irq].debounce.context = context;
 
+    /* store private data */
+    stm32_exti_handlers[irq].debounce.priv = priv;
+
     bool value = stm32_gpioread(stm32_exti_handlers[irq].pinset);
 
     /* check if GPIO value is stable */
@@ -183,7 +186,7 @@ call_irq:
         ret = stm32_exti_handlers[irq].stm32_exti_callback(
                                                 stm32_exti_handlers[irq].pin,
                                                 context,
-                                                stm32_exti_handlers[irq].priv);
+                                                priv);
     }
 
     return ret;
@@ -207,7 +210,8 @@ static int stm32_exti0_isr(int irq, void *context, void *priv)
     }
   } else {
       /* call debouncing handler */
-      ret = stm32_exti_debounce_isr(stm32_exti_handlers[0].pin, context, NULL);
+      ret = stm32_exti_debounce_isr(stm32_exti_handlers[0].pin, context,
+                                    stm32_exti_handlers[0].priv);
   }
 
   return ret;
@@ -231,7 +235,8 @@ static int stm32_exti1_isr(int irq, void *context, void *priv)
     }
   } else {
       /* call debouncing handler */
-      ret = stm32_exti_debounce_isr(stm32_exti_handlers[1].pin, context, NULL);
+      ret = stm32_exti_debounce_isr(stm32_exti_handlers[1].pin, context,
+                                    stm32_exti_handlers[1].priv);
   }
 
   return ret;
@@ -255,7 +260,8 @@ static int stm32_exti2_isr(int irq, void *context, void *priv)
     }
   } else {
       /* call debouncing handler */
-      ret = stm32_exti_debounce_isr(stm32_exti_handlers[2].pin, context, NULL);
+      ret = stm32_exti_debounce_isr(stm32_exti_handlers[2].pin, context,
+                                    stm32_exti_handlers[2].priv);
   }
 
   return ret;
@@ -279,7 +285,8 @@ static int stm32_exti3_isr(int irq, void *context, void *priv)
     }
   } else {
       /* call debouncing handler */
-      ret = stm32_exti_debounce_isr(stm32_exti_handlers[3].pin, context, NULL);
+      ret = stm32_exti_debounce_isr(stm32_exti_handlers[3].pin, context,
+                                    stm32_exti_handlers[3].priv);
   }
 
   return ret;
@@ -303,7 +310,8 @@ static int stm32_exti4_isr(int irq, void *context, void *priv)
     }
   } else {
       /* call debouncing handler */
-      ret = stm32_exti_debounce_isr(stm32_exti_handlers[4].pin, context, NULL);
+      ret = stm32_exti_debounce_isr(stm32_exti_handlers[4].pin, context,
+                                    stm32_exti_handlers[4].priv);
   }
 
   return ret;
@@ -345,7 +353,8 @@ static int stm32_exti_multiisr(int irq, void *context, int first, int last)
           } else {
             /* call debouncing handler */
             tmp = stm32_exti_debounce_isr(stm32_exti_handlers[pin].pin,
-                                          context, NULL);
+                                          context,
+                                          stm32_exti_handlers[pin].priv);
           }
           if (tmp != OK)
           {

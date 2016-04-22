@@ -50,6 +50,7 @@ struct debounce_data {
     int ms;                             /* debounce time in ms */
     xcpt_t isr;                         /* GPIO interrupt handler */
     void *context;                      /* ISR context */
+    void *priv;                         /* Stored private data */
     enum debounce_state db_state;       /* Debounce state */
     struct timeval debounce_tv;         /* Last time of signal debounce check */
     struct work_s work;                 /* Work queue for delayed state check */
