@@ -74,6 +74,12 @@ int svc_interface_eject_request(struct interface *, uint32_t delay);
 int svc_interface_eject_request_all(uint32_t delay);
 /* Notify the completion of interface ejection */
 int svc_interface_eject_completion_notify(struct interface *);
+int svc_intf_vsys_enable(uint8_t);
+int svc_intf_vsys_disable(uint8_t);
+int svc_intf_refclk_enable(uint8_t);
+int svc_intf_refclk_disable(uint8_t);
+int svc_intf_unipro_enable(uint8_t);
+int svc_intf_unipro_disable(uint8_t);
 int svc_intf_set_power_mode(uint8_t, struct unipro_link_cfg *);
 
 int svcd_start(void);
