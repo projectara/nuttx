@@ -891,6 +891,20 @@ const char *interface_get_name(struct interface *iface)
 }
 
 /**
+ * @brief           Return the switch port ID of the interface
+ * @return          ID of the interface's switch port; INVALID_PORT on error.
+ * @param[in]       iface: configured interface structure
+ */
+unsigned int interface_get_portid(const struct interface *iface)
+{
+    if (!iface) {
+        return INVALID_PORT;
+    }
+
+    return iface->switch_portid;
+}
+
+/**
  * @brief Get the interface struct from the index, as specified in the MDK.
  *        Index 0 is for the first interface (aka 'A').
  * @return interface* on success, NULL on error
