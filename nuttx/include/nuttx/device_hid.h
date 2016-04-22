@@ -74,8 +74,7 @@ struct hid_descriptor {
  * @brief HID event callback function
  *
  * This callback function is registered by the client using the HID device
- * driver and should be called by the HID device driver whenever an event
- * arises.
+ * driver and should be called by the driver whenever an event arises.
  *
  * @param dev The device that created the event
  * @param data Private user data passed to the callback
@@ -112,8 +111,8 @@ struct device_hid_type_ops {
      * @return 0 on success, !=0 on failure
      */
     int (*get_report_descriptor)(struct device *dev, uint8_t *desc);
-    /** Get an HID report's length by its type and identifier
-     * @param dev The device whose HID report's length to return
+    /** Get an HID report's length by type and identifier
+     * @param dev The device whose HID report length to return
      * @param report_type The HID report's type
      * @param report_d The HID report's identifier
      * @return The requested HID report's length on success, <0 on failure
@@ -121,10 +120,10 @@ struct device_hid_type_ops {
     int (*get_report_length)(struct device *dev,
                              enum hid_report_type report_type,
                              uint8_t report_id);
-    /** Get the maximum HID report length for a certain HID report type
+    /** Get the maximum HID report length for a certain report type
      * @param dev The device whose maximum HID report length to return
      * @param report_type The HID report's type
-     * @return The maximum HID report length for the specified HID report type,
+     * @return The maximum HID report length for the specified type,
      * <0 on failure
      */
     int (*get_maximum_report_length)(struct device *dev,
@@ -134,7 +133,7 @@ struct device_hid_type_ops {
      * @param report_type The HID report's type (input or feature)
      * @param report_id The HID report's identifier
      * @param data The HID report's content to fill out
-     * @param len The size of the HID report's content
+     * @param len The size of the HID report content
      * @return 0 on success, !=0 on failure
      */
     int (*get_report)(struct device *dev, enum hid_report_type report_type,
@@ -144,7 +143,7 @@ struct device_hid_type_ops {
      * @param report_type The HID report's type (output or feature)
      * @param report_id The HID report's identifier
      * @param data The HID report's content to read from
-     * @param len The size of the HID report's content
+     * @param len The size of the HID report content
      * @return 0 on success, !=0 on failure
      */
     int (*set_report)(struct device *dev, enum hid_report_type report_type,
@@ -229,9 +228,9 @@ static inline int device_hid_get_descriptor(struct device *dev,
 
 /**
  * @brief Get an HID report's length by its type and identifier
- * @param dev The device whose HID report's length to return
+ * @param dev The device whose HID report length to return
  * @param report_type The HID report's type
- * @param report_id The HID report's identifier
+ * @param report_id The HID report identifier
  * @return The requested HID report's length on success, <0 on failure
  */
 static inline int device_hid_get_report_length(struct device *dev,
@@ -255,7 +254,7 @@ static inline int device_hid_get_report_length(struct device *dev,
 /**
  * @brief Get the maximum HID report length for a certain HID report type
  * @param dev The device whose maximum HID report length to return
- * @param report_type The HID report's type
+ * @param report_type The HID report type
  * @return The maximum HID report length for the specified HID report type, <0
  * on failure
  */
@@ -301,10 +300,10 @@ static inline int device_hid_get_report_descriptor(struct device *dev,
 /**
  * @brief Get an HID input or feature report
  * @param dev The device whose HID input/feature report to return
- * @param report_type The HID report's type (input or feature)
+ * @param report_type The HID report type (input or feature)
  * @param report_id The HID report's identifier
  * @param data The HID report's content to fill out
- * @param len The size of the HID report's content
+ * @param len The size of the HID report content
  * @return 0 on success, !=0 on failure
  */
 static inline int device_hid_get_report(struct device *dev,
@@ -329,10 +328,10 @@ static inline int device_hid_get_report(struct device *dev,
 /**
  * @brief Set an HID output or feature report
  * @param dev The device whose HID output/feature report to set
- * @param report_type The HID report's type (output or feature)
+ * @param report_type The HID report type (output or feature)
  * @param report_id The HID report's identifier
  * @param data The HID report's content to read from
- * @param len The size of the HID report's content
+ * @param len The size of the HID report content
  * @return 0 on success, !=0 on failure
  */
 static inline int device_hid_set_report(struct device *dev,
