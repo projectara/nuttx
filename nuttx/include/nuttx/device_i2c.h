@@ -65,7 +65,7 @@ struct device_i2c_request {
     uint16_t flags;
     /** Buffer for data to transfer (read or write) */
     uint8_t *buffer;
-    /** Size of the buffer */
+    /** Size of buffer */
     int length;
 };
 
