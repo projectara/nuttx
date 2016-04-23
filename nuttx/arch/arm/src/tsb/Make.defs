@@ -68,6 +68,7 @@ CMN_CSRCS += tsb_pm.c
 endif
 
 CHIP_ASRCS  = tsb_vectors.S
+CHIP_ASRCS += tsb_standby.S
 
 CHIP_CSRCS  = tsb_start.c up_allocateheap.c tsb_idle.c tsb_irq.c
 CHIP_CSRCS += tsb_main.c tsb_lowputc.c tsb_serial.c
