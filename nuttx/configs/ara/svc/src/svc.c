@@ -1368,12 +1368,14 @@ static int svcd_startup(void) {
         goto error0;
     }
     svc->board_info = info;
+
+    /* Initialize interfaces, and ensure they're all powered off */
     rc = interface_early_init(info->interfaces, info->nr_interfaces,
                               info->nr_spring_interfaces, info->vlatch_vdd,
                               info->latch_ilim, info->mod_sense);
     if (rc < 0) {
-        dbg_error("%s: Failed to power off interfaces\n", __func__);
-        goto error0;
+        dbg_error("%s: Failed to power off interfaces (%d)\n", __func__, rc);
+        goto error1;
     }
 
     /* Init Switch */
@@ -1401,14 +1403,8 @@ static int svcd_startup(void) {
 
     list_init(&svc_eject_list);
 
-    /* Power on all provided interfaces */
-    if (!info->interfaces) {
-        dbg_error("%s: No interface information provided\n", __func__);
-        goto error2;
-    }
-    rc = interface_init(info->interfaces, info->nr_interfaces,
-                        info->nr_spring_interfaces, info->vlatch_vdd,
-                        info->latch_ilim, info->mod_sense);
+    /* Power on any interfaces that have modules present */
+    rc = interface_init();
     if (rc < 0) {
         dbg_error("%s: Failed to initialize interfaces\n", __func__);
         goto error2;
@@ -1435,6 +1431,7 @@ error2:
     svc->sw = NULL;
 error1:
     ara_board_exit();
+    svc->board_info = NULL;
 error0:
     return -1;
 }
