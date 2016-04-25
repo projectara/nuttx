@@ -1373,7 +1373,7 @@ static int svcd_startup(void) {
                               info->latch_ilim, info->mod_sense);
     if (rc < 0) {
         dbg_error("%s: Failed to power off interfaces\n", __func__);
-        goto error1;
+        goto error0;
     }
 
     /* Init Switch */
@@ -1435,7 +1435,6 @@ error2:
     svc->sw = NULL;
 error1:
     ara_board_exit();
-    svc->board_info = NULL;
 error0:
     return -1;
 }
