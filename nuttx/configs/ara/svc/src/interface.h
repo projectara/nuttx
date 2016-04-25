@@ -159,7 +159,9 @@ struct interface {
              (idx)++, (iface) = interface_get(idx))
 
 /* Initialization */
-int interface_init(void);
+int interface_init(struct interface**, size_t nr_interfaces,
+                   size_t nr_spring_ints, struct vreg *vlatch,
+                   struct vreg *latch_curlim, uint8_t mod_sense_gpio);
 int interface_early_init(struct interface**, size_t nr_interfaces,
                          size_t nr_spring_ints, struct vreg *vlatch,
                          struct vreg *latch_curlim, uint8_t mod_sense_gpio);
