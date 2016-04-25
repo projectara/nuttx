@@ -53,26 +53,18 @@ struct vreg_data {
     unsigned int def_val;     // Default value at init
 };
 
-/* Regulator power state */
-enum vreg_pwr_state {
-    VREG_PWR_ERROR = -1,
-    VREG_PWR_DOWN = 0,
-    VREG_PWR_UP = 1,
-};
-
 /* Voltage regulator management struct */
 struct vreg {
     const char *name;
     struct vreg_data *vregs;
     size_t nr_vregs;
-    atomic_t power_state;
+    bool power_enabled;
     atomic_t use_count;
 };
 
 int vreg_config(struct vreg *);
 int vreg_get(struct vreg *);
 int vreg_put(struct vreg *);
-enum vreg_pwr_state vreg_get_pwr_state(struct vreg *);
 
 /*
  * Macro magic.
