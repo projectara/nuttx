@@ -1058,7 +1058,7 @@ void gdmac_mem2unipro_error_handler(struct tsb_dma_chan *tsb_chan)
     bool retval;
 
     retval = gdmac_start_thread(tsb_chan->chan_id,
-                                mem2unipro_chan->flush_code);
+                                (uint8_t *)mem2unipro_chan->flush_code);
 
     if (retval == false) {
         lldbg("gdmac: failed to start recovery channel program.\n");
@@ -1633,7 +1633,7 @@ int tsb_gdmac_allocal_mem2io_chan(struct device *dev,
     }
 
     /* Set the transfer and transfer done handlers */
-    gdmac_chan->do_dma_transfer = gdmac_mem2io_prepare_transfer;
+    gdmac_chan->prepare_transfer = gdmac_mem2io_prepare_transfer;
     gdmac_chan->release_channel = gdmac_mem2io_release_channel;
     gdmac_chan->error_handler = NULL;
     gdmac_chan->gdmac_dev = dev;

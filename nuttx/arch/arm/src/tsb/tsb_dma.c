@@ -46,6 +46,8 @@
 #include "tsb_dma.h"
 #include "tsb_dma_share.h"
 
+#define TSM_DMA_DEQUEUE_WAIT_TIMEOUT_MS 20
+
 enum tsb_dma_op_state {
     TSB_DMA_OP_STATE_IDLE,
     TSB_DMA_OP_STATE_QUEUED,
@@ -396,6 +398,41 @@ static int tsb_dma_chan_alloc(struct device *dev,
     return retval;
 }
 
+static void tsb_dma_wait_for_all_op_dequeued(struct tsb_dma_info *info,
+        struct tsb_dma_chan *dma_chan)
+{
+    irqstate_t flags;
+    uint32_t index = 0;
+    struct list_head *node;
+    struct tsb_dma_op* dma_op;
+
+    while (index++ < TSM_DMA_DEQUEUE_WAIT_TIMEOUT_MS) {
+        flags = irqsave();
+
+        dma_op = NULL;
+        list_foreach(&info->completed_queue, node) {
+            dma_op = list_entry(node, struct tsb_dma_op, list_node);
+            if (dma_chan->chan_id == dma_op->chan_id) {
+                break;
+            }
+            dma_op = NULL;
+        }
+
+        irqrestore(flags);
+
+        if (dma_op != NULL) {
+            usleep(1000);
+        } else {
+            break;
+        }
+    }
+
+    if (index >= TSM_DMA_DEQUEUE_WAIT_TIMEOUT_MS) {
+        lldbg("Failed to wait for running dma op to be dequeued.\n");
+    }
+
+}
+
 static int tsb_dma_chan_free(struct device *dev, void *chan)
 {
     struct tsb_dma_info *info;
@@ -419,13 +456,15 @@ static int tsb_dma_chan_free(struct device *dev, void *chan)
 
         flags = irqsave();
 
-        list_foreach_safe(&dma_chan->queue, node, next_node) {
+        list_reverse_foreach_safe(&dma_chan->queue, node, next_node) {
             struct tsb_dma_op *dma_op;
+            struct device_dma_op *dev_op;
 
             dma_op = list_entry(node, struct tsb_dma_op, list_node);
+            dev_op = &dma_op->op;
 
-            if (dma_op->state == TSB_DMA_OP_STATE_QUEUED) {
-                struct device_dma_op *dev_op = &dma_op->op;
+            switch (dma_op->state) {
+            case TSB_DMA_OP_STATE_QUEUED:
                 list_del(node);
 
                 dma_op->state = TSB_DMA_OP_STATE_DEQUEUED;
@@ -436,6 +475,19 @@ static int tsb_dma_chan_free(struct device *dev, void *chan)
                             DEVICE_DMA_CALLBACK_EVENT_DEQUEUED,
                             dev_op->callback_arg);
                 }
+                break;
+            case TSB_DMA_OP_STATE_STARTING:
+                dma_op->state = TSB_DMA_OP_STATE_DEQUEUED;
+                break;
+            case TSB_DMA_OP_STATE_RUNNING:
+                retval = gdmac_stop_op(dev, dma_chan, dev_op);
+                break;
+            default:
+                /*
+                 * nothing need to be done if the op's is in error, dequeued,
+                 * or other state.
+                 */
+                break;
             }
         }
 
@@ -444,6 +496,8 @@ static int tsb_dma_chan_free(struct device *dev, void *chan)
         if (list_is_empty(&dma_chan->queue) != true) {
             retval = -EIO;
         } else {
+            tsb_dma_wait_for_all_op_dequeued(info, dma_chan);
+
             pthread_mutex_destroy(&dma_chan->chan_mutex);
 
             info->chans[dma_chan->chan_id] = NULL;
@@ -619,6 +673,8 @@ static int tsb_dma_dequeue(struct device *dev, void *chan,
 {
     struct tsb_dma_info *info;
     struct tsb_dma_op *dma_op;
+    struct tsb_dma_chan *dma_chan = (struct tsb_dma_chan *) chan;
+    struct device_dma_op *dev_op;
     irqstate_t flags;
     int retval = -EIO;
 
@@ -632,6 +688,7 @@ static int tsb_dma_dequeue(struct device *dev, void *chan,
     }
 
     dma_op = containerof(op, struct tsb_dma_op, op);
+    dev_op = &dma_op->op;
 
     flags = irqsave();
 
@@ -639,8 +696,12 @@ static int tsb_dma_dequeue(struct device *dev, void *chan,
      * from the queue. If the op is already started, we can't stop the DMAC
      * and delete it.
      */
-    if (dma_op->state == TSB_DMA_OP_STATE_QUEUED) {
-        struct device_dma_op *dev_op = &dma_op->op;
+    switch (dma_op->state) {
+    case TSB_DMA_OP_STATE_QUEUED:
+        /*
+         * If the DMA transfer is queued on a channel queue, all we need to
+        * do is to remove it from the queue and we are done.
+        */
 
         list_del(&dma_op->list_node);
 
@@ -653,13 +714,19 @@ static int tsb_dma_dequeue(struct device *dev, void *chan,
                     dev_op->callback_arg);
         }
         retval = OK;
-    } else {
-       if (dma_op->state == TSB_DMA_OP_STATE_RUNNING) {
-            struct device_dma_op *dev_op = &dma_op->op;
-            struct tsb_dma_chan *dma_chan = (struct tsb_dma_chan *) chan;
-
-            retval = gdmac_stop_op(dev, dma_chan, dev_op);
-        }
+        break;
+    case TSB_DMA_OP_STATE_RUNNING:
+        retval = gdmac_stop_op(dev, dma_chan, dev_op);
+        break;
+    case TSB_DMA_OP_STATE_STARTING:
+        dma_op->state = DEVICE_DMA_CALLBACK_EVENT_DEQUEUED;
+        break;
+    default:
+        /*
+         * nothing need to be done if the op's is in error, dequeued,
+         * or other state.
+         */
+        break;
     }
 
     irqrestore(flags);

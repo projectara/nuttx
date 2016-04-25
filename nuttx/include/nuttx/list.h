@@ -59,6 +59,11 @@ int list_count(struct list_head *head);
          (iter) != (head); \
          (iter) = (niter), (niter) = (niter)->next)
 
+#define list_reverse_foreach_safe(head, iter, niter) \
+    for ((iter) = (head)->prev, (niter) = (iter)->prev; \
+         (iter) != (head); \
+         (iter) = (niter), (niter) = (niter)->prev)
+
 #define LIST_INIT(head) { .prev = &head, .next = &head }
 #define LIST_DECLARE(name) struct list_head name = { .prev = &name, \
                                                      .next = &name }
