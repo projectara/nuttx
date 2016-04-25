@@ -733,7 +733,7 @@ static int interface_power_on(struct interface *iface)
     }
 
     /* If powered OFF, power it ON now */
-    if (!interface_get_vsys_state(iface) == ARA_IFACE_PWR_DOWN) {
+    if (!interface_get_vsys_state(iface)) {
         rc = interface_vsys_enable(iface);
         if (rc < 0) {
             return rc;
