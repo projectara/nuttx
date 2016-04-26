@@ -57,25 +57,22 @@ enum ep_mapping {
     DIRECT_EP,
 };
 
-struct apbridge_usb_driver
-{
-    int (*usb_to_unipro)(struct apbridge_dev_s *dev, unsigned int cportid,
-                         void *payload, size_t size);
-    int (*init)(struct apbridge_dev_s *dev);
-
-    void (*unipro_cport_mapping)(unsigned int cportid, enum ep_mapping mapping);
-};
-
 struct apbridge_dev_s *get_apbridge_dev(void);
 
-int unipro_to_usb(struct apbridge_dev_s *dev, unsigned cportid,
-                  const void *payload, size_t size);
-
+int rx_transfer(struct apbridge_dev_s *dev, unsigned cportid,
+                const void *payload, size_t size);
+int usb_rx_transfer(unsigned int cportid,
+                    void *payload, size_t len, void *priv);
 void usb_wait(struct apbridge_dev_s *dev);
-int usbdev_apbinitialize(struct device *dev,
-                         struct apbridge_usb_driver *driver);
+int usbdev_apbinitialize(struct device *dev);
 
 int usb_release_buffer(struct apbridge_dev_s *priv, const void *buf);
+
+static inline
+struct apbridge_dev_s *usbdev_to_apbridge(struct usbdev_s *dev)
+{
+    return dev->ep0->priv;
+}
 
 /*
  * Offloaded cport
@@ -85,25 +82,30 @@ int usb_release_buffer(struct apbridge_dev_s *priv, const void *buf);
  */
 
 /* Offloaded cport callback definition */
-typedef int (*unipro_offloaded_cb)(unsigned int cportid,
-                                   void *payload, size_t len);
+typedef int (*transfer_cb)(unsigned int cportid,
+                           void *payload, size_t len, void *priv);
 
+int register_cport_callback(struct apbridge_dev_s *priv, unsigned int cportid,
+                            transfer_cb p_rx_transfer,
+                            transfer_cb p_tx_transfer);
+int unregister_cport_callback(struct apbridge_dev_s *priv,
+                              unsigned int cportid);
 /*
  * @brief Offload a cport
  * @param priv Pointer on usb gadget device.
  * @param cportid ID of cport to offload.
- * @param unipro_cb The callback to invoke when there is incoming data from
+ * @param rx_transfer The callback to invoke when there is incoming data from
  * UniPro. It is the responsability of callback to release the UniPro buffer
  * using unipro_rxbuf_free().
- * @param usb_cb The callback to invoke when there is incoming data from USB.
+ * @param tx_transfer The callback to invoke when there is incoming data from USB.
  * It is the responsability of callback to release the USB buffer using
  * usb_release_buffer().
  * @return 0 on success or -EBUSY is the cport is already offloaded or mapped
  * to a dirrect mapped endpoint.
  */
 int map_offloaded_cport(struct apbridge_dev_s *priv, unsigned int cportid,
-                         unipro_offloaded_cb unipro_cb,
-                         unipro_offloaded_cb usb_cb);
+                        transfer_cb rx_transfer,
+                        transfer_cb tx_transfer);
 /*
  * @brief Un-offload a cport
  * @param priv Pointer on usb gadget device.

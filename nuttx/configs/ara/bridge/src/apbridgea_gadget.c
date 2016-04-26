@@ -69,7 +69,7 @@
 #include <arch/board/common_gadget.h>
 #include <arch/board/apbridgea_gadget.h>
 #include <arch/board/apbridgea_audio.h>
-#include <nuttx/greybus/greybus_timestamp.h>
+ #include <arch/board/apbridgea_unipro.h>
 #include <nuttx/greybus/timesync.h>
 #include <greybus/control-gb.h>
 
@@ -204,13 +204,10 @@ struct apbridge_dev_s {
 
     int *cport_to_epin_n;
     int epout_to_cport_n[APBRIDGE_NBULKS];
-    unipro_offloaded_cb *cport_to_unipro_offloaded;
-    unipro_offloaded_cb *cport_to_usb_offloaded;
-    struct gb_timestamp *ts;
+    transfer_cb *rx_transfer;
+    transfer_cb *tx_transfer;
 
     struct gadget_descriptor *g_desc;
-
-    struct apbridge_usb_driver *driver;
 
     /* Number of request per bulk out endpoints */
     uint8_t req_count[APBRIDGE_NBULKS];
@@ -249,12 +246,12 @@ static int usbclass_setconfig(struct apbridge_dev_s *priv, uint8_t config);
 
 /* Completion event handlers ***********************************************/
 
-static void usbclass_ep0incomplete(struct usbdev_ep_s *ep,
-                                   struct usbdev_req_s *req);
-static void usbclass_rdcomplete(struct usbdev_ep_s *ep,
-                                struct usbdev_req_s *req);
-static void usbclass_wrcomplete(struct usbdev_ep_s *ep,
-                                struct usbdev_req_s *req);
+static void ctrl_ep_complete(struct usbdev_ep_s *ep,
+                             struct usbdev_req_s *req);
+static void bulk_out_complete(struct usbdev_ep_s *ep,
+                              struct usbdev_req_s *req);
+static void bulk_in_complete(struct usbdev_ep_s *ep,
+                             struct usbdev_req_s *req);
 
 /* USB class device ********************************************************/
 
@@ -395,12 +392,6 @@ struct apbridge_dev_s *driver_to_apbridge(struct usbdevclass_driver_s *drv)
     return CONTAINER_OF(drv, struct apbridge_dev_s, drvr);
 }
 
-static inline
-struct apbridge_dev_s *usbdev_to_apbridge(struct usbdev_s *dev)
-{
-    return dev->ep0->priv;
-}
-
 static inline struct apbridge_dev_s *ep_to_apbridge(struct usbdev_ep_s *ep)
 {
     return (struct apbridge_dev_s *)ep->priv;
@@ -449,31 +440,83 @@ static void cportid_set_epno(struct apbridge_dev_s *priv,
 }
 
 /* Call the offloaded method registered for a particular cportid (APBridge to AP) */
-static int unipro_offloaded(struct apbridge_dev_s *priv,
-                            unsigned int cportid,
-                            const void *payload, size_t len)
+int rx_transfer(struct apbridge_dev_s *priv,
+                unsigned int cportid,
+                const void *payload, size_t len)
 {
-    unipro_offloaded_cb cb;
+    transfer_cb cb;
 
-    cb = priv->cport_to_unipro_offloaded[cportid];
-    return cb(cportid, (void *)payload, len);
+    cb = priv->rx_transfer[cportid];
+    return cb(cportid, (void *)payload, len, priv);
 }
 
 /* Call the offloaded method registered for a particular cportid (AP to APBridge) */
-static int usb_offloaded(struct apbridge_dev_s *priv,
-                         unsigned int cportid,
-                         const void *payload, size_t len)
+static int tx_transfer(struct apbridge_dev_s *priv,
+                       unsigned int cportid,
+                       const void *payload, size_t len)
 {
-    unipro_offloaded_cb cb;
+    transfer_cb cb;
 
-    cb = priv->cport_to_usb_offloaded[cportid];
-    return cb(cportid, (void *)payload, len);
+    cb = priv->tx_transfer[cportid];
+    return cb(cportid, (void *)payload, len, priv);
+}
+
+int register_cport_callback(struct apbridge_dev_s *priv, unsigned int cportid,
+                        transfer_cb p_rx_transfer, transfer_cb p_tx_transfer)
+{
+    priv->rx_transfer[cportid] = p_rx_transfer;
+    priv->tx_transfer[cportid] = p_tx_transfer;
+
+    return 0;
+}
+
+int unregister_cport_callback(struct apbridge_dev_s *priv, unsigned int cportid)
+{
+    return register_cport_callback(priv, cportid,
+                                   usb_rx_transfer, unipro_tx_transfer);
+}
+
+static int cport_callback_init(struct apbridge_dev_s *priv)
+{
+    int i;
+    unsigned int cport_count = unipro_cport_count();
+
+    priv->rx_transfer =
+        kmm_malloc(sizeof(transfer_cb) * cport_count);
+    if (!priv->rx_transfer) {
+        return -ENOMEM;
+    }
+
+    priv->tx_transfer =
+        kmm_malloc(sizeof(transfer_cb) * cport_count);
+    if (!priv->tx_transfer) {
+        kmm_free(priv->rx_transfer);
+        priv->rx_transfer = NULL;
+        return -ENOMEM;
+    }
+
+    for (i = 0; i < cport_count; i++) {
+        register_cport_callback(priv, i, usb_rx_transfer, unipro_tx_transfer);
+    }
+
+    return 0;
+}
+
+static void cport_callback_free(struct apbridge_dev_s *priv)
+{
+    if (priv->rx_transfer) {
+        kmm_free(priv->tx_transfer);
+        priv->rx_transfer = NULL;
+    }
+    if (priv->tx_transfer) {
+        kmm_free(priv->rx_transfer);
+        priv->tx_transfer = NULL;
+    }
 }
 
 /* Create an offloaded cport: from here, the two callback will be used instead of USB methods */
 int map_offloaded_cport(struct apbridge_dev_s *priv, unsigned int cportid,
-                         unipro_offloaded_cb unipro_cb,
-                         unipro_offloaded_cb usb_cb)
+                        transfer_cb p_rx_transfer, transfer_cb p_tx_transfer)
 {
     struct usbdev_ep_s *ep;
     struct cport_to_ep cport_to_ep = {
@@ -491,8 +534,7 @@ int map_offloaded_cport(struct apbridge_dev_s *priv, unsigned int cportid,
         return -EBUSY;
     }
 
-    priv->cport_to_unipro_offloaded[cportid] = unipro_cb;
-    priv->cport_to_usb_offloaded[cportid] = usb_cb;
+    register_cport_callback(priv, cportid, p_rx_transfer, p_tx_transfer);
     map_cport_to_ep(priv, &cport_to_ep);
 
     return 0;
@@ -514,6 +556,8 @@ int unmap_offloaded_cport(struct apbridge_dev_s *priv, unsigned int cportid)
 
     /* Map cport to muxed endpoints: now, can be use by AP */
     map_cport_to_ep(priv, &cport_to_ep);
+    unregister_cport_callback(priv, cportid);
+
     return 0;
 }
 
@@ -527,35 +571,15 @@ static int map_table_init(struct apbridge_dev_s *priv)
         return -ENOMEM;
     }
 
-    priv->cport_to_unipro_offloaded =
-        kmm_malloc(sizeof(unipro_offloaded_cb) * cport_count);
-    if (!priv->cport_to_unipro_offloaded) {
-        goto errout_with_unipro_cb_alloc;
-    }
-
-    priv->cport_to_usb_offloaded =
-        kmm_malloc(sizeof(unipro_offloaded_cb) * cport_count);
-    if (!priv->cport_to_usb_offloaded) {
-        goto errout_with_usb_cb_alloc;
-    }
-
     for (i = 0; i < cport_count; i++) {
         priv->cport_to_epin_n[i] = CONFIG_APBRIDGE_EPBULKIN;
     }
 
     return 0;
-
-errout_with_usb_cb_alloc:
-    kmm_free(priv->cport_to_unipro_offloaded);
-errout_with_unipro_cb_alloc:
-    kmm_free(priv->cport_to_epin_n);
-    return -ENOMEM;
 }
 
 static void map_table_free(struct apbridge_dev_s *priv)
 {
-    kmm_free(priv->cport_to_usb_offloaded);
-    kmm_free(priv->cport_to_unipro_offloaded);
     kmm_free(priv->cport_to_epin_n);
 }
 
@@ -606,7 +630,7 @@ static int ep_add_requests(struct apbridge_dev_s *priv,
 
     /* Queue read requests in the bulk OUT endpoint */
     for (i = 0; i < n; i++) {
-        req = get_request(ep, usbclass_rdcomplete,
+        req = get_request(ep, bulk_out_complete,
                           APBRIDGE_REQ_SIZE, NULL);
         request_set_priv(req, req->buf);
         ret = EP_SUBMIT(ep, req);
@@ -731,25 +755,13 @@ static int _to_usb_submit(struct usbdev_ep_s *ep, struct usbdev_req_s *req,
                           unsigned int cportid, const void *payload,
                           size_t len)
 {
-    struct gb_operation_hdr *gbhdr;
-    struct apbridge_dev_s *priv;
     int ret;
 
-    priv = ep->priv;
     req->len = len;
     req->flags = USBDEV_REQFLAGS_NULLPKT;
 
     req->buf = (void*) payload;
     set_cport_id(ep, req, cportid);
-
-    gbhdr = (struct gb_operation_hdr *)req->buf;
-    gb_timestamp_tag_exit_time(&priv->ts[cportid], cportid);
-
-    /* Skip the timestamping if it's not a response from GPB to AP. */
-    if (gbhdr->type & GB_TYPE_RESPONSE_FLAG) {
-        gb_timestamp_log(&priv->ts[cportid], cportid,
-                         req->buf, len, GREYBUS_FW_TIMESTAMP_APBRIDGE);
-    }
 
     /* Then submit the request to the endpoint */
 
@@ -770,8 +782,8 @@ static int _to_usb_submit(struct usbdev_ep_s *ep, struct usbdev_req_s *req,
  * @return 0 in success or -EINVAL if len is too big
  */
 
-int unipro_to_usb(struct apbridge_dev_s *priv, unsigned int cportid,
-                  const void *payload, size_t len)
+int usb_rx_transfer(unsigned int cportid,
+                    void *payload, size_t len, void *priv)
 {
     struct usbdev_ep_s *ep;
     struct usbdev_req_s *req;
@@ -780,13 +792,9 @@ int unipro_to_usb(struct apbridge_dev_s *priv, unsigned int cportid,
         return -EINVAL;
 
     ep = cportid_to_ep(priv, cportid);
-    if (ep == OFFLOADED_EP) {
-        /* offloaded cport: redirect data to the offloaded callback */
-        return unipro_offloaded(priv, cportid, payload, len);
-    }
 
     /* Bulk in request use UniPro buffer so only get a request without buffer */
-    req = get_request(ep, usbclass_wrcomplete, 0,
+    req = get_request(ep, bulk_in_complete, 0,
                       (void*) cportid);
     if (!req) {
         return apbridge_queue(priv, ep, payload, len, (void*) cportid);
@@ -835,11 +843,7 @@ void map_cport_to_ep(struct apbridge_dev_s *priv,
     cportid_set_epno(priv, cport_to_ep->endpoint_in, cportid);
     epno_set_cportid(priv, cport_to_ep->endpoint_out, cportid);
 
-    if (priv->driver->unipro_cport_mapping) {
-        priv->driver->unipro_cport_mapping(cportid,
-                                           is_multiplexed ? MULTIPLEXED_EP
-                                                          : DIRECT_EP);
-    }
+    unipro_cport_mapping(cportid, is_multiplexed ? MULTIPLEXED_EP : DIRECT_EP);
 }
 
 /****************************************************************************
@@ -989,15 +993,15 @@ static int usbclass_setconfig(struct apbridge_dev_s *priv, uint8_t config)
 }
 
 /****************************************************************************
- * Name: usbclass_ep0incomplete
+ * Name: ctrl_ep_complete
  *
  * Description:
  *   Handle completion of EP0 control operations
  *
  ****************************************************************************/
 
-static void usbclass_ep0incomplete(struct usbdev_ep_s *ep,
-                                   struct usbdev_req_s *req)
+static void ctrl_ep_complete(struct usbdev_ep_s *ep,
+                             struct usbdev_req_s *req)
 {
     if (req->result || req->xfrd != req->len) {
         usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_REQRESULT),
@@ -1008,13 +1012,8 @@ static void usbclass_ep0incomplete(struct usbdev_ep_s *ep,
     put_request(req);
 }
 
-static void usbdclass_log_rx_time(struct apbridge_dev_s *priv, unsigned int cportid)
-{
-    gb_timestamp_tag_entry_time(&priv->ts[cportid], cportid);
-}
-
 /****************************************************************************
- * Name: usbclass_rdcomplete
+ * Name: bulk_out_complete
  *
  * Description:
  *   Handle completion of read request on the bulk OUT endpoint.  This
@@ -1022,11 +1021,10 @@ static void usbdclass_log_rx_time(struct apbridge_dev_s *priv, unsigned int cpor
  *
  ****************************************************************************/
 
-static void usbclass_rdcomplete(struct usbdev_ep_s *ep,
-                                struct usbdev_req_s *req)
+static void bulk_out_complete(struct usbdev_ep_s *ep,
+                              struct usbdev_req_s *req)
 {
     struct apbridge_dev_s *priv;
-    struct apbridge_usb_driver *drv;
     unsigned int cportid;
 
     /* Sanity check */
@@ -1041,7 +1039,6 @@ static void usbclass_rdcomplete(struct usbdev_ep_s *ep,
     /* Extract references to private data */
 
     priv = ep_to_apbridge(ep);
-    drv = priv->driver;
 
     /* Process the received data unless this is some unusual condition */
 
@@ -1049,13 +1046,7 @@ static void usbclass_rdcomplete(struct usbdev_ep_s *ep,
     case OK:                    /* Normal completion */
         usbtrace(TRACE_CLASSRDCOMPLETE, 0);
         cportid = get_cport_id(priv, ep, req);
-        if (cportid_to_ep(priv, cportid) == OFFLOADED_EP) {
-            /* Get USB data for an offloaded cport: redirect data to callback */
-            usb_offloaded(priv, cportid, req->buf, req->xfrd);
-            return;
-        }
-        usbdclass_log_rx_time(priv, cportid);
-        if (!drv->usb_to_unipro(priv, cportid, req->buf , req->xfrd))
+        if (!tx_transfer(priv, cportid, req->buf, req->xfrd))
             return;
 
     case -ESHUTDOWN:           /* Disconnection */
@@ -1075,8 +1066,8 @@ static void usbclass_rdcomplete(struct usbdev_ep_s *ep,
     EP_SUBMIT(ep, req);
 }
 
-static void usbclass_wrcomplete(struct usbdev_ep_s *ep,
-                              struct usbdev_req_s *req)
+static void bulk_in_complete(struct usbdev_ep_s *ep,
+                             struct usbdev_req_s *req)
 {
     struct apbridge_msg_s *info;
     struct apbridge_dev_s *priv;
@@ -1377,36 +1368,6 @@ static int ep_mapping_vendor_request_out(struct usbdev_s *dev, uint8_t req,
     return len;
 }
 
-static int latency_tag_en_vendor_request_out(struct usbdev_s *dev, uint8_t req,
-                                             uint16_t index, uint16_t value,
-                                             void *buf, uint16_t len)
-{
-    int ret = -EINVAL;
-    struct apbridge_dev_s *priv = usbdev_to_apbridge(dev);
-
-    if (value < unipro_cport_count()) {
-        priv->ts[value].tag = true;
-        ret = 0;
-        lldbg("enable tagging for cportid %d\n", value);
-    }
-    return ret;
-}
-
-static int latency_tag_dis_vendor_request_out(struct usbdev_s *dev, uint8_t req,
-                                              uint16_t index, uint16_t value,
-                                              void *buf, uint16_t len)
-{
-    int ret = -EINVAL;
-    struct apbridge_dev_s *priv = usbdev_to_apbridge(dev);
-
-    if (value < unipro_cport_count()) {
-        priv->ts[value].tag = false;
-        ret = 0;
-        lldbg("disable tagging for cportid %d\n", value);
-    }
-    return ret;
-}
-
 #ifdef CONFIG_ARCH_CHIP_DEVICE_CSI
 static int csi_tx_control_vendor_request_out(struct usbdev_s *dev, uint8_t req,
                                              uint16_t index, uint16_t value,
@@ -1548,7 +1509,7 @@ static int usbclass_setup(struct usbdevclass_driver_s *driver,
         return -ENODEV;
     }
 #endif
-    req = get_request(dev->ep0, usbclass_ep0incomplete,
+    req = get_request(dev->ep0, ctrl_ep_complete,
                       APBRIDGE_MXDESCLEN, NULL);
     if (!req) {
         lowsyslog("%s(): unable to get a request buffer\n", __func__);
@@ -1661,7 +1622,7 @@ static int usbclass_setup(struct usbdevclass_driver_s *driver,
     }
 
     if (ret < 0) {
-         usbclass_ep0incomplete(dev->ep0, req);
+         ctrl_ep_complete(dev->ep0, req);
     }
 
     return ret;
@@ -1724,14 +1685,11 @@ static void usbclass_disconnect(struct usbdevclass_driver_s *driver,
     DEV_CONNECT(dev);
 }
 
-int usbdev_apbinitialize(struct device *dev,
-                         struct apbridge_usb_driver *driver)
+int usbdev_apbinitialize(struct device *dev)
 {
     struct apbridge_dev_s *priv;
     struct usbdevclass_driver_s *drvr;
     int ret = -ENOMEM;
-    unsigned int i;
-    unsigned int cport_count = unipro_cport_count();
 
     /* Register USB vendor requests */
     if (register_vendor_request(APBRIDGE_RWREQUEST_LOG, VENDOR_REQ_IN,
@@ -1739,12 +1697,6 @@ int usbdev_apbinitialize(struct device *dev,
         goto errout_vendor_req;
     if (register_vendor_request(APBRIDGE_RWREQUEST_EP_MAPPING, VENDOR_REQ_DATA,
                                 ep_mapping_vendor_request_out))
-        goto errout_vendor_req;
-    if (register_vendor_request(APBRIDGE_ROREQUEST_LATENCY_TAG_EN, VENDOR_REQ_OUT,
-                                latency_tag_en_vendor_request_out))
-        goto errout_vendor_req;
-    if (register_vendor_request(APBRIDGE_ROREQUEST_LATENCY_TAG_DIS, VENDOR_REQ_OUT,
-                                latency_tag_dis_vendor_request_out))
         goto errout_vendor_req;
 #ifdef CONFIG_ARCH_CHIP_DEVICE_CSI
     if (register_vendor_request(APBRIDGE_RWREQUEST_CSI_TX_CONTROL, VENDOR_REQ_DATA,
@@ -1791,24 +1743,17 @@ int usbdev_apbinitialize(struct device *dev,
     /* Initialize the USB driver structure */
 
     memset(priv, 0, sizeof(struct apbridge_dev_s));
-    priv->driver = driver;
 
     if (map_table_init(priv)) {
         goto errout_with_map_table;
     }
 
-    priv->ts = kmm_malloc(sizeof(struct gb_timestamp) * unipro_cport_count());
-    if (!priv->ts) {
-        ret = -ENOMEM;
-        goto errout_with_alloc_ts;
+    if (cport_callback_init(priv)) {
+        goto errout_with_cport_callback;
     }
 
-    for (i = 0; i < cport_count; i++) {
-        priv->ts[i].tag = false;
-    }
     sem_init(&priv->config_sem, 0, 0);
     list_init(&priv->msg_queue);
-    gb_timestamp_init();
 
     /* Initialize the USB class driver structure */
 
@@ -1823,18 +1768,14 @@ int usbdev_apbinitialize(struct device *dev,
                  (uint16_t) - ret);
         goto errout_cport_table;
     }
-    ret = priv->driver->init(priv);
-    if (ret)
-        goto errout_with_init;
 
     /* Register the single port supported by this implementation */
     return OK;
 
- errout_with_init:
-    device_usbdev_unregister_gadget(dev, drvr);
 errout_cport_table:
-    kmm_free(priv->ts);
-errout_with_alloc_ts:
+    device_usbdev_unregister_gadget(dev, drvr);
+    cport_callback_free(priv);
+errout_with_cport_callback:
     map_table_free(priv);
  errout_with_map_table:
     kmm_free(priv);

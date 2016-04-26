@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015 Google Inc.
+ * Copyright (c) 2016 Google Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,24 +26,10 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef APBRIDGE_BACKEND_H
-#define APBRIDGE_BACKEND_H
+#ifndef _APBRIDGEA_DEBUG_H_
+#define _APBRIDGEA_DEBUG_H_
 
-#include <nuttx/unipro/unipro.h>
+int apbridgea_debug_init(void);
+void apbridgea_debug_free(void);
 
-enum ep_mapping;
-
-struct apbridge_backend {
-    int (*usb_to_unipro)(unsigned int cportid, void *buf, size_t len,
-                         unipro_send_completion_t callback, void *priv);
-    void (*unipro_cport_mapping)(unsigned int cportid, enum ep_mapping mapping);
-    void (*unipro_enable)(void);
-
-    void (*init)(void);
-};
-
-int recv_from_unipro(unsigned int cportid, void *buf, size_t len);
-void apbridge_backend_register(struct apbridge_backend *apbridge_backend);
-
-#endif /* APBRIDGE_BACKEND_H */
-
+#endif /* _APBRIDGEA_DEBUG_H_ */
