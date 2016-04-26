@@ -34,6 +34,9 @@
 #include <nuttx/power/pm.h>
 #include <nuttx/clock.h>
 
+#define WAIT_FOR_WAKEUP_INTERVAL    10000 /* 10ms */
+#define WAIT_FOR_WAKEUP_MAX_RETRY   10
+
 static volatile int tsb_pm_curr_state = PM_NORMAL;
 static volatile int tsb_pm_enabled = 1;
 
@@ -133,6 +136,24 @@ void tsb_pm_enable(void)
     flags = irqsave();
     tsb_pm_enabled = 1;
     irqrestore(flags);
+}
+
+/**
+ * @brief Wait for tsb power-management wakeup.
+ * @return OK (0) on success, negative error number on failure.
+ */
+int tsb_pm_wait_for_wakeup(void)
+{
+    int retry = 0;
+
+    while (tsb_pm_getstate() == PM_SLEEP) {
+        usleep(WAIT_FOR_WAKEUP_INTERVAL);
+        if (++retry > WAIT_FOR_WAKEUP_MAX_RETRY) {
+            return -EIO;
+        }
+    }
+
+    return OK;
 }
 
 /**

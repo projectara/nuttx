@@ -41,11 +41,13 @@
 #define TSB_UNIPRO_ACTIVITY     9
 #define TSB_GPIO_ACTIVITY       9
 #define TSB_I2C_ACTIVITY        9
+#define TSB_PWM_ACTIVITY        9
 
 #ifdef CONFIG_PM
 int tsb_pm_getstate(void);
 void tsb_pm_disable(void);
 void tsb_pm_enable(void);
+int tsb_pm_wait_for_wakeup(void);
 int tsb_pm_driver_state_change(int pmstate);
 int tsb_pm_register(pm_prepare_cb prepare, pm_notify_cb notify, void *priv);
 #else
@@ -62,6 +64,11 @@ static void tsb_pm_disable(void)
 static void tsb_pm_enable(void)
 {
 
+}
+
+static int tsb_pm_wait_for_wakeup(void)
+{
+    return 0;
 }
 
 static int tsb_pm_driver_state_change(int pmstate)
