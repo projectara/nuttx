@@ -34,6 +34,8 @@
  * @file nuttx/device_i2c.h
  * @brief I2C API
  * @author Joel Porquet
+ * @attention This file is officially included in the Firmware Documentation.
+ * Please contact the Firmware Documentation team before modifying it.
  */
 
 #include <errno.h>
@@ -63,7 +65,7 @@ struct device_i2c_request {
     uint16_t flags;
     /** Buffer for data to transfer (read or write) */
     uint8_t *buffer;
-    /** Size of the buffer */
+    /** Size of buffer */
     int length;
 };
 

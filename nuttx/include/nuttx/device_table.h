@@ -34,6 +34,8 @@
  * @brief Device API
  * @author Mark Greer
  * @author Fabien Parent
+ * @attention This file is officially included in the Firmware Documentation.
+ * Please contact the Firmware Documentation team before modifying it.
  */
 
 #include <nuttx/list.h>

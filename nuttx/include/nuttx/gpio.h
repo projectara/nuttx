@@ -32,6 +32,8 @@
 /**
  * @file nuttx/gpio.h
  * @brief GPIO API
+ * @attention This file is officially included in the Firmware Documentation.
+ * Please contact the Firmware Documentation team before modifying it.
  */
 
 #include <stdbool.h>
@@ -51,7 +53,7 @@
 #define IRQ_TYPE_EDGE_RISING    0x00000001
 /** Triggers an interrupt on a falling edge */
 #define IRQ_TYPE_EDGE_FALLING   0x00000002
-/** Triggers an interrupt on a both types of edges */
+/** Triggers an interrupt on either type of edge */
 #define IRQ_TYPE_EDGE_BOTH      (IRQ_TYPE_EDGE_FALLING | IRQ_TYPE_EDGE_RISING)
 /** Triggers an interrupt when the signal is high */
 #define IRQ_TYPE_LEVEL_HIGH     0x00000004
@@ -61,9 +63,9 @@
 
 /** GPIO internal pull resistor types */
 enum gpio_pull_type {
-    /** Internal pull down resistor */
+    /** Internal pulldown resistor */
     GPIO_PULL_TYPE_PULL_DOWN,
-    /** Internal pull up resistor */
+    /** Internal pullup resistor */
     GPIO_PULL_TYPE_PULL_UP,
     /** No internal pull resistor */
     GPIO_PULL_TYPE_PULL_NONE,
@@ -118,7 +120,7 @@ void gpio_set_value(uint8_t which, uint8_t value);
 /**
  * @brief Set the debouncing delay of a GPIO line
  * @param which The number of the GPIO line
- * @param delay Debouncing delay in ms, delay of zero disables debouncing
+ * @param delay Debouncing delay in ms, delay of 0 disables debouncing
  * @return 0 on success, !=0 on failure
  */
 int gpio_set_debounce(uint8_t which, uint16_t delay);
@@ -191,7 +193,7 @@ int gpio_deactivate(uint8_t which);
 /**
  * @brief Check whether a GPIO line is valid
  *
- * This function can be used to check if a GPIO number is valid;
+ * This function can be used to check if a GPIO number is valid,
  * i.e. if a chip has been registered for this line.
  *
  * It is an error to use the GPIO chip API on invalid lines.

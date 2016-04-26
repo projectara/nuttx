@@ -33,6 +33,8 @@
  * @file nuttx/device.h
  * @brief Device API
  * @author Mark Greer
+ * @attention This file is officially included in the Firmware Documentation.
+ * Please contact the Firmware Documentation team before modifying it.
  */
 
 #include <assert.h>
@@ -84,12 +86,12 @@ struct device_pm_ops {
      * @return 0 on success, negative errno on failure
      */
     int (*suspend)(struct device *dev);
-    /** Power-off the device
+    /** Power off the device
      * @param dev Pointer to the device to power off
      * @return 0 on success, negative errno on failure
      */
     int (*poweroff)(struct device *dev);
-    /** Wake-up the device from a low-power mode
+    /** Wake up the device from a low-power mode
      * @param dev Pointer to the device to wake up
      * @return 0 on success, negative errno on failure
      */
@@ -161,8 +163,8 @@ struct device {
 };
 
 /**
- * @brief Open a device by its type and identifier
- * @param type The type of the device to open
+ * @brief Open a device by type and identifier
+ * @param type The type of device to open
  * @param id The identifier of the device to open
  * @return The specified device on success, NULL on failure
  */
@@ -188,7 +190,7 @@ int device_register_driver(struct device_driver *driver);
 void device_unregister_driver(struct device_driver *driver);
 
 /**
- * @brief Get a device's resource by its type and number
+ * @brief Get a device's resource by type and number
  * @param dev The device containing the requested resource
  * @param type The device resource's type
  * @param num The number of the device resource
@@ -199,7 +201,7 @@ struct device_resource *device_resource_get(struct device *dev,
                                             unsigned int num);
 
 /**
- * @brief Get a device's resource by its type and name
+ * @brief Get a device's resource by type and name
  * @param dev The device containing the requested resource
  * @param type The device resource's type
  * @param name The name of the device resource
@@ -210,7 +212,7 @@ struct device_resource *device_resource_get_by_name(
                                                  enum device_resource_type type,
                                                  char *name);
 /**
- * @brief Get the type of a device
+ * @brief Get the type of device
  * @param dev The device whose type to return
  * @return The type of the specified device
  */
@@ -281,7 +283,7 @@ static inline enum device_state device_get_state(struct device *dev)
 }
 
 /**
- * @brief Return whether a device is open or not
+ * @brief Return whether a device is open
  * @param dev The device whose state to test
  * @return 1 if the specified device is open, 0 otherwise
  */
@@ -291,7 +293,7 @@ static inline int device_is_open(struct device *dev)
 }
 
 /**
- * @brief Get the number of resources associate with a device
+ * @brief Get the number of resources associated with a device
  * @param dev The device whose resource count to return
  * @return The number of resources of the specified device
  */
@@ -322,7 +324,7 @@ static inline void device_set_private(struct device *dev, void *priv)
 
 /**
  * @brief Return whether a device driver is attached to the device
- * @param dev The device whose device driver to test
+ * @param dev The device whose driver to test
  * @return 1 if a device driver is attached to the specified device, 0 otherwise
  */
 static inline int device_driver_is_attached(struct device *dev)
@@ -331,8 +333,8 @@ static inline int device_driver_is_attached(struct device *dev)
 }
 
 /**
- * @brief Get the device driver's type of a device
- * @param dev The device whose device driver's type to return
+ * @brief Get the device driver's type of device
+ * @param dev The device whose driver's type to return
  * @return The device driver's type of the specified device
  */
 static inline char *device_driver_get_type(struct device *dev)
@@ -342,7 +344,7 @@ static inline char *device_driver_get_type(struct device *dev)
 
 /**
  * @brief Get the device driver's name of a device
- * @param dev The device whose device driver's name to return
+ * @param dev The device whose driver's name to return
  * @return The device driver's name of the specified device
  */
 static inline char *device_driver_get_name(struct device *dev)
@@ -352,7 +354,7 @@ static inline char *device_driver_get_name(struct device *dev)
 
 /**
  * @brief Get the device driver's description of a device
- * @param dev The device whose device driver's description to return
+ * @param dev The device whose driver's description to return
  * @return The device driver's description of the specified device
  */
 static inline char *device_driver_get_desc(struct device *dev)
@@ -362,7 +364,7 @@ static inline char *device_driver_get_desc(struct device *dev)
 
 /**
  * @brief Check the entire path from a device to the device type operations of
- * its device driver
+ * its driver
  *
  * Check the chain of pointers from the dev pointer to the type_ops pointer to
  * ensure none of them are NULL. If one is NULL, then raise ASSERT if
@@ -375,7 +377,7 @@ static inline char *device_driver_get_desc(struct device *dev)
                 (_dev)->driver->ops->type_ops)
 
 /**
- * @brief Get the device type operations of a device's device driver
+ * @brief Get the device type operations of a device's driver
  * @param _dev The device whose device type operations to return
  * @param _type The device's type
  * @return The device type operations of the specified device
@@ -385,7 +387,7 @@ static inline char *device_driver_get_desc(struct device *dev)
 
 /**
  * @brief Get the device driver's private data of a device
- * @param dev The device whose device driver's private data to return
+ * @param dev The device whose driver's private data to return
  * @return The device driver's private data of the specified device
  */
 static inline void *device_driver_get_private(struct device *dev)
@@ -395,7 +397,7 @@ static inline void *device_driver_get_private(struct device *dev)
 
 /**
  * @brief Set the device driver's private data of a device
- * @param dev The device whose device driver's private data to set
+ * @param dev The device whose driver's private data to set
  * @param priv The device driver's private data of the specified device
  */
 static inline void device_driver_set_private(struct device *dev, void *priv)
@@ -404,8 +406,8 @@ static inline void device_driver_set_private(struct device *dev, void *priv)
 }
 
 /**
- * @brief Get the device resource's name of a device by its index
- * @param dev The device whose device resource's name to return
+ * @brief Get the device resource's name by its index
+ * @param dev The device whose resource's name to return
  * @param idx The index of the device resource
  * @return The device resource's name
  */
@@ -416,8 +418,8 @@ static inline char *device_resource_get_name(struct device *dev,
 }
 
 /**
- * @brief Get the device resources's type of a device by its index
- * @param dev The device whose device resource's type to return
+ * @brief Get the device resources's type by its index
+ * @param dev The device whose resource's type to return
  * @param idx The index of the device resource
  * @return The device resource's type
  */
@@ -428,8 +430,8 @@ static inline enum device_resource_type device_resource_get_type(
 }
 
 /**
- * @brief Get the device resource's start value of a device by its index
- * @param dev The device whose device resource's start value to return
+ * @brief Get the device resource's start value by its index
+ * @param dev The device whose resource's start value to return
  * @param idx The index of the device resource
  * @return The device resource's start value
  */
@@ -440,8 +442,8 @@ static inline uint32_t device_resource_get_start(struct device *dev,
 }
 
 /**
- * @brief Get the device resource's count of a device by its index
- * @param dev The device whose device resource's count to return
+ * @brief Get the device resource's count by its index
+ * @param dev The device whose resource's count to return
  * @param idx The index of the device resource
  * @return The device resource's count
  */
