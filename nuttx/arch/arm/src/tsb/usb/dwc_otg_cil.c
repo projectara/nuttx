@@ -1646,6 +1646,36 @@ void dwc_otg_enable_device_interrupts(dwc_otg_core_if_t * core_if)
 	DWC_DEBUGPL(DBG_CIL, "%s() gintmsk=%0x\n", __func__,
 		    DWC_READ_REG32(&global_regs->gintmsk));
 }
+/*
+ * USB DMA arbiter workaround.
+ * The DMA give priority to out request.
+ * So, if the host is performing a lot of out transfer,
+ * an in transfer may be interrupted for a while, and worse,
+ * it might not be able to resume.
+ * We are using the global out nak to prevent this issue to happen
+ * by naking any out transfer during a in transfer.
+ *
+ * Note that the functions don't repsect the programming model of
+ * global out nak. For unknown reason (IP bug ?), at some point,
+ * the core fail to program the global the global out nak,
+ * and following the programming model will cause a crash
+ * (firmware hang).
+ */
+void ep_out_global_snak(dwc_otg_core_if_t * core_if)
+{
+	dctl_data_t dctl = {.d32 = 0 };
+
+	dctl.b.sgoutnak = 1;
+	DWC_MODIFY_REG32(&core_if->dev_if->dev_global_regs->dctl, 0, dctl.d32);
+}
+
+void ep_out_global_cnak(dwc_otg_core_if_t * core_if)
+{
+	dctl_data_t dctl = {.d32 = 0 };
+
+	dctl.b.cgoutnak = 1;
+	DWC_MODIFY_REG32(&core_if->dev_if->dev_global_regs->dctl, 0, dctl.d32);
+}
 
 /**
  * This function initializes the DWC_otg controller registers for
