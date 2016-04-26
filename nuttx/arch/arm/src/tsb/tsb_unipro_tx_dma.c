@@ -137,7 +137,7 @@ static struct dma_channel *pick_dma_channel(struct cport *cport)
 static void unipro_flush_cport(struct cport *cport)
 {
     struct unipro_xfer_descriptor *desc;
-    struct list_head *iterator = NULL;
+    struct list_head *iterator = NULL, *next = NULL;
     irqstate_t flags;
 
     if (list_is_empty(&cport->tx_fifo)) {
@@ -145,7 +145,7 @@ static void unipro_flush_cport(struct cport *cport)
     }
 
     flags = irqsave();
-    list_reverse_foreach(&cport->tx_fifo, iterator) {
+    list_reverse_foreach_safe(&cport->tx_fifo, iterator, next) {
         desc = containerof(iterator, struct unipro_xfer_descriptor, list);
 
         if (desc->channel == NULL) {
